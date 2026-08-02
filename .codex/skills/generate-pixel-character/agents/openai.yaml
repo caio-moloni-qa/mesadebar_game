@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Pixel Character"
+  short_description: "Create pixel-art characters and sprites"
+  default_prompt: "Use $generate-pixel-character to create a 32x32 pixel-art hero sprite."

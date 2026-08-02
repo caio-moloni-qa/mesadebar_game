@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Pixel Background"
+  short_description: "Create pixel-art backgrounds and tiles"
+  default_prompt: "Use $generate-pixel-background to create a 1920x1080 pixel-art grass background."

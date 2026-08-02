@@ -5,10 +5,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   public experience = 0;
 
   constructor(scene: Phaser.Scene) {
-    super(scene, 0, 0, 'skeleton');
+    super(scene, 0, 0, 'skeleton-sword');
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setCircle(13).setDepth(3).disableBody(true, true);
+    this.setDisplaySize(54, 54).setDepth(3);
+    this.setCircle(16, this.width / 2 - 16, this.height / 2 - 16).disableBody(true, true);
   }
 
   activate(x: number, y: number, health: number, experience: number): void {

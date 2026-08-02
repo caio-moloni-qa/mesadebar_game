@@ -10,11 +10,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public attackSpeedMultiplier = 1;
   private invulnerableUntil = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'warrior');
+  constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
+    super(scene, x, y, texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setCircle(14).setCollideWorldBounds(true).setDepth(4);
+    this.setDisplaySize(56, 56).setCollideWorldBounds(true).setDepth(4);
+    this.setCircle(16, this.width / 2 - 16, this.height / 2 - 16);
   }
 
   move(direction: Phaser.Math.Vector2): void {

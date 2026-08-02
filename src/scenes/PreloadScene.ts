@@ -2,9 +2,14 @@ import Phaser from 'phaser';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() { super('preload'); }
+  preload(): void {
+    this.load.image('grass-ruins-ground', new URL('../assets/backgrounds/grass-ruins-ground-tile.png', import.meta.url).href);
+    this.load.image('barbarian', new URL('../assets/characters/barbarian-topdown-preview.png', import.meta.url).href);
+    this.load.image('mage', new URL('../assets/characters/mage-topdown-preview.png', import.meta.url).href);
+    this.load.image('skeleton-sword', new URL('../assets/characters/skeleton-sword-topdown-preview.png', import.meta.url).href);
+  }
+
   create(): void {
-    this.makeTexture('warrior', 32, 0x5bb7e8, 0xdff9ff);
-    this.makeTexture('skeleton', 30, 0xdad6c8, 0x6d5b55);
     this.makeTexture('bolt', 14, 0x9876ff, 0xffffff);
     this.makeTexture('gem', 18, 0x46d89c, 0xb4ffdf);
     this.scene.start('menu');
