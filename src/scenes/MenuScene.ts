@@ -9,13 +9,14 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x151b2b);
-    this.add.text(GAME_WIDTH / 2, 190, 'MESA DE BAR: SOBREVIVÊNCIA', { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: '#f5cf79', stroke: '#3a2435', strokeThickness: 8 }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 275, 'Sobreviva à horda de esqueletos por três minutos.', { fontFamily: FONT_FAMILY, fontSize: '23px', color: '#d8d9e4' }).setOrigin(0.5);
-    const start = this.add.text(GAME_WIDTH / 2, 390, 'INICIAR PARTIDA', { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 28, y: 16 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.add.image(GAME_WIDTH / 2, 125, 'game-icon').setDisplaySize(150, 150);
+    this.add.text(GAME_WIDTH / 2, 245, 'MESA DE BAR: SOBREVIVÊNCIA', { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: '#f5cf79', stroke: '#3a2435', strokeThickness: 8 }).setOrigin(0.5);
+    this.add.text(GAME_WIDTH / 2, 325, 'Sobreviva à horda de esqueletos por três minutos.', { fontFamily: FONT_FAMILY, fontSize: '23px', color: '#d8d9e4' }).setOrigin(0.5);
+    const start = this.add.text(GAME_WIDTH / 2, 430, 'INICIAR PARTIDA', { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 28, y: 16 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     start.on('pointerover', () => start.setStyle({ backgroundColor: '#896bd0' }));
     start.on('pointerout', () => start.setStyle({ backgroundColor: '#6b4db3' }));
     start.on('pointerup', () => this.showCharacterSelector());
-    this.add.text(GAME_WIDTH / 2, 505, 'WASD / setas: mover   •   Esc: pausar', { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#aeb5c9' }).setOrigin(0.5);
+    this.add.text(GAME_WIDTH / 2, 535, 'WASD / setas: mover   •   Esc: pausar', { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#aeb5c9' }).setOrigin(0.5);
   }
 
   private showCharacterSelector(): void {
