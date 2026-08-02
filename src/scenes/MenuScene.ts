@@ -1,10 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
-
-const CHARACTERS = [
-  { name: 'Barbarian', texture: 'barbarian' },
-  { name: 'Mage', texture: 'mage' }
-] as const;
+import { CHARACTERS, CharacterConfig } from '../config/characters';
+import { WEAPONS } from '../config/weapons';
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
@@ -31,14 +28,12 @@ export class MenuScene extends Phaser.Scene {
     addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 600, 360, 0x21182f).setStrokeStyle(3, 0xa888d9).setDepth(11));
     addOverlay(this.add.text(GAME_WIDTH / 2, 230, 'ESCOLHA SEU PERSONAGEM', { fontFamily: 'Arial Black', fontSize: '28px', color: '#ffe29a' }).setOrigin(0.5).setDepth(12));
 
-    CHARACTERS.forEach((character, index) => {
+    Object.values(CHARACTERS).forEach((character, index) => {
       const x = GAME_WIDTH / 2 - 140 + index * 280;
       const card = addOverlay(this.add.rectangle(x, 390, 190, 200, 0x49326e).setStrokeStyle(3, 0x6b4db3).setDepth(12).setInteractive({ useHandCursor: true }));
       const preview = addOverlay(this.add.image(x, 365, character.texture).setDisplaySize(112, 112).setDepth(13).setInteractive({ useHandCursor: true }));
       const name = addOverlay(this.add.text(x, 470, character.name, { fontFamily: 'Arial Black', fontSize: '22px', color: '#ffffff' }).setOrigin(0.5).setDepth(13).setInteractive({ useHandCursor: true }));
-      const startGame = (): void => {
-        this.scene.start('game', { playerTexture: character.texture });
-      };
+      const startGame = (): void => this.showWeaponSelector(character);
 
       card.on('pointerover', () => card.setFillStyle(0x60428d));
       card.on('pointerout', () => card.setFillStyle(0x49326e));
@@ -49,5 +44,9 @@ export class MenuScene extends Phaser.Scene {
 
     const close = addOverlay(this.add.text(GAME_WIDTH / 2, 540, 'CANCELAR', { fontFamily: 'Arial Black', fontSize: '18px', color: '#c9cfe2' }).setOrigin(0.5).setDepth(12).setInteractive({ useHandCursor: true }));
     close.on('pointerup', () => overlay.forEach((object) => object.destroy()));
+  }
+
+  private showWeaponSelector(character: CharacterConfig): void {
+    this.scene.start('weapon-selection', { characterId: character.id });
   }
 }
