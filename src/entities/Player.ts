@@ -12,6 +12,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private invulnerableUntil = 0;
   private readonly animationTexture: string;
   private lastWalkDirection: 'down' | 'left' | 'right' | 'up' = 'down';
+  private slows: Array<{ expiresAt: number; percent: number }> = [];
 
   public armor = 0;
   public facing = new Phaser.Math.Vector2(1, 0);
@@ -32,7 +33,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       direction.normalize();
       this.facing.copy(direction);
       this.playWalkAnimation(direction);
-      direction.scale(this.movementSpeed);
+      direction.scale(this.effectiveMovementSpeed());
     } else {
       this.stopWalkAnimation();
     }
@@ -68,5 +69,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setTint(0xff8b8b);
     this.scene.time.delayedCall(130, () => this.clearTint());
     return true;
+  }
+
+  applySlow(percent: number, durationMs: number, now: number): void {
+    this.slows.push({ expiresAt: now + durationMs, percent });
+    this.setTint(0x8bbcff);
+    this.scene.time.delayedCall(160, () => this.clearTint());
+  }
+
+  private effectiveMovementSpeed(): number {
+    const now = this.scene.time.now;
+    this.slows = this.slows.filter((slow) => slow.expiresAt > now);
+    const slowAmount = this.slows.reduce((total, slow) => total + slow.percent, 0);
+    const slowMultiplier = Math.max(0.25, 1 - slowAmount);
+    return this.movementSpeed * slowMultiplier;
   }
 }
