@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=MedievalSharp&display=swap');
+
 html, body, #app { width: 100%; height: 100%; }
-:root { font-family: Arial, sans-serif; background: #0d101a; color: #fff; }
+:root { font-family: Cinzel, Georgia, serif; background: #0d101a; color: #fff; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; overflow: hidden; background: #151b2b; }
 #app { width: 100vw; height: 100vh; }
