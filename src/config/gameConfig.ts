@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 export const WORLD_SIZE = 2800;
-export const RUN_DURATION_MS = 10_000;
+export const RUN_DURATION_MS = 180_000;
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
