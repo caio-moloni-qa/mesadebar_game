@@ -9,6 +9,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public pickupRange = PLAYER_CONFIG.pickupRange;
   public damageMultiplier = 1;
   public attackSpeedMultiplier = 1;
+  public lifeStealPercent = 0;
   private invulnerableUntil = 0;
   private readonly animationTexture: string;
   private lastWalkDirection: 'down' | 'left' | 'right' | 'up' = 'down';
@@ -75,6 +76,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.slows.push({ expiresAt: now + durationMs, percent });
     this.setTint(0x8bbcff);
     this.scene.time.delayedCall(160, () => this.clearTint());
+  }
+
+  addLifeSteal(): void {
+    this.lifeStealPercent += this.lifeStealPercent === 0 ? 0.005 : 0.0025;
+  }
+
+  heal(amount: number): void {
+    this.health = Math.min(this.maxHealth, this.health + amount);
   }
 
   private effectiveMovementSpeed(): number {

@@ -11,9 +11,12 @@ export class UpgradeSystem {
   ];
 
   private readonly boomerangUpgrade: Upgrade = { id: 'boomerang-count', name: 'Bumerangue Extra', description: '+1 bumerangue por lançamento, em direções diferentes', apply: () => undefined };
+  private readonly swordLifeStealUpgrade: Upgrade = { id: 'sword-life-steal', name: 'Roubo de Vida', description: 'No primeiro nível, cura 0,5% do dano causado. Os próximos níveis somam 0,25%.', apply: (player) => player.addLifeSteal() };
 
   choices(weaponId: WeaponConfig['id']): Upgrade[] {
-    const common = [...this.upgrades].sort(() => Math.random() - 0.5);
-    return weaponId === 'boomerang' ? [this.boomerangUpgrade, ...common.slice(0, 2)] : common.slice(0, 3);
+    const available = [...this.upgrades];
+    if (weaponId === 'boomerang') available.push(this.boomerangUpgrade);
+    if (weaponId === 'sword') available.push(this.swordLifeStealUpgrade);
+    return available.sort(() => Math.random() - 0.5).slice(0, 3);
   }
 }
