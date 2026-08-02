@@ -1,0 +1,30 @@
+name: Notify Discord about main PRs
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MESSAGE: |
+            🔀 **New Pull Request to main**
+            **#${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}**
+            Author: ${{ github.event.pull_request.user.login }}
+            Branch: `${{ github.head_ref }}`
+            ${{ github.event.pull_request.html_url }}
+        run: |
+          payload=$(jq -n --arg content "$MESSAGE" '{content: $content}')
+          curl --fail-with-body \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "$DISCORD_WEBHOOK_URL"
