@@ -7,7 +7,7 @@ export class ExperienceGem extends Phaser.Physics.Arcade.Sprite {
     super(scene, 0, 0, 'gem');
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setCircle(8).setDepth(2).disableBody(true, true);
+    this.setDisplaySize(20, 20).setCircle(8).setDepth(2).disableBody(true, true);
   }
 
   activate(x: number, y: number, value: number): void {

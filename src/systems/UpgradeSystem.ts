@@ -4,7 +4,7 @@ export interface Upgrade { id: string; name: string; description: string; apply:
 
 export class UpgradeSystem {
   private readonly upgrades: Upgrade[] = [
-    { id: 'damage', name: 'Poder Arcano', description: '+25% de dano do Arcane Bolt', apply: (player) => { player.damageMultiplier += 0.25; } },
+    { id: 'damage', name: 'Poder Arcano', description: '+25% de dano dos projéteis mágicos', apply: (player) => { player.damageMultiplier += 0.25; } },
     { id: 'cooldown', name: 'Ritual Veloz', description: '+20% de velocidade de ataque', apply: (player) => { player.attackSpeedMultiplier += 0.2; } },
     { id: 'speed', name: 'Passos Ligeiros', description: '+25 de velocidade de movimento', apply: (player) => { player.movementSpeed += 25; } }
   ];
