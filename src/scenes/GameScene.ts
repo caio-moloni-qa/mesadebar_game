@@ -81,7 +81,26 @@ export class GameScene extends Phaser.Scene {
   }
   private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.pursue(this.player, ENEMY_CONFIG.movementSpeed); return true; }); }
   private autoAttack(): void { if (this.time.now < this.lastAttackAt + this.weapon.cooldown / this.player.attackSpeedMultiplier) return; const enemy = this.nearestEnemy(this.weapon.range); if (!enemy) return; if (this.weapon.type === 'cone') { this.lastAttackAt = this.time.now; const direction = new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize(); const minDot = Math.cos(Phaser.Math.DegToRad((this.weapon.coneAngle ?? 90) / 2)); this.enemies.children.each((child) => { const target = child as Enemy; const vector = new Phaser.Math.Vector2(target.x - this.player.x, target.y - this.player.y); if (target.active && vector.lengthSq() <= this.weapon.range ** 2 && direction.dot(vector.normalize()) >= minDot && target.takeDamage(this.weapon.baseDamage * this.player.damageMultiplier)) this.defeatEnemy(target); return true; }); this.playSwordSlash(direction); return; } let projectile = this.projectiles.getFirstDead(false) as Projectile | null; if (!projectile && this.projectiles.isFull()) return; if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); } this.lastAttackAt = this.time.now; projectile.fire(this.player.x, this.player.y, enemy.x, enemy.y, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.time.now); }
-  private playSwordSlash(direction: Phaser.Math.Vector2): void { const slash = this.add.sprite(this.player.x + direction.x * 62, this.player.y + direction.y * 62, 'sword-air-slash').setDisplaySize(128, 128).setDepth(6); slash.rotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y); slash.play('sword-air-slash-swing'); slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy()); }
+  private playSwordSlash(direction: Phaser.Math.Vector2): void {
+    // Start the effect on the attacker. Its previous 62px offset placed the
+    // 128px-wide slash over a nearby enemy, making it look like their attack.
+    const slash = this.add.sprite(this.player.x, this.player.y, 'sword-air-slash')
+      .setDisplaySize(112, 112)
+      .setDepth(6);
+
+    // The slash artwork faces left at rotation 0, whereas Phaser angles point
+    // right at 0. Rotate it 180° so its impact edge faces the target.
+    slash.rotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI;
+    slash.play('sword-air-slash-swing');
+    this.tweens.add({
+      targets: slash,
+      x: this.player.x + direction.x * 62,
+      y: this.player.y + direction.y * 62,
+      duration: 220,
+      ease: 'Quad.Out'
+    });
+    slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
+  }
   private nearestEnemy(range: number): Enemy | null { let nearest: Enemy | null = null; let best = range ** 2; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
   private updateProjectiles(): void { this.projectiles.children.each((child) => { const projectile = child as Projectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
   private updateGems(): void { this.gems.children.each((child) => { const gem = child as ExperienceGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
