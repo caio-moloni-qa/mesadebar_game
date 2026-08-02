@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
-import { ENEMY_CONFIG, WEAPON_CONFIG, requiredExperience } from '../config/balance';
+import { ENEMY_CONFIG, ENEMY_VARIANTS, WEAPON_CONFIG, requiredExperience } from '../config/balance';
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH, RUN_DURATION_MS, WORLD_SIZE } from '../config/gameConfig';
-import { Enemy } from '../entities/Enemy';
+import { Enemy, EnemyVariantConfig } from '../entities/Enemy';
 import { ExperienceGem } from '../entities/ExperienceGem';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
+import { SoulProjectile } from '../entities/SoulProjectile';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { GameHud } from '../ui/GameHud';
@@ -22,14 +23,34 @@ const UPGRADE_ICON_KEYS: Record<string, string> = {
   'boomerang-count': 'weapon-boomerang-icon'
 };
 
+const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
+  skeleton: 'skeleton-sword',
+  necromancerWraith: 'necromancer-wraith',
+  apparitionWraith: 'apparition-wraith',
+  superSkeleton: 'super-skeleton',
+  finalBoss: 'final-boss'
+};
+
+const FINAL_BOSS_MESSAGE_MS = 2600;
+const FINAL_BOSS_SUMMON_INTERVAL_MS = 10000;
+const FINAL_BOSS_MELEE_COOLDOWN_MS = 7000;
+const FINAL_BOSS_CHANNEL_INTERVAL_MS = 60000;
+const FINAL_BOSS_CHANNEL_DURATION_MS = 20000;
+const FINAL_BOSS_SHIELD_HEALTH = 450;
+const FINAL_BOSS_MELEE_RADIUS = 250;
+const FINAL_BOSS_EXPLOSION_RADIUS = 650;
+
 export class GameScene extends Phaser.Scene {
-  private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
+  private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private elapsedMs = 0; private spawnElapsed = 0; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
+  private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
   private paused = false; private ended = false; private levelPending = false; private boomerangCount = 1; private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapon: WeaponConfig = WEAPONS.staff;
+  private finalBoss?: Enemy; private finalBossPending = false; private finalBossActive = false; private finalBossMessage?: Phaser.GameObjects.Text; private finalBossArrow?: Phaser.GameObjects.Container;
+  private bossSummonElapsed = 0; private bossChannelElapsed = 0; private bossMeleeLastAt = 0; private bossChannelActive = false; private bossChannelStartedAt = 0; private bossShield = 0;
+  private bossShieldAura?: Phaser.GameObjects.Arc; private bossShieldBolts: Phaser.GameObjects.Sprite[] = []; private nextBossShieldBoltAt = 0; private bossShieldBack?: Phaser.GameObjects.Rectangle; private bossShieldFill?: Phaser.GameObjects.Rectangle;
   private get selectedPlayerTexture(): string { return CHARACTERS[this.characterId].texture; }
 
   constructor() { super('game'); }
@@ -37,8 +58,9 @@ export class GameScene extends Phaser.Scene {
   init(data: GameSceneData): void {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
     this.characterId = data.characterId; this.weapon = WEAPONS[data.weaponId];
-    this.elapsedMs = 0; this.spawnElapsed = 0; this.lastAttackAt = 0; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
+    this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.lastAttackAt = 0; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
     this.paused = false; this.ended = false; this.levelPending = false; this.boomerangCount = 1; this.levelOverlay = []; this.pauseOverlay = [];
+    this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
   }
 
   create(): void {
@@ -47,10 +69,12 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, CHARACTERS[this.characterId]);
     this.enemies = this.physics.add.group({ classType: Enemy, maxSize: ENEMY_CONFIG.maxActive, runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 80, runChildUpdate: false });
+    this.soulProjectiles = this.physics.add.group({ classType: SoulProjectile, maxSize: 80, runChildUpdate: false });
     this.gems = this.physics.add.group({ classType: ExperienceGem, maxSize: 120, runChildUpdate: false });
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE).startFollow(this.player, true, 0.12, 0.12);
     this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,ESC') as Record<string, Phaser.Input.Keyboard.Key>;
     this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHit, undefined, this);
+    this.physics.add.overlap(this.player, this.soulProjectiles, this.soulProjectileHit, undefined, this);
     this.physics.add.overlap(this.player, this.enemies, this.playerHit, undefined, this);
     this.physics.add.overlap(this.player, this.gems, this.collectGem, undefined, this);
     this.hud = new GameHud(this); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.keyboard?.removeAllKeys(true));
@@ -58,12 +82,13 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) && !this.ended && !this.levelPending) this.togglePause();
     if (this.paused || this.ended || this.levelPending) return;
-    this.elapsedMs += delta; if (this.elapsedMs >= RUN_DURATION_MS) { this.finish(true); return; }
-    this.movePlayer(); this.spawnElapsed += delta; this.spawnEnemies(); this.updateEnemies(); this.autoAttack(); this.updateProjectiles(); this.updateGems();
+    this.elapsedMs += delta; if (!this.finalBossPending && !this.finalBossActive && this.elapsedMs >= RUN_DURATION_MS) this.warnFinalBoss();
+    if (this.finalBossPending) { this.player.move(new Phaser.Math.Vector2(0, 0)); this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills); return; }
+    this.movePlayer(); this.spawnElapsed += delta; this.necromancerSpawnElapsed += delta; this.apparitionHordeElapsed += delta; this.superSkeletonSpawnElapsed += delta; this.spawnEnemies(); this.spawnEnemyVariants(); this.updateFinalBoss(delta); this.updateEnemies(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateBossArrow();
     this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
   }
   private movePlayer(): void { const d = new Phaser.Math.Vector2((this.cursors.right.isDown || this.keys.D.isDown ? 1 : 0) - (this.cursors.left.isDown || this.keys.A.isDown ? 1 : 0), (this.cursors.down.isDown || this.keys.S.isDown ? 1 : 0) - (this.cursors.up.isDown || this.keys.W.isDown ? 1 : 0)); this.player.move(d); }
-  private spawnEnemies(): void { const stage = this.difficulty.stageFor(this.elapsedMs); if (this.spawnElapsed < stage.spawnInterval) return; this.spawnElapsed = 0; for (let i = 0; i < stage.count; i += 1) this.spawnEnemy(stage.healthMultiplier); }
+  private spawnEnemies(): void { if (this.finalBossPending || this.finalBossActive) return; const stage = this.difficulty.stageFor(this.elapsedMs); if (this.spawnElapsed < stage.spawnInterval) return; this.spawnElapsed = 0; for (let i = 0; i < stage.count; i += 1) this.spawnEnemy(stage.healthMultiplier); }
   private spawnEnemy(multiplier: number): void {
     let enemy = this.enemies.getFirstDead(false) as Enemy | null;
 
@@ -78,9 +103,48 @@ export class GameScene extends Phaser.Scene {
 
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
     const distance = Phaser.Math.Between(700, 900);
-    enemy.activate(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, ENEMY_CONFIG.maxHealth * multiplier, ENEMY_CONFIG.experience);
+    enemy.activate(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, this.enemyConfig('skeleton', { maxHealth: ENEMY_VARIANTS.skeleton.maxHealth * multiplier }));
   }
-  private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.pursue(this.player, ENEMY_CONFIG.movementSpeed); return true; }); }
+  private spawnEnemyVariants(): void {
+    if (this.finalBossPending || this.finalBossActive) return;
+    if (this.necromancerSpawnElapsed >= 15000) {
+      this.necromancerSpawnElapsed = 0;
+      const position = this.randomMapPosition();
+      this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('necromancerWraith', { isStatic: true, displaySize: 68 }));
+    }
+
+    if (this.apparitionHordeElapsed >= 30000) {
+      this.apparitionHordeElapsed = 0;
+      const count = 10 + this.apparitionHordeLevel;
+      const health = ENEMY_VARIANTS.apparitionWraith.maxHealth + this.apparitionHordeLevel * 10;
+      for (let index = 0; index < count; index += 1) {
+        const position = this.randomBorderPosition();
+        this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('apparitionWraith', { maxHealth: health, displaySize: 68 }));
+      }
+      this.apparitionHordeLevel += 1;
+    }
+
+    if (this.superSkeletonSpawnElapsed >= 40000) {
+      this.superSkeletonSpawnElapsed = 0;
+      for (let index = 0; index < this.superSkeletonSpawnCount; index += 1) {
+        const position = this.randomBorderPosition();
+        this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('superSkeleton', { isMiniBoss: true, displaySize: 92 }));
+      }
+      this.superSkeletonSpawnCount += 1;
+    }
+  }
+  private spawnEnemyVariant(x: number, y: number, config: EnemyVariantConfig): Enemy | null {
+    let enemy = this.enemies.getFirstDead(false) as Enemy | null;
+    if (!enemy && this.enemies.isFull()) return null;
+    if (!enemy) {
+      enemy = new Enemy(this);
+      this.enemies.add(enemy);
+    }
+    enemy.activate(x, y, config);
+    return enemy;
+  }
+  private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) { if (enemy === this.finalBoss && this.bossChannelActive) enemy.pauseMovement(); else enemy.pursue(this.player); } return true; }); }
+  private updateNecromancerAttacks(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active && enemy.canCastSoul(this.time.now)) this.launchSoulProjectile(enemy); return true; }); }
   private autoAttack(): void {
     if (this.time.now < this.lastAttackAt + this.weapon.cooldown / this.player.attackSpeedMultiplier) return;
     const enemy = this.nearestEnemy(this.weapon.range);
@@ -89,7 +153,7 @@ export class GameScene extends Phaser.Scene {
       this.lastAttackAt = this.time.now;
       const direction = new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize();
       const minDot = Math.cos(Phaser.Math.DegToRad((this.weapon.coneAngle ?? 90) / 2));
-      this.enemies.children.each((child) => { const target = child as Enemy; const vector = new Phaser.Math.Vector2(target.x - this.player.x, target.y - this.player.y); if (target.active && vector.lengthSq() <= this.weapon.range ** 2 && direction.dot(vector.normalize()) >= minDot && target.takeDamage(this.weapon.baseDamage * this.player.damageMultiplier)) this.defeatEnemy(target); return true; });
+      this.enemies.children.each((child) => { const target = child as Enemy; const vector = new Phaser.Math.Vector2(target.x - this.player.x, target.y - this.player.y); const range = this.weapon.range + this.enemyRangePadding(target); if (target.active && vector.lengthSq() <= range ** 2 && direction.dot(vector.normalize()) >= minDot) this.damageEnemy(target, this.weapon.baseDamage * this.player.damageMultiplier); return true; });
       this.playSwordSlash(direction);
       return;
     }
@@ -107,6 +171,200 @@ export class GameScene extends Phaser.Scene {
     const range = this.weapon.range;
     projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.time.now, isBoomerang, range);
     return true;
+  }
+  private launchSoulProjectile(enemy: Enemy): void {
+    let projectile = this.soulProjectiles.getFirstDead(false) as SoulProjectile | null;
+    if (!projectile && this.soulProjectiles.isFull()) return;
+    if (!projectile) {
+      projectile = new SoulProjectile(this);
+      this.soulProjectiles.add(projectile);
+    }
+    projectile.fire(enemy.x, enemy.y, this.player.x, this.player.y, this.time.now);
+  }
+  private warnFinalBoss(): void {
+    this.finalBossPending = true;
+    this.player.move(new Phaser.Math.Vector2(0, 0));
+    this.clearEnemyField();
+    this.finalBossMessage = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'O sobrevivente sente uma presença maligna no ar!', {
+      fontFamily: TITLE_FONT_FAMILY,
+      fontSize: '34px',
+      color: '#d8ffd0',
+      align: 'center',
+      stroke: '#101510',
+      strokeThickness: 5,
+      wordWrap: { width: 900 }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(45);
+    this.tweens.add({ targets: this.finalBossMessage, alpha: 0.45, yoyo: true, repeat: 2, duration: 420 });
+    this.time.delayedCall(FINAL_BOSS_MESSAGE_MS, () => this.spawnFinalBoss());
+  }
+  private spawnFinalBoss(): void {
+    this.finalBossMessage?.destroy();
+    this.finalBossMessage = undefined;
+    this.clearEnemyField();
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const distance = 980;
+    const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 260, WORLD_SIZE - 260);
+    const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, 260, WORLD_SIZE - 260);
+    this.finalBoss = this.spawnEnemyVariant(x, y, this.enemyConfig('finalBoss', { isMiniBoss: true, displaySize: 390, collisionRadius: 58, healthBarWidth: 220 })) ?? undefined;
+    this.finalBossPending = false;
+    this.finalBossActive = Boolean(this.finalBoss);
+    this.bossSummonElapsed = 0;
+    this.bossChannelElapsed = 0;
+    this.bossMeleeLastAt = this.time.now - FINAL_BOSS_MELEE_COOLDOWN_MS + 1600;
+    this.ensureBossArrow();
+  }
+  private clearEnemyField(): void {
+    this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.deactivate(); return true; });
+    this.projectiles.children.each((child) => { const projectile = child as Projectile; if (projectile.active) projectile.deactivate(); return true; });
+    this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active) projectile.deactivate(); return true; });
+  }
+  private updateFinalBoss(delta: number): void {
+    if (!this.finalBossActive || !this.finalBoss?.active) return;
+    if (this.bossChannelActive) {
+      this.finalBoss.pauseMovement();
+      this.updateBossShieldVisual();
+      if (this.time.now >= this.bossChannelStartedAt + FINAL_BOSS_CHANNEL_DURATION_MS) this.completeBossChannel();
+      return;
+    }
+    this.bossSummonElapsed += delta;
+    this.bossChannelElapsed += delta;
+    if (this.bossSummonElapsed >= FINAL_BOSS_SUMMON_INTERVAL_MS) {
+      this.bossSummonElapsed = 0;
+      this.summonBossApparitions();
+    }
+    if (this.bossChannelElapsed >= FINAL_BOSS_CHANNEL_INTERVAL_MS) { this.startBossChannel(); return; }
+    this.tryBossMeleeAttack();
+  }
+  private summonBossApparitions(): void {
+    if (!this.finalBoss) return;
+    for (let index = 0; index < 30; index += 1) {
+      const angle = (Math.PI * 2 * index) / 30 + Phaser.Math.FloatBetween(-0.12, 0.12);
+      const radius = Phaser.Math.Between(175, 255);
+      this.spawnEnemyVariant(this.finalBoss.x + Math.cos(angle) * radius, this.finalBoss.y + Math.sin(angle) * radius, this.enemyConfig('apparitionWraith', { displaySize: 72 }));
+    }
+  }
+  private tryBossMeleeAttack(): void {
+    if (!this.finalBoss || this.time.now < this.bossMeleeLastAt + FINAL_BOSS_MELEE_COOLDOWN_MS) return;
+    if (Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) > FINAL_BOSS_MELEE_RADIUS) return;
+    this.bossMeleeLastAt = this.time.now;
+    const direction = new Phaser.Math.Vector2(this.player.x - this.finalBoss.x, this.player.y - this.finalBoss.y).normalize();
+    this.playBossMeleeSlash(direction);
+    this.time.delayedCall(220, () => {
+      if (this.ended || !this.finalBoss?.active) return;
+      if (Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) <= FINAL_BOSS_MELEE_RADIUS && this.player.damage(30, this.time.now) && this.player.health <= 0) this.finish(false);
+    });
+  }
+  private startBossChannel(): void {
+    if (!this.finalBoss || this.bossChannelActive) return;
+    this.bossChannelActive = true;
+    this.bossChannelStartedAt = this.time.now;
+    this.bossShield = FINAL_BOSS_SHIELD_HEALTH;
+    this.bossChannelElapsed = 0;
+    this.nextBossShieldBoltAt = 0;
+    this.finalBoss.pauseMovement();
+    this.updateBossShieldVisual();
+  }
+  private completeBossChannel(): void {
+    if (!this.finalBoss || this.bossShield <= 0) { this.endBossChannel(); return; }
+    const explosion = this.add.circle(this.finalBoss.x, this.finalBoss.y, FINAL_BOSS_EXPLOSION_RADIUS, 0x52ff45, 0.24).setStrokeStyle(7, 0xd8ffd0, 0.9).setDepth(12);
+    this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18, duration: 520, onComplete: () => explosion.destroy() });
+    const playerCaught = Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) <= FINAL_BOSS_EXPLOSION_RADIUS;
+    this.endBossChannel();
+    if (playerCaught) {
+      this.player.health = 0;
+      this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
+      this.time.delayedCall(260, () => this.finish(false));
+    }
+  }
+  private endBossChannel(): void {
+    this.bossChannelActive = false;
+    this.bossShield = 0;
+    this.bossShieldAura?.destroy();
+    this.bossShieldBolts.forEach((bolt) => bolt.destroy());
+    this.bossShieldBack?.destroy();
+    this.bossShieldFill?.destroy();
+    this.bossShieldAura = undefined;
+    this.bossShieldBolts = [];
+    this.bossShieldBack = undefined;
+    this.bossShieldFill = undefined;
+  }
+  private updateBossShieldVisual(): void {
+    if (!this.finalBoss?.active || !this.bossChannelActive) return;
+    if (!this.bossShieldAura) {
+      this.bossShieldAura = this.add.circle(this.finalBoss.x, this.finalBoss.y, 230, 0x48ff52, 0.16).setStrokeStyle(5, 0xb4ff9e, 0.88).setDepth(8);
+      this.bossShieldBack = this.add.rectangle(this.finalBoss.x, this.finalBoss.y - this.finalBoss.displayHeight / 2 - 34, 188, 10, 0x061009).setDepth(12);
+      this.bossShieldFill = this.add.rectangle(this.finalBoss.x, this.finalBoss.y - this.finalBoss.displayHeight / 2 - 34, 184, 5, 0x65ff5a).setDepth(13);
+    }
+    const width = Phaser.Math.Clamp(this.bossShield / FINAL_BOSS_SHIELD_HEALTH, 0, 1) * 184;
+    const y = this.finalBoss.y - this.finalBoss.displayHeight / 2 - 34;
+    this.bossShieldAura.setPosition(this.finalBoss.x, this.finalBoss.y);
+    this.spawnBossShieldBolts();
+    this.bossShieldBack?.setPosition(this.finalBoss.x, y);
+    this.bossShieldFill?.setPosition(this.finalBoss.x - 92 + width / 2, y).setSize(width, 5);
+  }
+  private spawnBossShieldBolts(): void {
+    if (!this.finalBoss || this.time.now < this.nextBossShieldBoltAt) return;
+    this.nextBossShieldBoltAt = this.time.now + Phaser.Math.Between(90, 180);
+    const count = Phaser.Math.Between(1, 3);
+    for (let index = 0; index < count; index += 1) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const radius = Math.sqrt(Math.random()) * 205;
+      const bolt = this.add.sprite(
+        this.finalBoss.x + Math.cos(angle) * radius,
+        this.finalBoss.y + Math.sin(angle) * radius,
+        'boss-shield-bolt'
+      )
+        .setDisplaySize(Phaser.Math.Between(42, 84), Phaser.Math.Between(42, 84))
+        .setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2))
+        .setAlpha(Phaser.Math.FloatBetween(0.72, 1))
+        .setDepth(11)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .play('boss-shield-bolt-flicker');
+      this.bossShieldBolts.push(bolt);
+      this.tweens.add({ targets: bolt, alpha: 0, duration: Phaser.Math.Between(180, 320), onComplete: () => this.destroyBossShieldBolt(bolt) });
+    }
+  }
+  private destroyBossShieldBolt(bolt: Phaser.GameObjects.Sprite): void {
+    Phaser.Utils.Array.Remove(this.bossShieldBolts, bolt);
+    bolt.destroy();
+  }
+  private ensureBossArrow(): void {
+    if (this.finalBossArrow) return;
+    const arrow = this.add.graphics();
+    arrow.fillStyle(0x111111, 0.9);
+    arrow.fillTriangle(25, 0, -15, -22, -9, 0);
+    arrow.fillTriangle(25, 0, -15, 22, -9, 0);
+    arrow.fillRect(-30, -7, 22, 14);
+    arrow.fillStyle(0xffffff, 1);
+    arrow.fillTriangle(18, 0, -11, -15, -7, 0);
+    arrow.fillTriangle(18, 0, -11, 15, -7, 0);
+    arrow.fillRect(-25, -4, 19, 8);
+    this.finalBossArrow = this.add.container(0, 0, [arrow]).setScrollFactor(0).setDepth(44).setVisible(false);
+  }
+  private updateBossArrow(): void {
+    if (!this.finalBossArrow || !this.finalBossActive || !this.finalBoss?.active) { this.finalBossArrow?.setVisible(false); return; }
+    const view = this.cameras.main.worldView;
+    const screenX = this.finalBoss.x - view.x;
+    const screenY = this.finalBoss.y - view.y;
+    const visible = screenX >= 0 && screenX <= GAME_WIDTH && screenY >= 0 && screenY <= GAME_HEIGHT;
+    if (visible) { this.finalBossArrow.setVisible(false); return; }
+    const x = Phaser.Math.Clamp(screenX, 48, GAME_WIDTH - 48);
+    const y = Phaser.Math.Clamp(screenY, 48, GAME_HEIGHT - 48);
+    this.finalBossArrow.setVisible(true).setPosition(x, y).setRotation(Phaser.Math.Angle.Between(GAME_WIDTH / 2, GAME_HEIGHT / 2, screenX, screenY));
+  }
+  private enemyConfig(id: EnemyVariantConfig['id'], overrides: Partial<Omit<EnemyVariantConfig, 'id'>> = {}): EnemyVariantConfig {
+    return { id, texture: ENEMY_TEXTURE_KEYS[id], ...ENEMY_VARIANTS[id], ...overrides };
+  }
+  private randomMapPosition(): Phaser.Math.Vector2 {
+    return new Phaser.Math.Vector2(Phaser.Math.Between(120, WORLD_SIZE - 120), Phaser.Math.Between(120, WORLD_SIZE - 120));
+  }
+  private randomBorderPosition(): Phaser.Math.Vector2 {
+    const side = Phaser.Math.Between(0, 3);
+    const edge = 40;
+    if (side === 0) return new Phaser.Math.Vector2(Phaser.Math.Between(0, WORLD_SIZE), edge);
+    if (side === 1) return new Phaser.Math.Vector2(Phaser.Math.Between(0, WORLD_SIZE), WORLD_SIZE - edge);
+    if (side === 2) return new Phaser.Math.Vector2(edge, Phaser.Math.Between(0, WORLD_SIZE));
+    return new Phaser.Math.Vector2(WORLD_SIZE - edge, Phaser.Math.Between(0, WORLD_SIZE));
   }
   private playSwordSlash(direction: Phaser.Math.Vector2): void {
     // Start the effect on the attacker. Its previous 62px offset placed the
@@ -128,12 +386,58 @@ export class GameScene extends Phaser.Scene {
     });
     slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
   }
-  private nearestEnemy(range: number): Enemy | null { let nearest: Enemy | null = null; let best = range ** 2; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
+  private playBossMeleeSlash(direction: Phaser.Math.Vector2): void {
+    if (!this.finalBoss) return;
+    const slash = this.add.sprite(this.finalBoss.x + direction.x * 118, this.finalBoss.y + direction.y * 118, 'sword-air-slash')
+      .setDisplaySize(300, 300)
+      .setTint(0x52ff45)
+      .setAlpha(0.88)
+      .setDepth(12)
+      .setBlendMode(Phaser.BlendModes.ADD);
+
+    slash.rotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI;
+    slash.play('sword-air-slash-swing');
+    this.tweens.add({
+      targets: slash,
+      x: this.finalBoss.x + direction.x * 168,
+      y: this.finalBoss.y + direction.y * 168,
+      alpha: 0.12,
+      duration: 320,
+      ease: 'Quad.Out'
+    });
+    slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
+  }
+  private nearestEnemy(range: number): Enemy | null { let nearest: Enemy | null = null; let best = Number.POSITIVE_INFINITY; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const effectiveRange = range + this.enemyRangePadding(enemy); const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance <= effectiveRange ** 2 && distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
+  private enemyRangePadding(enemy: Enemy): number { return enemy.variantId === 'finalBoss' ? enemy.displayWidth * 0.35 : 0; }
   private updateProjectiles(): void { this.projectiles.children.each((child) => { const projectile = child as Projectile; if (!projectile.active) return true; if (projectile.isBoomerang) projectile.updateBoomerang(this.player.x, this.player.y, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed); if (this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
+  private updateSoulProjectiles(): void { this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
   private updateGems(): void { this.gems.children.each((child) => { const gem = child as ExperienceGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
-  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; if (enemy.takeDamage(projectile.damage)) this.defeatEnemy(enemy); if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
+  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; this.damageEnemy(enemy, projectile.damage); if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
+  private damageEnemy(enemy: Enemy, amount: number): void {
+    if (enemy === this.finalBoss && this.bossChannelActive && this.bossShield > 0) {
+      const overflowDamage = Math.max(0, amount - this.bossShield);
+      this.bossShield = Math.max(0, this.bossShield - amount);
+      enemy.takeDamage(0);
+      this.updateBossShieldVisual();
+      if (this.bossShield <= 0) {
+        this.endBossChannel();
+        if (overflowDamage > 0) this.damageEnemy(enemy, overflowDamage);
+      }
+      return;
+    }
+    if (enemy.takeDamage(amount)) this.defeatEnemy(enemy);
+  }
+  private soulProjectileHit(_playerObject: ArcadeColliderObject, projectileObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as SoulProjectile; if (!projectile.active) return; this.player.applySlow(projectile.slowPercent, projectile.slowDurationMs, this.time.now); const damaged = this.player.damage(projectile.damage, this.time.now); projectile.deactivate(); if (damaged && this.player.health <= 0) this.finish(false); }
   private defeatEnemy(enemy: Enemy): void {
     this.kills += 1;
+    if (enemy === this.finalBoss) {
+      this.finalBossActive = false;
+      this.finalBossArrow?.setVisible(false);
+      this.endBossChannel();
+      enemy.deactivate();
+      this.finish(true);
+      return;
+    }
     let gem = this.gems.getFirstDead(false) as ExperienceGem | null;
     if (!gem && !this.gems.isFull()) {
       gem = new ExperienceGem(this);
@@ -142,7 +446,7 @@ export class GameScene extends Phaser.Scene {
     if (gem) gem.activate(enemy.x, enemy.y, enemy.experience);
     enemy.deactivate();
   }
-  private playerHit(_playerObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const enemy = enemyObject as unknown as Enemy; if (!enemy.active || !this.player.damage(ENEMY_CONFIG.contactDamage, this.time.now)) return; if (this.player.health <= 0) this.finish(false); }
+  private playerHit(_playerObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const enemy = enemyObject as unknown as Enemy; if (!enemy.active || enemy.contactDamage <= 0 || !this.player.damage(enemy.contactDamage, this.time.now)) return; if (this.player.health <= 0) this.finish(false); }
   private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as ExperienceGem; if (!gem.active) return; this.experience += gem.value; gem.deactivate(); this.processExperience(); }
   private processExperience(): void { if (this.experience < this.experienceNeeded || this.levelPending) return; this.experience -= this.experienceNeeded; this.level += 1; this.experienceNeeded = requiredExperience(this.level); this.levelPending = true; this.showUpgrades(); }
   private showUpgrades(): void { this.physics.pause(); const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30); const title = this.add.text(GAME_WIDTH / 2, 190, `NÍVEL ${this.level}! Escolha uma melhoria`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31); this.levelOverlay = [veil, title]; const spacing = 230; const startX = GAME_WIDTH / 2 - spacing; this.upgrades.choices(this.weapon.id).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing)); }
