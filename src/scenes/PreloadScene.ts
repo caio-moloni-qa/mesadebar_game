@@ -10,6 +10,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('skeleton-sword', new URL('../assets/characters/skeleton-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
     this.load.image('weapon-staff-icon', new URL('../assets/weapons/staff-icon.png', import.meta.url).href);
     this.load.image('weapon-sword-icon', new URL('../assets/weapons/sword-icon.png', import.meta.url).href);
+    this.load.image('weapon-boomerang-icon', new URL('../assets/weapons/boomerang-icon.png', import.meta.url).href);
     this.load.image('gem', new URL('../assets/pickups/exp-crystal.png', import.meta.url).href);
     this.load.image('upgrade-damage-icon', new URL('../assets/upgrades/damage-icon.png', import.meta.url).href);
     this.load.image('upgrade-cooldown-icon', new URL('../assets/upgrades/cooldown-icon.png', import.meta.url).href);

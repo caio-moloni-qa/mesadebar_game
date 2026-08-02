@@ -1,4 +1,5 @@
 import { Player } from '../entities/Player';
+import { WeaponConfig } from '../config/weapons';
 
 export interface Upgrade { id: string; name: string; description: string; apply: (player: Player) => void; }
 
@@ -9,5 +10,10 @@ export class UpgradeSystem {
     { id: 'speed', name: 'Passos Ligeiros', description: '+25 de velocidade de movimento', apply: (player) => { player.movementSpeed += 25; } }
   ];
 
-  choices(): Upgrade[] { return [...this.upgrades].sort(() => Math.random() - 0.5).slice(0, 3); }
+  private readonly boomerangUpgrade: Upgrade = { id: 'boomerang-count', name: 'Bumerangue Extra', description: '+1 bumerangue por lançamento, em direções diferentes', apply: () => undefined };
+
+  choices(weaponId: WeaponConfig['id']): Upgrade[] {
+    const common = [...this.upgrades].sort(() => Math.random() - 0.5);
+    return weaponId === 'boomerang' ? [this.boomerangUpgrade, ...common.slice(0, 2)] : common.slice(0, 3);
+  }
 }
