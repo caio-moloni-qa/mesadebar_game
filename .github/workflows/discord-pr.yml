@@ -1,30 +1,64 @@
-name: Notify Discord about main PRs
+name: Discord Patch Notes
 
 on:
-  pull_request:
+  push:
     branches: [main]
-    types: [opened, reopened, ready_for_review]
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
-  notify-discord:
+  publish-patch-note:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send notification
+      - name: Publish merged PR as patch note
+        uses: actions/github-script@v8
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          MESSAGE: |
-            🔀 **New Pull Request to main**
-            **#${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}**
-            Author: ${{ github.event.pull_request.user.login }}
-            Branch: `${{ github.head_ref }}`
-            ${{ github.event.pull_request.html_url }}
-        run: |
-          payload=$(jq -n --arg content "$MESSAGE" '{content: $content}')
-          curl --fail-with-body \
-            -H "Content-Type: application/json" \
-            -d "$payload" \
-            "$DISCORD_WEBHOOK_URL"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pullRequests } =
+              await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+              });
+
+            const pr = pullRequests.find(
+              (item) => item.merged_at && item.base.ref === 'main'
+            );
+
+            // Ignores direct pushes to main that are not associated with a PR.
+            if (!pr) {
+              core.info('No merged pull request associated with this push.');
+              return;
+            }
+
+            const description =
+              (pr.body?.trim() || '_No description was provided for this pull request._')
+                .slice(0, 3800);
+
+            const response = await fetch(process.env.DISCORD_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                embeds: [{
+                  title: `Patch Notes — #${pr.number}: ${pr.title}`,
+                  url: pr.html_url,
+                  description,
+                  color: 0x57F287,
+                  fields: [
+                    { name: 'Author', value: pr.user.login, inline: true },
+                    { name: 'Merged into', value: `\`${pr.base.ref}\``, inline: true }
+                  ],
+                  footer: { text: `${context.repo.owner}/${context.repo.repo}` }
+                }]
+              })
+            });
+
+            if (!response.ok) {
+              core.setFailed(`Discord webhook failed: ${response.status}`);
+            }
