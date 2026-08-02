@@ -10,6 +10,7 @@ import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { GameHud } from '../ui/GameHud';
 
 type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile;
+interface GameSceneData { playerTexture?: string; }
 
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
@@ -17,13 +18,20 @@ export class GameScene extends Phaser.Scene {
   private elapsedMs = 0; private spawnElapsed = 0; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
   private paused = false; private ended = false; private levelPending = false; private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
+  private selectedPlayerTexture = 'barbarian';
 
   constructor() { super('game'); }
+
+  init(data: GameSceneData): void {
+    this.selectedPlayerTexture = data.playerTexture ?? this.selectedPlayerTexture;
+    this.elapsedMs = 0; this.spawnElapsed = 0; this.lastAttackAt = 0; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
+    this.paused = false; this.ended = false; this.levelPending = false; this.levelOverlay = [];
+  }
+
   create(): void {
     this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
-    this.add.rectangle(WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE, WORLD_SIZE, 0x25342a);
-    for (let x = 80; x < WORLD_SIZE; x += 160) for (let y = 80; y < WORLD_SIZE; y += 160) this.add.circle(x, y, 3, 0x5b7052, 0.5);
-    this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2);
+    this.add.tileSprite(WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE, WORLD_SIZE, 'grass-ruins-ground').setDepth(0);
+    this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, this.selectedPlayerTexture);
     this.enemies = this.physics.add.group({ classType: Enemy, maxSize: ENEMY_CONFIG.maxActive, runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 80, runChildUpdate: false });
     this.gems = this.physics.add.group({ classType: ExperienceGem, maxSize: 120, runChildUpdate: false });
@@ -56,6 +64,6 @@ export class GameScene extends Phaser.Scene {
   private showUpgrades(): void { this.physics.pause(); const veil = this.add.rectangle(640, 360, 1280, 720, 0x090b12, 0.84).setScrollFactor(0).setDepth(30); const title = this.add.text(640, 190, `NÍVEL ${this.level}! Escolha uma melhoria`, { fontFamily: 'Arial Black', fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31); this.levelOverlay = [veil, title]; this.upgrades.choices().forEach((upgrade, index) => this.upgradeCard(upgrade, 310 + index * 220)); }
   private upgradeCard(upgrade: Upgrade, x: number): void { const card = this.add.rectangle(x, 400, 190, 180, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const name = this.add.text(x, 365, upgrade.name, { fontFamily: 'Arial Black', fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 440, upgrade.description, { fontFamily: 'Arial', fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 160 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; this.levelPending = false; this.physics.resume(); this.processExperience(); }); }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) { this.physics.pause(); this.add.rectangle(640, 360, 1280, 720, 0x080a10, 0.7).setScrollFactor(0).setDepth(25).setName('pause'); this.add.text(640, 340, 'PAUSADO', { fontFamily: 'Arial Black', fontSize: '46px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(26).setName('pause'); this.add.text(640, 405, 'Pressione Esc para continuar', { fontFamily: 'Arial', fontSize: '22px', color: '#c9cfe2' }).setOrigin(0.5).setScrollFactor(0).setDepth(26).setName('pause'); } else { this.physics.resume(); this.children.getAll('name', 'pause').forEach((object) => object.destroy()); } }
-  private finish(victory: boolean): void { this.ended = true; this.physics.pause(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x070910, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: 'Arial Black', fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: 'Arial', fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart()); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
+  private finish(victory: boolean): void { this.ended = true; this.physics.pause(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x070910, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: 'Arial Black', fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: 'Arial', fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
   private resultButton(label: string, y: number, action: () => void): void { const button = this.add.text(640, y, label, { fontFamily: 'Arial Black', fontSize: '21px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 20, y: 10 } }).setOrigin(0.5).setScrollFactor(0).setDepth(41).setInteractive({ useHandCursor: true }); button.on('pointerup', action); }
 }
