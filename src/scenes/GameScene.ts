@@ -8,9 +8,11 @@ import { Projectile } from '../entities/Projectile';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { GameHud } from '../ui/GameHud';
+import { CHARACTERS } from '../config/characters';
+import { WEAPONS, WeaponConfig } from '../config/weapons';
 
 type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile;
-interface GameSceneData { playerTexture?: string; }
+interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; playerTexture?: string; }
 
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
@@ -18,12 +20,14 @@ export class GameScene extends Phaser.Scene {
   private elapsedMs = 0; private spawnElapsed = 0; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
   private paused = false; private ended = false; private levelPending = false; private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
-  private selectedPlayerTexture = 'barbarian';
+  private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapon: WeaponConfig = WEAPONS.staff;
+  private get selectedPlayerTexture(): string { return CHARACTERS[this.characterId].texture; }
 
   constructor() { super('game'); }
 
   init(data: GameSceneData): void {
-    this.selectedPlayerTexture = data.playerTexture ?? this.selectedPlayerTexture;
+    if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
+    this.characterId = data.characterId; this.weapon = WEAPONS[data.weaponId];
     this.elapsedMs = 0; this.spawnElapsed = 0; this.lastAttackAt = 0; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
     this.paused = false; this.ended = false; this.levelPending = false; this.levelOverlay = [];
   }
@@ -31,7 +35,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
     this.add.tileSprite(WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE, WORLD_SIZE, 'grass-ruins-ground').setDepth(0);
-    this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, this.selectedPlayerTexture);
+    this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, CHARACTERS[this.characterId]);
     this.enemies = this.physics.add.group({ classType: Enemy, maxSize: ENEMY_CONFIG.maxActive, runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 80, runChildUpdate: false });
     this.gems = this.physics.add.group({ classType: ExperienceGem, maxSize: 120, runChildUpdate: false });
@@ -53,8 +57,8 @@ export class GameScene extends Phaser.Scene {
   private spawnEnemies(): void { const stage = this.difficulty.stageFor(this.elapsedMs); if (this.spawnElapsed < stage.spawnInterval) return; this.spawnElapsed = 0; for (let i = 0; i < stage.count; i += 1) this.spawnEnemy(stage.healthMultiplier); }
   private spawnEnemy(multiplier: number): void { let enemy = this.enemies.getFirstDead(false) as Enemy | null; if (!enemy) { enemy = new Enemy(this); this.enemies.add(enemy); } const angle = Phaser.Math.FloatBetween(0, Math.PI * 2); const distance = Phaser.Math.Between(700, 900); enemy.activate(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, ENEMY_CONFIG.maxHealth * multiplier, ENEMY_CONFIG.experience); }
   private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.pursue(this.player, ENEMY_CONFIG.movementSpeed); return true; }); }
-  private autoAttack(): void { if (this.time.now < this.lastAttackAt + WEAPON_CONFIG.cooldownMs / this.player.attackSpeedMultiplier) return; const enemy = this.nearestEnemy(); if (!enemy) return; this.lastAttackAt = this.time.now; let projectile = this.projectiles.getFirstDead(false) as Projectile | null; if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); } projectile.fire(this.player.x, this.player.y, enemy.x, enemy.y, WEAPON_CONFIG.damage * this.player.damageMultiplier, WEAPON_CONFIG.projectileSpeed, WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.time.now); }
-  private nearestEnemy(): Enemy | null { let nearest: Enemy | null = null; let best = WEAPON_CONFIG.range ** 2; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
+  private autoAttack(): void { if (this.time.now < this.lastAttackAt + this.weapon.cooldown / this.player.attackSpeedMultiplier) return; const enemy = this.nearestEnemy(this.weapon.range); if (!enemy) return; this.lastAttackAt = this.time.now; if (this.weapon.type === 'cone') { const direction = new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize(); const minDot = Math.cos(Phaser.Math.DegToRad((this.weapon.coneAngle ?? 90) / 2)); this.enemies.children.each((child) => { const target = child as Enemy; const vector = new Phaser.Math.Vector2(target.x - this.player.x, target.y - this.player.y); if (target.active && vector.lengthSq() <= this.weapon.range ** 2 && direction.dot(vector.normalize()) >= minDot && target.takeDamage(this.weapon.baseDamage * this.player.damageMultiplier)) { this.kills += 1; target.deactivate(); } return true; }); const flash = this.add.circle(this.player.x + direction.x * 60, this.player.y + direction.y * 60, 65, 0xffd47a, 0.45).setDepth(6); this.tweens.add({ targets: flash, alpha: 0, duration: 150, onComplete: () => flash.destroy() }); return; } let projectile = this.projectiles.getFirstDead(false) as Projectile | null; if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); } projectile.fire(this.player.x, this.player.y, enemy.x, enemy.y, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.time.now); }
+  private nearestEnemy(range: number): Enemy | null { let nearest: Enemy | null = null; let best = range ** 2; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
   private updateProjectiles(): void { this.projectiles.children.each((child) => { const projectile = child as Projectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
   private updateGems(): void { this.gems.children.each((child) => { const gem = child as ExperienceGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
   private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active) return; if (enemy.takeDamage(projectile.damage)) { this.kills += 1; let gem = this.gems.getFirstDead(false) as ExperienceGem | null; if (!gem) { gem = new ExperienceGem(this); this.gems.add(gem); } gem.activate(enemy.x, enemy.y, enemy.experience); enemy.deactivate(); } if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; }
