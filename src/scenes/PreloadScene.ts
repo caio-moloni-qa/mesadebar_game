@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() { super('preload'); }
@@ -20,7 +21,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('exp-bar-border', new URL('../assets/ui/exp-bar-border.png', import.meta.url).href);
   }
 
-  create(): void {
+  async create(): Promise<void> {
+    await this.waitForFonts();
     this.createCharacterAnimations('barbarian');
     this.createCharacterAnimations('mage');
     this.createCharacterAnimations('skeleton-sword');
@@ -60,5 +62,14 @@ export class PreloadScene extends Phaser.Scene {
         repeat: 0
       });
     }
+  }
+
+  private async waitForFonts(): Promise<void> {
+    if (!document.fonts) return;
+    await Promise.all([
+      document.fonts.load(`16px ${FONT_FAMILY}`),
+      document.fonts.load(`16px ${TITLE_FONT_FAMILY}`)
+    ]);
+    await document.fonts.ready;
   }
 }
