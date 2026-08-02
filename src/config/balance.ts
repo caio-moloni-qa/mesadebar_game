@@ -2,7 +2,7 @@ export const PLAYER_CONFIG = { maxHealth: 100, movementSpeed: 180, pickupRange: 
 export const ENEMY_CONFIG = { maxHealth: 30, movementSpeed: 75, contactDamage: 10, experience: 3, maxActive: 240 };
 export const ENEMY_VARIANTS = {
   skeleton: { maxHealth: ENEMY_CONFIG.maxHealth, movementSpeed: ENEMY_CONFIG.movementSpeed, contactDamage: ENEMY_CONFIG.contactDamage, experience: ENEMY_CONFIG.experience },
-  necromancerWraith: { maxHealth: 45, movementSpeed: 0, contactDamage: 0, experience: 8, soulCooldownMs: 2200 },
+  necromancerWraith: { maxHealth: 45, movementSpeed: 0, contactDamage: 0, experience: 8, experienceDrops: 3, soulCooldownMs: 2200 },
   apparitionWraith: { maxHealth: ENEMY_CONFIG.maxHealth / 2, movementSpeed: ENEMY_CONFIG.movementSpeed * 2, contactDamage: ENEMY_CONFIG.contactDamage, experience: 4 },
   superSkeleton: { maxHealth: ENEMY_CONFIG.maxHealth * 20, movementSpeed: ENEMY_CONFIG.movementSpeed / 3, contactDamage: ENEMY_CONFIG.contactDamage * 5, experience: 25 },
   finalBoss: { maxHealth: 3000, movementSpeed: ENEMY_CONFIG.movementSpeed / 3, contactDamage: 0, experience: 0 }

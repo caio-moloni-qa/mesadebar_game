@@ -20,7 +20,8 @@ const UPGRADE_ICON_KEYS: Record<string, string> = {
   damage: 'upgrade-damage-icon',
   cooldown: 'upgrade-cooldown-icon',
   speed: 'upgrade-speed-icon',
-  'boomerang-count': 'weapon-boomerang-icon'
+  'boomerang-count': 'weapon-boomerang-icon',
+  'sword-life-steal': 'upgrade-life-steal-icon'
 };
 
 const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
@@ -425,6 +426,8 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
+    const damageDealt = Math.min(amount, enemy.health);
+    if (this.weapon.id === 'sword' && this.player.lifeStealPercent > 0) this.player.heal(damageDealt * this.player.lifeStealPercent);
     if (enemy.takeDamage(amount)) this.defeatEnemy(enemy);
   }
   private soulProjectileHit(_playerObject: ArcadeColliderObject, projectileObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as SoulProjectile; if (!projectile.active) return; this.player.applySlow(projectile.slowPercent, projectile.slowDurationMs, this.time.now); const damaged = this.player.damage(projectile.damage, this.time.now); projectile.deactivate(); if (damaged && this.player.health <= 0) this.finish(false); }
@@ -438,14 +441,15 @@ export class GameScene extends Phaser.Scene {
       this.finish(true);
       return;
     }
-    let gem = this.gems.getFirstDead(false) as ExperienceGem | null;
-    if (!gem && !this.gems.isFull()) {
-      gem = new ExperienceGem(this);
-      this.gems.add(gem);
+    for (let index = 0; index < enemy.experienceDrops; index += 1) {
+      const gem = this.availableGem();
+      if (!gem) break;
+      const offset = new Phaser.Math.Vector2().setToPolar(Math.random() * Math.PI * 2, index === 0 ? 0 : Phaser.Math.Between(12, 28));
+      gem.activate(enemy.x + offset.x, enemy.y + offset.y, enemy.experience);
     }
-    if (gem) gem.activate(enemy.x, enemy.y, enemy.experience);
     enemy.deactivate();
   }
+  private availableGem(): ExperienceGem | null { let gem = this.gems.getFirstDead(false) as ExperienceGem | null; if (!gem && !this.gems.isFull()) { gem = new ExperienceGem(this); this.gems.add(gem); } return gem; }
   private playerHit(_playerObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const enemy = enemyObject as unknown as Enemy; if (!enemy.active || enemy.contactDamage <= 0 || !this.player.damage(enemy.contactDamage, this.time.now)) return; if (this.player.health <= 0) this.finish(false); }
   private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as ExperienceGem; if (!gem.active) return; this.experience += gem.value; gem.deactivate(); this.processExperience(); }
   private processExperience(): void { if (this.experience < this.experienceNeeded || this.levelPending) return; this.experience -= this.experienceNeeded; this.level += 1; this.experienceNeeded = requiredExperience(this.level); this.levelPending = true; this.showUpgrades(); }
