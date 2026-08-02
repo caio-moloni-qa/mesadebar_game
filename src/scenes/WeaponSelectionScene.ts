@@ -12,11 +12,11 @@ export class WeaponSelectionScene extends Phaser.Scene {
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x151b2b);
     this.add.text(GAME_WIDTH / 2, 120, `${this.character.name}: ESCOLHA UMA ARMA`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5);
     Object.values(WEAPONS).forEach((weapon, index) => {
-      const x = 430 + index * 420;
+      const x = 260 + index * 380;
       const startGame = (): void => {
         this.scene.start('game', { characterId: this.character.id, weaponId: weapon.id });
       };
-      const card = this.add.rectangle(x, 370, 340, 300, 0x49326e).setStrokeStyle(3, 0xa888d9).setInteractive({ useHandCursor: true });
+      const card = this.add.rectangle(x, 370, 330, 300, 0x49326e).setStrokeStyle(3, 0xa888d9).setInteractive({ useHandCursor: true });
       const icon = this.add.image(x, 270, `weapon-${weapon.id}-icon`).setDisplaySize(78, 78).setInteractive({ useHandCursor: true });
       const name = this.add.text(x, 335, weapon.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#fff0c2' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.add.text(x, 430, `${weapon.description}\n\nDano: ${weapon.baseDamage}\nRecarga: ${weapon.cooldown}ms\nAlcance: ${weapon.range}`, { fontFamily: FONT_FAMILY, fontSize: '17px', color: '#fff', align: 'center', wordWrap: { width: 280 } }).setOrigin(0.5);

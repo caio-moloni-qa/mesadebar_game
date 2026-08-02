@@ -18,14 +18,15 @@ interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyo
 const UPGRADE_ICON_KEYS: Record<string, string> = {
   damage: 'upgrade-damage-icon',
   cooldown: 'upgrade-cooldown-icon',
-  speed: 'upgrade-speed-icon'
+  speed: 'upgrade-speed-icon',
+  'boomerang-count': 'weapon-boomerang-icon'
 };
 
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private elapsedMs = 0; private spawnElapsed = 0; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
-  private paused = false; private ended = false; private levelPending = false; private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
+  private paused = false; private ended = false; private levelPending = false; private boomerangCount = 1; private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapon: WeaponConfig = WEAPONS.staff;
@@ -37,7 +38,7 @@ export class GameScene extends Phaser.Scene {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
     this.characterId = data.characterId; this.weapon = WEAPONS[data.weaponId];
     this.elapsedMs = 0; this.spawnElapsed = 0; this.lastAttackAt = 0; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
-    this.paused = false; this.ended = false; this.levelPending = false; this.levelOverlay = []; this.pauseOverlay = [];
+    this.paused = false; this.ended = false; this.levelPending = false; this.boomerangCount = 1; this.levelOverlay = []; this.pauseOverlay = [];
   }
 
   create(): void {
@@ -80,7 +81,33 @@ export class GameScene extends Phaser.Scene {
     enemy.activate(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, ENEMY_CONFIG.maxHealth * multiplier, ENEMY_CONFIG.experience);
   }
   private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.pursue(this.player, ENEMY_CONFIG.movementSpeed); return true; }); }
-  private autoAttack(): void { if (this.time.now < this.lastAttackAt + this.weapon.cooldown / this.player.attackSpeedMultiplier) return; const enemy = this.nearestEnemy(this.weapon.range); if (!enemy) return; if (this.weapon.type === 'cone') { this.lastAttackAt = this.time.now; const direction = new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize(); const minDot = Math.cos(Phaser.Math.DegToRad((this.weapon.coneAngle ?? 90) / 2)); this.enemies.children.each((child) => { const target = child as Enemy; const vector = new Phaser.Math.Vector2(target.x - this.player.x, target.y - this.player.y); if (target.active && vector.lengthSq() <= this.weapon.range ** 2 && direction.dot(vector.normalize()) >= minDot && target.takeDamage(this.weapon.baseDamage * this.player.damageMultiplier)) this.defeatEnemy(target); return true; }); this.playSwordSlash(direction); return; } let projectile = this.projectiles.getFirstDead(false) as Projectile | null; if (!projectile && this.projectiles.isFull()) return; if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); } this.lastAttackAt = this.time.now; projectile.fire(this.player.x, this.player.y, enemy.x, enemy.y, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.time.now); }
+  private autoAttack(): void {
+    if (this.time.now < this.lastAttackAt + this.weapon.cooldown / this.player.attackSpeedMultiplier) return;
+    const enemy = this.nearestEnemy(this.weapon.range);
+    if (!enemy) return;
+    if (this.weapon.type === 'cone') {
+      this.lastAttackAt = this.time.now;
+      const direction = new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize();
+      const minDot = Math.cos(Phaser.Math.DegToRad((this.weapon.coneAngle ?? 90) / 2));
+      this.enemies.children.each((child) => { const target = child as Enemy; const vector = new Phaser.Math.Vector2(target.x - this.player.x, target.y - this.player.y); if (target.active && vector.lengthSq() <= this.weapon.range ** 2 && direction.dot(vector.normalize()) >= minDot && target.takeDamage(this.weapon.baseDamage * this.player.damageMultiplier)) this.defeatEnemy(target); return true; });
+      this.playSwordSlash(direction);
+      return;
+    }
+    const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+    const count = this.weapon.type === 'boomerang' ? this.boomerangCount : 1;
+    const spread = Phaser.Math.DegToRad(30);
+    let launched = false;
+    for (let index = 0; index < count; index += 1) launched = this.launchProjectile(baseAngle + (index - (count - 1) / 2) * spread, this.weapon.type === 'boomerang') || launched;
+    if (launched) this.lastAttackAt = this.time.now;
+  }
+  private launchProjectile(angle: number, isBoomerang: boolean): boolean {
+    let projectile = this.projectiles.getFirstDead(false) as Projectile | null;
+    if (!projectile && this.projectiles.isFull()) return false;
+    if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); }
+    const range = this.weapon.range;
+    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.time.now, isBoomerang, range);
+    return true;
+  }
   private playSwordSlash(direction: Phaser.Math.Vector2): void {
     // Start the effect on the attacker. Its previous 62px offset placed the
     // 128px-wide slash over a nearby enemy, making it look like their attack.
@@ -102,9 +129,9 @@ export class GameScene extends Phaser.Scene {
     slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
   }
   private nearestEnemy(range: number): Enemy | null { let nearest: Enemy | null = null; let best = range ** 2; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
-  private updateProjectiles(): void { this.projectiles.children.each((child) => { const projectile = child as Projectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
+  private updateProjectiles(): void { this.projectiles.children.each((child) => { const projectile = child as Projectile; if (!projectile.active) return true; if (projectile.isBoomerang) projectile.updateBoomerang(this.player.x, this.player.y, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed); if (this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
   private updateGems(): void { this.gems.children.each((child) => { const gem = child as ExperienceGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
-  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active) return; if (enemy.takeDamage(projectile.damage)) this.defeatEnemy(enemy); if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; }
+  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; if (enemy.takeDamage(projectile.damage)) this.defeatEnemy(enemy); if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
   private defeatEnemy(enemy: Enemy): void {
     this.kills += 1;
     let gem = this.gems.getFirstDead(false) as ExperienceGem | null;
@@ -118,8 +145,8 @@ export class GameScene extends Phaser.Scene {
   private playerHit(_playerObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const enemy = enemyObject as unknown as Enemy; if (!enemy.active || !this.player.damage(ENEMY_CONFIG.contactDamage, this.time.now)) return; if (this.player.health <= 0) this.finish(false); }
   private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as ExperienceGem; if (!gem.active) return; this.experience += gem.value; gem.deactivate(); this.processExperience(); }
   private processExperience(): void { if (this.experience < this.experienceNeeded || this.levelPending) return; this.experience -= this.experienceNeeded; this.level += 1; this.experienceNeeded = requiredExperience(this.level); this.levelPending = true; this.showUpgrades(); }
-  private showUpgrades(): void { this.physics.pause(); const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30); const title = this.add.text(GAME_WIDTH / 2, 190, `NÍVEL ${this.level}! Escolha uma melhoria`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31); this.levelOverlay = [veil, title]; const spacing = 230; const startX = GAME_WIDTH / 2 - spacing; this.upgrades.choices().forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing)); }
-  private upgradeCard(upgrade: Upgrade, x: number): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; this.levelPending = false; this.physics.resume(); this.processExperience(); }); }
+  private showUpgrades(): void { this.physics.pause(); const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30); const title = this.add.text(GAME_WIDTH / 2, 190, `NÍVEL ${this.level}! Escolha uma melhoria`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31); this.levelOverlay = [veil, title]; const spacing = 230; const startX = GAME_WIDTH / 2 - spacing; this.upgrades.choices(this.weapon.id).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing)); }
+  private upgradeCard(upgrade: Upgrade, x: number): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { if (upgrade.id === 'boomerang-count') this.boomerangCount += 1; else upgrade.apply(this.player); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; this.levelPending = false; this.physics.resume(); this.processExperience(); }); }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) this.showPauseScreen(); else this.resumeFromPause(); }
   private showPauseScreen(): void { this.physics.pause(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
   private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void { const button = addOverlay(this.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(27).setInteractive({ useHandCursor: true })); button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' })); button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' })); button.on('pointerup', action); }
