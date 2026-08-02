@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Pixel Weapon"
+  short_description: "Create pixel-art weapon assets"
+  default_prompt: "Use $generate-pixel-weapon to create a 64x64 pixel-art sword icon."
