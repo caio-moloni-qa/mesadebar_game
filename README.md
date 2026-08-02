@@ -1,4 +1,4 @@
-# Crônicas de Éter
+# Mesa de Bar Survivor
 
 MVP survivors-like de fantasia medieval feito com Phaser, TypeScript e Vite.
 
