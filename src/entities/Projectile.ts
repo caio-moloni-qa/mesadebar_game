@@ -9,7 +9,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     super(scene, 0, 0, 'bolt');
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setCircle(6).setDepth(5).disableBody(true, true);
+    this.setDisplaySize(24, 24).setCircle(6, 6, 6).setDepth(5).disableBody(true, true);
   }
 
   fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number, lifetime: number, pierces: number, now: number): void {
@@ -18,8 +18,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.remainingPierces = pierces;
     this.expiresAt = now + lifetime;
     this.rotation = Phaser.Math.Angle.Between(x, y, targetX, targetY);
+    this.play('bolt-fly', true);
     this.scene.physics.velocityFromRotation(this.rotation, speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
   }
 
-  deactivate(): void { this.disableBody(true, true); }
+  deactivate(): void {
+    if (this.anims.isPlaying) this.anims.stop();
+    this.disableBody(true, true);
+  }
 }
