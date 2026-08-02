@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Pixel Upgrade"
+  short_description: "Create pixel-art upgrade icons"
+  default_prompt: "Use $generate-pixel-upgrade to create a 64x64 pixel-art damage upgrade icon."
