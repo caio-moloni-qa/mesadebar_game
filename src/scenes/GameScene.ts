@@ -44,6 +44,7 @@ const FINAL_BOSS_EXPLOSION_RADIUS = 650;
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
   private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
   private paused = false; private ended = false; private levelPending = false; private boomerangCount = 1; private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
@@ -74,11 +75,18 @@ export class GameScene extends Phaser.Scene {
     this.gems = this.physics.add.group({ classType: ExperienceGem, maxSize: 120, runChildUpdate: false });
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE).startFollow(this.player, true, 0.12, 0.12);
     this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,ESC') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.mobileMode = this.isTouchDevice();
+    if (this.mobileMode) this.createMobileControls();
     this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHit, undefined, this);
     this.physics.add.overlap(this.player, this.soulProjectiles, this.soulProjectileHit, undefined, this);
     this.physics.add.overlap(this.player, this.enemies, this.playerHit, undefined, this);
     this.physics.add.overlap(this.player, this.gems, this.collectGem, undefined, this);
-    this.hud = new GameHud(this); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.keyboard?.removeAllKeys(true));
+    this.hud = new GameHud(this); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.removeAllKeys(true);
+      this.input.off('pointermove', this.updateJoystick, this);
+      this.input.off('pointerup', this.releaseJoystick, this);
+      this.input.off('pointerupoutside', this.releaseJoystick, this);
+    });
   }
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) && !this.ended && !this.levelPending) this.togglePause();
@@ -88,7 +96,53 @@ export class GameScene extends Phaser.Scene {
     this.movePlayer(); this.spawnElapsed += delta; this.necromancerSpawnElapsed += delta; this.apparitionHordeElapsed += delta; this.superSkeletonSpawnElapsed += delta; this.spawnEnemies(); this.spawnEnemyVariants(); this.updateFinalBoss(delta); this.updateEnemies(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateBossArrow();
     this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
   }
-  private movePlayer(): void { const d = new Phaser.Math.Vector2((this.cursors.right.isDown || this.keys.D.isDown ? 1 : 0) - (this.cursors.left.isDown || this.keys.A.isDown ? 1 : 0), (this.cursors.down.isDown || this.keys.S.isDown ? 1 : 0) - (this.cursors.up.isDown || this.keys.W.isDown ? 1 : 0)); this.player.move(d); }
+  private movePlayer(): void {
+    const d = new Phaser.Math.Vector2(
+      (this.cursors.right.isDown || this.keys.D.isDown ? 1 : 0) - (this.cursors.left.isDown || this.keys.A.isDown ? 1 : 0),
+      (this.cursors.down.isDown || this.keys.S.isDown ? 1 : 0) - (this.cursors.up.isDown || this.keys.W.isDown ? 1 : 0)
+    );
+    if (this.mobileDirection.lengthSq() > 0) d.copy(this.mobileDirection);
+    this.player.move(d);
+  }
+  private isTouchDevice(): boolean {
+    const compactScreen = window.matchMedia('(max-width: 900px)').matches || window.matchMedia('(max-height: 900px) and (pointer: coarse)').matches;
+    return compactScreen && this.sys.game.device.input.touch && (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
+  }
+  private createMobileControls(): void {
+    const x = 120;
+    const y = GAME_HEIGHT - 120;
+    this.add.circle(x, y, 88, 0x111827, 0.48).setStrokeStyle(4, 0xb7a3e5, 0.62).setScrollFactor(0).setDepth(20);
+    this.joystickKnob = this.add.circle(x, y, 37, 0x8568c3, 0.82).setStrokeStyle(3, 0xf2eaff, 0.8).setScrollFactor(0).setDepth(21);
+    this.joystickZone = this.add.zone(x, y, 220, 220).setScrollFactor(0).setDepth(22).setInteractive();
+    this.joystickZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.paused || this.ended || this.levelPending || this.joystickPointerId !== null) return;
+      this.joystickPointerId = pointer.id;
+      this.updateJoystick(pointer);
+    });
+    this.input.on('pointermove', this.updateJoystick, this);
+    this.input.on('pointerup', this.releaseJoystick, this);
+    this.input.on('pointerupoutside', this.releaseJoystick, this);
+    this.input.addPointer(2);
+    this.add.text(x, y + 118, 'MOVER', { fontFamily: FONT_FAMILY, fontSize: '14px', color: '#e9e0ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(21).setAlpha(0.8);
+  }
+  private updateJoystick(pointer: Phaser.Input.Pointer): void {
+    if (pointer.id !== this.joystickPointerId || !this.joystickKnob) return;
+    const centerX = 120;
+    const centerY = GAME_HEIGHT - 120;
+    const offset = new Phaser.Math.Vector2(pointer.x - centerX, pointer.y - centerY);
+    const distance = offset.length();
+    const radius = 70;
+    if (distance > radius) offset.scale(radius / distance);
+    this.joystickKnob.setPosition(centerX + offset.x, centerY + offset.y);
+    this.mobileDirection.set(offset.x / radius, offset.y / radius);
+    if (distance < 12) this.mobileDirection.set(0, 0);
+  }
+  private releaseJoystick(pointer: Phaser.Input.Pointer): void {
+    if (pointer.id !== this.joystickPointerId) return;
+    this.joystickPointerId = null;
+    this.mobileDirection.set(0, 0);
+    this.joystickKnob?.setPosition(120, GAME_HEIGHT - 120);
+  }
   private spawnEnemies(): void { if (this.finalBossPending || this.finalBossActive) return; const stage = this.difficulty.stageFor(this.elapsedMs); if (this.spawnElapsed < stage.spawnInterval) return; this.spawnElapsed = 0; for (let i = 0; i < stage.count; i += 1) this.spawnEnemy(stage.healthMultiplier); }
   private spawnEnemy(multiplier: number): void {
     let enemy = this.enemies.getFirstDead(false) as Enemy | null;

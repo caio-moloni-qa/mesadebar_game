@@ -5,4 +5,4 @@ html, body, #app { width: 100%; height: 100%; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; overflow: hidden; background: #151b2b; }
 #app { width: 100vw; height: 100vh; }
-canvas { display: block; width: 100%; height: 100%; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }

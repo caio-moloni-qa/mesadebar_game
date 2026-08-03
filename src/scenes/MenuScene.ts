@@ -16,7 +16,10 @@ export class MenuScene extends Phaser.Scene {
     start.on('pointerover', () => start.setStyle({ backgroundColor: '#896bd0' }));
     start.on('pointerout', () => start.setStyle({ backgroundColor: '#6b4db3' }));
     start.on('pointerup', () => this.showCharacterSelector());
-    this.add.text(GAME_WIDTH / 2, 535, 'WASD / setas: mover   •   Esc: pausar', { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#aeb5c9' }).setOrigin(0.5);
+    const compactScreen = window.matchMedia('(max-width: 900px)').matches || window.matchMedia('(max-height: 900px) and (pointer: coarse)').matches;
+    const mobile = compactScreen && this.sys.game.device.input.touch && (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
+    const controlsHint = mobile ? 'Use o joystick no canto inferior esquerdo para mover' : 'WASD / setas: mover   •   Esc: pausar';
+    this.add.text(GAME_WIDTH / 2, 535, controlsHint, { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#aeb5c9' }).setOrigin(0.5);
   }
 
   private showCharacterSelector(): void {
