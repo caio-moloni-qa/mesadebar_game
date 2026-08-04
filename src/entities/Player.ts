@@ -10,10 +10,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public damageMultiplier = 1;
   public attackSpeedMultiplier = 1;
   public lifeStealPercent = 0;
+  public meleeRangeBonus = 0;
+  public meleeExtraAttackChance = 0;
+  public meleeExtraAttackMax = 0;
+  public whirlwindUnlocked = false;
+  public projectileExtraCount = 0;
+  public projectileRicochetChance = 0;
+  public projectileRicochetMax = 0;
+  public weaponUpgradeCount = 0;
+  public passiveHealAmount = 0;
+  public passiveHealIntervalMs = 0;
+  public lowHealthAttackSpeedBonus = 0;
   private invulnerableUntil = 0;
   private readonly animationTexture: string;
   private lastWalkDirection: 'down' | 'left' | 'right' | 'up' = 'down';
   private slows: Array<{ expiresAt: number; percent: number }> = [];
+  private passiveHealElapsed = 0;
 
   public armor = 0;
   public facing = new Phaser.Math.Vector2(1, 0);
@@ -25,7 +37,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     this.setDisplaySize(64, 64).setCollideWorldBounds(true).setDepth(4);
     this.setCircle(18, this.width / 2 - 18, this.height / 2 - 18);
-    if (typeof character !== 'string') { this.maxHealth = this.health = character.maxHealth; this.movementSpeed = character.movementSpeed; this.damageMultiplier = character.damageMultiplier; this.attackSpeedMultiplier = character.attackSpeedMultiplier; this.pickupRange = character.pickupRange; this.armor = character.armor; }
+    if (typeof character !== 'string') {
+      this.maxHealth = this.health = character.maxHealth;
+      this.movementSpeed = character.movementSpeed;
+      this.damageMultiplier = character.damageMultiplier;
+      this.attackSpeedMultiplier = character.attackSpeedMultiplier;
+      this.pickupRange = character.pickupRange;
+      this.armor = character.armor;
+      this.passiveHealAmount = character.passiveHealAmount ?? 0;
+      this.passiveHealIntervalMs = character.passiveHealIntervalMs ?? 0;
+      this.lowHealthAttackSpeedBonus = character.lowHealthAttackSpeedBonus ?? 0;
+    }
   }
 
   move(direction: Phaser.Math.Vector2): void {
@@ -80,6 +102,51 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   addLifeSteal(): void {
     this.lifeStealPercent += this.lifeStealPercent === 0 ? 0.005 : 0.0025;
+  }
+
+  addMeleeRangeBonus(amount: number): void {
+    this.meleeRangeBonus += amount;
+  }
+
+  addMeleeExtraAttack(): void {
+    this.meleeExtraAttackChance += 0.1;
+    this.meleeExtraAttackMax += 1;
+  }
+
+  unlockWhirlwind(): void {
+    this.whirlwindUnlocked = true;
+  }
+
+  addProjectileExtraCount(): void {
+    this.projectileExtraCount += 1;
+  }
+
+  addProjectileRicochet(): void {
+    this.projectileRicochetChance += 0.1;
+    this.projectileRicochetMax += 1;
+  }
+
+  addWeaponUpgrade(): void {
+    this.weaponUpgradeCount += 1;
+  }
+
+  hasExclusiveWeaponBuff(): boolean {
+    return this.weaponUpgradeCount >= 5;
+  }
+
+  effectiveAttackSpeedMultiplier(): number {
+    if (this.lowHealthAttackSpeedBonus <= 0) return this.attackSpeedMultiplier;
+    const missingHealthPercent = 1 - this.health / this.maxHealth;
+    return this.attackSpeedMultiplier + this.lowHealthAttackSpeedBonus * Phaser.Math.Clamp(missingHealthPercent, 0, 1);
+  }
+
+  updatePassiveEffects(delta: number): void {
+    if (this.passiveHealAmount <= 0 || this.passiveHealIntervalMs <= 0 || this.health <= 0) return;
+    this.passiveHealElapsed += delta;
+    while (this.passiveHealElapsed >= this.passiveHealIntervalMs) {
+      this.passiveHealElapsed -= this.passiveHealIntervalMs;
+      this.heal(this.passiveHealAmount);
+    }
   }
 
   heal(amount: number): void {
