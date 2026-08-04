@@ -34,11 +34,14 @@ export class UpgradeSystem {
     { id: 'projectile-wide-bolt', name: 'Feixe Amplificado', description: 'Aumenta o tamanho e a área de impacto dos projéteis mágicos', tier: 'common', apply: (player) => player.addProjectileSizeBonus() }
   ];
 
-  choices(weapon: WeaponConfig, player?: Player, weaponOnly = false): Upgrade[] {
+  choices(weapon: WeaponConfig, player?: Player, amount = 3): Upgrade[] {
     const weaponUpgrades = this.weaponSpecificUpgrades(weapon, player);
-    if (weaponOnly) return this.weightedChoices(weaponUpgrades, 3);
-    if (weaponUpgrades.length === 0) return [...this.upgrades].sort(() => Math.random() - 0.5).slice(0, 3);
-    return this.weightedChoices([...this.upgrades, ...weaponUpgrades], 3, this.upgrades);
+    if (weaponUpgrades.length === 0) return [...this.upgrades].sort(() => Math.random() - 0.5).slice(0, amount);
+    return this.weightedChoices([...this.upgrades, ...weaponUpgrades], amount, this.upgrades);
+  }
+
+  weaponUpgradePool(weapon: WeaponConfig, player?: Player): Upgrade[] {
+    return this.weaponSpecificUpgrades(weapon, player);
   }
 
   private weaponSpecificUpgrades(weapon: WeaponConfig, player?: Player): Upgrade[] {
