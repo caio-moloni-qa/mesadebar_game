@@ -12,6 +12,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   public explodesOnHit = false;
   public executeToken = 0;
   public criticalChance = 0;
+  public speed = 0;
+  public range = 0;
+  public weaponId = '';
   private origin = new Phaser.Math.Vector2();
   private maxOutboundDistance = 0;
   private readonly outboundHits = new Set<Phaser.GameObjects.GameObject>();
@@ -59,23 +62,23 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.remainingPierces = Number.POSITIVE_INFINITY;
   }
 
-  updateBoomerang(playerX: number, playerY: number, speed: number): void {
+  updateBoomerang(playerX: number, playerY: number): void {
     if (!this.isBoomerang) return;
     if (!this.returning && Phaser.Math.Distance.Between(this.origin.x, this.origin.y, this.x, this.y) >= this.maxOutboundDistance) this.returning = true;
     if (this.returning) {
       const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
-      this.scene.physics.velocityFromRotation(angle, speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
+      this.scene.physics.velocityFromRotation(angle, this.speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
       if (Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY) < 26) this.deactivate();
     }
     this.rotation += this.returning ? -0.34 : 0.34;
   }
 
-  updateThrownSword(playerX: number, playerY: number, speed: number): void {
+  updateThrownSword(playerX: number, playerY: number): void {
     if (!this.isThrownSword) return;
     if (!this.returning && Phaser.Math.Distance.Between(this.origin.x, this.origin.y, this.x, this.y) >= this.maxOutboundDistance) this.returning = true;
     if (this.returning) {
       const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
-      this.scene.physics.velocityFromRotation(angle, speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
+      this.scene.physics.velocityFromRotation(angle, this.speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
       if (Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY) < 30) this.deactivate();
     }
     this.rotation += this.returning ? -0.28 : 0.28;
@@ -112,6 +115,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.explodesOnHit = false;
     this.executeToken = 0;
     this.criticalChance = 0;
+    this.speed = 0;
+    this.range = 0;
+    this.weaponId = '';
   }
 
   private updateHitCircle(displayRadius: number): void {

@@ -15,6 +15,15 @@ import { WEAPONS, WeaponConfig } from '../config/weapons';
 
 type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile;
 interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; playerTexture?: string; }
+interface ActiveWeapon {
+  config: WeaponConfig;
+  lastAttackAt: number;
+  lastWhirlwindAt: number;
+  thrownSwordCooldownReadyAt: number;
+  thrownSwordVolleyActive: boolean;
+  staffAttacksSinceExecute: number;
+  staffExecuteToken: number;
+}
 
 const UPGRADE_ICON_KEYS: Record<string, string> = {
   damage: 'upgrade-damage-icon',
@@ -52,11 +61,12 @@ export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
-  private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
-  private paused = false; private ended = false; private levelPending = false; private lastWhirlwindAt = 0; private thrownSwordCooldownReadyAt = 0; private thrownSwordVolleyActive = false; private staffAttacksSinceExecute = 0; private staffExecuteToken = 0; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
+  private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
+  private paused = false; private ended = false; private levelPending = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
-  private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapon: WeaponConfig = WEAPONS.staff;
+  private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapons: ActiveWeapon[] = [];
+  private get primaryWeapon(): WeaponConfig { return this.weapons[0].config; }
   private finalBoss?: Enemy; private finalBossPending = false; private finalBossActive = false; private finalBossMessage?: Phaser.GameObjects.Text; private finalBossArrow?: Phaser.GameObjects.Container; private finalBossCountdown?: Phaser.GameObjects.Text; private finalBossCleanupAt = 0;
   private bossSummonElapsed = 0; private bossChannelElapsed = 0; private bossMeleeLastAt = 0; private bossChannelActive = false; private bossShieldActive = false; private bossChannelStartedAt = 0; private bossShield = 0;
   private bossShieldAura?: Phaser.GameObjects.Arc; private bossShieldBolts: Phaser.GameObjects.Sprite[] = []; private nextBossShieldBoltAt = 0; private bossShieldBack?: Phaser.GameObjects.Rectangle; private bossShieldFill?: Phaser.GameObjects.Rectangle;
@@ -66,10 +76,13 @@ export class GameScene extends Phaser.Scene {
 
   init(data: GameSceneData): void {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
-    this.characterId = data.characterId; this.weapon = WEAPONS[data.weaponId];
-    this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.lastAttackAt = 0; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
-    this.paused = false; this.ended = false; this.levelPending = false; this.lastWhirlwindAt = 0; this.thrownSwordCooldownReadyAt = 0; this.thrownSwordVolleyActive = false; this.staffAttacksSinceExecute = 0; this.staffExecuteToken = 0; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
+    this.characterId = data.characterId; this.weapons = [this.createActiveWeapon(WEAPONS[data.weaponId])];
+    this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
+    this.paused = false; this.ended = false; this.levelPending = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
     this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.finalBossCountdown = undefined; this.finalBossCleanupAt = 0; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossShieldActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
+  }
+  private createActiveWeapon(config: WeaponConfig): ActiveWeapon {
+    return { config, lastAttackAt: 0, lastWhirlwindAt: 0, thrownSwordCooldownReadyAt: 0, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0 };
   }
 
   create(): void {
@@ -207,24 +220,27 @@ export class GameScene extends Phaser.Scene {
   private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) { if (enemy === this.finalBoss && this.bossChannelActive) enemy.pauseMovement(); else enemy.pursue(this.player); } return true; }); }
   private updateNecromancerAttacks(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active && enemy.canCastSoul(this.time.now)) this.launchSoulProjectile(enemy); return true; }); }
   private autoAttack(): void {
-    if (this.time.now < this.lastAttackAt + this.weapon.cooldown / this.player.effectiveAttackSpeedMultiplier()) return;
-    const enemy = this.nearestEnemy(this.attackRange());
+    this.weapons.forEach((weapon) => this.attackWithWeapon(weapon));
+  }
+  private attackWithWeapon(weapon: ActiveWeapon): void {
+    if (this.time.now < weapon.lastAttackAt + weapon.config.cooldown / this.player.effectiveAttackSpeedMultiplier()) return;
+    const enemy = this.nearestEnemy(this.attackRange(weapon));
     if (!enemy) return;
-    if (this.weapon.type === 'cone') {
-      this.lastAttackAt = this.time.now;
+    if (weapon.config.type === 'cone') {
+      weapon.lastAttackAt = this.time.now;
       const direction = new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize();
-      this.performMeleeAttack(direction);
-      this.queueMeleeExtraAttacks(direction);
+      this.performMeleeAttack(weapon, direction);
+      this.queueMeleeExtraAttacks(weapon, direction);
       return;
     }
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
     const count = 1 + this.player.projectileExtraCount;
-    const staffExecuteToken = this.staffExecuteTokenForAttack();
+    const staffExecuteToken = this.staffExecuteTokenForAttack(weapon);
     let launched = false;
     this.projectileAngles(baseAngle, count).forEach((angle) => {
-      launched = this.launchProjectile(angle, this.weapon.type === 'boomerang', staffExecuteToken) || launched;
+      launched = this.launchProjectile(weapon, angle, weapon.config.type === 'boomerang', staffExecuteToken) || launched;
     });
-    if (launched) this.lastAttackAt = this.time.now;
+    if (launched) weapon.lastAttackAt = this.time.now;
   }
   private projectileAngles(baseAngle: number, count: number): number[] {
     const spread = Phaser.Math.DegToRad(30);
@@ -235,28 +251,28 @@ export class GameScene extends Phaser.Scene {
     }
     return angles;
   }
-  private staffExecuteTokenForAttack(): number {
-    if (this.weapon.id !== 'staff' || !this.player.hasExclusiveWeaponBuff()) return 0;
-    if (this.staffAttacksSinceExecute >= 3) {
-      this.staffAttacksSinceExecute = 0;
-      this.staffExecuteToken += 1;
-      return this.staffExecuteToken;
+  private staffExecuteTokenForAttack(weapon: ActiveWeapon): number {
+    if (weapon.config.id !== 'staff' || !this.player.hasExclusiveWeaponBuff()) return 0;
+    if (weapon.staffAttacksSinceExecute >= 3) {
+      weapon.staffAttacksSinceExecute = 0;
+      weapon.staffExecuteToken += 1;
+      return weapon.staffExecuteToken;
     }
-    this.staffAttacksSinceExecute += 1;
+    weapon.staffAttacksSinceExecute += 1;
     return 0;
   }
-  private performMeleeAttack(direction: Phaser.Math.Vector2): boolean {
+  private performMeleeAttack(weapon: ActiveWeapon, direction: Phaser.Math.Vector2): boolean {
     const attackDirection = direction.clone().normalize();
-    const minDot = Math.cos(Phaser.Math.DegToRad((this.weapon.coneAngle ?? 90) / 2));
+    const minDot = Math.cos(Phaser.Math.DegToRad((weapon.config.coneAngle ?? 90) / 2));
     let hit = false;
     this.enemies.children.each((child) => {
       const target = child as Enemy;
       if (!target.active) return true;
       const vector = new Phaser.Math.Vector2(target.x - this.player.x, target.y - this.player.y);
       if (vector.lengthSq() <= 0) return true;
-      const range = this.attackRange() + this.enemyRangePadding(target);
+      const range = this.attackRange(weapon) + this.enemyRangePadding(target);
       if (vector.lengthSq() <= range ** 2 && attackDirection.dot(vector.normalize()) >= minDot) {
-        this.damageEnemy(target, this.weapon.baseDamage * this.player.damageMultiplier);
+        this.damageEnemy(target, weapon.config.baseDamage * this.player.damageMultiplier, weapon.config.id);
         hit = true;
       }
       return true;
@@ -264,24 +280,27 @@ export class GameScene extends Phaser.Scene {
     this.playSwordSlash(attackDirection);
     return hit;
   }
-  private queueMeleeExtraAttacks(direction: Phaser.Math.Vector2): void {
+  private queueMeleeExtraAttacks(weapon: ActiveWeapon, direction: Phaser.Math.Vector2): void {
     if (this.player.meleeExtraAttackMax <= 0 || Math.random() >= this.player.meleeExtraAttackChance) return;
     const fallbackDirection = direction.clone().normalize();
     for (let index = 1; index <= this.player.meleeExtraAttackMax; index += 1) {
       this.time.delayedCall(index * 110, () => {
-        if (this.ended || this.paused || this.levelPending || this.weapon.type !== 'cone') return;
-        const enemy = this.nearestEnemy(this.attackRange());
+        if (this.ended || this.paused || this.levelPending || weapon.config.type !== 'cone') return;
+        const enemy = this.nearestEnemy(this.attackRange(weapon));
         const attackDirection = enemy
           ? new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize()
           : fallbackDirection;
-        this.performMeleeAttack(attackDirection);
+        this.performMeleeAttack(weapon, attackDirection);
       });
     }
   }
   private updateMeleeWhirlwind(): void {
-    if (this.weapon.type !== 'cone' || !this.player.whirlwindUnlocked || this.time.now < this.lastWhirlwindAt + 5000) return;
-    if (!this.nearestEnemy(this.attackRange())) return;
-    this.lastWhirlwindAt = this.time.now;
+    this.weapons.filter((weapon) => weapon.config.type === 'cone').forEach((weapon) => this.updateMeleeWhirlwindFor(weapon));
+  }
+  private updateMeleeWhirlwindFor(weapon: ActiveWeapon): void {
+    if (!this.player.whirlwindUnlocked || this.time.now < weapon.lastWhirlwindAt + 5000) return;
+    if (!this.nearestEnemy(this.attackRange(weapon))) return;
+    weapon.lastWhirlwindAt = this.time.now;
     [
       new Phaser.Math.Vector2(1, 0),
       new Phaser.Math.Vector2(0, 1),
@@ -289,30 +308,31 @@ export class GameScene extends Phaser.Scene {
       new Phaser.Math.Vector2(0, -1)
     ].forEach((direction, index) => {
       this.time.delayedCall(index * 70, () => {
-        if (this.ended || this.paused || this.levelPending || this.weapon.type !== 'cone') return;
-        this.performMeleeAttack(direction);
+        if (this.ended || this.paused || this.levelPending) return;
+        this.performMeleeAttack(weapon, direction);
       });
     });
   }
   private updateThrownSwordBuff(): void {
-    if (this.weapon.id !== 'sword' || !this.player.hasExclusiveWeaponBuff() || this.thrownSwordVolleyActive || this.time.now < this.thrownSwordCooldownReadyAt) return;
+    const swordWeapon = this.weapons.find((weapon) => weapon.config.id === 'sword');
+    if (!swordWeapon || !this.player.hasExclusiveWeaponBuff() || swordWeapon.thrownSwordVolleyActive || this.time.now < swordWeapon.thrownSwordCooldownReadyAt) return;
     const enemy = this.nearestEnemy(WORLD_SIZE);
     if (!enemy) return;
-    this.thrownSwordVolleyActive = true;
+    swordWeapon.thrownSwordVolleyActive = true;
     [
       new Phaser.Math.Vector2(1, 0),
       new Phaser.Math.Vector2(0, 1),
       new Phaser.Math.Vector2(-1, 0),
       new Phaser.Math.Vector2(0, -1)
-    ].forEach((direction) => this.launchThrownSword(direction));
+    ].forEach((direction) => this.launchThrownSword(swordWeapon, direction));
   }
   private thrownSwordCooldownMs(): number {
     return Math.max(1000, 10000 - Math.max(0, this.player.weaponUpgradeCount - 5) * 1000);
   }
-  private attackRange(): number {
-    return this.weapon.range + (this.weapon.type === 'cone' ? this.player.meleeRangeBonus : 0);
+  private attackRange(weapon: ActiveWeapon): number {
+    return weapon.config.range + (weapon.config.type === 'cone' ? this.player.meleeRangeBonus : 0);
   }
-  private launchThrownSword(direction: Phaser.Math.Vector2): void {
+  private launchThrownSword(weapon: ActiveWeapon, direction: Phaser.Math.Vector2): void {
     let projectile = this.projectiles.getFirstDead(false) as Projectile | null;
     if (!projectile && this.projectiles.isFull()) return;
     if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); }
@@ -321,7 +341,10 @@ export class GameScene extends Phaser.Scene {
     const speed = 520;
     const distance = Phaser.Math.Distance.Between(start.x, start.y, edge.x, edge.y);
     const lifetime = Math.ceil((distance * 2) / speed * 1000) + 600;
-    projectile.fire(start.x, start.y, edge.x, edge.y, this.weapon.baseDamage * this.player.damageMultiplier, speed, lifetime, Number.POSITIVE_INFINITY, 0, this.time.now, false, distance);
+    projectile.fire(start.x, start.y, edge.x, edge.y, weapon.config.baseDamage * this.player.damageMultiplier, speed, lifetime, Number.POSITIVE_INFINITY, 0, this.time.now, false, distance);
+    projectile.speed = speed;
+    projectile.range = distance;
+    projectile.weaponId = weapon.config.id;
     projectile.configureThrownSword();
   }
   private worldEdgePoint(start: Phaser.Math.Vector2, direction: Phaser.Math.Vector2): Phaser.Math.Vector2 {
@@ -333,12 +356,16 @@ export class GameScene extends Phaser.Scene {
     const distance = Math.max(0, Math.min(...candidates.filter((candidate) => candidate > 0)));
     return new Phaser.Math.Vector2(start.x + direction.x * distance, start.y + direction.y * distance);
   }
-  private launchProjectile(angle: number, isBoomerang: boolean, staffExecuteToken = 0): boolean {
+  private launchProjectile(weapon: ActiveWeapon, angle: number, isBoomerang: boolean, staffExecuteToken = 0): boolean {
     let projectile = this.projectiles.getFirstDead(false) as Projectile | null;
     if (!projectile && this.projectiles.isFull()) return false;
     if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); }
-    const range = this.weapon.range;
-    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range, 1 + this.player.projectileSizeBonus);
+    const range = weapon.config.range;
+    const speed = weapon.config.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed;
+    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, weapon.config.baseDamage * this.player.damageMultiplier, speed, weapon.config.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range, 1 + this.player.projectileSizeBonus);
+    projectile.speed = speed;
+    projectile.range = range;
+    projectile.weaponId = weapon.config.id;
     projectile.executesCommonEnemy = staffExecuteToken > 0;
     projectile.explodesOnHit = staffExecuteToken > 0;
     projectile.executeToken = staffExecuteToken;
@@ -606,20 +633,21 @@ export class GameScene extends Phaser.Scene {
     this.projectiles.children.each((child) => {
       const projectile = child as Projectile;
       if (!projectile.active) return true;
-      if (projectile.isBoomerang) projectile.updateBoomerang(this.player.x, this.player.y, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed);
-      if (projectile.isThrownSword) projectile.updateThrownSword(this.player.x, this.player.y, 520);
+      if (projectile.isBoomerang) projectile.updateBoomerang(this.player.x, this.player.y);
+      if (projectile.isThrownSword) projectile.updateThrownSword(this.player.x, this.player.y);
       if (this.time.now >= projectile.expiresAt) projectile.deactivate();
       if (projectile.active && projectile.isThrownSword) activeThrownSwords += 1;
       return true;
     });
-    if (this.thrownSwordVolleyActive && activeThrownSwords === 0) {
-      this.thrownSwordVolleyActive = false;
-      this.thrownSwordCooldownReadyAt = this.time.now + this.thrownSwordCooldownMs();
+    const swordWeapon = this.weapons.find((weapon) => weapon.config.id === 'sword');
+    if (swordWeapon?.thrownSwordVolleyActive && activeThrownSwords === 0) {
+      swordWeapon.thrownSwordVolleyActive = false;
+      swordWeapon.thrownSwordCooldownReadyAt = this.time.now + this.thrownSwordCooldownMs();
     }
   }
   private updateSoulProjectiles(): void { this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
   private updateGems(): void { this.gems.children.each((child) => { const gem = child as ExperienceGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
-  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; this.damageEnemy(enemy, this.projectileDamage(projectile, enemy)); this.triggerStaffExplosion(projectile, enemy); if (this.tryProjectileRicochet(projectile, enemy)) return; if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
+  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; this.damageEnemy(enemy, this.projectileDamage(projectile, enemy), projectile.weaponId); this.triggerStaffExplosion(projectile, enemy); if (this.tryProjectileRicochet(projectile, enemy)) return; if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
   private projectileDamage(projectile: Projectile, enemy: Enemy): number {
     if (this.shouldExecuteWithStaff(projectile, enemy)) return enemy.health;
     if (projectile.criticalChance > 0 && Math.random() < projectile.criticalChance) {
@@ -642,7 +670,7 @@ export class GameScene extends Phaser.Scene {
       this.enemies.children.each((child) => {
         const enemy = child as Enemy;
         if (!enemy.active || enemy === hitEnemy) return true;
-        if (Phaser.Math.Distance.Between(hitEnemy.x, hitEnemy.y, enemy.x, enemy.y) <= radius) this.damageEnemy(enemy, projectile.damage);
+        if (Phaser.Math.Distance.Between(hitEnemy.x, hitEnemy.y, enemy.x, enemy.y) <= radius) this.damageEnemy(enemy, projectile.damage, projectile.weaponId);
         return true;
       });
     }
@@ -671,12 +699,12 @@ export class GameScene extends Phaser.Scene {
     if (projectile.remainingRicochets <= 0 || Math.random() >= this.player.projectileRicochetChance) return false;
     const target = this.nearestRicochetTarget(projectile, hitEnemy);
     if (!target) return false;
-    projectile.ricochetTo(target.x, target.y, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.time.now, projectile.isBoomerang);
+    projectile.ricochetTo(target.x, target.y, projectile.speed, this.time.now, projectile.isBoomerang);
     return true;
   }
   private nearestRicochetTarget(projectile: Projectile, hitEnemy: Enemy): Enemy | null {
     let nearest: Enemy | null = null;
-    let best = this.weapon.range ** 2;
+    let best = projectile.range ** 2;
     this.enemies.children.each((child) => {
       const enemy = child as Enemy;
       if (!enemy.active || enemy === hitEnemy || projectile.hasDamaged(enemy)) return true;
@@ -689,7 +717,7 @@ export class GameScene extends Phaser.Scene {
     });
     return nearest;
   }
-  private damageEnemy(enemy: Enemy, amount: number): void {
+  private damageEnemy(enemy: Enemy, amount: number, sourceWeaponId?: string): void {
     if (enemy === this.finalBoss && this.bossShieldActive && this.bossShield > 0) {
       const overflowDamage = Math.max(0, amount - this.bossShield);
       this.bossShield = Math.max(0, this.bossShield - amount);
@@ -697,12 +725,12 @@ export class GameScene extends Phaser.Scene {
       this.updateBossShieldVisual();
       if (this.bossShield <= 0) {
         this.endBossChannel();
-        if (overflowDamage > 0) this.damageEnemy(enemy, overflowDamage);
+        if (overflowDamage > 0) this.damageEnemy(enemy, overflowDamage, sourceWeaponId);
       }
       return;
     }
     const damageDealt = Math.min(amount, enemy.health);
-    if (this.weapon.id === 'sword' && this.player.lifeStealPercent > 0) this.player.heal(damageDealt * this.player.lifeStealPercent);
+    if (sourceWeaponId === 'sword' && this.player.lifeStealPercent > 0) this.player.heal(damageDealt * this.player.lifeStealPercent);
     if (enemy.takeDamage(amount)) this.defeatEnemy(enemy);
   }
   private soulProjectileHit(_playerObject: ArcadeColliderObject, projectileObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as SoulProjectile; if (!projectile.active) return; this.player.applySlow(projectile.slowPercent, projectile.slowDurationMs, this.time.now); const damaged = this.player.damage(projectile.damage, this.time.now); projectile.deactivate(); if (damaged && this.player.health <= 0) this.finish(false); }
@@ -730,7 +758,7 @@ export class GameScene extends Phaser.Scene {
   private processExperience(): void { if (this.experience < this.experienceNeeded || this.levelPending) return; this.experience -= this.experienceNeeded; this.level += 1; this.experienceNeeded = requiredExperience(this.level); this.levelPending = true; this.showUpgrades(); }
   private prepareStartingWeaponUpgrades(): void {
     const character = CHARACTERS[this.characterId];
-    if (character.preferredWeaponId !== this.weapon.id || !character.startingWeaponUpgradeChoices) return;
+    if (character.preferredWeaponId !== this.primaryWeapon.id || !character.startingWeaponUpgradeChoices) return;
     this.startingUpgradeChoicesRemaining = character.startingWeaponUpgradeChoices;
     this.startingUpgradeChoicesTotal = character.startingWeaponUpgradeChoices;
     this.levelPending = true;
@@ -765,12 +793,12 @@ export class GameScene extends Phaser.Scene {
     this.levelOverlay = [veil, title];
     const spacing = 230;
     const startX = GAME_WIDTH / 2 - spacing;
-    this.upgrades.choices(this.weapon, this.player, weaponOnly).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
+    this.upgrades.choices(this.primaryWeapon, this.player, weaponOnly).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
   }
   private showUpgrades(): void { this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }); }
   private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.player.addWeaponUpgrade(); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
   private updateBuildHud(): void {
-    const weaponIcon = `weapon-${this.weapon.id}-icon`;
+    const weaponIcon = `weapon-${this.primaryWeapon.id}-icon`;
     const upgrades = [...this.selectedUpgradeCounts.entries()].map(([id, count]) => ({ textureKey: UPGRADE_ICON_KEYS[id] ?? 'upgrade-damage-icon', count }));
     this.hud.setBuild([{ textureKey: weaponIcon, count: 1 }, ...upgrades]);
   }
