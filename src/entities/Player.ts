@@ -17,6 +17,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public projectileExtraCount = 0;
   public projectileRicochetChance = 0;
   public projectileRicochetMax = 0;
+  public projectileSizeBonus = 0;
   public weaponUpgradeCount = 0;
   public passiveHealAmount = 0;
   public passiveHealIntervalMs = 0;
@@ -124,6 +125,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   addProjectileRicochet(): void {
     this.projectileRicochetChance += 0.1;
     this.projectileRicochetMax += 1;
+  }
+
+  addProjectileSizeBonus(): void {
+    this.projectileSizeBonus += this.projectileSizeBonus === 0 ? 0.35 : 0.15;
   }
 
   addWeaponUpgrade(): void {
