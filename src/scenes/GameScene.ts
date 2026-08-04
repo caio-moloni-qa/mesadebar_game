@@ -734,40 +734,65 @@ export class GameScene extends Phaser.Scene {
     this.startingUpgradeChoicesRemaining = character.startingWeaponUpgradeChoices;
     this.startingUpgradeChoicesTotal = character.startingWeaponUpgradeChoices;
     this.levelPending = true;
-    this.time.delayedCall(120, () => this.showStartingWeaponUpgrade());
+    this.time.delayedCall(120, () => this.showStartingWeaponUpgradesScreen());
   }
-  private showStartingWeaponUpgrade(): void {
-    if (this.startingUpgradeChoicesRemaining <= 0) {
-      this.levelPending = false;
-      this.physics.resume();
-      return;
-    }
+  private showStartingWeaponUpgradesScreen(): void {
+    this.physics.pause();
     const character = CHARACTERS[this.characterId];
-    const currentChoice = this.startingUpgradeChoicesTotal - this.startingUpgradeChoicesRemaining + 1;
-    this.showUpgradeSelection(
-      `${character.name}: escolha uma melhoria inicial (${currentChoice}/${this.startingUpgradeChoicesTotal})`,
-      () => {
-        this.startingUpgradeChoicesRemaining -= 1;
-        if (this.startingUpgradeChoicesRemaining > 0) this.time.delayedCall(90, () => this.showStartingWeaponUpgrade());
-        else {
-          this.levelPending = false;
-          this.physics.resume();
-          this.processExperience();
-        }
-      },
-      true
-    );
+    const pool = this.upgrades.weaponUpgradePool(this.weapon, this.player);
+    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
+    const title = this.add.text(GAME_WIDTH / 2, 160, this.startingWeaponUpgradesTitle(character.name), { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
+    this.levelOverlay = [veil, title];
+    const spacing = 230;
+    const startX = GAME_WIDTH / 2 - (spacing * (pool.length - 1)) / 2;
+    const picks = new Map<string, number>();
+    pool.forEach((upgrade, index) => this.startingUpgradeCard(upgrade, startX + index * spacing, picks, title));
   }
-  private showUpgradeSelection(titleText: string, onSelect: () => void, weaponOnly = false): void {
+  private startingWeaponUpgradesTitle(characterName: string): string {
+    return `${characterName}: escolha ${this.startingUpgradeChoicesTotal} melhorias iniciais (restam ${this.startingUpgradeChoicesRemaining})`;
+  }
+  private startingUpgradeCard(upgrade: Upgrade, x: number, picks: Map<string, number>, title: Phaser.GameObjects.Text): void {
+    const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const iconKey = UPGRADE_ICON_KEYS[upgrade.id];
+    const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
+    const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const badge = this.add.text(x + 84, 306, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffffff', backgroundColor: '#8a5cf6', padding: { x: 6, y: 2 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33);
+    this.levelOverlay.push(card, icon, name, description, badge);
+    card.on('pointerup', () => {
+      if (this.startingUpgradeChoicesRemaining <= 0) return;
+      upgrade.apply(this.player);
+      this.player.addWeaponUpgrade();
+      this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1);
+      this.updateBuildHud();
+      picks.set(upgrade.id, (picks.get(upgrade.id) ?? 0) + 1);
+      badge.setText(`×${picks.get(upgrade.id)}`);
+      this.startingUpgradeChoicesRemaining -= 1;
+      if (this.startingUpgradeChoicesRemaining <= 0) {
+        this.levelOverlay.forEach((object) => object.destroy());
+        this.levelOverlay = [];
+        this.levelPending = false;
+        this.physics.resume();
+        this.processExperience();
+        return;
+      }
+      title.setText(this.startingWeaponUpgradesTitle(CHARACTERS[this.characterId].name));
+    });
+  }
+  private showUpgradeSelection(titleText: string, onSelect: () => void, amount = 3): void {
     this.physics.pause();
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
+    const choices = this.upgrades.choices(this.weapon, this.player, amount);
     const spacing = 230;
-    const startX = GAME_WIDTH / 2 - spacing;
-    this.upgrades.choices(this.weapon, this.player, weaponOnly).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
+    const startX = GAME_WIDTH / 2 - (spacing * (choices.length - 1)) / 2;
+    choices.forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
   }
-  private showUpgrades(): void { this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }); }
+  private showUpgrades(): void {
+    const amount = this.level >= 5 ? 5 : 3;
+    this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }, amount);
+  }
   private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.player.addWeaponUpgrade(); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
   private updateBuildHud(): void {
     const weaponIcon = `weapon-${this.weapon.id}-icon`;
