@@ -34,8 +34,8 @@ export class UpgradeSystem {
   ];
 
   choices(weapon: WeaponConfig, player?: Player): Upgrade[] {
-    if (weapon.type === 'cone') return this.weightedChoices(this.availableMeleeUpgrades(player), 3);
-    if (weapon.type === 'projectile' || weapon.type === 'boomerang') return this.weightedChoices(this.availableProjectileUpgrades(), 3);
+    if (weapon.type === 'cone') return this.weightedChoices(this.availableMeleeUpgrades(player), 3, this.upgrades);
+    if (weapon.type === 'projectile' || weapon.type === 'boomerang') return this.weightedChoices(this.availableProjectileUpgrades(), 3, this.upgrades);
 
     const available = [...this.upgrades];
     return available.sort(() => Math.random() - 0.5).slice(0, 3);
@@ -43,17 +43,23 @@ export class UpgradeSystem {
 
   private availableMeleeUpgrades(player?: Player): Upgrade[] {
     const rareUpgrades = player?.whirlwindUnlocked ? [] : this.meleeRareUpgrades;
-    return [...this.meleeCommonUpgrades, ...rareUpgrades];
+    return [...this.upgrades, ...this.meleeCommonUpgrades, ...rareUpgrades];
   }
 
   private availableProjectileUpgrades(): Upgrade[] {
     return [...this.upgrades, ...this.projectileCommonUpgrades];
   }
 
-  private weightedChoices(available: Upgrade[], amount: number): Upgrade[] {
+  private weightedChoices(available: Upgrade[], amount: number, guaranteedPool: Upgrade[] = []): Upgrade[] {
     const choices: Upgrade[] = [];
     const remaining = [...available];
-    for (let index = 0; index < amount && remaining.length > 0; index += 1) {
+    const guaranteedChoices = remaining.filter((upgrade) => guaranteedPool.some((guaranteed) => guaranteed.id === upgrade.id));
+    if (guaranteedChoices.length > 0) {
+      const selected = guaranteedChoices[Math.floor(Math.random() * guaranteedChoices.length)];
+      choices.push(selected);
+      remaining.splice(remaining.indexOf(selected), 1);
+    }
+    while (choices.length < amount && remaining.length > 0) {
       const preferredTier: UpgradeTier = Math.random() < 0.7 ? 'common' : 'rare';
       const tierPool = remaining.filter((upgrade) => upgrade.tier === preferredTier);
       const fallbackPool = remaining.filter((upgrade) => upgrade.tier !== preferredTier);

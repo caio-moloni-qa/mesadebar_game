@@ -21,12 +21,12 @@ const UPGRADE_ICON_KEYS: Record<string, string> = {
   cooldown: 'upgrade-cooldown-icon',
   speed: 'upgrade-speed-icon',
   'boomerang-count': 'weapon-boomerang-icon',
-  'projectile-extra-count': 'weapon-staff-icon',
-  'projectile-ricochet': 'weapon-staff-icon',
   'sword-life-steal': 'upgrade-life-steal-icon',
-  'melee-range': 'weapon-sword-icon',
-  'melee-extra-attack': 'upgrade-cooldown-icon',
-  'melee-whirlwind': 'weapon-sword-icon'
+  'projectile-extra-count': 'upgrade-arcane-blessing-icon',
+  'projectile-ricochet': 'upgrade-arcane-bounce-icon',
+  'melee-range': 'upgrade-colossus-arms-icon',
+  'melee-extra-attack': 'upgrade-chained-fury-icon',
+  'melee-whirlwind': 'upgrade-whirlwind-attack-icon'
 };
 
 const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
@@ -40,23 +40,24 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
 const FINAL_BOSS_MESSAGE_MS = 2600;
 const FINAL_BOSS_SUMMON_INTERVAL_MS = 10000;
 const FINAL_BOSS_MELEE_COOLDOWN_MS = 7000;
-const FINAL_BOSS_CHANNEL_INTERVAL_MS = 60000;
-const FINAL_BOSS_CHANNEL_DURATION_MS = 20000;
-const FINAL_BOSS_SHIELD_HEALTH = 450;
+const FINAL_BOSS_CHANNEL_INTERVAL_MS = 40000;
+const FINAL_BOSS_CHANNEL_DURATION_MS = 15000;
+const FINAL_BOSS_SHIELD_DEADLINE_MS = 20000;
+const FINAL_BOSS_SHIELD_HEALTH = 500;
 const FINAL_BOSS_MELEE_RADIUS = 250;
-const FINAL_BOSS_EXPLOSION_RADIUS = 650;
+const FINAL_BOSS_EXPLOSION_RADIUS = 700;
 
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
   private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private lastAttackAt = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
-  private paused = false; private ended = false; private levelPending = false; private lastWhirlwindAt = 0; private thrownSwordCooldownReadyAt = 0; private thrownSwordVolleyActive = false; private staffAttacksSinceExecute = 0; private staffExecuteToken = 0; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
+  private paused = false; private ended = false; private levelPending = false; private lastWhirlwindAt = 0; private thrownSwordCooldownReadyAt = 0; private thrownSwordVolleyActive = false; private staffAttacksSinceExecute = 0; private staffExecuteToken = 0; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapon: WeaponConfig = WEAPONS.staff;
-  private finalBoss?: Enemy; private finalBossPending = false; private finalBossActive = false; private finalBossMessage?: Phaser.GameObjects.Text; private finalBossArrow?: Phaser.GameObjects.Container;
-  private bossSummonElapsed = 0; private bossChannelElapsed = 0; private bossMeleeLastAt = 0; private bossChannelActive = false; private bossChannelStartedAt = 0; private bossShield = 0;
+  private finalBoss?: Enemy; private finalBossPending = false; private finalBossActive = false; private finalBossMessage?: Phaser.GameObjects.Text; private finalBossArrow?: Phaser.GameObjects.Container; private finalBossCountdown?: Phaser.GameObjects.Text; private finalBossCleanupAt = 0;
+  private bossSummonElapsed = 0; private bossChannelElapsed = 0; private bossMeleeLastAt = 0; private bossChannelActive = false; private bossShieldActive = false; private bossChannelStartedAt = 0; private bossShield = 0;
   private bossShieldAura?: Phaser.GameObjects.Arc; private bossShieldBolts: Phaser.GameObjects.Sprite[] = []; private nextBossShieldBoltAt = 0; private bossShieldBack?: Phaser.GameObjects.Rectangle; private bossShieldFill?: Phaser.GameObjects.Rectangle;
   private get selectedPlayerTexture(): string { return CHARACTERS[this.characterId].texture; }
 
@@ -66,8 +67,8 @@ export class GameScene extends Phaser.Scene {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
     this.characterId = data.characterId; this.weapon = WEAPONS[data.weaponId];
     this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.lastAttackAt = 0; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
-    this.paused = false; this.ended = false; this.levelPending = false; this.lastWhirlwindAt = 0; this.thrownSwordCooldownReadyAt = 0; this.thrownSwordVolleyActive = false; this.staffAttacksSinceExecute = 0; this.staffExecuteToken = 0; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.consumedStaffExecuteTokens.clear(); this.levelOverlay = []; this.pauseOverlay = [];
-    this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
+    this.paused = false; this.ended = false; this.levelPending = false; this.lastWhirlwindAt = 0; this.thrownSwordCooldownReadyAt = 0; this.thrownSwordVolleyActive = false; this.staffAttacksSinceExecute = 0; this.staffExecuteToken = 0; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
+    this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.finalBossCountdown = undefined; this.finalBossCleanupAt = 0; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossShieldActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
   }
 
   create(): void {
@@ -86,7 +87,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.soulProjectiles, this.soulProjectileHit, undefined, this);
     this.physics.add.overlap(this.player, this.enemies, this.playerHit, undefined, this);
     this.physics.add.overlap(this.player, this.gems, this.collectGem, undefined, this);
-    this.hud = new GameHud(this); this.prepareStartingWeaponUpgrades(); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    this.hud = new GameHud(this); this.updateBuildHud(); this.prepareStartingWeaponUpgrades(); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.removeAllKeys(true);
       this.input.off('pointermove', this.updateJoystick, this);
       this.input.off('pointerup', this.releaseJoystick, this);
@@ -97,7 +98,6 @@ export class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) && !this.ended && !this.levelPending) this.togglePause();
     if (this.paused || this.ended || this.levelPending) return;
     this.elapsedMs += delta; if (!this.finalBossPending && !this.finalBossActive && this.elapsedMs >= RUN_DURATION_MS) this.warnFinalBoss();
-    if (this.finalBossPending) { this.player.move(new Phaser.Math.Vector2(0, 0)); this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills); return; }
     this.movePlayer(); this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; this.necromancerSpawnElapsed += delta; this.apparitionHordeElapsed += delta; this.superSkeletonSpawnElapsed += delta; this.spawnEnemies(); this.spawnEnemyVariants(); this.updateFinalBoss(delta); this.updateEnemies(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateBossArrow();
     this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
   }
@@ -175,8 +175,8 @@ export class GameScene extends Phaser.Scene {
 
     if (this.apparitionHordeElapsed >= 30000) {
       this.apparitionHordeElapsed = 0;
-      const count = 10 + this.apparitionHordeLevel;
-      const health = ENEMY_VARIANTS.apparitionWraith.maxHealth + this.apparitionHordeLevel * 10;
+      const count = 10 + this.apparitionHordeLevel * 2;
+      const health = ENEMY_VARIANTS.apparitionWraith.maxHealth + this.apparitionHordeLevel * 12;
       for (let index = 0; index < count; index += 1) {
         const position = this.randomBorderPosition();
         this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('apparitionWraith', { maxHealth: health, displaySize: 68 }));
@@ -190,7 +190,7 @@ export class GameScene extends Phaser.Scene {
         const position = this.randomBorderPosition();
         this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('superSkeleton', { isMiniBoss: true, displaySize: 92 }));
       }
-      this.superSkeletonSpawnCount += 1;
+      this.superSkeletonSpawnCount += 2;
     }
   }
   private spawnEnemyVariant(x: number, y: number, config: EnemyVariantConfig): Enemy | null {
@@ -355,8 +355,6 @@ export class GameScene extends Phaser.Scene {
   }
   private warnFinalBoss(): void {
     this.finalBossPending = true;
-    this.player.move(new Phaser.Math.Vector2(0, 0));
-    this.clearEnemyField();
     this.finalBossMessage = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'O sobrevivente sente uma presença maligna no ar!', {
       fontFamily: TITLE_FONT_FAMILY,
       fontSize: '34px',
@@ -372,7 +370,6 @@ export class GameScene extends Phaser.Scene {
   private spawnFinalBoss(): void {
     this.finalBossMessage?.destroy();
     this.finalBossMessage = undefined;
-    this.clearEnemyField();
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
     const distance = 980;
     const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 260, WORLD_SIZE - 260);
@@ -380,22 +377,42 @@ export class GameScene extends Phaser.Scene {
     this.finalBoss = this.spawnEnemyVariant(x, y, this.enemyConfig('finalBoss', { isMiniBoss: true, displaySize: 390, collisionRadius: 58, healthBarWidth: 220 })) ?? undefined;
     this.finalBossPending = false;
     this.finalBossActive = Boolean(this.finalBoss);
+    this.finalBossCleanupAt = this.time.now + 30000;
     this.bossSummonElapsed = 0;
     this.bossChannelElapsed = 0;
     this.bossMeleeLastAt = this.time.now - FINAL_BOSS_MELEE_COOLDOWN_MS + 1600;
     this.ensureBossArrow();
+    this.finalBossCountdown = this.add.text(GAME_WIDTH / 2, 84, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '24px', color: '#ffffff', stroke: '#101510', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(44);
   }
-  private clearEnemyField(): void {
-    this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.deactivate(); return true; });
+  private clearEnemyField(preserve?: Enemy): number {
+    let clearedEnemies = 0;
+    this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active && enemy !== preserve) { enemy.deactivate(); clearedEnemies += 1; } return true; });
     this.projectiles.children.each((child) => { const projectile = child as Projectile; if (projectile.active) projectile.deactivate(); return true; });
     this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active) projectile.deactivate(); return true; });
+    return clearedEnemies;
   }
   private updateFinalBoss(delta: number): void {
     if (!this.finalBossActive || !this.finalBoss?.active) return;
+    if (this.finalBossCleanupAt > 0) {
+      const remainingMs = Math.max(0, this.finalBossCleanupAt - this.time.now);
+      this.finalBossCountdown?.setText(`A escuridão consome a arena em ${Math.ceil(remainingMs / 1000)}s`);
+      if (remainingMs <= 0) {
+        const clearedEnemies = this.clearEnemyField(this.finalBoss);
+        this.finalBoss.maxHealth += clearedEnemies * 20;
+        this.finalBoss.health += clearedEnemies * 20;
+        this.finalBossCleanupAt = 0;
+        this.finalBossCountdown?.destroy();
+        this.finalBossCountdown = undefined;
+      }
+    }
     if (this.bossChannelActive) {
       this.finalBoss.pauseMovement();
       this.updateBossShieldVisual();
-      if (this.time.now >= this.bossChannelStartedAt + FINAL_BOSS_CHANNEL_DURATION_MS) this.completeBossChannel();
+      if (this.time.now >= this.bossChannelStartedAt + FINAL_BOSS_CHANNEL_DURATION_MS) this.bossChannelActive = false;
+      return;
+    }
+    if (this.bossShieldActive) {
+      if (this.time.now >= this.bossChannelStartedAt + FINAL_BOSS_SHIELD_DEADLINE_MS) this.completeBossChannel();
       return;
     }
     this.bossSummonElapsed += delta;
@@ -423,12 +440,13 @@ export class GameScene extends Phaser.Scene {
     this.playBossMeleeSlash(direction);
     this.time.delayedCall(220, () => {
       if (this.ended || !this.finalBoss?.active) return;
-      if (Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) <= FINAL_BOSS_MELEE_RADIUS && this.player.damage(30, this.time.now) && this.player.health <= 0) this.finish(false);
+      if (Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) <= FINAL_BOSS_MELEE_RADIUS && this.player.damage(40, this.time.now) && this.player.health <= 0) this.finish(false);
     });
   }
   private startBossChannel(): void {
     if (!this.finalBoss || this.bossChannelActive) return;
     this.bossChannelActive = true;
+    this.bossShieldActive = true;
     this.bossChannelStartedAt = this.time.now;
     this.bossShield = FINAL_BOSS_SHIELD_HEALTH;
     this.bossChannelElapsed = 0;
@@ -450,6 +468,7 @@ export class GameScene extends Phaser.Scene {
   }
   private endBossChannel(): void {
     this.bossChannelActive = false;
+    this.bossShieldActive = false;
     this.bossShield = 0;
     this.bossShieldAura?.destroy();
     this.bossShieldBolts.forEach((bolt) => bolt.destroy());
@@ -461,7 +480,7 @@ export class GameScene extends Phaser.Scene {
     this.bossShieldFill = undefined;
   }
   private updateBossShieldVisual(): void {
-    if (!this.finalBoss?.active || !this.bossChannelActive) return;
+    if (!this.finalBoss?.active || !this.bossShieldActive) return;
     if (!this.bossShieldAura) {
       this.bossShieldAura = this.add.circle(this.finalBoss.x, this.finalBoss.y, 230, 0x48ff52, 0.16).setStrokeStyle(5, 0xb4ff9e, 0.88).setDepth(8);
       this.bossShieldBack = this.add.rectangle(this.finalBoss.x, this.finalBoss.y - this.finalBoss.displayHeight / 2 - 34, 188, 10, 0x061009).setDepth(12);
@@ -670,7 +689,7 @@ export class GameScene extends Phaser.Scene {
     return nearest;
   }
   private damageEnemy(enemy: Enemy, amount: number): void {
-    if (enemy === this.finalBoss && this.bossChannelActive && this.bossShield > 0) {
+    if (enemy === this.finalBoss && this.bossShieldActive && this.bossShield > 0) {
       const overflowDamage = Math.max(0, amount - this.bossShield);
       this.bossShield = Math.max(0, this.bossShield - amount);
       enemy.takeDamage(0);
@@ -747,7 +766,12 @@ export class GameScene extends Phaser.Scene {
     this.upgrades.choices(this.weapon, this.player).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
   }
   private showUpgrades(): void { this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }); }
-  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.player.addWeaponUpgrade(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
+  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.player.addWeaponUpgrade(); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
+  private updateBuildHud(): void {
+    const weaponIcon = `weapon-${this.weapon.id}-icon`;
+    const upgrades = [...this.selectedUpgradeCounts.entries()].map(([id, count]) => ({ textureKey: UPGRADE_ICON_KEYS[id] ?? 'upgrade-damage-icon', count }));
+    this.hud.setBuild([{ textureKey: weaponIcon, count: 1 }, ...upgrades]);
+  }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) this.showPauseScreen(); else this.resumeFromPause(); }
   private showPauseScreen(): void { this.physics.pause(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
   private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void { const button = addOverlay(this.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(27).setInteractive({ useHandCursor: true })); button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' })); button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' })); button.on('pointerup', action); }

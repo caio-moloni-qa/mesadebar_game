@@ -9,6 +9,11 @@ interface SafeArea {
   centerX: number;
 }
 
+export interface BuildIcon {
+  textureKey: string;
+  count: number;
+}
+
 export class GameHud {
   private readonly healthText: Phaser.GameObjects.Text;
   private readonly levelText: Phaser.GameObjects.Text;
@@ -19,6 +24,7 @@ export class GameHud {
   private readonly healthBorder: Phaser.GameObjects.Image;
   private readonly expBar: Phaser.GameObjects.Graphics;
   private readonly expBorder: Phaser.GameObjects.Image;
+  private buildIcons: Phaser.GameObjects.Container[] = [];
 
   constructor(private readonly scene: Phaser.Scene) {
     const style: Phaser.Types.GameObjects.Text.TextStyle = { fontFamily: FONT_FAMILY, fontSize: '20px', color: '#f7f1dc', stroke: '#14101c', strokeThickness: 4 };
@@ -57,6 +63,31 @@ export class GameHud {
     const expScale = expWidth / 1280;
     this.drawBar(this.expBar, safe.left + 76 * expScale, safe.bottom - 23, expWidth - 152 * expScale, 14, experience / needed, 0x58b8e8, 0);
     this.expBorder.setPosition(safe.left, safe.bottom - 32).setDisplaySize(expWidth, 32);
+    this.layoutBuildIcons(healthBarX, healthBarY);
+  }
+
+  setBuild(items: BuildIcon[]): void {
+    this.buildIcons.forEach((icon) => icon.destroy());
+    this.buildIcons = items.map(({ textureKey, count }) => this.createBuildIcon(textureKey, count));
+  }
+
+  private createBuildIcon(textureKey: string, count: number): Phaser.GameObjects.Container {
+    const background = this.scene.add.rectangle(0, 0, 42, 42, 0x171222, 0.9).setStrokeStyle(2, 0x9a7bca, 0.92);
+    const icon = this.scene.add.image(0, 0, textureKey).setDisplaySize(34, 34);
+    const counterBackground = this.scene.add.circle(15, -15, 11, 0x382353, 0.98).setStrokeStyle(2, 0xf5dc91, 0.92);
+    const counter = this.scene.add.text(15, -15, `×${count}`, { fontFamily: FONT_FAMILY, fontSize: '14px', color: '#fff7d8', stroke: '#160d22', strokeThickness: 3 })
+      .setOrigin(0.5);
+    const showCounter = count > 1;
+    counterBackground.setVisible(showCounter);
+    counter.setVisible(showCounter);
+    return this.scene.add.container(0, 0, [background, icon, counterBackground, counter]).setScrollFactor(0).setDepth(24);
+  }
+
+  private layoutBuildIcons(healthBarX: number, healthBarY: number): void {
+    const spacing = 48;
+    const startX = healthBarX + 21;
+    const y = healthBarY - 22;
+    this.buildIcons.forEach((icon, index) => icon.setPosition(startX + index * spacing, y));
   }
 
   private drawBar(graphics: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number, ratio: number, color: number, radius: number): void {
