@@ -30,24 +30,24 @@ export class UpgradeSystem {
 
   private readonly projectileCommonUpgrades: Upgrade[] = [
     { id: 'projectile-extra-count', name: 'Benção Arcana', description: '+1 projétil por lançamento, em direções diferentes', tier: 'common', apply: (player) => player.addProjectileExtraCount() },
-    { id: 'projectile-ricochet', name: 'Rebote Arcano', description: '+10% de chance e +1 ricochete possível', tier: 'common', apply: (player) => player.addProjectileRicochet() }
+    { id: 'projectile-ricochet', name: 'Rebote Arcano', description: '+10% de chance e +1 ricochete possível', tier: 'common', apply: (player) => player.addProjectileRicochet() },
+    { id: 'projectile-wide-bolt', name: 'Feixe Amplificado', description: 'Aumenta o tamanho e a área de impacto dos projéteis mágicos', tier: 'common', apply: (player) => player.addProjectileSizeBonus() }
   ];
 
-  choices(weapon: WeaponConfig, player?: Player): Upgrade[] {
-    if (weapon.type === 'cone') return this.weightedChoices(this.availableMeleeUpgrades(player), 3, this.upgrades);
-    if (weapon.type === 'projectile' || weapon.type === 'boomerang') return this.weightedChoices(this.availableProjectileUpgrades(), 3, this.upgrades);
-
-    const available = [...this.upgrades];
-    return available.sort(() => Math.random() - 0.5).slice(0, 3);
+  choices(weapon: WeaponConfig, player?: Player, weaponOnly = false): Upgrade[] {
+    const weaponUpgrades = this.weaponSpecificUpgrades(weapon, player);
+    if (weaponOnly) return this.weightedChoices(weaponUpgrades, 3);
+    if (weaponUpgrades.length === 0) return [...this.upgrades].sort(() => Math.random() - 0.5).slice(0, 3);
+    return this.weightedChoices([...this.upgrades, ...weaponUpgrades], 3, this.upgrades);
   }
 
-  private availableMeleeUpgrades(player?: Player): Upgrade[] {
-    const rareUpgrades = player?.whirlwindUnlocked ? [] : this.meleeRareUpgrades;
-    return [...this.upgrades, ...this.meleeCommonUpgrades, ...rareUpgrades];
-  }
-
-  private availableProjectileUpgrades(): Upgrade[] {
-    return [...this.upgrades, ...this.projectileCommonUpgrades];
+  private weaponSpecificUpgrades(weapon: WeaponConfig, player?: Player): Upgrade[] {
+    if (weapon.type === 'cone') {
+      const rareUpgrades = player?.whirlwindUnlocked ? [] : this.meleeRareUpgrades;
+      return [...this.meleeCommonUpgrades, ...rareUpgrades];
+    }
+    if (weapon.type === 'projectile' || weapon.type === 'boomerang') return [...this.projectileCommonUpgrades];
+    return [];
   }
 
   private weightedChoices(available: Upgrade[], amount: number, guaranteedPool: Upgrade[] = []): Upgrade[] {

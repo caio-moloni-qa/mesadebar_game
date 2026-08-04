@@ -24,6 +24,7 @@ const UPGRADE_ICON_KEYS: Record<string, string> = {
   'sword-life-steal': 'upgrade-life-steal-icon',
   'projectile-extra-count': 'upgrade-arcane-blessing-icon',
   'projectile-ricochet': 'upgrade-arcane-bounce-icon',
+  'projectile-wide-bolt': 'upgrade-wide-bolt-icon',
   'melee-range': 'upgrade-colossus-arms-icon',
   'melee-extra-attack': 'upgrade-chained-fury-icon',
   'melee-whirlwind': 'upgrade-whirlwind-attack-icon'
@@ -337,7 +338,7 @@ export class GameScene extends Phaser.Scene {
     if (!projectile && this.projectiles.isFull()) return false;
     if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); }
     const range = this.weapon.range;
-    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range);
+    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, this.weapon.baseDamage * this.player.damageMultiplier, this.weapon.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed, this.weapon.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range, 1 + this.player.projectileSizeBonus);
     projectile.executesCommonEnemy = staffExecuteToken > 0;
     projectile.explodesOnHit = staffExecuteToken > 0;
     projectile.executeToken = staffExecuteToken;
@@ -753,17 +754,18 @@ export class GameScene extends Phaser.Scene {
           this.physics.resume();
           this.processExperience();
         }
-      }
+      },
+      true
     );
   }
-  private showUpgradeSelection(titleText: string, onSelect: () => void): void {
+  private showUpgradeSelection(titleText: string, onSelect: () => void, weaponOnly = false): void {
     this.physics.pause();
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
     const spacing = 230;
     const startX = GAME_WIDTH / 2 - spacing;
-    this.upgrades.choices(this.weapon, this.player).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
+    this.upgrades.choices(this.weapon, this.player, weaponOnly).forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
   }
   private showUpgrades(): void { this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }); }
   private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.player.addWeaponUpgrade(); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }

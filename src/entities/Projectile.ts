@@ -24,7 +24,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.setDisplaySize(24, 24).setCircle(6, 6, 6).setDepth(5).disableBody(true, true);
   }
 
-  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number, lifetime: number, pierces: number, ricochets: number, now: number, isBoomerang = false, outboundDistance = 0): void {
+  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number, lifetime: number, pierces: number, ricochets: number, now: number, isBoomerang = false, outboundDistance = 0, sizeMultiplier = 1): void {
     this.enableBody(true, x, y, true, true);
     this.damage = damage;
     this.remainingPierces = pierces;
@@ -43,8 +43,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.returnHits.clear();
     this.rotation = Phaser.Math.Angle.Between(x, y, targetX, targetY);
     this.setTexture(isBoomerang ? 'weapon-boomerang-icon' : 'bolt');
-    this.setDisplaySize(isBoomerang ? 42 : 24, isBoomerang ? 42 : 24);
-    this.updateHitCircle(isBoomerang ? 17 : 7);
+    const displaySize = (isBoomerang ? 42 : 24) * sizeMultiplier;
+    this.setDisplaySize(displaySize, displaySize);
+    this.updateHitCircle((isBoomerang ? 17 : 7) * sizeMultiplier);
     if (isBoomerang) this.anims.stop(); else this.play('bolt-fly', true);
     this.scene.physics.velocityFromRotation(this.rotation, speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
   }
