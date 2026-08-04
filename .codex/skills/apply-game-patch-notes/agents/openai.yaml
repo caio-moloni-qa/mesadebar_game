@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "Patch Notes de Jogo"
+  short_description: "Converta notas em mudanças verificáveis."
+  default_prompt: "Use $apply-game-patch-notes para aplicar estas notas de patch ao jogo."

@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "Auditoria de Balanceamento"
+  short_description: "Valide atributos, escalas e cadências."
+  default_prompt: "Use $audit-game-balance para conferir este balanceamento contra o código."

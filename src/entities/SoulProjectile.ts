@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 export class SoulProjectile extends Phaser.Physics.Arcade.Sprite {
   public expiresAt = 0;
-  public damage = 10;
+  public damage = 17;
   public slowPercent = 0.2;
   public slowDurationMs = 5000;
 

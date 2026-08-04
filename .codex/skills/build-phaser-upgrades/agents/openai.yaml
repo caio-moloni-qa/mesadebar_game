@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "Upgrades Phaser"
+  short_description: "Crie upgrades completos e consistentes."
+  default_prompt: "Use $build-phaser-upgrades para adicionar este upgrade ao jogo Phaser."

@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "Assets Pixel no Phaser"
+  short_description: "Integre ícones pixel art ao jogo."
+  default_prompt: "Use $integrate-pixel-assets para integrar estes assets pixel art ao jogo."
