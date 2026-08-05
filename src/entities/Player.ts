@@ -18,7 +18,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public projectileRicochetChance = 0;
   public projectileRicochetMax = 0;
   public projectileSizeBonus = 0;
-  public weaponUpgradeCount = 0;
   public passiveHealAmount = 0;
   public passiveHealIntervalMs = 0;
   public lowHealthAttackSpeedBonus = 0;
@@ -129,14 +128,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   addProjectileSizeBonus(): void {
     this.projectileSizeBonus += this.projectileSizeBonus === 0 ? 0.35 : 0.15;
-  }
-
-  addWeaponUpgrade(): void {
-    this.weaponUpgradeCount += 1;
-  }
-
-  hasExclusiveWeaponBuff(): boolean {
-    return this.weaponUpgradeCount >= 5;
   }
 
   effectiveAttackSpeedMultiplier(): number {
