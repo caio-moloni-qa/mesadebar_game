@@ -26,6 +26,12 @@ interface ActiveWeapon {
   staffExecuteToken: number;
 }
 
+interface StartingUpgradeSnapshot {
+  player: Pick<Player, 'damageMultiplier' | 'attackSpeedMultiplier' | 'movementSpeed' | 'lifeStealPercent' | 'meleeRangeBonus' | 'meleeExtraAttackChance' | 'meleeExtraAttackMax' | 'whirlwindUnlocked' | 'projectileExtraCount' | 'projectileRicochetChance' | 'projectileRicochetMax' | 'projectileSizeBonus'>;
+  weaponUpgradeCounts: number[];
+  selectedUpgradeCounts: Map<string, number>;
+}
+
 const UPGRADE_ICON_KEYS: Record<string, string> = {
   damage: 'upgrade-damage-icon',
   cooldown: 'upgrade-cooldown-icon',
@@ -63,7 +69,7 @@ export class GameScene extends Phaser.Scene {
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
   private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
-  private paused = false; private ended = false; private levelPending = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
+  private paused = false; private ended = false; private levelPending = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private startingUpgradeSnapshot?: StartingUpgradeSnapshot; private startingUpgradePool?: Upgrade[]; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapons: ActiveWeapon[] = [];
@@ -79,7 +85,7 @@ export class GameScene extends Phaser.Scene {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
     this.characterId = data.characterId; this.weapons = [this.createActiveWeapon(WEAPONS[data.weaponId])];
     this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
-    this.paused = false; this.ended = false; this.levelPending = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
+    this.paused = false; this.ended = false; this.levelPending = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.startingUpgradeSnapshot = undefined; this.startingUpgradePool = undefined; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
     this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.finalBossCountdown = undefined; this.finalBossCleanupAt = 0; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossShieldActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
   }
   private createActiveWeapon(config: WeaponConfig): ActiveWeapon {
@@ -763,13 +769,18 @@ export class GameScene extends Phaser.Scene {
     if (character.preferredWeaponId !== this.primaryWeapon.id || !character.startingWeaponUpgradeChoices) return;
     this.startingUpgradeChoicesRemaining = character.startingWeaponUpgradeChoices;
     this.startingUpgradeChoicesTotal = character.startingWeaponUpgradeChoices;
+    this.startingUpgradeSnapshot = this.captureStartingUpgradeSnapshot();
     this.levelPending = true;
     this.time.delayedCall(120, () => this.showStartingWeaponUpgradesScreen());
   }
   private showStartingWeaponUpgradesScreen(): void {
     this.physics.pause();
     const character = CHARACTERS[this.characterId];
-    const pool = this.upgrades.weaponUpgradePool(this.primaryWeapon, this.player);
+    this.startingUpgradePool ??= this.upgrades
+      .weaponUpgradePool(this.primaryWeapon, this.player)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, this.startingUpgradeChoicesTotal);
+    const pool = this.startingUpgradePool;
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 160, this.startingWeaponUpgradesTitle(character.name), { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
@@ -777,6 +788,38 @@ export class GameScene extends Phaser.Scene {
     const startX = GAME_WIDTH / 2 - (spacing * (pool.length - 1)) / 2;
     const picks = new Map<string, number>();
     pool.forEach((upgrade, index) => this.startingUpgradeCard(upgrade, startX + index * spacing, picks, title));
+    this.startingUpgradeResetButton(picks);
+  }
+  private captureStartingUpgradeSnapshot(): StartingUpgradeSnapshot {
+    const { damageMultiplier, attackSpeedMultiplier, movementSpeed, lifeStealPercent, meleeRangeBonus, meleeExtraAttackChance, meleeExtraAttackMax, whirlwindUnlocked, projectileExtraCount, projectileRicochetChance, projectileRicochetMax, projectileSizeBonus } = this.player;
+    return {
+      player: { damageMultiplier, attackSpeedMultiplier, movementSpeed, lifeStealPercent, meleeRangeBonus, meleeExtraAttackChance, meleeExtraAttackMax, whirlwindUnlocked, projectileExtraCount, projectileRicochetChance, projectileRicochetMax, projectileSizeBonus },
+      weaponUpgradeCounts: this.weapons.map((weapon) => weapon.upgradeCount),
+      selectedUpgradeCounts: new Map(this.selectedUpgradeCounts)
+    };
+  }
+  private startingUpgradeResetButton(picks: Map<string, number>): void {
+    const button = this.add.text(GAME_WIDTH / 2, 610, 'LIMPAR SELEÇÃO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#ffffff', backgroundColor: '#8b3745', padding: { x: 18, y: 10 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33).setInteractive({ useHandCursor: true });
+    this.levelOverlay.push(button);
+    button.on('pointerover', () => button.setStyle({ backgroundColor: '#ad4a5a' }));
+    button.on('pointerout', () => button.setStyle({ backgroundColor: '#8b3745' }));
+    button.on('pointerup', () => {
+      if (picks.size === 0) return;
+      this.restoreStartingUpgradeSnapshot();
+      this.levelOverlay.forEach((object) => object.destroy());
+      this.levelOverlay = [];
+      this.showStartingWeaponUpgradesScreen();
+    });
+  }
+  private restoreStartingUpgradeSnapshot(): void {
+    const snapshot = this.startingUpgradeSnapshot;
+    if (!snapshot) return;
+    Object.assign(this.player, snapshot.player);
+    this.weapons.forEach((weapon, index) => { weapon.upgradeCount = snapshot.weaponUpgradeCounts[index] ?? 0; });
+    this.selectedUpgradeCounts.clear();
+    snapshot.selectedUpgradeCounts.forEach((count, id) => this.selectedUpgradeCounts.set(id, count));
+    this.startingUpgradeChoicesRemaining = this.startingUpgradeChoicesTotal;
+    this.updateBuildHud();
   }
   private startingWeaponUpgradesTitle(characterName: string): string {
     return `${characterName}: escolha ${this.startingUpgradeChoicesTotal} melhorias iniciais (restam ${this.startingUpgradeChoicesRemaining})`;
@@ -801,6 +844,8 @@ export class GameScene extends Phaser.Scene {
       if (this.startingUpgradeChoicesRemaining <= 0) {
         this.levelOverlay.forEach((object) => object.destroy());
         this.levelOverlay = [];
+        this.startingUpgradeSnapshot = undefined;
+        this.startingUpgradePool = undefined;
         this.levelPending = false;
         this.physics.resume();
         this.processExperience();
