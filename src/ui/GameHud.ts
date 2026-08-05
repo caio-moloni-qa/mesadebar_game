@@ -24,6 +24,8 @@ export class GameHud {
   private readonly healthBorder: Phaser.GameObjects.Image;
   private readonly expBar: Phaser.GameObjects.Graphics;
   private readonly expBorder: Phaser.GameObjects.Image;
+  private readonly currencyIcon: Phaser.GameObjects.Image;
+  private readonly currencyText: Phaser.GameObjects.Text;
   private buildIcons: Phaser.GameObjects.Container[] = [];
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -37,9 +39,11 @@ export class GameHud {
     this.healthBorder = scene.add.image(0, 0, 'hp-bar-border').setOrigin(0, 0).setScrollFactor(0).setDepth(21);
     this.expBar = scene.add.graphics().setScrollFactor(0).setDepth(20);
     this.expBorder = scene.add.image(0, 0, 'exp-bar-border').setOrigin(0, 0).setScrollFactor(0).setDepth(21);
+    this.currencyIcon = scene.add.image(0, 0, 'gem').setOrigin(0, 0).setScrollFactor(0).setDepth(22);
+    this.currencyText = scene.add.text(0, 0, '', style).setOrigin(0, 0).setScrollFactor(0).setDepth(20);
   }
 
-  update(health: number, maxHealth: number, level: number, experience: number, needed: number, elapsedMs: number, kills: number): void {
+  update(health: number, maxHealth: number, level: number, experience: number, needed: number, elapsedMs: number, kills: number, currency: number): void {
     const safe = this.safeArea();
     const left = safe.left + 26;
     const top = safe.top + 22;
@@ -51,11 +55,14 @@ export class GameHud {
     this.levelText.setPosition(left, top + 60);
     this.timerText.setPosition(safe.centerX, top);
     this.killsText.setPosition(safe.right - 26, top);
+    this.currencyIcon.setPosition(left, top + 96).setDisplaySize(24, 24);
+    this.currencyText.setPosition(left + 32, top + 100);
 
     this.healthText.setText(`${Math.ceil(health)} / ${maxHealth}`);
     this.levelText.setText(`Nível ${level}`);
     this.timerText.setText(`Sobreviva: ${this.formatTime(elapsedMs)}`);
     this.killsText.setText(`Eliminações: ${kills}`);
+    this.currencyText.setText(`${currency}`);
     this.healthIcon.setPosition(healthIconX, healthBarY).setDisplaySize(32, 32);
     this.drawBar(this.healthBar, healthBarX + 15, healthBarY + 10, 250, 12, health / maxHealth, 0xd94d59, 4);
     this.healthBorder.setPosition(healthBarX, healthBarY).setDisplaySize(280, 32);

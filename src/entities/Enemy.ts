@@ -8,8 +8,8 @@ export interface EnemyVariantConfig {
   maxHealth: number;
   movementSpeed: number;
   contactDamage: number;
-  experience: number;
-  experienceDrops?: number;
+  reward: number;
+  currencyDrops?: number;
   isStatic?: boolean;
   isMiniBoss?: boolean;
   soulCooldownMs?: number;
@@ -23,8 +23,8 @@ export interface EnemyVariantConfig {
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   public health = 0;
   public maxHealth = 0;
-  public experience = 0;
-  public experienceDrops = 1;
+  public reward = 0;
+  public currencyDrops = 1;
   public contactDamage = 0;
   public variantId: EnemyVariantId = 'skeleton';
   public nextSoulAttackAt = 0;
@@ -54,8 +54,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.variantId = config.id;
     this.health = config.maxHealth;
     this.maxHealth = config.maxHealth;
-    this.experience = config.experience;
-    this.experienceDrops = config.experienceDrops ?? 1;
+    this.reward = config.reward;
+    this.currencyDrops = config.currencyDrops ?? 1;
     this.contactDamage = config.contactDamage;
     this.movementSpeed = config.movementSpeed;
     this.isStatic = Boolean(config.isStatic);

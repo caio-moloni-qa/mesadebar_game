@@ -3,7 +3,7 @@ import { ENEMY_CONFIG, ENEMY_VARIANTS, WEAPON_CONFIG, requiredExperience } from 
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH, RUN_DURATION_MS, WORLD_SIZE } from '../config/gameConfig';
 import { Enemy, EnemyVariantConfig } from '../entities/Enemy';
-import { ExperienceGem } from '../entities/ExperienceGem';
+import { CurrencyGem } from '../entities/CurrencyGem';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { SoulProjectile } from '../entities/SoulProjectile';
@@ -15,6 +15,8 @@ import { WEAPONS, WeaponConfig } from '../config/weapons';
 
 type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile;
 interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; playerTexture?: string; }
+type MerchantPathType = 'straight' | 'zigzag' | 'curve';
+const MERCHANT_PATH_TYPES: MerchantPathType[] = ['straight', 'zigzag', 'curve'];
 interface ActiveWeapon {
   config: WeaponConfig;
   upgradeCount: number;
@@ -58,11 +60,17 @@ const FINAL_BOSS_SHIELD_HEALTH = 500;
 const FINAL_BOSS_MELEE_RADIUS = 250;
 const FINAL_BOSS_EXPLOSION_RADIUS = 700;
 
+const MERCHANT_PORTAL_INTERVAL_MS = 5000;
+const MERCHANT_PORTAL_OPEN_MS = 20000;
+const MERCHANT_PATH_LENGTH = 740;
+const MERCHANT_PATH_WIDTH = 160;
+const MERCHANT_ROOM_SIZE = 480;
+
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
-  private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
+  private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
   private paused = false; private ended = false; private levelPending = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
@@ -71,6 +79,9 @@ export class GameScene extends Phaser.Scene {
   private finalBoss?: Enemy; private finalBossPending = false; private finalBossActive = false; private finalBossMessage?: Phaser.GameObjects.Text; private finalBossArrow?: Phaser.GameObjects.Container; private finalBossCountdown?: Phaser.GameObjects.Text; private finalBossCleanupAt = 0;
   private bossSummonElapsed = 0; private bossChannelElapsed = 0; private bossMeleeLastAt = 0; private bossChannelActive = false; private bossShieldActive = false; private bossChannelStartedAt = 0; private bossShield = 0;
   private bossShieldAura?: Phaser.GameObjects.Arc; private bossShieldBolts: Phaser.GameObjects.Sprite[] = []; private nextBossShieldBoltAt = 0; private bossShieldBack?: Phaser.GameObjects.Rectangle; private bossShieldFill?: Phaser.GameObjects.Rectangle;
+  private merchantElapsed = 0; private merchantPortalActive = false; private merchantPortalExpiresAt = 0; private readonly merchantPortalPosition = new Phaser.Math.Vector2(); private readonly merchantPortalDirection = new Phaser.Math.Vector2(); private merchantPortalVisual?: Phaser.GameObjects.Arc;
+  private merchantArrow?: Phaser.GameObjects.Container; private merchantPrompt?: Phaser.GameObjects.Text; private merchantOverlay: Phaser.GameObjects.GameObject[] = []; private merchantAreaVisuals: Phaser.GameObjects.GameObject[] = [];
+  private inMerchant = false; private readonly merchantReturnPosition = new Phaser.Math.Vector2(); private readonly merchantRoomCenter = new Phaser.Math.Vector2(); private merchantPathType: MerchantPathType = 'straight';
   private get selectedPlayerTexture(): string { return CHARACTERS[this.characterId].texture; }
 
   constructor() { super('game'); }
@@ -78,9 +89,10 @@ export class GameScene extends Phaser.Scene {
   init(data: GameSceneData): void {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
     this.characterId = data.characterId; this.weapons = [this.createActiveWeapon(WEAPONS[data.weaponId])];
-    this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
+    this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1); this.currency = 0;
     this.paused = false; this.ended = false; this.levelPending = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
     this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.finalBossCountdown = undefined; this.finalBossCleanupAt = 0; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossShieldActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
+    this.merchantElapsed = 0; this.merchantPortalActive = false; this.merchantPortalExpiresAt = 0; this.merchantPortalVisual = undefined; this.merchantArrow = undefined; this.merchantPrompt = undefined; this.merchantOverlay = []; this.merchantAreaVisuals = []; this.inMerchant = false;
   }
   private createActiveWeapon(config: WeaponConfig): ActiveWeapon {
     return { config, upgradeCount: 0, lastAttackAt: 0, lastWhirlwindAt: 0, thrownSwordCooldownReadyAt: 0, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0 };
@@ -89,13 +101,14 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
     this.add.tileSprite(WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE, WORLD_SIZE, 'grass-ruins-ground').setDepth(0);
+    this.createMapFog();
     this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, CHARACTERS[this.characterId]);
     this.enemies = this.physics.add.group({ classType: Enemy, maxSize: ENEMY_CONFIG.maxActive, runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 80, runChildUpdate: false });
     this.soulProjectiles = this.physics.add.group({ classType: SoulProjectile, maxSize: 80, runChildUpdate: false });
-    this.gems = this.physics.add.group({ classType: ExperienceGem, maxSize: 120, runChildUpdate: false });
+    this.gems = this.physics.add.group({ classType: CurrencyGem, maxSize: 120, runChildUpdate: false });
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE).startFollow(this.player, true, 0.12, 0.12);
-    this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,ESC') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,E,ESC') as Record<string, Phaser.Input.Keyboard.Key>;
     this.mobileMode = this.isTouchDevice();
     if (this.mobileMode) this.createMobileControls();
     this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHit, undefined, this);
@@ -109,12 +122,256 @@ export class GameScene extends Phaser.Scene {
       this.input.off('pointerupoutside', this.releaseJoystick, this);
     });
   }
+  private createMapFog(): void {
+    const fogWidth = 320;
+    const color = 0xdfe9f0;
+    const edgeAlpha = 0.55;
+    const top = this.add.graphics().setDepth(8);
+    top.fillGradientStyle(color, color, color, color, edgeAlpha, edgeAlpha, 0, 0);
+    top.fillRect(0, 0, WORLD_SIZE, fogWidth);
+    const bottom = this.add.graphics().setDepth(8);
+    bottom.fillGradientStyle(color, color, color, color, 0, 0, edgeAlpha, edgeAlpha);
+    bottom.fillRect(0, WORLD_SIZE - fogWidth, WORLD_SIZE, fogWidth);
+    const left = this.add.graphics().setDepth(8);
+    left.fillGradientStyle(color, color, color, color, edgeAlpha, 0, edgeAlpha, 0);
+    left.fillRect(0, 0, fogWidth, WORLD_SIZE);
+    const right = this.add.graphics().setDepth(8);
+    right.fillGradientStyle(color, color, color, color, 0, edgeAlpha, 0, edgeAlpha);
+    right.fillRect(WORLD_SIZE - fogWidth, 0, fogWidth, WORLD_SIZE);
+  }
+  private updateMerchantPortal(): void {
+    if (this.finalBossPending || this.finalBossActive) { this.closeMerchantPortal(); return; }
+    if (this.merchantPortalActive) {
+      if (this.time.now >= this.merchantPortalExpiresAt) { this.closeMerchantPortal(); return; }
+      this.updateMerchantArrow();
+      this.updateMerchantApproachPrompt();
+      return;
+    }
+    if (this.merchantElapsed < MERCHANT_PORTAL_INTERVAL_MS) return;
+    this.merchantElapsed = 0;
+    this.openMerchantPortal();
+  }
+  private openMerchantPortal(): void {
+    const side = Phaser.Math.Between(0, 3);
+    const edge = 40;
+    const along = Phaser.Math.Between(420, WORLD_SIZE - 420);
+    if (side === 0) { this.merchantPortalPosition.set(along, edge); this.merchantPortalDirection.set(0, -1); }
+    else if (side === 1) { this.merchantPortalPosition.set(along, WORLD_SIZE - edge); this.merchantPortalDirection.set(0, 1); }
+    else if (side === 2) { this.merchantPortalPosition.set(edge, along); this.merchantPortalDirection.set(-1, 0); }
+    else { this.merchantPortalPosition.set(WORLD_SIZE - edge, along); this.merchantPortalDirection.set(1, 0); }
+    this.merchantPathType = MERCHANT_PATH_TYPES[Phaser.Math.Between(0, MERCHANT_PATH_TYPES.length - 1)];
+    this.merchantPortalActive = true;
+    this.merchantPortalExpiresAt = this.time.now + MERCHANT_PORTAL_OPEN_MS;
+    this.merchantPortalVisual = this.add.circle(this.merchantPortalPosition.x, this.merchantPortalPosition.y, 46, 0x8a5cf6, 0.5).setStrokeStyle(4, 0xffd868, 0.95).setDepth(9);
+    this.tweens.add({ targets: this.merchantPortalVisual, scale: 1.12, yoyo: true, repeat: -1, duration: 700 });
+    this.ensureMerchantArrow();
+  }
+  private closeMerchantPortal(): void {
+    if (!this.merchantPortalActive) return;
+    this.merchantPortalActive = false;
+    this.merchantElapsed = 0;
+    this.merchantPortalVisual?.destroy();
+    this.merchantPortalVisual = undefined;
+    this.merchantArrow?.setVisible(false);
+    this.destroyMerchantPrompt();
+  }
+  private ensureMerchantArrow(): void {
+    if (this.merchantArrow) return;
+    const arrow = this.add.graphics();
+    arrow.fillStyle(0x2b1d00, 0.9);
+    arrow.fillTriangle(25, 0, -15, -22, -9, 0);
+    arrow.fillTriangle(25, 0, -15, 22, -9, 0);
+    arrow.fillRect(-30, -7, 22, 14);
+    arrow.fillStyle(0xffd868, 1);
+    arrow.fillTriangle(18, 0, -11, -15, -7, 0);
+    arrow.fillTriangle(18, 0, -11, 15, -7, 0);
+    arrow.fillRect(-25, -4, 19, 8);
+    this.merchantArrow = this.add.container(0, 0, [arrow]).setScrollFactor(0).setDepth(44).setVisible(false);
+  }
+  private updateMerchantArrow(): void {
+    if (!this.merchantArrow || !this.merchantPortalActive) { this.merchantArrow?.setVisible(false); return; }
+    const view = this.cameras.main.worldView;
+    const screenX = this.merchantPortalPosition.x - view.x;
+    const screenY = this.merchantPortalPosition.y - view.y;
+    const visible = screenX >= 0 && screenX <= GAME_WIDTH && screenY >= 0 && screenY <= GAME_HEIGHT;
+    if (visible) { this.merchantArrow.setVisible(false); return; }
+    const x = Phaser.Math.Clamp(screenX, 48, GAME_WIDTH - 48);
+    const y = Phaser.Math.Clamp(screenY, 48, GAME_HEIGHT - 48);
+    this.merchantArrow.setVisible(true).setPosition(x, y).setRotation(Phaser.Math.Angle.Between(GAME_WIDTH / 2, GAME_HEIGHT / 2, screenX, screenY));
+  }
+  private updateMerchantApproachPrompt(): void {
+    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.merchantPortalPosition.x, this.merchantPortalPosition.y);
+    const inRange = distance <= 90;
+    if (inRange && !this.merchantPrompt) {
+      this.merchantPrompt = this.add.text(this.merchantPortalPosition.x, this.merchantPortalPosition.y - 70, 'Pressione E para entrar', { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#ffe29a', stroke: '#101015', strokeThickness: 4 }).setOrigin(0.5).setDepth(31);
+    } else if (!inRange && this.merchantPrompt) {
+      this.destroyMerchantPrompt();
+    }
+    if (inRange && Phaser.Input.Keyboard.JustDown(this.keys.E)) this.showMerchantEntryPrompt();
+  }
+  private destroyMerchantPrompt(): void {
+    this.merchantPrompt?.destroy();
+    this.merchantPrompt = undefined;
+  }
+  private showMerchantEntryPrompt(): void {
+    this.levelPending = true;
+    this.physics.pause();
+    this.destroyMerchantPrompt();
+    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.78).setScrollFactor(0).setDepth(30);
+    const title = this.add.text(GAME_WIDTH / 2, 280, 'Um portal misterioso surge à sua frente.\nDeseja entrar?', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: '#ffe29a', align: 'center', stroke: '#101015', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
+    this.merchantOverlay = [veil, title];
+    this.merchantPromptButton('ENTRAR', 370, () => this.enterMerchantPortal());
+    this.merchantPromptButton('CANCELAR', 435, () => {
+      this.merchantOverlay.forEach((object) => object.destroy());
+      this.merchantOverlay = [];
+      this.levelPending = false;
+      this.physics.resume();
+    });
+  }
+  private merchantPromptButton(label: string, y: number, action: () => void): void {
+    const button = this.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' }));
+    button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' }));
+    button.on('pointerup', action);
+    this.merchantOverlay.push(button);
+  }
+  private enterMerchantPortal(): void {
+    this.merchantOverlay.forEach((object) => object.destroy());
+    this.merchantOverlay = [];
+    const direction = this.merchantPortalDirection.clone();
+    const pathStart = this.merchantPortalPosition.clone();
+    const waypoints = this.computeMerchantWaypoints(pathStart, direction, this.merchantPathType);
+    const pathEnd = waypoints[waypoints.length - 1];
+    const finalDirection = new Phaser.Math.Vector2(pathEnd.x - waypoints[waypoints.length - 2].x, pathEnd.y - waypoints[waypoints.length - 2].y).normalize();
+    this.merchantRoomCenter.copy(pathEnd.clone().add(finalDirection.clone().scale(MERCHANT_ROOM_SIZE / 2 + 20)));
+    this.closeMerchantPortal();
+    this.merchantReturnPosition.set(this.player.x, this.player.y);
+    this.expandWorldBoundsForMerchant(waypoints);
+    this.darkenMainArena();
+    this.buildMerchantPath(waypoints);
+    this.buildMerchantRoomGround();
+    this.player.setPosition(pathStart.x + direction.x * 20, pathStart.y + direction.y * 20);
+    this.inMerchant = true;
+    this.levelPending = false;
+    this.physics.resume();
+  }
+  private computeMerchantWaypoints(pathStart: Phaser.Math.Vector2, direction: Phaser.Math.Vector2, pathType: MerchantPathType): Phaser.Math.Vector2[] {
+    const perpendicular = new Phaser.Math.Vector2(-direction.y, direction.x);
+    const sideSign = Math.random() < 0.5 ? 1 : -1;
+    const along = (fraction: number) => direction.clone().scale(MERCHANT_PATH_LENGTH * fraction);
+    const side = (amount: number) => perpendicular.clone().scale(amount * sideSign);
+    if (pathType === 'zigzag') {
+      return [
+        pathStart.clone(),
+        pathStart.clone().add(along(0.35)).add(side(130)),
+        pathStart.clone().add(along(0.7)).add(side(-130)),
+        pathStart.clone().add(along(1))
+      ];
+    }
+    if (pathType === 'curve') {
+      return [
+        pathStart.clone(),
+        pathStart.clone().add(along(0.5)).add(side(150)),
+        pathStart.clone().add(along(1))
+      ];
+    }
+    return [pathStart.clone(), pathStart.clone().add(along(1))];
+  }
+  private expandWorldBoundsForMerchant(waypoints: Phaser.Math.Vector2[]): void {
+    const pathPad = MERCHANT_PATH_WIDTH / 2 + 60;
+    const roomPad = MERCHANT_ROOM_SIZE / 2 + 40;
+    const xs = [0, WORLD_SIZE, ...waypoints.flatMap((point) => [point.x - pathPad, point.x + pathPad]), this.merchantRoomCenter.x - roomPad, this.merchantRoomCenter.x + roomPad];
+    const ys = [0, WORLD_SIZE, ...waypoints.flatMap((point) => [point.y - pathPad, point.y + pathPad]), this.merchantRoomCenter.y - roomPad, this.merchantRoomCenter.y + roomPad];
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    const maxX = Math.max(...xs);
+    const maxY = Math.max(...ys);
+    this.physics.world.setBounds(minX, minY, maxX - minX, maxY - minY);
+    this.cameras.main.setBounds(minX, minY, maxX - minX, maxY - minY);
+  }
+  private darkenMainArena(): void {
+    const dark = this.add.rectangle(WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE, WORLD_SIZE, 0x000000, 0.92).setDepth(16);
+    this.merchantAreaVisuals.push(dark);
+  }
+  private buildMerchantPath(waypoints: Phaser.Math.Vector2[]): void {
+    for (let index = 0; index < waypoints.length - 1; index += 1) {
+      this.buildMerchantPathSegment(waypoints[index], waypoints[index + 1]);
+    }
+    for (let index = 1; index < waypoints.length - 1; index += 1) {
+      const joint = this.add.circle(waypoints[index].x, waypoints[index].y, MERCHANT_PATH_WIDTH / 2, 0x3a3f3a, 1).setDepth(1);
+      this.merchantAreaVisuals.push(joint);
+    }
+  }
+  private buildMerchantPathSegment(from: Phaser.Math.Vector2, to: Phaser.Math.Vector2): void {
+    const length = Phaser.Math.Distance.Between(from.x, from.y, to.x, to.y);
+    const angle = Phaser.Math.Angle.Between(from.x, from.y, to.x, to.y);
+    const midX = (from.x + to.x) / 2;
+    const midY = (from.y + to.y) / 2;
+    const ground = this.add.rectangle(midX, midY, length, MERCHANT_PATH_WIDTH, 0x3a3f3a, 1).setRotation(angle).setDepth(1);
+    const fogOverlay = this.add.rectangle(midX, midY, length, MERCHANT_PATH_WIDTH, 0xdfe9f0, 0.22).setRotation(angle).setDepth(9);
+    this.merchantAreaVisuals.push(ground, fogOverlay);
+    const direction = new Phaser.Math.Vector2(to.x - from.x, to.y - from.y).normalize();
+    const perpendicular = new Phaser.Math.Vector2(-direction.y, direction.x);
+    const treeCount = Math.max(2, Math.floor(length / 140));
+    for (let index = 0; index < treeCount; index += 1) {
+      const t = (index + 0.5) / treeCount;
+      const point = new Phaser.Math.Vector2(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t);
+      const side = index % 2 === 0 ? 1 : -1;
+      const offset = perpendicular.clone().scale(side * (MERCHANT_PATH_WIDTH / 2 + 30 + Phaser.Math.Between(0, 20)));
+      this.merchantAreaVisuals.push(this.drawDeadTree(point.x + offset.x, point.y + offset.y));
+    }
+  }
+  private drawDeadTree(x: number, y: number): Phaser.GameObjects.Graphics {
+    const tree = this.add.graphics({ x, y }).setDepth(2);
+    tree.lineStyle(4, 0x2c2620, 1);
+    tree.beginPath();
+    tree.moveTo(0, 20);
+    tree.lineTo(0, -20);
+    tree.moveTo(0, -10);
+    tree.lineTo(-14, -26);
+    tree.moveTo(0, -4);
+    tree.lineTo(13, -20);
+    tree.moveTo(0, -18);
+    tree.lineTo(-10, -34);
+    tree.strokePath();
+    return tree;
+  }
+  private buildMerchantRoomGround(): void {
+    const ground = this.add.rectangle(this.merchantRoomCenter.x, this.merchantRoomCenter.y, MERCHANT_ROOM_SIZE, MERCHANT_ROOM_SIZE, 0x241a30, 1).setDepth(1);
+    const border = this.add.rectangle(this.merchantRoomCenter.x, this.merchantRoomCenter.y, MERCHANT_ROOM_SIZE, MERCHANT_ROOM_SIZE).setStrokeStyle(4, 0xa888d9, 0.8).setDepth(9);
+    this.merchantAreaVisuals.push(ground, border);
+  }
+  private updateMerchantInteraction(): void {
+    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.merchantRoomCenter.x, this.merchantRoomCenter.y);
+    const inRoom = distance <= MERCHANT_ROOM_SIZE / 2 - 30;
+    if (inRoom && !this.merchantPrompt) {
+      this.merchantPrompt = this.add.text(this.merchantRoomCenter.x, this.merchantRoomCenter.y - MERCHANT_ROOM_SIZE / 2 + 40, 'Sala do mercador (em breve) — Pressione E para voltar', { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#ffe29a', align: 'center', wordWrap: { width: MERCHANT_ROOM_SIZE - 60 }, stroke: '#101015', strokeThickness: 4 }).setOrigin(0.5).setDepth(31);
+    } else if (!inRoom && this.merchantPrompt) {
+      this.destroyMerchantPrompt();
+    }
+    if (inRoom && Phaser.Input.Keyboard.JustDown(this.keys.E)) this.leaveMerchant();
+  }
+  private leaveMerchant(): void {
+    this.destroyMerchantPrompt();
+    this.merchantAreaVisuals.forEach((object) => object.destroy());
+    this.merchantAreaVisuals = [];
+    this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
+    this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
+    this.player.setPosition(this.merchantReturnPosition.x, this.merchantReturnPosition.y);
+    this.inMerchant = false;
+  }
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) && !this.ended && !this.levelPending) this.togglePause();
     if (this.paused || this.ended || this.levelPending) return;
+    this.movePlayer();
+    if (this.inMerchant) {
+      this.updateMerchantInteraction();
+      this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency);
+      return;
+    }
     this.elapsedMs += delta; if (!this.finalBossPending && !this.finalBossActive && this.elapsedMs >= RUN_DURATION_MS) this.warnFinalBoss();
-    this.movePlayer(); this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; this.necromancerSpawnElapsed += delta; this.apparitionHordeElapsed += delta; this.superSkeletonSpawnElapsed += delta; this.spawnEnemies(); this.spawnEnemyVariants(); this.updateFinalBoss(delta); this.updateEnemies(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateBossArrow();
-    this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
+    this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; this.necromancerSpawnElapsed += delta; this.apparitionHordeElapsed += delta; this.superSkeletonSpawnElapsed += delta; this.merchantElapsed += delta; this.spawnEnemies(); this.spawnEnemyVariants(); this.updateFinalBoss(delta); this.updateEnemies(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateBossArrow(); this.updateMerchantPortal();
+    this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency);
   }
   private movePlayer(): void {
     const d = new Phaser.Math.Vector2(
@@ -491,7 +748,7 @@ export class GameScene extends Phaser.Scene {
     this.endBossChannel();
     if (playerCaught) {
       this.player.health = 0;
-      this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
+      this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency);
       this.time.delayedCall(260, () => this.finish(false));
     }
   }
@@ -647,7 +904,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
   private updateSoulProjectiles(): void { this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
-  private updateGems(): void { this.gems.children.each((child) => { const gem = child as ExperienceGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
+  private updateGems(): void { this.gems.children.each((child) => { const gem = child as CurrencyGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
   private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; this.damageEnemy(enemy, this.projectileDamage(projectile, enemy), projectile.weaponId); this.triggerStaffExplosion(projectile, enemy); if (this.tryProjectileRicochet(projectile, enemy)) return; if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
   private projectileDamage(projectile: Projectile, enemy: Enemy): number {
     if (this.shouldExecuteWithStaff(projectile, enemy)) return enemy.health;
@@ -746,17 +1003,24 @@ export class GameScene extends Phaser.Scene {
       this.finish(true);
       return;
     }
-    for (let index = 0; index < enemy.experienceDrops; index += 1) {
+    this.experience += enemy.reward;
+    this.processExperience();
+    this.spawnXpOrbEffect(enemy.x, enemy.y);
+    for (let index = 0; index < enemy.currencyDrops; index += 1) {
       const gem = this.availableGem();
       if (!gem) break;
       const offset = new Phaser.Math.Vector2().setToPolar(Math.random() * Math.PI * 2, index === 0 ? 0 : Phaser.Math.Between(12, 28));
-      gem.activate(enemy.x + offset.x, enemy.y + offset.y, enemy.experience);
+      gem.activate(enemy.x + offset.x, enemy.y + offset.y, enemy.reward);
     }
     enemy.deactivate();
   }
-  private availableGem(): ExperienceGem | null { let gem = this.gems.getFirstDead(false) as ExperienceGem | null; if (!gem && !this.gems.isFull()) { gem = new ExperienceGem(this); this.gems.add(gem); } return gem; }
+  private spawnXpOrbEffect(x: number, y: number): void {
+    const orb = this.add.image(x, y, 'xp-orb').setDisplaySize(18, 18).setDepth(6);
+    this.tweens.add({ targets: orb, y: y - 30, alpha: 0, duration: 450, ease: 'Quad.Out', onComplete: () => orb.destroy() });
+  }
+  private availableGem(): CurrencyGem | null { let gem = this.gems.getFirstDead(false) as CurrencyGem | null; if (!gem && !this.gems.isFull()) { gem = new CurrencyGem(this); this.gems.add(gem); } return gem; }
   private playerHit(_playerObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const enemy = enemyObject as unknown as Enemy; if (!enemy.active || enemy.contactDamage <= 0 || !this.player.damage(enemy.contactDamage, this.time.now)) return; if (this.player.health <= 0) this.finish(false); }
-  private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as ExperienceGem; if (!gem.active) return; this.experience += gem.value; gem.deactivate(); this.processExperience(); }
+  private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as CurrencyGem; if (!gem.active) return; this.currency += gem.value; gem.deactivate(); }
   private processExperience(): void { if (this.experience < this.experienceNeeded || this.levelPending) return; this.experience -= this.experienceNeeded; this.level += 1; this.experienceNeeded = requiredExperience(this.level); this.levelPending = true; this.showUpgrades(); }
   private prepareStartingWeaponUpgrades(): void {
     const character = CHARACTERS[this.characterId];
