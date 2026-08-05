@@ -17,6 +17,7 @@ type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.S
 interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; playerTexture?: string; }
 interface ActiveWeapon {
   config: WeaponConfig;
+  upgradeCount: number;
   lastAttackAt: number;
   lastWhirlwindAt: number;
   thrownSwordCooldownReadyAt: number;
@@ -82,7 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.finalBossCountdown = undefined; this.finalBossCleanupAt = 0; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossShieldActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
   }
   private createActiveWeapon(config: WeaponConfig): ActiveWeapon {
-    return { config, lastAttackAt: 0, lastWhirlwindAt: 0, thrownSwordCooldownReadyAt: 0, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0 };
+    return { config, upgradeCount: 0, lastAttackAt: 0, lastWhirlwindAt: 0, thrownSwordCooldownReadyAt: 0, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0 };
   }
 
   create(): void {
@@ -252,7 +253,7 @@ export class GameScene extends Phaser.Scene {
     return angles;
   }
   private staffExecuteTokenForAttack(weapon: ActiveWeapon): number {
-    if (weapon.config.id !== 'staff' || !this.player.hasExclusiveWeaponBuff()) return 0;
+    if (weapon.config.id !== 'staff' || weapon.upgradeCount < 5) return 0;
     if (weapon.staffAttacksSinceExecute >= 3) {
       weapon.staffAttacksSinceExecute = 0;
       weapon.staffExecuteToken += 1;
@@ -315,7 +316,7 @@ export class GameScene extends Phaser.Scene {
   }
   private updateThrownSwordBuff(): void {
     const swordWeapon = this.weapons.find((weapon) => weapon.config.id === 'sword');
-    if (!swordWeapon || !this.player.hasExclusiveWeaponBuff() || swordWeapon.thrownSwordVolleyActive || this.time.now < swordWeapon.thrownSwordCooldownReadyAt) return;
+    if (!swordWeapon || swordWeapon.upgradeCount < 5 || swordWeapon.thrownSwordVolleyActive || this.time.now < swordWeapon.thrownSwordCooldownReadyAt) return;
     const enemy = this.nearestEnemy(WORLD_SIZE);
     if (!enemy) return;
     swordWeapon.thrownSwordVolleyActive = true;
@@ -326,8 +327,8 @@ export class GameScene extends Phaser.Scene {
       new Phaser.Math.Vector2(0, -1)
     ].forEach((direction) => this.launchThrownSword(swordWeapon, direction));
   }
-  private thrownSwordCooldownMs(): number {
-    return Math.max(1000, 10000 - Math.max(0, this.player.weaponUpgradeCount - 5) * 1000);
+  private thrownSwordCooldownMs(weapon: ActiveWeapon): number {
+    return Math.max(1000, 10000 - Math.max(0, weapon.upgradeCount - 5) * 1000);
   }
   private attackRange(weapon: ActiveWeapon): number {
     return weapon.config.range + (weapon.config.type === 'cone' ? this.player.meleeRangeBonus : 0);
@@ -369,7 +370,7 @@ export class GameScene extends Phaser.Scene {
     projectile.executesCommonEnemy = staffExecuteToken > 0;
     projectile.explodesOnHit = staffExecuteToken > 0;
     projectile.executeToken = staffExecuteToken;
-    projectile.criticalChance = isBoomerang && this.player.hasExclusiveWeaponBuff() ? this.boomerangCriticalChance() : 0;
+    projectile.criticalChance = isBoomerang && weapon.upgradeCount >= 5 ? this.boomerangCriticalChance(weapon.upgradeCount) : 0;
     return true;
   }
   private launchSoulProjectile(enemy: Enemy): void {
@@ -642,7 +643,7 @@ export class GameScene extends Phaser.Scene {
     const swordWeapon = this.weapons.find((weapon) => weapon.config.id === 'sword');
     if (swordWeapon?.thrownSwordVolleyActive && activeThrownSwords === 0) {
       swordWeapon.thrownSwordVolleyActive = false;
-      swordWeapon.thrownSwordCooldownReadyAt = this.time.now + this.thrownSwordCooldownMs();
+      swordWeapon.thrownSwordCooldownReadyAt = this.time.now + this.thrownSwordCooldownMs(swordWeapon);
     }
   }
   private updateSoulProjectiles(): void { this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
@@ -664,7 +665,8 @@ export class GameScene extends Phaser.Scene {
   private triggerStaffExplosion(projectile: Projectile, hitEnemy: Enemy): void {
     if (!projectile.explodesOnHit || projectile.executeToken <= 0) return;
     const radius = 50;
-    for (let index = 0; index < this.staffExplosionCount(); index += 1) {
+    const upgradeCount = this.weapons.find((weapon) => weapon.config.id === projectile.weaponId)?.upgradeCount ?? 0;
+    for (let index = 0; index < this.staffExplosionCount(upgradeCount); index += 1) {
       const explosion = this.add.circle(hitEnemy.x, hitEnemy.y, radius, 0x6ee7ff, 0.18).setStrokeStyle(3, 0xc7f9ff, 0.85).setDepth(7);
       this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18 + index * 0.1, duration: 220 + index * 45, onComplete: () => explosion.destroy() });
       this.enemies.children.each((child) => {
@@ -675,14 +677,14 @@ export class GameScene extends Phaser.Scene {
       });
     }
   }
-  private staffExplosionCount(): number {
-    return 1 + Math.max(0, this.player.weaponUpgradeCount - 5);
+  private staffExplosionCount(upgradeCount: number): number {
+    return 1 + Math.max(0, upgradeCount - 5);
   }
   private isCommonEnemy(enemy: Enemy): boolean {
     return enemy.variantId !== 'superSkeleton' && enemy.variantId !== 'finalBoss';
   }
-  private boomerangCriticalChance(): number {
-    return 0.15 + this.player.weaponUpgradeCount * 0.025;
+  private boomerangCriticalChance(upgradeCount: number): number {
+    return 0.15 + upgradeCount * 0.025;
   }
   private showCriticalText(enemy: Enemy): void {
     const text = this.add.text(enemy.x, enemy.y - enemy.displayHeight / 2 - 10, 'CRIT!', {
@@ -790,7 +792,7 @@ export class GameScene extends Phaser.Scene {
     card.on('pointerup', () => {
       if (this.startingUpgradeChoicesRemaining <= 0) return;
       upgrade.apply(this.player);
-      this.player.addWeaponUpgrade();
+      this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; });
       this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1);
       this.updateBuildHud();
       picks.set(upgrade.id, (picks.get(upgrade.id) ?? 0) + 1);
@@ -807,25 +809,53 @@ export class GameScene extends Phaser.Scene {
       title.setText(this.startingWeaponUpgradesTitle(CHARACTERS[this.characterId].name));
     });
   }
-  private showUpgradeSelection(titleText: string, onSelect: () => void, amount = 3): void {
+  private showUpgradeSelection(titleText: string, onSelect: () => void, amount = 3, extraWeaponOffer: WeaponConfig | null = null): void {
     this.physics.pause();
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
-    const choices = this.upgrades.choices(this.primaryWeapon, this.player, amount);
+    const choices = this.upgrades.choices(this.primaryWeapon, this.player, amount, this.weapons[1]?.config);
+    const cardCount = choices.length + (extraWeaponOffer ? 1 : 0);
     const spacing = 230;
-    const startX = GAME_WIDTH / 2 - (spacing * (choices.length - 1)) / 2;
+    const startX = GAME_WIDTH / 2 - (spacing * (cardCount - 1)) / 2;
     choices.forEach((upgrade, index) => this.upgradeCard(upgrade, startX + index * spacing, onSelect));
+    if (extraWeaponOffer) this.extraWeaponCard(extraWeaponOffer, startX + choices.length * spacing, onSelect);
   }
   private showUpgrades(): void {
     const amount = this.level >= 5 ? 5 : 3;
-    this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }, amount);
+    const extraWeaponOffer = this.rollExtraWeaponOffer();
+    const upgradeAmount = extraWeaponOffer ? amount - 1 : amount;
+    this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }, upgradeAmount, extraWeaponOffer);
   }
-  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.player.addWeaponUpgrade(); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
+  private rollExtraWeaponOffer(): WeaponConfig | null {
+    if (this.level % 5 !== 0 || this.weapons.length >= 2) return null;
+    const ownedIds = new Set(this.weapons.map((weapon) => weapon.config.id));
+    const candidates = Object.values(WEAPONS).filter((weapon) => !ownedIds.has(weapon.id));
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; }); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
+  private extraWeaponCard(weapon: WeaponConfig, x: number, onSelect?: () => void): void {
+    const card = this.add.rectangle(x, 410, 200, 220, 0x6b4d10).setStrokeStyle(3, 0xffd868).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const banner = this.add.text(x, 314, 'ARMA EXTRA!', { fontFamily: TITLE_FONT_FAMILY, fontSize: '14px', color: '#3a2400', backgroundColor: '#ffd868', padding: { x: 8, y: 3 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33);
+    const icon = this.add.image(x, 358, `weapon-${weapon.id}-icon`).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
+    const name = this.add.text(x, 407, weapon.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff3d2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const description = this.add.text(x, 468, weapon.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#fff0d2', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    this.levelOverlay.push(card, banner, icon, name, description);
+    card.on('pointerover', () => card.setFillStyle(0x86611a));
+    card.on('pointerout', () => card.setFillStyle(0x6b4d10));
+    card.on('pointerup', () => {
+      this.weapons.push(this.createActiveWeapon(weapon));
+      this.updateBuildHud();
+      this.levelOverlay.forEach((object) => object.destroy());
+      this.levelOverlay = [];
+      if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); }
+    });
+  }
   private updateBuildHud(): void {
-    const weaponIcon = `weapon-${this.primaryWeapon.id}-icon`;
+    const weaponEntries = this.weapons.map((weapon) => ({ textureKey: `weapon-${weapon.config.id}-icon`, count: 1 }));
     const upgrades = [...this.selectedUpgradeCounts.entries()].map(([id, count]) => ({ textureKey: UPGRADE_ICON_KEYS[id] ?? 'upgrade-damage-icon', count }));
-    this.hud.setBuild([{ textureKey: weaponIcon, count: 1 }, ...upgrades]);
+    this.hud.setBuild([...weaponEntries, ...upgrades]);
   }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) this.showPauseScreen(); else this.resumeFromPause(); }
   private showPauseScreen(): void { this.physics.pause(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }

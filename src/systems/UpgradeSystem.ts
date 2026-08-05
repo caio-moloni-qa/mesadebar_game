@@ -34,10 +34,13 @@ export class UpgradeSystem {
     { id: 'projectile-wide-bolt', name: 'Feixe Amplificado', description: 'Aumenta o tamanho e a área de impacto dos projéteis mágicos', tier: 'common', apply: (player) => player.addProjectileSizeBonus() }
   ];
 
-  choices(weapon: WeaponConfig, player?: Player, amount = 3): Upgrade[] {
-    const weaponUpgrades = this.weaponSpecificUpgrades(weapon, player);
-    if (weaponUpgrades.length === 0) return [...this.upgrades].sort(() => Math.random() - 0.5).slice(0, amount);
-    return this.weightedChoices([...this.upgrades, ...weaponUpgrades], amount, this.upgrades);
+  choices(primaryWeapon: WeaponConfig, player?: Player, amount = 3, secondaryWeapon?: WeaponConfig): Upgrade[] {
+    const primaryPool = this.weaponSpecificUpgrades(primaryWeapon, player);
+    const secondaryPool = secondaryWeapon ? this.weaponSpecificUpgrades(secondaryWeapon, player) : [];
+    const combinedWeaponPool = this.uniqueUpgrades([...primaryPool, ...secondaryPool]);
+    if (combinedWeaponPool.length === 0) return [...this.upgrades].sort(() => Math.random() - 0.5).slice(0, amount);
+    const guaranteedPools = secondaryPool.length > 0 ? [this.upgrades, secondaryPool] : [this.upgrades];
+    return this.weightedChoices([...this.upgrades, ...combinedWeaponPool], amount, guaranteedPools);
   }
 
   weaponUpgradePool(weapon: WeaponConfig, player?: Player): Upgrade[] {
@@ -53,15 +56,21 @@ export class UpgradeSystem {
     return [];
   }
 
-  private weightedChoices(available: Upgrade[], amount: number, guaranteedPool: Upgrade[] = []): Upgrade[] {
+  private uniqueUpgrades(upgrades: Upgrade[]): Upgrade[] {
+    return [...new Map(upgrades.map((upgrade) => [upgrade.id, upgrade])).values()];
+  }
+
+  private weightedChoices(available: Upgrade[], amount: number, guaranteedPools: Upgrade[][] = []): Upgrade[] {
     const choices: Upgrade[] = [];
     const remaining = [...available];
-    const guaranteedChoices = remaining.filter((upgrade) => guaranteedPool.some((guaranteed) => guaranteed.id === upgrade.id));
-    if (guaranteedChoices.length > 0) {
+    guaranteedPools.forEach((guaranteedPool) => {
+      if (choices.length >= amount) return;
+      const guaranteedChoices = remaining.filter((upgrade) => guaranteedPool.some((guaranteed) => guaranteed.id === upgrade.id));
+      if (guaranteedChoices.length === 0) return;
       const selected = guaranteedChoices[Math.floor(Math.random() * guaranteedChoices.length)];
       choices.push(selected);
       remaining.splice(remaining.indexOf(selected), 1);
-    }
+    });
     while (choices.length < amount && remaining.length > 0) {
       const preferredTier: UpgradeTier = Math.random() < 0.7 ? 'common' : 'rare';
       const tierPool = remaining.filter((upgrade) => upgrade.tier === preferredTier);
