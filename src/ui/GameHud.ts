@@ -27,6 +27,7 @@ export class GameHud {
   private readonly currencyIcon: Phaser.GameObjects.Image;
   private readonly currencyText: Phaser.GameObjects.Text;
   private buildIcons: Phaser.GameObjects.Container[] = [];
+  private visible = true;
 
   constructor(private readonly scene: Phaser.Scene) {
     const style: Phaser.Types.GameObjects.Text.TextStyle = { fontFamily: FONT_FAMILY, fontSize: '20px', color: '#f7f1dc', stroke: '#14101c', strokeThickness: 4 };
@@ -76,6 +77,24 @@ export class GameHud {
   setBuild(items: BuildIcon[]): void {
     this.buildIcons.forEach((icon) => icon.destroy());
     this.buildIcons = items.map(({ textureKey, count }) => this.createBuildIcon(textureKey, count));
+    this.buildIcons.forEach((icon) => icon.setVisible(this.visible));
+  }
+
+  /** Hides/shows every HUD element, including build icons created later while hidden (e.g. during the starting-upgrade picker). */
+  setVisible(visible: boolean): void {
+    this.visible = visible;
+    this.healthText.setVisible(visible);
+    this.levelText.setVisible(visible);
+    this.timerText.setVisible(visible);
+    this.killsText.setVisible(visible);
+    this.healthIcon.setVisible(visible);
+    this.healthBar.setVisible(visible);
+    this.healthBorder.setVisible(visible);
+    this.expBar.setVisible(visible);
+    this.expBorder.setVisible(visible);
+    this.currencyIcon.setVisible(visible);
+    this.currencyText.setVisible(visible);
+    this.buildIcons.forEach((icon) => icon.setVisible(visible));
   }
 
   private createBuildIcon(textureKey: string, count: number): Phaser.GameObjects.Container {

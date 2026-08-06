@@ -17,7 +17,7 @@ For every upgrade, define `id`, display name, description, tier, eligible weapon
    - Weapon runtime state for a weapon-specific modifier.
    - Scene/ability controller for timers, projectiles, and target queries.
 3. Add an idempotent application path and specify stack behavior explicitly: additive, multiplicative, capped, chance per hit, or cooldown reduction.
-4. Generate choices through metadata filters. Roll tiers first, then choose valid upgrades; make mandatory choices and extra-weapon slots explicit rules.
+4. Generate choices through metadata filters. Roll tiers first, then choose valid upgrades; make mandatory choices and extra-weapon slots explicit rules. If the project distinguishes owning a weapon from having upgrade rights to it (an affinity/unlock flag), filter each weapon's upgrade pool by that flag, not by mere presence in the player's active-weapon list.
 5. Register the icon in preload and map the UI by upgrade metadata, with a safe fallback icon.
 6. Update attack/damage code to consume the modifier without weapon-id special cases whenever possible.
 7. Validate selection eligibility, stacking, UI display, restart reset, and a representative combat case.
@@ -26,5 +26,6 @@ For every upgrade, define `id`, display name, description, tier, eligible weapon
 
 - Do not implement only art or text when the request is for an upgrade effect.
 - Do not let an upgrade appear for an incompatible weapon.
+- Do not equate "owns a weapon" with "has upgrade access to it." When a weapon can be acquired independently of progression bonuses (a milestone reward, a random drop), do not let its acquisition silently unlock its upgrade pool — gate that behind a separate, explicit acquired state instead.
 - Avoid hidden state in anonymous scene fields when it belongs to player or weapon runtime state.
 - Keep probability rolls independent where the design requires per-projectile or per-enemy behavior.

@@ -907,6 +907,35 @@ A evolução não precisa estar presente no primeiro protótipo, mas a arquitetu
 
 ---
 
+# Afinidade de arma
+
+Ao permitir que o jogador possua mais de uma arma ao mesmo tempo, separar dois conceitos que parecem iguais mas não são:
+
+* posse da arma — ela está na lista de armas ativas do jogador e ataca automaticamente;
+* afinidade com a família da arma — o jogador tem acesso ao pool de melhorias específicas daquela família (corpo a corpo, à distância, etc.).
+
+Regras:
+
+* adquirir uma arma extra (sorteio, recompensa de nível, drop) não deve conceder afinidade automaticamente;
+* uma arma sem afinidade continua atacando normalmente, mas não deve aparecer nas telas de melhoria com upgrades específicos dela — nem como opção garantida, nem misturada nas opções aleatórias;
+* a afinidade deve ser adquirida por um mecanismo separado e explícito (por exemplo, um item comprável ou uma escolha dedicada de família), nunca como efeito colateral de ganhar a arma em si;
+* a afinidade nativa do personagem (a arma com que ele começa a partida) é a exceção: é concedida de graça, sem precisar do mecanismo de aquisição.
+
+Interface sugerida:
+
+```typescript
+type WeaponFamily = string;
+
+interface AffinityState {
+  ownedWeaponIds: Set<string>;
+  affinityFamilies: Set<WeaponFamily>;
+}
+```
+
+Ao montar o sorteio de melhorias, filtrar o pool de cada arma possuída pela afinidade da família dela — nunca pela posse isolada.
+
+---
+
 # Colisões
 
 Configurar colisões entre:

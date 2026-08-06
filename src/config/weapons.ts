@@ -11,6 +11,27 @@ export interface WeaponConfig {
   coneAngle?: number;
 }
 
+export type WeaponFamily = 'melee' | 'ranged';
+
+export function weaponFamily(weapon: WeaponConfig): WeaponFamily {
+  switch (weapon.type) {
+    case 'cone':
+      return 'melee';
+    case 'projectile':
+    case 'boomerang':
+      return 'ranged';
+    default: {
+      const exhaustiveCheck: never = weapon.type;
+      throw new Error(`weaponFamily: unhandled weapon type "${exhaustiveCheck}"`);
+    }
+  }
+}
+
+export const FAMILY_LABELS: Record<WeaponFamily, string> = { melee: 'CORPO A CORPO', ranged: 'À DISTÂNCIA' };
+
+/** Maximum number of weapons a run can have active at once (see GameScene.rollExtraWeaponOffer). */
+export const MAX_ACTIVE_WEAPONS = 2;
+
 export const WEAPONS: Record<WeaponConfig['id'], WeaponConfig> = {
   staff: {
     id: 'staff',
@@ -45,3 +66,5 @@ export const WEAPONS: Record<WeaponConfig['id'], WeaponConfig> = {
     projectileLifetime: 2000
   }
 };
+
+export const WEAPON_FAMILIES: WeaponFamily[] = Array.from(new Set(Object.values(WEAPONS).map(weaponFamily)));

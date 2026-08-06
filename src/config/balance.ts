@@ -8,6 +8,12 @@ export const ENEMY_VARIANTS = {
   finalBoss: { maxHealth: 5000, movementSpeed: 35, contactDamage: 0, reward: 0 }
 };
 export const WEAPON_CONFIG = { damage: 10, cooldownMs: 700, projectileSpeed: 450, range: 600, lifetimeMs: 1500, pierces: 0 };
+export interface EnemyVariantScheduleEntry { variantId: 'necromancerWraith' | 'apparitionWraith' | 'superSkeleton'; intervalMs: number; }
+export const ENEMY_VARIANT_SCHEDULE: EnemyVariantScheduleEntry[] = [
+  { variantId: 'necromancerWraith', intervalMs: 15000 },
+  { variantId: 'apparitionWraith', intervalMs: 30000 },
+  { variantId: 'superSkeleton', intervalMs: 40000 }
+];
 export const DIFFICULTY_STAGES = [
   { startMs: 0, spawnInterval: 1000, count: 1, healthMultiplier: 1 },
   { startMs: 60_000, spawnInterval: 750, count: 2, healthMultiplier: 1.75 },
