@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-export class ExperienceGem extends Phaser.Physics.Arcade.Sprite {
+export class CurrencyGem extends Phaser.Physics.Arcade.Sprite {
   public value = 0;
 
   constructor(scene: Phaser.Scene) {

@@ -2,15 +2,18 @@ import Phaser from 'phaser';
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { CHARACTERS, CharacterConfig } from '../config/characters';
+import { SandboxIndicator } from '../systems/SandboxState';
 
 type CharacterCard =
   | { locked: false; character: CharacterConfig }
   | { locked: true };
 
 export class MenuScene extends Phaser.Scene {
+  private sandboxIndicator!: SandboxIndicator;
   constructor() { super('menu'); }
 
   create(): void {
+    this.sandboxIndicator = new SandboxIndicator(this);
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x151b2b);
     this.add.image(GAME_WIDTH / 2, 125, 'game-icon').setDisplaySize(150, 150);
     this.add.text(GAME_WIDTH / 2, 245, 'MESA DE BAR: SOBREVIVÊNCIA', { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: '#f5cf79', stroke: '#3a2435', strokeThickness: 8 }).setOrigin(0.5);
@@ -25,6 +28,10 @@ export class MenuScene extends Phaser.Scene {
     const mobile = compactScreen && this.sys.game.device.input.touch && (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
     const controlsHint = mobile ? 'Use o joystick no canto inferior esquerdo para mover' : 'WASD / setas: mover   •   Esc: pausar';
     this.add.text(GAME_WIDTH / 2, 535, controlsHint, { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#aeb5c9' }).setOrigin(0.5);
+  }
+
+  update(): void {
+    this.sandboxIndicator.update();
   }
 
   private showCharacterSelector(): void {

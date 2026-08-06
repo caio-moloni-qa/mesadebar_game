@@ -1,17 +1,21 @@
-import Phaser from 'phaser';
-import { ENEMY_CONFIG, ENEMY_VARIANTS, WEAPON_CONFIG, requiredExperience } from '../config/balance';
+﻿import Phaser from 'phaser';
+import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, WEAPON_CONFIG, requiredExperience } from '../config/balance';
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH, RUN_DURATION_MS, WORLD_SIZE } from '../config/gameConfig';
 import { Enemy, EnemyVariantConfig } from '../entities/Enemy';
-import { ExperienceGem } from '../entities/ExperienceGem';
+import { CurrencyGem } from '../entities/CurrencyGem';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { SoulProjectile } from '../entities/SoulProjectile';
+import { BossHost, BossSystem } from '../systems/BossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
+import { MerchantHost, MerchantSystem } from '../systems/MerchantSystem';
+import { SandboxDebugHost, SandboxDebugPanel } from '../systems/SandboxDebugPanel';
+import { sandboxState } from '../systems/SandboxState';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { GameHud } from '../ui/GameHud';
 import { CHARACTERS } from '../config/characters';
-import { WEAPONS, WeaponConfig } from '../config/weapons';
+import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../config/weapons';
 
 type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile;
 interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; playerTexture?: string; }
@@ -54,39 +58,79 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
   finalBoss: 'final-boss'
 };
 
-const FINAL_BOSS_MESSAGE_MS = 2600;
-const FINAL_BOSS_SUMMON_INTERVAL_MS = 10000;
-const FINAL_BOSS_MELEE_COOLDOWN_MS = 7000;
-const FINAL_BOSS_CHANNEL_INTERVAL_MS = 40000;
-const FINAL_BOSS_CHANNEL_DURATION_MS = 15000;
-const FINAL_BOSS_SHIELD_DEADLINE_MS = 20000;
-const FINAL_BOSS_SHIELD_HEALTH = 500;
-const FINAL_BOSS_MELEE_RADIUS = 250;
-const FINAL_BOSS_EXPLOSION_RADIUS = 700;
-
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
-  private elapsedMs = 0; private spawnElapsed = 0; private necromancerSpawnElapsed = 0; private apparitionHordeElapsed = 0; private superSkeletonSpawnElapsed = 0; private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1);
+  private elapsedMs = 0; private spawnElapsed = 0; private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.variantId, 0])); private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
   private paused = false; private ended = false; private levelPending = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private startingUpgradeSnapshot?: StartingUpgradeSnapshot; private startingUpgradePool?: Upgrade[]; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
+  private mapFogGraphics: Phaser.GameObjects.Graphics[] = [];
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapons: ActiveWeapon[] = [];
   private get primaryWeapon(): WeaponConfig { return this.weapons[0].config; }
-  private finalBoss?: Enemy; private finalBossPending = false; private finalBossActive = false; private finalBossMessage?: Phaser.GameObjects.Text; private finalBossArrow?: Phaser.GameObjects.Container; private finalBossCountdown?: Phaser.GameObjects.Text; private finalBossCleanupAt = 0;
-  private bossSummonElapsed = 0; private bossChannelElapsed = 0; private bossMeleeLastAt = 0; private bossChannelActive = false; private bossShieldActive = false; private bossChannelStartedAt = 0; private bossShield = 0;
-  private bossShieldAura?: Phaser.GameObjects.Arc; private bossShieldBolts: Phaser.GameObjects.Sprite[] = []; private nextBossShieldBoltAt = 0; private bossShieldBack?: Phaser.GameObjects.Rectangle; private bossShieldFill?: Phaser.GameObjects.Rectangle;
+  private affinityFamilies: Set<WeaponFamily> = new Set();
   private get selectedPlayerTexture(): string { return CHARACTERS[this.characterId].texture; }
+  private readonly merchant: MerchantSystem = new MerchantSystem(this.buildMerchantHost());
+  private readonly sandbox: SandboxDebugPanel = new SandboxDebugPanel(this.buildSandboxHost());
+  private readonly bossSystem: BossSystem = new BossSystem(this.buildBossHost());
 
   constructor() { super('game'); }
+
+  private buildMerchantHost(): MerchantHost {
+    return {
+      scene: this,
+      getPlayer: () => this.player,
+      getKeys: () => this.keys,
+      getEnemies: () => this.enemies,
+      getProjectiles: () => this.projectiles,
+      getSoulProjectiles: () => this.soulProjectiles,
+      getGems: () => this.gems,
+      getCurrency: () => this.currency,
+      spendCurrency: (amount) => { this.currency -= amount; },
+      getAffinityFamilies: () => this.affinityFamilies,
+      addAffinityFamily: (family) => { this.affinityFamilies.add(family); },
+      isMerchantEnabled: () => this.sandbox.isMerchantEnabled(),
+      isBossEncounterActive: () => this.bossSystem.hasActiveEncounter(),
+      setLevelPending: (value) => { this.levelPending = value; }
+    };
+  }
+  private buildSandboxHost(): SandboxDebugHost {
+    return {
+      scene: this,
+      addCurrency: (amount) => { this.currency += amount; },
+      killAllActiveEnemies: () => this.sandboxKillAllEnemies(),
+      adjustElapsedMs: (deltaMs) => { this.elapsedMs = Math.max(0, this.elapsedMs + deltaMs); },
+      setForcedDifficultyStage: (stage) => this.difficulty.setForcedStage(stage),
+      setEnemySpawnCap: (cap) => { this.enemies.maxSize = cap; },
+      setMapFogVisible: (visible) => this.mapFogGraphics.forEach((graphics) => graphics.setVisible(visible)),
+      spawnVariantNearPlayer: (id, count) => this.sandboxSpawnVariant(id, count),
+      spawnExtraBoss: () => this.bossSystem.spawnExtraBoss()
+    };
+  }
+  private buildBossHost(): BossHost {
+    return {
+      scene: this,
+      getPlayer: () => this.player,
+      isEnded: () => this.ended,
+      spawnEnemyVariant: (x, y, config) => this.spawnEnemyVariant(x, y, config),
+      enemyConfig: (id, overrides) => this.enemyConfig(id, overrides),
+      clearEnemyField: (preserve) => this.clearEnemyField(preserve),
+      finish: (victory) => this.finish(victory),
+      refreshHud: () => this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency)
+    };
+  }
 
   init(data: GameSceneData): void {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
     this.characterId = data.characterId; this.weapons = [this.createActiveWeapon(WEAPONS[data.weaponId])];
-    this.elapsedMs = 0; this.spawnElapsed = 0; this.necromancerSpawnElapsed = 0; this.apparitionHordeElapsed = 0; this.superSkeletonSpawnElapsed = 0; this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1);
+    this.affinityFamilies = new Set([weaponFamily(WEAPONS[data.weaponId])]);
+    this.elapsedMs = 0; this.spawnElapsed = 0; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, 0)); this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1); this.currency = 0;
     this.paused = false; this.ended = false; this.levelPending = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.startingUpgradeSnapshot = undefined; this.startingUpgradePool = undefined; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
-    this.finalBoss = undefined; this.finalBossPending = false; this.finalBossActive = false; this.finalBossMessage = undefined; this.finalBossArrow = undefined; this.finalBossCountdown = undefined; this.finalBossCleanupAt = 0; this.bossSummonElapsed = 0; this.bossChannelElapsed = 0; this.bossMeleeLastAt = 0; this.bossChannelActive = false; this.bossShieldActive = false; this.bossChannelStartedAt = 0; this.bossShield = 0; this.bossShieldAura = undefined; this.bossShieldBolts = []; this.nextBossShieldBoltAt = 0; this.bossShieldBack = undefined; this.bossShieldFill = undefined;
+    this.bossSystem.reset();
+    this.merchant.reset();
+    this.sandbox.resetUiRefs();
+    this.mapFogGraphics = [];
   }
   private createActiveWeapon(config: WeaponConfig): ActiveWeapon {
     return { config, upgradeCount: 0, lastAttackAt: 0, lastWhirlwindAt: 0, thrownSwordCooldownReadyAt: 0, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0 };
@@ -95,32 +139,83 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
     this.add.tileSprite(WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE, WORLD_SIZE, 'grass-ruins-ground').setDepth(0);
+    this.createMapFog();
     this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, CHARACTERS[this.characterId]);
-    this.enemies = this.physics.add.group({ classType: Enemy, maxSize: ENEMY_CONFIG.maxActive, runChildUpdate: false });
+    this.enemies = this.physics.add.group({ classType: Enemy, maxSize: this.sandbox.initialSpawnCap(), runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 80, runChildUpdate: false });
     this.soulProjectiles = this.physics.add.group({ classType: SoulProjectile, maxSize: 80, runChildUpdate: false });
-    this.gems = this.physics.add.group({ classType: ExperienceGem, maxSize: 120, runChildUpdate: false });
+    this.gems = this.physics.add.group({ classType: CurrencyGem, maxSize: 120, runChildUpdate: false });
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE).startFollow(this.player, true, 0.12, 0.12);
-    this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,ESC') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,E,ESC,F9') as Record<string, Phaser.Input.Keyboard.Key>;
     this.mobileMode = this.isTouchDevice();
     if (this.mobileMode) this.createMobileControls();
     this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHit, undefined, this);
     this.physics.add.overlap(this.player, this.soulProjectiles, this.soulProjectileHit, undefined, this);
     this.physics.add.overlap(this.player, this.enemies, this.playerHit, undefined, this);
     this.physics.add.overlap(this.player, this.gems, this.collectGem, undefined, this);
-    this.hud = new GameHud(this); this.updateBuildHud(); this.prepareStartingWeaponUpgrades(); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    this.hud = new GameHud(this); this.updateBuildHud();
+    this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency);
+    this.hud.setVisible(false);
+    this.prepareStartingWeaponUpgrades(); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.removeAllKeys(true);
       this.input.off('pointermove', this.updateJoystick, this);
       this.input.off('pointerup', this.releaseJoystick, this);
       this.input.off('pointerupoutside', this.releaseJoystick, this);
     });
+    if (sandboxState.enabled) this.sandbox.setActive(true);
+  }
+  private toggleSandboxMode(): void {
+    sandboxState.enabled = !sandboxState.enabled;
+    this.sandbox.setActive(sandboxState.enabled);
+  }
+  private sandboxKillAllEnemies(): void {
+    const activeEnemies: Enemy[] = [];
+    this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) activeEnemies.push(enemy); return true; });
+    activeEnemies.forEach((enemy) => this.defeatEnemy(enemy));
+  }
+  private sandboxSpawnVariant(id: EnemyVariantConfig['id'], count: number): void {
+    const overrides: Partial<Omit<EnemyVariantConfig, 'id'>> =
+      id === 'necromancerWraith' ? { isStatic: true, displaySize: 68 } :
+      id === 'apparitionWraith' ? { displaySize: 68 } :
+      id === 'superSkeleton' ? { isMiniBoss: true, displaySize: 92 } : {};
+    for (let index = 0; index < count; index += 1) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.Between(160, 260);
+      this.spawnEnemyVariant(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, this.enemyConfig(id, overrides));
+    }
+  }
+  private createMapFog(): void {
+    const fogWidth = 320;
+    const color = 0xdfe9f0;
+    const edgeAlpha = 0.55;
+    const top = this.add.graphics().setDepth(8);
+    top.fillGradientStyle(color, color, color, color, edgeAlpha, edgeAlpha, 0, 0);
+    top.fillRect(0, 0, WORLD_SIZE, fogWidth);
+    const bottom = this.add.graphics().setDepth(8);
+    bottom.fillGradientStyle(color, color, color, color, 0, 0, edgeAlpha, edgeAlpha);
+    bottom.fillRect(0, WORLD_SIZE - fogWidth, WORLD_SIZE, fogWidth);
+    const left = this.add.graphics().setDepth(8);
+    left.fillGradientStyle(color, color, color, color, edgeAlpha, 0, edgeAlpha, 0);
+    left.fillRect(0, 0, fogWidth, WORLD_SIZE);
+    const right = this.add.graphics().setDepth(8);
+    right.fillGradientStyle(color, color, color, color, 0, edgeAlpha, 0, edgeAlpha);
+    right.fillRect(WORLD_SIZE - fogWidth, 0, fogWidth, WORLD_SIZE);
+    this.mapFogGraphics = [top, bottom, left, right];
+    this.mapFogGraphics.forEach((graphics) => graphics.setVisible(this.sandbox.isFogEnabled()));
   }
   update(_time: number, delta: number): void {
+    if (Phaser.Input.Keyboard.JustDown(this.keys.F9)) this.toggleSandboxMode();
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) && !this.ended && !this.levelPending) this.togglePause();
     if (this.paused || this.ended || this.levelPending) return;
-    this.elapsedMs += delta; if (!this.finalBossPending && !this.finalBossActive && this.elapsedMs >= RUN_DURATION_MS) this.warnFinalBoss();
-    this.movePlayer(); this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; this.necromancerSpawnElapsed += delta; this.apparitionHordeElapsed += delta; this.superSkeletonSpawnElapsed += delta; this.spawnEnemies(); this.spawnEnemyVariants(); this.updateFinalBoss(delta); this.updateEnemies(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateBossArrow();
-    this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
+    this.movePlayer();
+    if (this.merchant.isInMerchant()) {
+      this.merchant.updateInteraction();
+      this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency);
+      return;
+    }
+    this.elapsedMs += delta; if (!this.bossSystem.hasTriggeredMainBoss() && this.elapsedMs >= RUN_DURATION_MS) this.bossSystem.warn();
+    this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta)); this.spawnEnemies(); this.spawnEnemyVariants(); this.bossSystem.update(delta); this.updateEnemies(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.bossSystem.updateArrows(); this.merchant.update(delta);
+    this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency);
   }
   private movePlayer(): void {
     const d = new Phaser.Math.Vector2(
@@ -169,7 +264,7 @@ export class GameScene extends Phaser.Scene {
     this.mobileDirection.set(0, 0);
     this.joystickKnob?.setPosition(120, GAME_HEIGHT - 120);
   }
-  private spawnEnemies(): void { if (this.finalBossPending || this.finalBossActive) return; const stage = this.difficulty.stageFor(this.elapsedMs); if (this.spawnElapsed < stage.spawnInterval) return; this.spawnElapsed = 0; for (let i = 0; i < stage.count; i += 1) this.spawnEnemy(stage.healthMultiplier); }
+  private spawnEnemies(): void { if (!this.sandbox.isSkeletonSpawnEnabled() || this.bossSystem.hasActiveEncounter()) return; const stage = this.difficulty.stageFor(this.elapsedMs); if (this.spawnElapsed < stage.spawnInterval) return; this.spawnElapsed = 0; for (let i = 0; i < stage.count; i += 1) this.spawnEnemy(stage.healthMultiplier); }
   private spawnEnemy(multiplier: number): void {
     let enemy = this.enemies.getFirstDead(false) as Enemy | null;
 
@@ -187,15 +282,21 @@ export class GameScene extends Phaser.Scene {
     enemy.activate(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, this.enemyConfig('skeleton', { maxHealth: ENEMY_VARIANTS.skeleton.maxHealth * multiplier }));
   }
   private spawnEnemyVariants(): void {
-    if (this.finalBossPending || this.finalBossActive) return;
-    if (this.necromancerSpawnElapsed >= 15000) {
-      this.necromancerSpawnElapsed = 0;
+    if (!this.sandbox.isVariantSpawnEnabled() || this.bossSystem.hasActiveEncounter()) return;
+    ENEMY_VARIANT_SCHEDULE.forEach((entry) => {
+      const elapsed = this.variantSpawnElapsed.get(entry.variantId) ?? 0;
+      if (elapsed < entry.intervalMs) return;
+      this.variantSpawnElapsed.set(entry.variantId, 0);
+      this.spawnScheduledVariant(entry.variantId);
+    });
+  }
+  private spawnScheduledVariant(variantId: EnemyVariantScheduleEntry['variantId']): void {
+    if (variantId === 'necromancerWraith') {
       const position = this.randomMapPosition();
       this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('necromancerWraith', { isStatic: true, displaySize: 68 }));
+      return;
     }
-
-    if (this.apparitionHordeElapsed >= 30000) {
-      this.apparitionHordeElapsed = 0;
+    if (variantId === 'apparitionWraith') {
       const count = 10 + this.apparitionHordeLevel * 2;
       const health = ENEMY_VARIANTS.apparitionWraith.maxHealth + this.apparitionHordeLevel * 12;
       for (let index = 0; index < count; index += 1) {
@@ -203,16 +304,13 @@ export class GameScene extends Phaser.Scene {
         this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('apparitionWraith', { maxHealth: health, displaySize: 68 }));
       }
       this.apparitionHordeLevel += 1;
+      return;
     }
-
-    if (this.superSkeletonSpawnElapsed >= 40000) {
-      this.superSkeletonSpawnElapsed = 0;
-      for (let index = 0; index < this.superSkeletonSpawnCount; index += 1) {
-        const position = this.randomBorderPosition();
-        this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('superSkeleton', { isMiniBoss: true, displaySize: 92 }));
-      }
-      this.superSkeletonSpawnCount += 2;
+    for (let index = 0; index < this.superSkeletonSpawnCount; index += 1) {
+      const position = this.randomBorderPosition();
+      this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('superSkeleton', { isMiniBoss: true, displaySize: 92 }));
     }
+    this.superSkeletonSpawnCount += 2;
   }
   private spawnEnemyVariant(x: number, y: number, config: EnemyVariantConfig): Enemy | null {
     let enemy = this.enemies.getFirstDead(false) as Enemy | null;
@@ -224,7 +322,7 @@ export class GameScene extends Phaser.Scene {
     enemy.activate(x, y, config);
     return enemy;
   }
-  private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) { if (enemy === this.finalBoss && this.bossChannelActive) enemy.pauseMovement(); else enemy.pursue(this.player); } return true; }); }
+  private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) { if (this.bossSystem.isChanneling(enemy)) enemy.pauseMovement(); else enemy.pursue(this.player); } return true; }); }
   private updateNecromancerAttacks(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active && enemy.canCastSoul(this.time.now)) this.launchSoulProjectile(enemy); return true; }); }
   private autoAttack(): void {
     this.weapons.forEach((weapon) => this.attackWithWeapon(weapon));
@@ -388,195 +486,12 @@ export class GameScene extends Phaser.Scene {
     }
     projectile.fire(enemy.x, enemy.y, this.player.x, this.player.y, this.time.now);
   }
-  private warnFinalBoss(): void {
-    this.finalBossPending = true;
-    this.finalBossMessage = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'O sobrevivente sente uma presença maligna no ar!', {
-      fontFamily: TITLE_FONT_FAMILY,
-      fontSize: '34px',
-      color: '#d8ffd0',
-      align: 'center',
-      stroke: '#101510',
-      strokeThickness: 5,
-      wordWrap: { width: 900 }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(45);
-    this.tweens.add({ targets: this.finalBossMessage, alpha: 0.45, yoyo: true, repeat: 2, duration: 420 });
-    this.time.delayedCall(FINAL_BOSS_MESSAGE_MS, () => this.spawnFinalBoss());
-  }
-  private spawnFinalBoss(): void {
-    this.finalBossMessage?.destroy();
-    this.finalBossMessage = undefined;
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-    const distance = 980;
-    const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 260, WORLD_SIZE - 260);
-    const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, 260, WORLD_SIZE - 260);
-    this.finalBoss = this.spawnEnemyVariant(x, y, this.enemyConfig('finalBoss', { isMiniBoss: true, displaySize: 390, collisionRadius: 58, healthBarWidth: 220 })) ?? undefined;
-    this.finalBossPending = false;
-    this.finalBossActive = Boolean(this.finalBoss);
-    this.finalBossCleanupAt = this.time.now + 30000;
-    this.bossSummonElapsed = 0;
-    this.bossChannelElapsed = 0;
-    this.bossMeleeLastAt = this.time.now - FINAL_BOSS_MELEE_COOLDOWN_MS + 1600;
-    this.ensureBossArrow();
-    this.finalBossCountdown = this.add.text(GAME_WIDTH / 2, 84, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '24px', color: '#ffffff', stroke: '#101510', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(44);
-  }
   private clearEnemyField(preserve?: Enemy): number {
     let clearedEnemies = 0;
     this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active && enemy !== preserve) { enemy.deactivate(); clearedEnemies += 1; } return true; });
     this.projectiles.children.each((child) => { const projectile = child as Projectile; if (projectile.active) projectile.deactivate(); return true; });
     this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active) projectile.deactivate(); return true; });
     return clearedEnemies;
-  }
-  private updateFinalBoss(delta: number): void {
-    if (!this.finalBossActive || !this.finalBoss?.active) return;
-    if (this.finalBossCleanupAt > 0) {
-      const remainingMs = Math.max(0, this.finalBossCleanupAt - this.time.now);
-      this.finalBossCountdown?.setText(`A escuridão consome a arena em ${Math.ceil(remainingMs / 1000)}s`);
-      if (remainingMs <= 0) {
-        const clearedEnemies = this.clearEnemyField(this.finalBoss);
-        this.finalBoss.maxHealth += clearedEnemies * 20;
-        this.finalBoss.health += clearedEnemies * 20;
-        this.finalBossCleanupAt = 0;
-        this.finalBossCountdown?.destroy();
-        this.finalBossCountdown = undefined;
-      }
-    }
-    if (this.bossChannelActive) {
-      this.finalBoss.pauseMovement();
-      this.updateBossShieldVisual();
-      if (this.time.now >= this.bossChannelStartedAt + FINAL_BOSS_CHANNEL_DURATION_MS) this.bossChannelActive = false;
-      return;
-    }
-    if (this.bossShieldActive) {
-      if (this.time.now >= this.bossChannelStartedAt + FINAL_BOSS_SHIELD_DEADLINE_MS) this.completeBossChannel();
-      return;
-    }
-    this.bossSummonElapsed += delta;
-    this.bossChannelElapsed += delta;
-    if (this.bossSummonElapsed >= FINAL_BOSS_SUMMON_INTERVAL_MS) {
-      this.bossSummonElapsed = 0;
-      this.summonBossApparitions();
-    }
-    if (this.bossChannelElapsed >= FINAL_BOSS_CHANNEL_INTERVAL_MS) { this.startBossChannel(); return; }
-    this.tryBossMeleeAttack();
-  }
-  private summonBossApparitions(): void {
-    if (!this.finalBoss) return;
-    for (let index = 0; index < 30; index += 1) {
-      const angle = (Math.PI * 2 * index) / 30 + Phaser.Math.FloatBetween(-0.12, 0.12);
-      const radius = Phaser.Math.Between(175, 255);
-      this.spawnEnemyVariant(this.finalBoss.x + Math.cos(angle) * radius, this.finalBoss.y + Math.sin(angle) * radius, this.enemyConfig('apparitionWraith', { displaySize: 72 }));
-    }
-  }
-  private tryBossMeleeAttack(): void {
-    if (!this.finalBoss || this.time.now < this.bossMeleeLastAt + FINAL_BOSS_MELEE_COOLDOWN_MS) return;
-    if (Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) > FINAL_BOSS_MELEE_RADIUS) return;
-    this.bossMeleeLastAt = this.time.now;
-    const direction = new Phaser.Math.Vector2(this.player.x - this.finalBoss.x, this.player.y - this.finalBoss.y).normalize();
-    this.playBossMeleeSlash(direction);
-    this.time.delayedCall(220, () => {
-      if (this.ended || !this.finalBoss?.active) return;
-      if (Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) <= FINAL_BOSS_MELEE_RADIUS && this.player.damage(40, this.time.now) && this.player.health <= 0) this.finish(false);
-    });
-  }
-  private startBossChannel(): void {
-    if (!this.finalBoss || this.bossChannelActive) return;
-    this.bossChannelActive = true;
-    this.bossShieldActive = true;
-    this.bossChannelStartedAt = this.time.now;
-    this.bossShield = FINAL_BOSS_SHIELD_HEALTH;
-    this.bossChannelElapsed = 0;
-    this.nextBossShieldBoltAt = 0;
-    this.finalBoss.pauseMovement();
-    this.updateBossShieldVisual();
-  }
-  private completeBossChannel(): void {
-    if (!this.finalBoss || this.bossShield <= 0) { this.endBossChannel(); return; }
-    const explosion = this.add.circle(this.finalBoss.x, this.finalBoss.y, FINAL_BOSS_EXPLOSION_RADIUS, 0x52ff45, 0.24).setStrokeStyle(7, 0xd8ffd0, 0.9).setDepth(12);
-    this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18, duration: 520, onComplete: () => explosion.destroy() });
-    const playerCaught = Phaser.Math.Distance.Between(this.finalBoss.x, this.finalBoss.y, this.player.x, this.player.y) <= FINAL_BOSS_EXPLOSION_RADIUS;
-    this.endBossChannel();
-    if (playerCaught) {
-      this.player.health = 0;
-      this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills);
-      this.time.delayedCall(260, () => this.finish(false));
-    }
-  }
-  private endBossChannel(): void {
-    this.bossChannelActive = false;
-    this.bossShieldActive = false;
-    this.bossShield = 0;
-    this.bossShieldAura?.destroy();
-    this.bossShieldBolts.forEach((bolt) => bolt.destroy());
-    this.bossShieldBack?.destroy();
-    this.bossShieldFill?.destroy();
-    this.bossShieldAura = undefined;
-    this.bossShieldBolts = [];
-    this.bossShieldBack = undefined;
-    this.bossShieldFill = undefined;
-  }
-  private updateBossShieldVisual(): void {
-    if (!this.finalBoss?.active || !this.bossShieldActive) return;
-    if (!this.bossShieldAura) {
-      this.bossShieldAura = this.add.circle(this.finalBoss.x, this.finalBoss.y, 230, 0x48ff52, 0.16).setStrokeStyle(5, 0xb4ff9e, 0.88).setDepth(8);
-      this.bossShieldBack = this.add.rectangle(this.finalBoss.x, this.finalBoss.y - this.finalBoss.displayHeight / 2 - 34, 188, 10, 0x061009).setDepth(12);
-      this.bossShieldFill = this.add.rectangle(this.finalBoss.x, this.finalBoss.y - this.finalBoss.displayHeight / 2 - 34, 184, 5, 0x65ff5a).setDepth(13);
-    }
-    const width = Phaser.Math.Clamp(this.bossShield / FINAL_BOSS_SHIELD_HEALTH, 0, 1) * 184;
-    const y = this.finalBoss.y - this.finalBoss.displayHeight / 2 - 34;
-    this.bossShieldAura.setPosition(this.finalBoss.x, this.finalBoss.y);
-    this.spawnBossShieldBolts();
-    this.bossShieldBack?.setPosition(this.finalBoss.x, y);
-    this.bossShieldFill?.setPosition(this.finalBoss.x - 92 + width / 2, y).setSize(width, 5);
-  }
-  private spawnBossShieldBolts(): void {
-    if (!this.finalBoss || this.time.now < this.nextBossShieldBoltAt) return;
-    this.nextBossShieldBoltAt = this.time.now + Phaser.Math.Between(90, 180);
-    const count = Phaser.Math.Between(1, 3);
-    for (let index = 0; index < count; index += 1) {
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const radius = Math.sqrt(Math.random()) * 205;
-      const bolt = this.add.sprite(
-        this.finalBoss.x + Math.cos(angle) * radius,
-        this.finalBoss.y + Math.sin(angle) * radius,
-        'boss-shield-bolt'
-      )
-        .setDisplaySize(Phaser.Math.Between(42, 84), Phaser.Math.Between(42, 84))
-        .setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2))
-        .setAlpha(Phaser.Math.FloatBetween(0.72, 1))
-        .setDepth(11)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .play('boss-shield-bolt-flicker');
-      this.bossShieldBolts.push(bolt);
-      this.tweens.add({ targets: bolt, alpha: 0, duration: Phaser.Math.Between(180, 320), onComplete: () => this.destroyBossShieldBolt(bolt) });
-    }
-  }
-  private destroyBossShieldBolt(bolt: Phaser.GameObjects.Sprite): void {
-    Phaser.Utils.Array.Remove(this.bossShieldBolts, bolt);
-    bolt.destroy();
-  }
-  private ensureBossArrow(): void {
-    if (this.finalBossArrow) return;
-    const arrow = this.add.graphics();
-    arrow.fillStyle(0x111111, 0.9);
-    arrow.fillTriangle(25, 0, -15, -22, -9, 0);
-    arrow.fillTriangle(25, 0, -15, 22, -9, 0);
-    arrow.fillRect(-30, -7, 22, 14);
-    arrow.fillStyle(0xffffff, 1);
-    arrow.fillTriangle(18, 0, -11, -15, -7, 0);
-    arrow.fillTriangle(18, 0, -11, 15, -7, 0);
-    arrow.fillRect(-25, -4, 19, 8);
-    this.finalBossArrow = this.add.container(0, 0, [arrow]).setScrollFactor(0).setDepth(44).setVisible(false);
-  }
-  private updateBossArrow(): void {
-    if (!this.finalBossArrow || !this.finalBossActive || !this.finalBoss?.active) { this.finalBossArrow?.setVisible(false); return; }
-    const view = this.cameras.main.worldView;
-    const screenX = this.finalBoss.x - view.x;
-    const screenY = this.finalBoss.y - view.y;
-    const visible = screenX >= 0 && screenX <= GAME_WIDTH && screenY >= 0 && screenY <= GAME_HEIGHT;
-    if (visible) { this.finalBossArrow.setVisible(false); return; }
-    const x = Phaser.Math.Clamp(screenX, 48, GAME_WIDTH - 48);
-    const y = Phaser.Math.Clamp(screenY, 48, GAME_HEIGHT - 48);
-    this.finalBossArrow.setVisible(true).setPosition(x, y).setRotation(Phaser.Math.Angle.Between(GAME_WIDTH / 2, GAME_HEIGHT / 2, screenX, screenY));
   }
   private enemyConfig(id: EnemyVariantConfig['id'], overrides: Partial<Omit<EnemyVariantConfig, 'id'>> = {}): EnemyVariantConfig {
     return { id, texture: ENEMY_TEXTURE_KEYS[id], ...ENEMY_VARIANTS[id], ...overrides };
@@ -612,27 +527,6 @@ export class GameScene extends Phaser.Scene {
     });
     slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
   }
-  private playBossMeleeSlash(direction: Phaser.Math.Vector2): void {
-    if (!this.finalBoss) return;
-    const slash = this.add.sprite(this.finalBoss.x + direction.x * 118, this.finalBoss.y + direction.y * 118, 'sword-air-slash')
-      .setDisplaySize(300, 300)
-      .setTint(0x52ff45)
-      .setAlpha(0.88)
-      .setDepth(12)
-      .setBlendMode(Phaser.BlendModes.ADD);
-
-    slash.rotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI;
-    slash.play('sword-air-slash-swing');
-    this.tweens.add({
-      targets: slash,
-      x: this.finalBoss.x + direction.x * 168,
-      y: this.finalBoss.y + direction.y * 168,
-      alpha: 0.12,
-      duration: 320,
-      ease: 'Quad.Out'
-    });
-    slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
-  }
   private nearestEnemy(range: number): Enemy | null { let nearest: Enemy | null = null; let best = Number.POSITIVE_INFINITY; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const effectiveRange = range + this.enemyRangePadding(enemy); const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance <= effectiveRange ** 2 && distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
   private enemyRangePadding(enemy: Enemy): number { return enemy.variantId === 'finalBoss' ? enemy.displayWidth * 0.35 : 0; }
   private updateProjectiles(): void {
@@ -653,7 +547,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
   private updateSoulProjectiles(): void { this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
-  private updateGems(): void { this.gems.children.each((child) => { const gem = child as ExperienceGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
+  private updateGems(): void { this.gems.children.each((child) => { const gem = child as CurrencyGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
   private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; this.damageEnemy(enemy, this.projectileDamage(projectile, enemy), projectile.weaponId); this.triggerStaffExplosion(projectile, enemy); if (this.tryProjectileRicochet(projectile, enemy)) return; if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
   private projectileDamage(projectile: Projectile, enemy: Enemy): number {
     if (this.shouldExecuteWithStaff(projectile, enemy)) return enemy.health;
@@ -726,16 +620,10 @@ export class GameScene extends Phaser.Scene {
     return nearest;
   }
   private damageEnemy(enemy: Enemy, amount: number, sourceWeaponId?: string): void {
-    if (enemy === this.finalBoss && this.bossShieldActive && this.bossShield > 0) {
-      const overflowDamage = Math.max(0, amount - this.bossShield);
-      this.bossShield = Math.max(0, this.bossShield - amount);
-      enemy.takeDamage(0);
-      this.updateBossShieldVisual();
-      if (this.bossShield <= 0) {
-        this.endBossChannel();
-        if (overflowDamage > 0) this.damageEnemy(enemy, overflowDamage, sourceWeaponId);
-      }
-      return;
+    const overflow = this.bossSystem.tryAbsorbShieldDamage(enemy, amount);
+    if (overflow !== null) {
+      if (overflow <= 0) return;
+      amount = overflow;
     }
     const damageDealt = Math.min(amount, enemy.health);
     if (sourceWeaponId === 'sword' && this.player.lifeStealPercent > 0) this.player.heal(damageDealt * this.player.lifeStealPercent);
@@ -744,29 +632,34 @@ export class GameScene extends Phaser.Scene {
   private soulProjectileHit(_playerObject: ArcadeColliderObject, projectileObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as SoulProjectile; if (!projectile.active) return; this.player.applySlow(projectile.slowPercent, projectile.slowDurationMs, this.time.now); const damaged = this.player.damage(projectile.damage, this.time.now); projectile.deactivate(); if (damaged && this.player.health <= 0) this.finish(false); }
   private defeatEnemy(enemy: Enemy): void {
     this.kills += 1;
-    if (enemy === this.finalBoss) {
-      this.finalBossActive = false;
-      this.finalBossArrow?.setVisible(false);
-      this.endBossChannel();
+    if (this.bossSystem.isBoss(enemy)) {
+      const wasMainBoss = this.bossSystem.defeatBoss(enemy);
       enemy.deactivate();
-      this.finish(true);
+      if (wasMainBoss) this.finish(true);
       return;
     }
-    for (let index = 0; index < enemy.experienceDrops; index += 1) {
+    this.experience += enemy.reward;
+    this.processExperience();
+    this.spawnXpOrbEffect(enemy.x, enemy.y);
+    for (let index = 0; index < enemy.currencyDrops; index += 1) {
       const gem = this.availableGem();
       if (!gem) break;
       const offset = new Phaser.Math.Vector2().setToPolar(Math.random() * Math.PI * 2, index === 0 ? 0 : Phaser.Math.Between(12, 28));
-      gem.activate(enemy.x + offset.x, enemy.y + offset.y, enemy.experience);
+      gem.activate(enemy.x + offset.x, enemy.y + offset.y, enemy.reward);
     }
     enemy.deactivate();
   }
-  private availableGem(): ExperienceGem | null { let gem = this.gems.getFirstDead(false) as ExperienceGem | null; if (!gem && !this.gems.isFull()) { gem = new ExperienceGem(this); this.gems.add(gem); } return gem; }
+  private spawnXpOrbEffect(x: number, y: number): void {
+    const orb = this.add.image(x, y, 'xp-orb').setDisplaySize(18, 18).setDepth(6);
+    this.tweens.add({ targets: orb, y: y - 30, alpha: 0, duration: 450, ease: 'Quad.Out', onComplete: () => orb.destroy() });
+  }
+  private availableGem(): CurrencyGem | null { let gem = this.gems.getFirstDead(false) as CurrencyGem | null; if (!gem && !this.gems.isFull()) { gem = new CurrencyGem(this); this.gems.add(gem); } return gem; }
   private playerHit(_playerObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const enemy = enemyObject as unknown as Enemy; if (!enemy.active || enemy.contactDamage <= 0 || !this.player.damage(enemy.contactDamage, this.time.now)) return; if (this.player.health <= 0) this.finish(false); }
-  private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as ExperienceGem; if (!gem.active) return; this.experience += gem.value; gem.deactivate(); this.processExperience(); }
+  private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as CurrencyGem; if (!gem.active) return; this.currency += gem.value; gem.deactivate(); }
   private processExperience(): void { if (this.experience < this.experienceNeeded || this.levelPending) return; this.experience -= this.experienceNeeded; this.level += 1; this.experienceNeeded = requiredExperience(this.level); this.levelPending = true; this.showUpgrades(); }
   private prepareStartingWeaponUpgrades(): void {
     const character = CHARACTERS[this.characterId];
-    if (character.preferredWeaponId !== this.primaryWeapon.id || !character.startingWeaponUpgradeChoices) return;
+    if (character.preferredWeaponId !== this.primaryWeapon.id || !character.startingWeaponUpgradeChoices) { this.hud.setVisible(true); return; }
     this.startingUpgradeChoicesRemaining = character.startingWeaponUpgradeChoices;
     this.startingUpgradeChoicesTotal = character.startingWeaponUpgradeChoices;
     this.startingUpgradeSnapshot = this.captureStartingUpgradeSnapshot();
@@ -830,7 +723,7 @@ export class GameScene extends Phaser.Scene {
     const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
     const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
     const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const badge = this.add.text(x + 84, 306, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffffff', backgroundColor: '#8a5cf6', padding: { x: 6, y: 2 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33);
+    const badge = this.add.text(x + 84, 306, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffffff', backgroundColor: '#8a5cf6', padding: { x: 6, y: 2 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33).setVisible(false);
     this.levelOverlay.push(card, icon, name, description, badge);
     card.on('pointerup', () => {
       if (this.startingUpgradeChoicesRemaining <= 0) return;
@@ -839,7 +732,7 @@ export class GameScene extends Phaser.Scene {
       this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1);
       this.updateBuildHud();
       picks.set(upgrade.id, (picks.get(upgrade.id) ?? 0) + 1);
-      badge.setText(`×${picks.get(upgrade.id)}`);
+      badge.setText(`×${picks.get(upgrade.id)}`).setVisible(true);
       this.startingUpgradeChoicesRemaining -= 1;
       if (this.startingUpgradeChoicesRemaining <= 0) {
         this.levelOverlay.forEach((object) => object.destroy());
@@ -848,6 +741,7 @@ export class GameScene extends Phaser.Scene {
         this.startingUpgradePool = undefined;
         this.levelPending = false;
         this.physics.resume();
+        this.hud.setVisible(true);
         this.processExperience();
         return;
       }
@@ -859,7 +753,9 @@ export class GameScene extends Phaser.Scene {
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
-    const choices = this.upgrades.choices(this.primaryWeapon, this.player, amount, this.weapons[1]?.config);
+    const secondaryWeapon = this.weapons[1];
+    const secondaryWithAffinity = secondaryWeapon && this.affinityFamilies.has(weaponFamily(secondaryWeapon.config)) ? secondaryWeapon.config : undefined;
+    const choices = this.upgrades.choices(this.primaryWeapon, this.player, amount, secondaryWithAffinity);
     const cardCount = choices.length + (extraWeaponOffer ? 1 : 0);
     const spacing = 230;
     const startX = GAME_WIDTH / 2 - (spacing * (cardCount - 1)) / 2;
@@ -873,7 +769,7 @@ export class GameScene extends Phaser.Scene {
     this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }, upgradeAmount, extraWeaponOffer);
   }
   private rollExtraWeaponOffer(): WeaponConfig | null {
-    if (this.level % 5 !== 0 || this.weapons.length >= 2) return null;
+    if (this.level % 5 !== 0 || this.weapons.length >= MAX_ACTIVE_WEAPONS) return null;
     const ownedIds = new Set(this.weapons.map((weapon) => weapon.config.id));
     const candidates = Object.values(WEAPONS).filter((weapon) => !ownedIds.has(weapon.id));
     if (candidates.length === 0) return null;

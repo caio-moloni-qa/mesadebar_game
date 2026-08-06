@@ -17,6 +17,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('weapon-sword-icon', new URL('../assets/weapons/sword-icon.png', import.meta.url).href);
     this.load.image('weapon-boomerang-icon', new URL('../assets/weapons/boomerang-icon.png', import.meta.url).href);
     this.load.image('gem', new URL('../assets/pickups/exp-crystal.png', import.meta.url).href);
+    this.load.image('xp-orb', new URL('../assets/pickups/xp-orb.png', import.meta.url).href);
     this.load.image('upgrade-damage-icon', new URL('../assets/upgrades/damage-icon.png', import.meta.url).href);
     this.load.image('upgrade-cooldown-icon', new URL('../assets/upgrades/cooldown-icon.png', import.meta.url).href);
     this.load.image('upgrade-speed-icon', new URL('../assets/upgrades/speed-icon.png', import.meta.url).href);
