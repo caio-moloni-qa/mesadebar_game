@@ -11,9 +11,43 @@ const FINAL_BOSS_CHANNEL_INTERVAL_MS = 40000;
 const FINAL_BOSS_CHANNEL_DURATION_MS = 15000;
 const FINAL_BOSS_SHIELD_DEADLINE_MS = 20000;
 const FINAL_BOSS_SHIELD_HEALTH = 500;
-const FINAL_BOSS_MELEE_RADIUS = 250;
+const FINAL_BOSS_MELEE_TRIGGER_RADIUS = 250;
+const FINAL_BOSS_MELEE_DAMAGE = 40;
 const FINAL_BOSS_EXPLOSION_RADIUS = 700;
 const EXTRA_BOSS_SPAWN_DISTANCE = 520;
+/** Telegraph before the melee sweep resolves — gives the player a window to back off after the sword appears. */
+const MELEE_TELEGRAPH_MS = 1500;
+/** Reach of the 360° sweep itself, distinct from the (larger) trigger radius above. */
+const MELEE_SWING_RADIUS = 170;
+/** How close the player must be to the blade's current (moving) position for the swing to actually connect — sized to roughly match the sword sprite's own footprint (140px display size). */
+const MELEE_SWORD_HIT_RADIUS = 70;
+/** The sword icon art is drawn on a diagonal (hilt bottom-left, tip top-right); this nudges it left so it reads as upright. Eyeballed — tune if it still looks off. */
+const MELEE_SWORD_ART_TILT = -Math.PI / 8;
+const MELEE_SWORD_BASE_TINT = 0x2fe86a;
+const MELEE_SWORD_BLINK_TINT = 0xd6ffd0;
+const MELEE_SWORD_BLINK_COUNT = 3;
+/** Damage already resolves the instant the telegraph ends — this only paces the follow-through visual (sword + glowing arc)
+ *  slowly enough to actually see the swing's path, since a sprite alone moving at "instant" speed was invisible between frames. */
+const MELEE_SWEEP_VISUAL_MS = 320;
+const MELEE_SWEEP_RING_COLOR = 0x8cff8c;
+/** Cooldown between Necro-Beam casts. Never fires during a shield channel (mutually exclusive — see updateBoss). */
+const NECRO_BEAM_INTERVAL_MS = 20000;
+const NECRO_BEAM_LOCKON_MS = 3000;
+const NECRO_BEAM_DURATION_MS = 6000;
+const NECRO_BEAM_WIDTH = 46;
+const NECRO_BEAM_LENGTH = WORLD_SIZE * 1.5;
+/** The beam's leading edge travels outward from the boss at this speed instead of drawing full-length instantly —
+ *  gives the player a visible window to step out of its path before it reaches them. ~1.6s to reach full length. */
+const NECRO_BEAM_TRAVEL_SPEED = 2600;
+/** Per-tick damage, gated by the player's own invulnerability window (~750ms) — standing fully in the beam for its whole duration is heavily punished but not an instant kill. */
+const NECRO_BEAM_DAMAGE = 20;
+// At range D, the beam needs an angular speed of (player_speed / D) rad/s just to keep pointing exactly at a player
+// moving perpendicular to it. At the base player speed (180px/s), 60°/s could out-turn that requirement at
+// anything closer than ~170px, which is why it always caught up once it landed a hit. 15°/s only "wins" the
+// chase below ~690px, so moving perpendicular to the beam gains real separation at any normal fighting distance.
+const NECRO_BEAM_FOLLOW_TURN_RATE = Phaser.Math.DegToRad(15);
+const NECRO_BEAM_CORE_COLOR = 0xd6ffd0;
+const NECRO_BEAM_GLOW_COLOR = 0x35c96b;
 
 /** One boss encounter's full runtime state — channel/shield/melee/summon/arrow — generalized from the old single `finalBoss` scalar fields. */
 interface ActiveBoss {
@@ -35,6 +69,14 @@ interface ActiveBoss {
   shieldBack?: Phaser.GameObjects.Rectangle;
   shieldFill?: Phaser.GameObjects.Rectangle;
   arrow?: Phaser.GameObjects.Container;
+  beamElapsed: number;
+  beamState: 'idle' | 'lockon' | 'active';
+  beamLockOnElapsed: number;
+  beamActiveElapsed: number;
+  /** Fixed once at activation — the beam doesn't re-aim while active. Its origin, unlike the angle, always tracks the boss sprite's current position (see drawBeam/distanceToBeam). */
+  beamAngle: number;
+  beamReticle?: Phaser.GameObjects.Image;
+  beamVisual?: Phaser.GameObjects.Graphics;
 }
 
 /** Everything BossSystem needs from GameScene, exposed narrowly so the two stay decoupled. */
@@ -133,7 +175,12 @@ export class BossSystem {
       channelStartedAt: 0,
       shield: 0,
       shieldBolts: [],
-      nextShieldBoltAt: 0
+      nextShieldBoltAt: 0,
+      beamElapsed: 0,
+      beamState: 'idle',
+      beamLockOnElapsed: 0,
+      beamActiveElapsed: 0,
+      beamAngle: 0
     };
     this.bosses.push(boss);
     this.ensureArrow(boss);
@@ -166,13 +213,21 @@ export class BossSystem {
       if (this.host.scene.time.now >= boss.channelStartedAt + FINAL_BOSS_SHIELD_DEADLINE_MS) this.completeChannel(boss);
       return;
     }
+    // Mutually exclusive with shield-channel/melee/summon-trigger checks below: while beaming, the boss stands
+    // still tracking the player and nothing else can start until the beam ends.
+    if (boss.beamState !== 'idle') {
+      this.updateBeam(boss, delta);
+      return;
+    }
     boss.summonElapsed += delta;
     boss.channelElapsed += delta;
+    boss.beamElapsed += delta;
     if (boss.summonElapsed >= FINAL_BOSS_SUMMON_INTERVAL_MS) {
       boss.summonElapsed = 0;
       this.summonApparitions(boss);
     }
     if (boss.channelElapsed >= FINAL_BOSS_CHANNEL_INTERVAL_MS) { this.startChannel(boss); return; }
+    if (boss.beamElapsed >= NECRO_BEAM_INTERVAL_MS) { this.startBeamLockOn(boss); return; }
     this.tryMeleeAttack(boss);
   }
   private summonApparitions(boss: ActiveBoss): void {
@@ -186,14 +241,208 @@ export class BossSystem {
     const scene = this.host.scene;
     const player = this.host.getPlayer();
     if (scene.time.now < boss.meleeLastAt + FINAL_BOSS_MELEE_COOLDOWN_MS) return;
-    if (Phaser.Math.Distance.Between(boss.enemy.x, boss.enemy.y, player.x, player.y) > FINAL_BOSS_MELEE_RADIUS) return;
+    if (Phaser.Math.Distance.Between(boss.enemy.x, boss.enemy.y, player.x, player.y) > FINAL_BOSS_MELEE_TRIGGER_RADIUS) return;
     boss.meleeLastAt = scene.time.now;
+    this.telegraphMeleeAttack(boss);
+  }
+  /** Spawns the telegraph sword beside the boss, then resolves the 360° sweep after `MELEE_TELEGRAPH_MS`. */
+  private telegraphMeleeAttack(boss: ActiveBoss): void {
+    const scene = this.host.scene;
+    const player = this.host.getPlayer();
     const direction = new Phaser.Math.Vector2(player.x - boss.enemy.x, player.y - boss.enemy.y).normalize();
-    this.playMeleeSlash(boss, direction);
-    scene.time.delayedCall(220, () => {
-      if (this.host.isEnded() || !boss.enemy.active) return;
-      if (Phaser.Math.Distance.Between(boss.enemy.x, boss.enemy.y, player.x, player.y) <= FINAL_BOSS_MELEE_RADIUS && player.damage(40, scene.time.now) && player.health <= 0) this.host.finish(false);
+    const perpendicular = new Phaser.Math.Vector2(-direction.y, direction.x);
+    const spawnAngle = Phaser.Math.Angle.Between(0, 0, perpendicular.x, perpendicular.y);
+    // Placeholder art: reuses the sword weapon icon (same sprite as the player's thrown-sword buff), tinted green.
+    // Swap for a dedicated "necromantic sword" sprite once one exists.
+    const sword = scene.add.sprite(
+      boss.enemy.x + perpendicular.x * MELEE_SWING_RADIUS,
+      boss.enemy.y + perpendicular.y * MELEE_SWING_RADIUS,
+      'weapon-sword-icon'
+    )
+      .setDisplaySize(140, 140)
+      .setTint(MELEE_SWORD_BASE_TINT)
+      .setDepth(12)
+      .setRotation(spawnAngle + Math.PI / 2 + MELEE_SWORD_ART_TILT);
+    this.blinkTelegraphSword(sword);
+    scene.time.delayedCall(MELEE_TELEGRAPH_MS, () => this.resolveMeleeSweep(boss, sword, spawnAngle));
+  }
+  /** Flashes the telegraph sword to a light green tint `MELEE_SWORD_BLINK_COUNT` times, spread evenly across the telegraph window. */
+  private blinkTelegraphSword(sword: Phaser.GameObjects.Sprite): void {
+    const scene = this.host.scene;
+    const halfCycles = MELEE_SWORD_BLINK_COUNT * 2;
+    const stepMs = MELEE_TELEGRAPH_MS / halfCycles;
+    for (let step = 1; step <= halfCycles; step += 1) {
+      scene.time.delayedCall(stepMs * step, () => {
+        if (!sword.active) return;
+        sword.setTint(step % 2 === 1 ? MELEE_SWORD_BLINK_TINT : MELEE_SWORD_BASE_TINT);
+      });
+    }
+  }
+  /** Plays the 360° sweep once the telegraph ends; damage only lands when the moving blade actually reaches the player. */
+  private resolveMeleeSweep(boss: ActiveBoss, sword: Phaser.GameObjects.Sprite, startAngle: number): void {
+    const scene = this.host.scene;
+    const player = this.host.getPlayer();
+    if (this.host.isEnded() || !boss.enemy.active) { sword.destroy(); return; }
+    const orbit = { angle: startAngle };
+    const wind = this.createWindTrail(sword);
+    const ring = scene.add.graphics().setDepth(11);
+    scene.tweens.add({
+      targets: orbit,
+      angle: startAngle + Math.PI * 2,
+      duration: MELEE_SWEEP_VISUAL_MS,
+      ease: 'Linear',
+      onUpdate: () => {
+        if (!boss.enemy.active) return;
+        const swordX = boss.enemy.x + Math.cos(orbit.angle) * MELEE_SWING_RADIUS;
+        const swordY = boss.enemy.y + Math.sin(orbit.angle) * MELEE_SWING_RADIUS;
+        sword.setPosition(swordX, swordY);
+        sword.setRotation(orbit.angle + Math.PI / 2 + MELEE_SWORD_ART_TILT);
+        // Redraws the traced arc every frame so the swing's full path stays visible, unlike the fast-moving
+        // sword sprite alone (which was skipping too many pixels between frames to read at a glance).
+        ring.clear();
+        ring.lineStyle(22, MELEE_SWEEP_RING_COLOR, 0.18);
+        ring.beginPath().arc(boss.enemy.x, boss.enemy.y, MELEE_SWING_RADIUS, startAngle, orbit.angle, false).strokePath();
+        ring.lineStyle(9, MELEE_SWEEP_RING_COLOR, 0.9);
+        ring.beginPath().arc(boss.enemy.x, boss.enemy.y, MELEE_SWING_RADIUS, startAngle, orbit.angle, false).strokePath();
+        // Contact-based: only damages once the blade's current position actually reaches the player
+        // (player.damage()'s own invulnerability window keeps this from re-triggering every frame of contact).
+        if (!this.host.isEnded() && Phaser.Math.Distance.Between(swordX, swordY, player.x, player.y) <= MELEE_SWORD_HIT_RADIUS) {
+          if (player.damage(FINAL_BOSS_MELEE_DAMAGE, scene.time.now) && player.health <= 0) this.host.finish(false);
+        }
+      },
+      onComplete: () => {
+        sword.destroy();
+        wind.stop();
+        scene.time.delayedCall(250, () => wind.destroy());
+        scene.tweens.add({ targets: ring, alpha: 0, duration: 260, ease: 'Quad.Out', onComplete: () => ring.destroy() });
+      }
     });
+  }
+  /** Generates a tiny soft-dot texture once (no dedicated wind asset exists yet) and returns a light-green particle
+   *  emitter following `sword`, giving the swing a streaking wind trail. Caller stops/destroys it when the swing ends. */
+  private createWindTrail(sword: Phaser.GameObjects.Sprite): Phaser.GameObjects.Particles.ParticleEmitter {
+    const scene = this.host.scene;
+    if (!scene.textures.exists('melee-wind-particle')) {
+      const graphics = scene.add.graphics();
+      graphics.fillStyle(0xffffff, 1);
+      graphics.fillCircle(4, 4, 4);
+      graphics.generateTexture('melee-wind-particle', 8, 8);
+      graphics.destroy();
+    }
+    const emitter = scene.add.particles(sword.x, sword.y, 'melee-wind-particle', {
+      tint: 0xb6ffb0,
+      alpha: { start: 0.75, end: 0 },
+      scale: { start: 1.4, end: 0.2 },
+      speed: 30,
+      lifespan: 220,
+      frequency: 12,
+      blendMode: Phaser.BlendModes.ADD
+    }).setDepth(11);
+    emitter.startFollow(sword);
+    return emitter;
+  }
+  /** Begins the 3s lock-on: a reticle tracks the player's live position above their head while the boss stands still. */
+  private startBeamLockOn(boss: ActiveBoss): void {
+    boss.beamElapsed = 0;
+    boss.beamState = 'lockon';
+    boss.beamLockOnElapsed = 0;
+    boss.enemy.pauseMovement();
+    this.ensureBeamReticleTexture();
+    const player = this.host.getPlayer();
+    boss.beamReticle = this.host.scene.add.image(player.x, player.y - 60, 'necro-beam-reticle').setDepth(46).setScale(0);
+    this.host.scene.tweens.add({ targets: boss.beamReticle, scale: 1, duration: 260, ease: 'Back.Out' });
+  }
+  /** Lock-on ends: points the beam at the player's position right now. The origin itself always tracks the boss's live sprite position (see drawBeam), it's only the angle that locks here. */
+  private activateBeam(boss: ActiveBoss): void {
+    boss.beamReticle?.destroy();
+    boss.beamReticle = undefined;
+    const player = this.host.getPlayer();
+    boss.beamState = 'active';
+    boss.beamActiveElapsed = 0;
+    boss.beamAngle = Phaser.Math.Angle.Between(boss.enemy.x, boss.enemy.y, player.x, player.y);
+    boss.beamVisual = this.host.scene.add.graphics().setDepth(10);
+  }
+  private updateBeam(boss: ActiveBoss, delta: number): void {
+    boss.enemy.pauseMovement();
+    const player = this.host.getPlayer();
+    if (boss.beamState === 'lockon') {
+      boss.beamLockOnElapsed += delta;
+      boss.beamReticle?.setPosition(player.x, player.y - 60);
+      if (boss.beamLockOnElapsed >= NECRO_BEAM_LOCKON_MS) this.activateBeam(boss);
+      return;
+    }
+    boss.beamActiveElapsed += delta;
+    this.steerBeamTowardPlayer(boss, delta);
+    this.drawBeam(boss);
+    this.applyBeamDamage(boss);
+    if (boss.beamActiveElapsed >= NECRO_BEAM_DURATION_MS) this.endBeam(boss);
+  }
+  /** Slowly rotates the beam toward wherever the player currently is — e.g. if they walk down after it's emitted
+   *  pointing at their old spot, the beam gradually swings down to reacquire them, at a capped turn rate rather
+   *  than snapping instantly. */
+  private steerBeamTowardPlayer(boss: ActiveBoss, delta: number): void {
+    const player = this.host.getPlayer();
+    const targetAngle = Phaser.Math.Angle.Between(boss.enemy.x, boss.enemy.y, player.x, player.y);
+    boss.beamAngle = Phaser.Math.Angle.RotateTo(boss.beamAngle, targetAngle, NECRO_BEAM_FOLLOW_TURN_RATE * (delta / 1000));
+  }
+  /** How far the beam's leading edge has traveled from the boss so far — grows at `NECRO_BEAM_TRAVEL_SPEED`, capped at full length. */
+  private beamGrownLength(boss: ActiveBoss): number {
+    return Math.min(NECRO_BEAM_LENGTH, (boss.beamActiveElapsed / 1000) * NECRO_BEAM_TRAVEL_SPEED);
+  }
+  private drawBeam(boss: ActiveBoss): void {
+    if (!boss.beamVisual) return;
+    const originX = boss.enemy.x;
+    const originY = boss.enemy.y;
+    const length = this.beamGrownLength(boss);
+    const endX = originX + Math.cos(boss.beamAngle) * length;
+    const endY = originY + Math.sin(boss.beamAngle) * length;
+    boss.beamVisual.clear();
+    boss.beamVisual.lineStyle(NECRO_BEAM_WIDTH, NECRO_BEAM_GLOW_COLOR, 0.28);
+    boss.beamVisual.lineBetween(originX, originY, endX, endY);
+    boss.beamVisual.lineStyle(NECRO_BEAM_WIDTH * 0.4, NECRO_BEAM_CORE_COLOR, 0.9);
+    boss.beamVisual.lineBetween(originX, originY, endX, endY);
+  }
+  /** Perpendicular distance from the player to the beam's already-drawn portion — clamped to how far the leading
+   *  edge has actually traveled, so standing beyond the tip (or behind the boss) is always safe. Origin tracks
+   *  the boss's live sprite position (e.g. its hit-reaction shake), only the angle is locked at activation. */
+  private distanceToBeam(boss: ActiveBoss): number {
+    const player = this.host.getPlayer();
+    const originX = boss.enemy.x;
+    const originY = boss.enemy.y;
+    const dirX = Math.cos(boss.beamAngle);
+    const dirY = Math.sin(boss.beamAngle);
+    const toPlayerX = player.x - originX;
+    const toPlayerY = player.y - originY;
+    const projection = Phaser.Math.Clamp(toPlayerX * dirX + toPlayerY * dirY, 0, this.beamGrownLength(boss));
+    const closestX = originX + dirX * projection;
+    const closestY = originY + dirY * projection;
+    return Phaser.Math.Distance.Between(player.x, player.y, closestX, closestY);
+  }
+  private applyBeamDamage(boss: ActiveBoss): void {
+    if (this.host.isEnded() || this.distanceToBeam(boss) > NECRO_BEAM_WIDTH / 2) return;
+    const player = this.host.getPlayer();
+    if (player.damage(NECRO_BEAM_DAMAGE, this.host.scene.time.now) && player.health <= 0) this.host.finish(false);
+  }
+  private endBeam(boss: ActiveBoss): void {
+    boss.beamState = 'idle';
+    boss.beamVisual?.destroy();
+    boss.beamVisual = undefined;
+  }
+  /** Generates a tiny crosshair-in-a-ring texture once (no dedicated reticle asset exists yet) for the beam's lock-on warning. */
+  private ensureBeamReticleTexture(): void {
+    const scene = this.host.scene;
+    if (scene.textures.exists('necro-beam-reticle')) return;
+    const graphics = scene.add.graphics();
+    graphics.lineStyle(3, 0x8cffb0, 1);
+    graphics.strokeCircle(14, 14, 11);
+    graphics.lineBetween(14, 0, 14, 6);
+    graphics.lineBetween(14, 22, 14, 28);
+    graphics.lineBetween(0, 14, 6, 14);
+    graphics.lineBetween(22, 14, 28, 14);
+    graphics.fillStyle(0x8cffb0, 1);
+    graphics.fillCircle(14, 14, 2.5);
+    graphics.generateTexture('necro-beam-reticle', 28, 28);
+    graphics.destroy();
   }
   private startChannel(boss: ActiveBoss): void {
     if (boss.channelActive) return;
@@ -271,27 +520,6 @@ export class BossSystem {
       scene.tweens.add({ targets: bolt, alpha: 0, duration: Phaser.Math.Between(180, 320), onComplete: () => { Phaser.Utils.Array.Remove(boss.shieldBolts, bolt); bolt.destroy(); } });
     }
   }
-  private playMeleeSlash(boss: ActiveBoss, direction: Phaser.Math.Vector2): void {
-    const scene = this.host.scene;
-    const slash = scene.add.sprite(boss.enemy.x + direction.x * 118, boss.enemy.y + direction.y * 118, 'sword-air-slash')
-      .setDisplaySize(300, 300)
-      .setTint(0x52ff45)
-      .setAlpha(0.88)
-      .setDepth(12)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    slash.rotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI;
-    slash.play('sword-air-slash-swing');
-    scene.tweens.add({
-      targets: slash,
-      x: boss.enemy.x + direction.x * 168,
-      y: boss.enemy.y + direction.y * 168,
-      alpha: 0.12,
-      duration: 320,
-      ease: 'Quad.Out'
-    });
-    slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
-  }
-
   private ensureArrow(boss: ActiveBoss): void {
     if (boss.arrow) return;
     const scene = this.host.scene;
@@ -339,6 +567,8 @@ export class BossSystem {
     if (index === -1) return false;
     const [boss] = this.bosses.splice(index, 1);
     this.endChannel(boss);
+    this.endBeam(boss);
+    boss.beamReticle?.destroy();
     boss.arrow?.destroy();
     boss.countdownText?.destroy();
     return boss.isMain;
