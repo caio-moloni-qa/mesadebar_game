@@ -374,9 +374,9 @@ export class BossSystem {
     const sword = scene.add.sprite(
       boss.enemy.x + perpendicular.x * MELEE_SWING_RADIUS,
       boss.enemy.y + perpendicular.y * MELEE_SWING_RADIUS,
-      'weapon-sword-icon'
+      'boss-sword-icon'
     )
-      .setDisplaySize(140, 140)
+      .setDisplaySize(200, 200)
       .setTint(MELEE_SWORD_BASE_TINT)
       .setDepth(12)
       .setRotation(spawnAngle + Math.PI / 2 + MELEE_SWORD_ART_TILT);

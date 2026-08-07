@@ -87,8 +87,8 @@ export class GameHud {
     this.drawBar(this.healthBar, healthBarX + 15, healthBarY + 10, 250, 12, health / maxHealth, 0xd94d59, 4);
     this.healthBorder.setPosition(healthBarX, healthBarY).setDisplaySize(280, 32);
     const expWidth = safe.right - safe.left;
-    const expScale = expWidth / 1800;
-    this.drawBar(this.expBar, safe.left + 76 * expScale, safe.bottom - 23, expWidth - 152 * expScale, 14, experience / needed, 0x58b8e8, 0);
+    const expScale = (expWidth) / 1800;
+    this.drawBar(this.expBar, safe.left + 76 * expScale, safe.bottom - 24, expWidth - 152 * expScale, 14, experience / needed, 0x58b8e8, 0);
     this.expBorder.setPosition(safe.left, safe.bottom - 32).setDisplaySize(expWidth, 32);
     this.layoutBuildIcons(healthBarX, healthBarY);
   }

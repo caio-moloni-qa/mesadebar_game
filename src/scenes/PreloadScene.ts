@@ -15,6 +15,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg('game-icon', new URL('../assets/icons/game-icon.svg', import.meta.url).href, { width: 192, height: 192 });
     this.load.image('weapon-staff-icon', new URL('../assets/weapons/staff-icon.png', import.meta.url).href);
     this.load.image('weapon-sword-icon', new URL('../assets/weapons/sword-icon.png', import.meta.url).href);
+    this.load.image('boss-sword-icon', new URL('../assets/weapons/boss-sword-icon.png', import.meta.url).href);
     this.load.image('weapon-boomerang-icon', new URL('../assets/weapons/boomerang-icon.png', import.meta.url).href);
     this.load.image('gem', new URL('../assets/pickups/exp-crystal.png', import.meta.url).href);
     this.load.image('xp-orb', new URL('../assets/pickups/xp-orb.png', import.meta.url).href);
