@@ -17,6 +17,7 @@ export interface SandboxDebugHost {
   setMapFogVisible(visible: boolean): void;
   spawnVariantNearPlayer(id: EnemyVariantConfig['id'], count: number): void;
   spawnExtraBoss(): void;
+  setPlayerInvincible(invincible: boolean): void;
 }
 
 /** F9 debug UI: run-time toggles, spawn/kill shortcuts and difficulty overrides. Owns all sandbox-only state. */
@@ -27,6 +28,7 @@ export class SandboxDebugPanel {
   private merchantEnabled = false;
   private skeletonSpawnEnabled = true;
   private variantSpawnEnabled = true;
+  private invincible = false;
   private difficultyStage: number | null = null;
   private spawnCapIndex = 0;
 
@@ -36,6 +38,7 @@ export class SandboxDebugPanel {
   isMerchantEnabled(): boolean { return this.merchantEnabled; }
   isSkeletonSpawnEnabled(): boolean { return this.skeletonSpawnEnabled; }
   isVariantSpawnEnabled(): boolean { return this.variantSpawnEnabled; }
+  isInvincible(): boolean { return this.invincible; }
   initialSpawnCap(): number { return SANDBOX_SPAWN_CAP_OPTIONS[this.spawnCapIndex]; }
 
   /** Drops per-run UI object references; scene shutdown already destroyed the underlying GameObjects. */
@@ -61,7 +64,7 @@ export class SandboxDebugPanel {
     const panelX = GAME_WIDTH - 230;
     const panelTop = 110;
     const rowHeight = 38;
-    const rows = 15;
+    const rows = 16;
     const panelHeight = 44 + rows * rowHeight;
     const background = scene.add.rectangle(panelX, panelTop, 220, panelHeight, 0x14101f, 0.88).setOrigin(0, 0).setStrokeStyle(2, 0x8a6ad8, 0.9).setScrollFactor(0).setDepth(59);
     const title = scene.add.text(panelX + 10, panelTop + 8, 'SANDBOX', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffe29a' }).setScrollFactor(0).setDepth(60);
@@ -74,6 +77,7 @@ export class SandboxDebugPanel {
     this.addToggleButton(panelX + 10, nextY(), 'Névoa', () => this.fogEnabled, (value) => { this.fogEnabled = value; this.host.setMapFogVisible(value); });
     this.addToggleButton(panelX + 10, nextY(), 'Spawn esqueletos', () => this.skeletonSpawnEnabled, (value) => { this.skeletonSpawnEnabled = value; });
     this.addToggleButton(panelX + 10, nextY(), 'Spawn variantes', () => this.variantSpawnEnabled, (value) => { this.variantSpawnEnabled = value; });
+    this.addToggleButton(panelX + 10, nextY(), 'Invencível', () => this.invincible, (value) => { this.invincible = value; this.host.setPlayerInvincible(value); });
     this.addCycleButton(panelX + 10, nextY(), () => this.difficultyLabel(), () => this.cycleDifficulty());
     this.addButton(panelX + 10, nextY(), 'Avançar 30s (run)', () => this.host.adjustElapsedMs(30000));
     this.addButton(panelX + 10, nextY(), 'Voltar 30s (run)', () => this.host.adjustElapsedMs(-30000));
