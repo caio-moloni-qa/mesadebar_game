@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { PLAYER_CONFIG } from '../config/balance';
+import { PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../config/balance';
 import { CharacterConfig } from '../config/characters';
+import { TITLE_FONT_FAMILY } from '../config/fonts';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public health = PLAYER_CONFIG.maxHealth;
@@ -21,11 +22,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public passiveHealAmount = 0;
   public passiveHealIntervalMs = 0;
   public lowHealthAttackSpeedBonus = 0;
+  /** Sandbox-only testing toggle: when true, damage() is a no-op regardless of source. */
+  public invincible = false;
+  /** Bênção Divina (merchant item): flat HP/second, independent of the character's own passiveHealAmount/IntervalMs pairing so the two don't need a shared tick rate. */
+  private bonusPassiveHealPerSecond = 0;
   private invulnerableUntil = 0;
   private readonly animationTexture: string;
   private lastWalkDirection: 'down' | 'left' | 'right' | 'up' = 'down';
   private slows: Array<{ expiresAt: number; percent: number }> = [];
   private passiveHealElapsed = 0;
+  private bonusPassiveHealElapsed = 0;
+  /** Rotten Aura status: refreshed by GameScene whenever the player is near a rotten-aura enemy; the debuff (heal cut + DoT) lingers until ROTTEN_AURA_CONFIG.durationMs after the last refresh. */
+  private rottenExpiresAt = 0;
+  private rottenTickElapsed = 0;
 
   public armor = 0;
   public facing = new Phaser.Math.Vector2(1, 0);
@@ -86,12 +95,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   damage(amount: number, now: number): boolean {
-    if (now < this.invulnerableUntil) return false;
-    this.health = Math.max(0, this.health - Math.max(1, amount - this.armor));
+    if (this.invincible || now < this.invulnerableUntil) return false;
+    const dealt = Math.max(1, amount - this.armor);
+    this.health = Math.max(0, this.health - dealt);
     this.invulnerableUntil = now + PLAYER_CONFIG.invulnerabilityMs;
+    this.flashDamageTint();
+    this.showDamageText(dealt);
+    return true;
+  }
+
+  private flashDamageTint(): void {
     this.setTint(0xff8b8b);
     this.scene.time.delayedCall(130, () => this.clearTint());
-    return true;
+  }
+
+  private showDamageText(amount: number): void {
+    const text = this.scene.add.text(this.x, this.y - this.displayHeight / 2 - 10, `- ${Math.round(amount)}`, {
+      fontFamily: TITLE_FONT_FAMILY,
+      fontSize: '22px',
+      color: '#ff5c5c',
+      stroke: '#321b00',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(15);
+    this.scene.tweens.add({ targets: text, y: text.y - 34, alpha: 0, duration: 520, ease: 'Quad.Out', onComplete: () => text.destroy() });
   }
 
   applySlow(percent: number, durationMs: number, now: number): void {
@@ -137,16 +163,67 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   updatePassiveEffects(delta: number): void {
-    if (this.passiveHealAmount <= 0 || this.passiveHealIntervalMs <= 0 || this.health <= 0) return;
-    this.passiveHealElapsed += delta;
-    while (this.passiveHealElapsed >= this.passiveHealIntervalMs) {
-      this.passiveHealElapsed -= this.passiveHealIntervalMs;
-      this.heal(this.passiveHealAmount);
+    if (this.health <= 0) return;
+    if (this.passiveHealAmount > 0 && this.passiveHealIntervalMs > 0) {
+      this.passiveHealElapsed += delta;
+      while (this.passiveHealElapsed >= this.passiveHealIntervalMs) {
+        this.passiveHealElapsed -= this.passiveHealIntervalMs;
+        this.heal(this.passiveHealAmount);
+      }
+    }
+    if (this.bonusPassiveHealPerSecond > 0) {
+      this.bonusPassiveHealElapsed += delta;
+      while (this.bonusPassiveHealElapsed >= 1000) {
+        this.bonusPassiveHealElapsed -= 1000;
+        this.heal(this.bonusPassiveHealPerSecond);
+      }
     }
   }
 
   heal(amount: number): void {
-    this.health = Math.min(this.maxHealth, this.health + amount);
+    const effective = this.isRotten() ? amount * (1 - ROTTEN_AURA_CONFIG.healReduction) : amount;
+    this.health = Math.min(this.maxHealth, this.health + effective);
+  }
+
+  /** Bênção Divina (merchant item, 350 gemas): +5 HP/s passive healing. Stacks additively if bought again. */
+  addDivineBlessing(): void {
+    this.bonusPassiveHealPerSecond += 5;
+  }
+
+  /** Maldição Arcana (merchant item, 250 gemas): trades 50 max HP for +30% damage. Stacks additively; never drops max HP below 1. */
+  addArcaneCurse(): void {
+    this.maxHealth = Math.max(1, this.maxHealth - 50);
+    this.health = Math.min(this.health, this.maxHealth);
+    this.damageMultiplier += 0.3;
+  }
+
+  /** Called by GameScene every frame the player overlaps a rotten-aura enemy — refreshes (doesn't stack) the debuff window. */
+  refreshRottenAura(now: number): void {
+    this.rottenExpiresAt = now + ROTTEN_AURA_CONFIG.durationMs;
+  }
+
+  isRotten(): boolean {
+    return this.scene.time.now < this.rottenExpiresAt;
+  }
+
+  /** Ticks the rotten damage-over-time independently of the normal hit-invulnerability window — a DoT shouldn't be blocked by an unrelated attack's i-frames. Bypasses armor and invincible still stops it. */
+  updateRottenStatus(delta: number): void {
+    if (!this.isRotten() || this.health <= 0) {
+      this.rottenTickElapsed = 0;
+      return;
+    }
+    this.rottenTickElapsed += delta;
+    while (this.rottenTickElapsed >= ROTTEN_AURA_CONFIG.tickMs) {
+      this.rottenTickElapsed -= ROTTEN_AURA_CONFIG.tickMs;
+      this.applyRottenTick();
+    }
+  }
+
+  private applyRottenTick(): void {
+    if (this.invincible) return;
+    this.health = Math.max(0, this.health - ROTTEN_AURA_CONFIG.dps);
+    this.flashDamageTint();
+    this.showDamageText(ROTTEN_AURA_CONFIG.dps);
   }
 
   private effectiveMovementSpeed(): number {

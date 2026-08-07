@@ -27,5 +27,6 @@ For every upgrade, define `id`, display name, description, tier, eligible weapon
 - Do not implement only art or text when the request is for an upgrade effect.
 - Do not let an upgrade appear for an incompatible weapon.
 - Do not equate "owns a weapon" with "has upgrade access to it." When a weapon can be acquired independently of progression bonuses (a milestone reward, a random drop), do not let its acquisition silently unlock its upgrade pool — gate that behind a separate, explicit acquired state instead.
+- The same rule applies to automatic weapon-exclusive passive effects (a threshold-triggered ability, not a selectable upgrade), not just the selection screen. If a shared/aggregate counter (e.g., total upgrades picked across all owned weapons) drives the threshold, it keeps climbing on a weapon acquired without affinity — check the affinity/unlock flag at the point the passive fires, not only when building upgrade choices.
 - Avoid hidden state in anonymous scene fields when it belongs to player or weapon runtime state.
 - Keep probability rolls independent where the design requires per-projectile or per-enemy behavior.

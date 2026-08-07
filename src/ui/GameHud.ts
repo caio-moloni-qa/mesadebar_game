@@ -26,6 +26,10 @@ export class GameHud {
   private readonly expBorder: Phaser.GameObjects.Image;
   private readonly currencyIcon: Phaser.GameObjects.Image;
   private readonly currencyText: Phaser.GameObjects.Text;
+  private readonly rottenHealIcon: Phaser.GameObjects.Image;
+  private readonly rottenHealArrow: Phaser.GameObjects.Text;
+  private readonly rottenHpLabel: Phaser.GameObjects.Text;
+  private readonly rottenHpArrow: Phaser.GameObjects.Text;
   private buildIcons: Phaser.GameObjects.Container[] = [];
   private visible = true;
 
@@ -42,9 +46,15 @@ export class GameHud {
     this.expBorder = scene.add.image(0, 0, 'exp-bar-border').setOrigin(0, 0).setScrollFactor(0).setDepth(21);
     this.currencyIcon = scene.add.image(0, 0, 'gem').setOrigin(0, 0).setScrollFactor(0).setDepth(22);
     this.currencyText = scene.add.text(0, 0, '', style).setOrigin(0, 0).setScrollFactor(0).setDepth(20);
+    const arrowStyle: Phaser.Types.GameObjects.Text.TextStyle = { fontFamily: FONT_FAMILY, fontSize: '16px', color: '#ff5c5c', stroke: '#160d22', strokeThickness: 3 };
+    const statusLabelStyle: Phaser.Types.GameObjects.Text.TextStyle = { fontFamily: FONT_FAMILY, fontSize: '14px', color: '#f7f1dc', stroke: '#14101c', strokeThickness: 3 };
+    this.rottenHealIcon = scene.add.image(0, 0, 'upgrade-life-steal-icon').setOrigin(0, 0.5).setScrollFactor(0).setDepth(23).setVisible(false);
+    this.rottenHealArrow = scene.add.text(0, 0, '↓', arrowStyle).setOrigin(0, 0.5).setScrollFactor(0).setDepth(23).setVisible(false);
+    this.rottenHpLabel = scene.add.text(0, 0, 'HP', statusLabelStyle).setOrigin(0, 0.5).setScrollFactor(0).setDepth(23).setVisible(false);
+    this.rottenHpArrow = scene.add.text(0, 0, '↓', arrowStyle).setOrigin(0, 0.5).setScrollFactor(0).setDepth(23).setVisible(false);
   }
 
-  update(health: number, maxHealth: number, level: number, experience: number, needed: number, elapsedMs: number, kills: number, currency: number): void {
+  update(health: number, maxHealth: number, level: number, experience: number, needed: number, elapsedMs: number, kills: number, currency: number, isRotten: boolean): void {
     const safe = this.safeArea();
     const left = safe.left + 26;
     const top = safe.top + 22;
@@ -58,6 +68,15 @@ export class GameHud {
     this.killsText.setPosition(safe.right - 26, top);
     this.currencyIcon.setPosition(left, top + 96).setDisplaySize(24, 24);
     this.currencyText.setPosition(left + 32, top + 100);
+
+    // Rotten Aura status row: heal-reduction (life-steal icon + down arrow) then "HP" (down arrow), same row as
+    // currency but shifted right so they don't collide with it. Only visible while the player is rotten.
+    const statusY = top + 100;
+    const statusStartX = left + 90;
+    this.rottenHealIcon.setPosition(statusStartX, statusY).setDisplaySize(22, 22).setVisible(isRotten);
+    this.rottenHealArrow.setPosition(statusStartX + 26, statusY).setVisible(isRotten);
+    this.rottenHpLabel.setPosition(statusStartX + 52, statusY).setVisible(isRotten);
+    this.rottenHpArrow.setPosition(statusStartX + 80, statusY).setVisible(isRotten);
 
     this.healthText.setText(`${Math.ceil(health)} / ${maxHealth}`);
     this.levelText.setText(`Nível ${level}`);
@@ -95,6 +114,13 @@ export class GameHud {
     this.currencyIcon.setVisible(visible);
     this.currencyText.setVisible(visible);
     this.buildIcons.forEach((icon) => icon.setVisible(visible));
+    // Only force these off — their "on" state is conditional on isRotten and gets set by the next update() call.
+    if (!visible) {
+      this.rottenHealIcon.setVisible(false);
+      this.rottenHealArrow.setVisible(false);
+      this.rottenHpLabel.setVisible(false);
+      this.rottenHpArrow.setVisible(false);
+    }
   }
 
   private createBuildIcon(textureKey: string, count: number): Phaser.GameObjects.Container {

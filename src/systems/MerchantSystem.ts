@@ -12,13 +12,18 @@ type MerchantPathType = 'straight' | 'zigzag' | 'curve';
 const MERCHANT_PATH_TYPES: MerchantPathType[] = ['straight', 'zigzag', 'curve'];
 
 interface MerchantItemOption { id: string; name: string; cost: number; apply?: (player: Player) => void; }
-const MERCHANT_AFFINITY_TOME_OPTION: MerchantItemOption = { id: 'affinity-tome', name: 'Tomo de Afinidade', cost: 40 };
+const MERCHANT_AFFINITY_TOME_OPTION: MerchantItemOption = { id: 'affinity-tome', name: 'Tomo de Afinidade', cost: 500 };
+/** Falls back into the affinity-tome slot once the player already owns every family — there's nothing left to unlock. */
 const MERCHANT_FALLBACK_ITEM_OPTION: MerchantItemOption = { id: 'max-health', name: 'Elixir de Vitalidade', cost: 25, apply: (player) => { player.maxHealth += 20; player.heal(20); } };
+/** Pool for the random-buff slot — one is picked (33% each) per merchant visit and re-priced to MERCHANT_RANDOM_BUFF_COST. */
 const MERCHANT_BASE_ITEM_OPTIONS: MerchantItemOption[] = [
-  { id: 'heal', name: 'Poção de Cura', cost: 15, apply: (player) => player.heal(40) },
-  { id: 'damage', name: 'Lâmina Afiada', cost: 25, apply: (player) => { player.damageMultiplier += 0.15; } },
-  { id: 'speed', name: 'Botas Ligeiras', cost: 20, apply: (player) => { player.movementSpeed += 15; } }
+  { id: 'heal', name: 'Poção de Cura', cost: 0, apply: (player) => player.heal(40) },
+  { id: 'damage', name: 'Lâmina Afiada', cost: 0, apply: (player) => { player.damageMultiplier += 0.15; } },
+  { id: 'speed', name: 'Botas Ligeiras', cost: 0, apply: (player) => { player.movementSpeed += 15; } }
 ];
+const MERCHANT_RANDOM_BUFF_COST = 100;
+const MERCHANT_DIVINE_BLESSING_OPTION: MerchantItemOption = { id: 'divine-blessing', name: 'Bênção Divina', cost: 350, apply: (player) => player.addDivineBlessing() };
+const MERCHANT_ARCANE_CURSE_OPTION: MerchantItemOption = { id: 'arcane-curse', name: 'Maldição Arcana', cost: 250, apply: (player) => player.addArcaneCurse() };
 interface MerchantItemSlot { option: MerchantItemOption; position: Phaser.Math.Vector2; purchased: boolean; marker: Phaser.GameObjects.Arc; label: Phaser.GameObjects.Text; }
 
 const MERCHANT_PORTAL_INTERVAL_MS = 10000;
@@ -412,8 +417,10 @@ export class MerchantSystem {
     this.merchantAreaVisuals.push(table);
     this.merchantColliders.push(scene.physics.add.collider(this.host.getPlayer(), table));
 
-    const fourthSlotOption = this.availableAffinityFamilies().length > 0 ? MERCHANT_AFFINITY_TOME_OPTION : MERCHANT_FALLBACK_ITEM_OPTION;
-    const itemOptions: MerchantItemOption[] = [MERCHANT_BASE_ITEM_OPTIONS[0], fourthSlotOption, MERCHANT_BASE_ITEM_OPTIONS[1], MERCHANT_BASE_ITEM_OPTIONS[2]];
+    const affinityOption = this.availableAffinityFamilies().length > 0 ? MERCHANT_AFFINITY_TOME_OPTION : MERCHANT_FALLBACK_ITEM_OPTION;
+    const randomBuffBase = MERCHANT_BASE_ITEM_OPTIONS[Math.floor(Math.random() * MERCHANT_BASE_ITEM_OPTIONS.length)];
+    const randomBuffOption: MerchantItemOption = { ...randomBuffBase, cost: MERCHANT_RANDOM_BUFF_COST };
+    const itemOptions: MerchantItemOption[] = [MERCHANT_DIVINE_BLESSING_OPTION, MERCHANT_ARCANE_CURSE_OPTION, randomBuffOption, affinityOption];
     this.merchantItemSlots = itemOptions.map((option, index) => {
       const x = this.merchantRoomCenter.x + 150;
       const y = this.merchantRoomCenter.y - 150 + index * 100;
