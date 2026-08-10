@@ -1,5 +1,5 @@
 ﻿import Phaser from 'phaser';
-import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, LOOT_CHEST_DROP_CHANCE, WEAPON_CONFIG, requiredExperience } from '../config/balance';
+import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, WEAPON_CONFIG, requiredExperience } from '../config/balance';
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH, RUN_DURATION_MS, WORLD_SIZE } from '../config/gameConfig';
 import { Enemy, EnemyVariantConfig } from '../entities/Enemy';
@@ -886,13 +886,14 @@ export class GameScene extends Phaser.Scene {
     if (extraWeaponOffer) this.extraWeaponCard(extraWeaponOffer, startX + choices.length * spacing, onSelect);
   }
   private showUpgrades(): void {
-    const amount = this.level >= 5 ? 5 : 3;
+    const isBonusLevel = this.level % LEVEL_UPGRADE_CONFIG.bonusChoiceInterval === 0;
+    const amount = isBonusLevel ? LEVEL_UPGRADE_CONFIG.bonusChoiceAmount : LEVEL_UPGRADE_CONFIG.defaultChoiceAmount;
     const extraWeaponOffer = this.rollExtraWeaponOffer();
     const upgradeAmount = extraWeaponOffer ? amount - 1 : amount;
     this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }, upgradeAmount, extraWeaponOffer);
   }
   private rollExtraWeaponOffer(): WeaponConfig | null {
-    if (this.level % 5 !== 0 || this.weapons.length >= MAX_ACTIVE_WEAPONS) return null;
+    if (this.level % LEVEL_UPGRADE_CONFIG.bonusChoiceInterval !== 0 || this.weapons.length >= MAX_ACTIVE_WEAPONS || Math.random() >= LEVEL_UPGRADE_CONFIG.extraWeaponOfferChance) return null;
     const ownedIds = new Set(this.weapons.map((weapon) => weapon.config.id));
     const candidates = Object.values(WEAPONS).filter((weapon) => !ownedIds.has(weapon.id));
     if (candidates.length === 0) return null;
