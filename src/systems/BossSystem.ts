@@ -205,7 +205,7 @@ export class BossSystem {
     this.mainBossMessage = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'O sobrevivente sente uma presença maligna no ar!', {
       fontFamily: TITLE_FONT_FAMILY,
       fontSize: '34px',
-      color: '#d8ffd0',
+      color: '#d2b26e',
       align: 'center',
       stroke: '#101510',
       strokeThickness: 5,

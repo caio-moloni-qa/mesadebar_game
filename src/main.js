@@ -29,7 +29,7 @@ class BarScene extends Phaser.Scene {
     this.add.text(WIDTH / 2, HEIGHT - 35, 'Setas ou WASD para jogar · Pegue as moedas!', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '17px',
-      color: '#d9c7e8'
+      color: '#ffffe2'
     }).setOrigin(0.5);
 
     this.table = this.add.ellipse(WIDTH / 2, HEIGHT / 2 + 25, 590, 330, 0x9e5927)

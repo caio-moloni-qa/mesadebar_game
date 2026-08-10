@@ -116,6 +116,11 @@ export class MerchantSystem {
     this.merchantColliders = [];
   }
 
+  advanceElapsed(deltaMs: number): void {
+    if (this.merchantPortalActive) return;
+    this.merchantElapsed = Math.max(0, this.merchantElapsed + deltaMs);
+  }
+
   isInMerchant(): boolean {
     return this.inMerchant;
   }
@@ -209,7 +214,7 @@ export class MerchantSystem {
     const message = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Um portal misterioso surgiu na arena!', {
       fontFamily: TITLE_FONT_FAMILY,
       fontSize: '34px',
-      color: '#e3caff',
+      color: '#d2b26e',
       align: 'center',
       stroke: '#1a1025',
       strokeThickness: 5,
@@ -267,7 +272,7 @@ export class MerchantSystem {
     this.host.setLevelPending(true);
     scene.physics.pause();
     this.destroyMerchantPrompt();
-    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.78).setScrollFactor(0).setDepth(30);
+    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x2a1d12, 0.78).setScrollFactor(0).setDepth(30);
     const title = scene.add.text(GAME_WIDTH / 2, 280, 'Um portal misterioso surge à sua frente.\nDeseja entrar?', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: '#ffe29a', align: 'center', stroke: '#101015', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.merchantOverlay = [veil, title];
     this.merchantPromptButton('ENTRAR', 370, () => this.enterMerchantPortal());
@@ -280,11 +285,26 @@ export class MerchantSystem {
   }
   private merchantPromptButton(label: string, y: number, action: () => void): void {
     const scene = this.host.scene;
-    const button = scene.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
-    button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' }));
-    button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' }));
-    button.on('pointerup', action);
-    this.merchantOverlay.push(button);
+    const buttonBg = scene.add.rectangle(GAME_WIDTH / 2, y, 240, 54, 0x2a1d12)
+      .setStrokeStyle(3, 0xd2b26e)
+      .setScrollFactor(0)
+      .setDepth(31)
+      .setInteractive({ useHandCursor: true });
+
+    const buttonText = scene.add.text(GAME_WIDTH / 2, y, label, {
+      fontFamily: TITLE_FONT_FAMILY,
+      fontSize: '22px',
+      color: '#ffffff'
+    })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(32);
+
+    buttonBg.on('pointerover', () => buttonBg.setFillStyle(0x5d4429));
+    buttonBg.on('pointerout', () => buttonBg.setFillStyle(0x2a1d12));
+    buttonBg.on('pointerup', action);
+
+    this.merchantOverlay.push(buttonBg, buttonText);
   }
   private enterMerchantPortal(): void {
     const scene = this.host.scene;

@@ -128,7 +128,10 @@ export class GameScene extends Phaser.Scene {
       scene: this,
       addCurrency: (amount) => { this.currency += amount; },
       killAllActiveEnemies: () => this.sandboxKillAllEnemies(),
-      adjustElapsedMs: (deltaMs) => { this.elapsedMs = Math.max(0, this.elapsedMs + deltaMs); },
+      adjustElapsedMs: (deltaMs) => {
+        this.elapsedMs = Math.max(0, this.elapsedMs + deltaMs);
+        this.merchant.advanceElapsed(deltaMs);
+      },
       setForcedDifficultyStage: (stage) => this.difficulty.setForcedStage(stage),
       setEnemySpawnCap: (cap) => { this.enemies.maxSize = cap; },
       setMapFogVisible: (visible) => this.mapFogGraphics.forEach((graphics) => graphics.setVisible(visible)),
@@ -786,6 +789,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.chestRollActive = true;
+    this.levelPending = true;
     this.physics.pause();
     this.playChestRollAnimation(choices, upgrade, chestX, chestY);
   }
@@ -845,6 +849,7 @@ export class GameScene extends Phaser.Scene {
       this.grantChestUpgrade(upgrade, chestX, chestY);
       this.destroyChestRollCard(card);
       this.chestRollActive = false;
+      this.levelPending = false;
       this.physics.resume();
     });
   }
@@ -943,6 +948,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
   private showUpgradeSelection(titleText: string, onSelect: () => void, amount = 3, extraWeaponOffer: WeaponConfig | null = null): void {
+    this.levelPending = true;
     this.physics.pause();
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30).setInteractive();
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
@@ -1042,7 +1048,7 @@ export class GameScene extends Phaser.Scene {
   private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void {
     const button = addOverlay(this.createMenuButton(label, GAME_WIDTH / 2, y, action, 27));
     button.setDepth(27);
-  }
+  } 
   private resumeFromPause(): void { this.physics.resume(); this.destroyPauseOverlay(); }
   private destroyPauseOverlay(): void { this.pauseOverlay.forEach((object) => object.destroy()); this.pauseOverlay = []; }
   private finish(victory: boolean): void { this.ended = true; this.physics.pause(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x3f2f20, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
