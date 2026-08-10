@@ -19,6 +19,11 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   private maxOutboundDistance = 0;
   private readonly outboundHits = new Set<Phaser.GameObjects.GameObject>();
   private readonly returnHits = new Set<Phaser.GameObjects.GameObject>();
+  /** Thrown sword only: how many more full out-and-back trips remain, including the one in progress — decremented
+   *  each time it reaches the player, relaunching instead of deactivating until this hits 0. */
+  private thrownSwordCyclesRemaining = 0;
+  /** Thrown sword only: the rotation it was originally launched at, reused to relaunch each new outbound leg in the same direction. */
+  private thrownSwordLaunchRotation = 0;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0, 'bolt');
@@ -53,13 +58,15 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.scene.physics.velocityFromRotation(this.rotation, speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
   }
 
-  configureThrownSword(): void {
+  configureThrownSword(cycles = 1): void {
     if (this.anims.isPlaying) this.anims.stop();
     this.setTexture('weapon-sword-icon');
     this.setDisplaySize(64, 64);
     this.updateHitCircle(20);
     this.isThrownSword = true;
     this.remainingPierces = Number.POSITIVE_INFINITY;
+    this.thrownSwordCyclesRemaining = cycles;
+    this.thrownSwordLaunchRotation = this.rotation;
   }
 
   updateBoomerang(playerX: number, playerY: number): void {
@@ -79,7 +86,17 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (this.returning) {
       const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
       this.scene.physics.velocityFromRotation(angle, this.speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
-      if (Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY) < 30) this.deactivate();
+      if (Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY) < 30) {
+        this.thrownSwordCyclesRemaining -= 1;
+        if (this.thrownSwordCyclesRemaining <= 0) { this.deactivate(); return; }
+        // Another out-and-back trip remains: relaunch from here (near the player) in the original thrown
+        // direction, and let it hit everything again rather than treating already-hit enemies as permanently immune.
+        this.returning = false;
+        this.origin.set(this.x, this.y);
+        this.outboundHits.clear();
+        this.returnHits.clear();
+        this.scene.physics.velocityFromRotation(this.thrownSwordLaunchRotation, this.speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
+      }
     }
     this.rotation += this.returning ? -0.28 : 0.28;
   }
@@ -110,6 +127,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.disableBody(true, true);
     this.isBoomerang = false;
     this.isThrownSword = false;
+    this.thrownSwordCyclesRemaining = 0;
     this.remainingRicochets = 0;
     this.executesCommonEnemy = false;
     this.explodesOnHit = false;

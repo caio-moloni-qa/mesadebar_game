@@ -48,7 +48,7 @@ export class MenuScene extends Phaser.Scene {
     const cards: CharacterCard[] = [
       { locked: false, character: CHARACTERS.barbarian },
       { locked: false, character: CHARACTERS.mage },
-      { locked: true }
+      { locked: false, character: CHARACTERS.reliquia }
     ];
     const startX = GAME_WIDTH / 2 - 330;
     cards.forEach((card, index) => this.renderCharacterCard(card, startX + index * 330, addOverlay));

@@ -19,11 +19,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public projectileRicochetChance = 0;
   public projectileRicochetMax = 0;
   public projectileSizeBonus = 0;
+  public auraRadiusBonusPercent = 0;
+  public auraDamageBonus = 0;
+  public auraTickSpeedBonusMs = 0;
+  /** 1.5% of the Relíquia Divina's current banked streak damage (GameScene.performAuraTick keeps this in sync) — added to the next incoming hit, then consumed, by damage(). */
+  public auraDamageTakenBonus = 0;
+  /** Timestamp of the player's last actual damage-taken tick (see damage()); GameScene compares this against each aura weapon's own last-seen value to reset its damage ramp the moment the player is hit. */
+  public lastDamagedAt = 0;
+  /** True while the player has the Relíquia Divina in their loadout (kept in sync by GameScene whenever `weapons` changes) — swaps the plain damage-taken number for the weapon's green "DMG -" combat feedback. */
+  public divineRelicFeedback = false;
   public passiveHealAmount = 0;
   public passiveHealIntervalMs = 0;
   public lowHealthAttackSpeedBonus = 0;
   /** Sandbox-only testing toggle: when true, damage() is a no-op regardless of source. */
   public invincible = false;
+  /** True whenever GameScene has an upgrade/chest/pause overlay open (kept in sync by pauseGameplay()/resumeGameplay()).
+   *  Tracking every boss timer/tween individually still isn't watertight against a one-frame race (Phaser advances
+   *  scene.time — and fires due delayedCalls like a meteor impact — *before* GameScene's own gated update() runs
+   *  each frame, so a kill that triggers the pause this same frame can't retroactively stop a timer that already
+   *  fired). This flag is the authoritative backstop: no damage lands while it's true, regardless of which code path
+   *  or timing coincidence tried to apply it. */
+  public gameplayPaused = false;
+  /** Sandbox-only testing aid: absorbs incoming damage before it touches real health, unlike `invincible` (a total
+   *  no-op) — lets a tester see damage numbers/reactions actually land while still surviving them. Does not protect
+   *  against instant-kill effects that zero health directly (e.g. the boss shield's Explosão Letal), only `invincible` does. */
+  public damageBuffer = 0;
   /** Bênção Divina (merchant item): flat HP/second, independent of the character's own passiveHealAmount/IntervalMs pairing so the two don't need a shared tick rate. */
   private bonusPassiveHealPerSecond = 0;
   private invulnerableUntil = 0;
@@ -95,13 +115,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   damage(amount: number, now: number): boolean {
-    if (this.invincible || now < this.invulnerableUntil) return false;
-    const dealt = Math.max(1, amount - this.armor);
+    if (this.invincible || this.gameplayPaused || now < this.invulnerableUntil) return false;
+    // Relíquia Divina risk/reward (see GameScene.performAuraTick): the total damage the aura has banked during its
+    // current streak makes the *next enemy hit* worse — 1.5% of that banked total is added on top of the attack's
+    // own damage, then the bank is consumed (single-use per hit, not per tick the aura connects).
+    const incoming = amount + this.auraDamageTakenBonus;
+    this.auraDamageTakenBonus = 0;
+    const dealt = this.absorbWithBuffer(Math.max(1, incoming - this.armor));
     this.health = Math.max(0, this.health - dealt);
     this.invulnerableUntil = now + PLAYER_CONFIG.invulnerabilityMs;
+    this.lastDamagedAt = now;
     this.flashDamageTint();
     this.showDamageText(dealt);
     return true;
+  }
+
+  /** Drains the sandbox damage buffer first, returning whatever's left to actually apply to health. */
+  private absorbWithBuffer(amount: number): number {
+    if (this.damageBuffer <= 0) return amount;
+    const absorbed = Math.min(this.damageBuffer, amount);
+    this.damageBuffer -= absorbed;
+    return amount - absorbed;
   }
 
   private flashDamageTint(): void {
@@ -110,10 +144,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private showDamageText(amount: number): void {
-    const text = this.scene.add.text(this.x, this.y - this.displayHeight / 2 - 10, `- ${Math.round(amount)}`, {
+    const message = this.divineRelicFeedback ? `DANO -${Math.round(amount)}` : `- ${Math.round(amount)}`;
+    const color = this.divineRelicFeedback ? '#8effa0' : '#ff5c5c';
+    this.spawnFloatingStatusText(message, color);
+  }
+
+  /** Floating status callout above the player's head, shared by damage numbers and the negative-status announcements
+   *  below (CURA -, LENTO +, HP -) so every player-facing effect gets the same visibility Relíquia's "DANO -" has. */
+  private spawnFloatingStatusText(message: string, color: string): void {
+    const text = this.scene.add.text(this.x, this.y - this.displayHeight / 2 - 10, message, {
       fontFamily: TITLE_FONT_FAMILY,
       fontSize: '22px',
-      color: '#ff5c5c',
+      color,
       stroke: '#321b00',
       strokeThickness: 4
     }).setOrigin(0.5).setDepth(15);
@@ -124,6 +166,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.slows.push({ expiresAt: now + durationMs, percent });
     this.setTint(0x8bbcff);
     this.scene.time.delayedCall(160, () => this.clearTint());
+    this.spawnFloatingStatusText(`LENTO +${Math.round(percent * 100)}%`, '#8bbcff');
   }
 
   addLifeSteal(): void {
@@ -156,10 +199,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.projectileSizeBonus += this.projectileSizeBonus === 0 ? 0.35 : 0.15;
   }
 
+  addAuraRadiusPercent(): void {
+    this.auraRadiusBonusPercent += 0.06;
+  }
+
+  addAuraDamageBonus(): void {
+    this.auraDamageBonus += 1.7;
+  }
+
+  addAuraTickSpeedBonus(): void {
+    this.auraTickSpeedBonusMs += 100;
+  }
+
   effectiveAttackSpeedMultiplier(): number {
     if (this.lowHealthAttackSpeedBonus <= 0) return this.attackSpeedMultiplier;
-    const missingHealthPercent = 1 - this.health / this.maxHealth;
-    return this.attackSpeedMultiplier + this.lowHealthAttackSpeedBonus * Phaser.Math.Clamp(missingHealthPercent, 0, 1);
+    return this.attackSpeedMultiplier + this.lowHealthAttackSpeedBonus * this.lowHealthBonusRatio();
+  }
+
+  /** Missing-health ratio (0 at full HP, 1 at 0 HP) used to scale lowHealthAttackSpeedBonus — shared by
+   *  effectiveAttackSpeedMultiplier and effectiveMovementSpeed so "pouca vida" boosts both in lockstep. */
+  private lowHealthBonusRatio(): number {
+    return Phaser.Math.Clamp(1 - this.health / this.maxHealth, 0, 1);
   }
 
   updatePassiveEffects(delta: number): void {
@@ -183,6 +243,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   heal(amount: number): void {
     const effective = this.isRotten() ? amount * (1 - ROTTEN_AURA_CONFIG.healReduction) : amount;
     this.health = Math.min(this.maxHealth, this.health + effective);
+    const reduced = Math.round(amount - effective);
+    if (reduced > 0) this.spawnFloatingStatusText(`CURA -${reduced}`, '#ffb347');
   }
 
   /** Bênção Divina (merchant item, 350 gemas): +5 HP/s passive healing. Stacks additively if bought again. */
@@ -190,11 +252,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.bonusPassiveHealPerSecond += 5;
   }
 
-  /** Maldição Arcana (merchant item, 250 gemas): trades 50 max HP for +30% damage. Stacks additively; never drops max HP below 1. */
+  /** Maldição Arcana (merchant item, 250 gemas): trades 50 max HP for +150% damage. Stacks additively; never drops max HP below 1. */
   addArcaneCurse(): void {
     this.maxHealth = Math.max(1, this.maxHealth - 50);
     this.health = Math.min(this.health, this.maxHealth);
-    this.damageMultiplier += 0.3;
+    this.damageMultiplier += 1.5;
   }
 
   /** Called by GameScene every frame the player overlaps a rotten-aura enemy — refreshes (doesn't stack) the debuff window. */
@@ -220,10 +282,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private applyRottenTick(): void {
-    if (this.invincible) return;
-    this.health = Math.max(0, this.health - ROTTEN_AURA_CONFIG.dps);
+    if (this.invincible || this.gameplayPaused) return;
+    const dealt = this.absorbWithBuffer(ROTTEN_AURA_CONFIG.dps);
+    this.health = Math.max(0, this.health - dealt);
+    this.lastDamagedAt = this.scene.time.now;
     this.flashDamageTint();
-    this.showDamageText(ROTTEN_AURA_CONFIG.dps);
+    this.spawnFloatingStatusText(`HP -${Math.round(dealt)}`, '#b98bff');
   }
 
   private effectiveMovementSpeed(): number {
@@ -231,6 +295,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.slows = this.slows.filter((slow) => slow.expiresAt > now);
     const slowAmount = this.slows.reduce((total, slow) => total + slow.percent, 0);
     const slowMultiplier = Math.max(0.25, 1 - slowAmount);
-    return this.movementSpeed * slowMultiplier;
+    const lowHealthBonus = this.lowHealthAttackSpeedBonus > 0 ? this.lowHealthAttackSpeedBonus * this.lowHealthBonusRatio() : 0;
+    return this.movementSpeed * slowMultiplier * (1 + lowHealthBonus);
   }
 }

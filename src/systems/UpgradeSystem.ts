@@ -34,6 +34,15 @@ export class UpgradeSystem {
     { id: 'projectile-wide-bolt', name: 'Feixe Amplificado', description: 'Aumenta o tamanho e a área de impacto dos projéteis mágicos', tier: 'common', apply: (player) => player.addProjectileSizeBonus() }
   ];
 
+  private readonly auraCommonUpgrades: Upgrade[] = [
+    { id: 'aura-radius', name: 'Relíquia Expandida', description: '+6% no raio de efeito da aura', tier: 'common', apply: (player) => player.addAuraRadiusPercent() },
+    { id: 'aura-damage', name: 'Poder da Relíquia', description: '+1,7 de dano base da aura', tier: 'common', apply: (player) => player.addAuraDamageBonus() }
+  ];
+
+  private readonly auraRareUpgrades: Upgrade[] = [
+    { id: 'aura-tick-speed', name: 'Ressonância Acelerada', description: '-0,1s no intervalo de dano da aura', tier: 'rare', apply: (player) => player.addAuraTickSpeedBonus() }
+  ];
+
   choices(primaryWeapon: WeaponConfig, player?: Player, amount = 3, secondaryWeapon?: WeaponConfig): Upgrade[] {
     const primaryPool = this.weaponSpecificUpgrades(primaryWeapon, player);
     const secondaryPool = secondaryWeapon ? this.weaponSpecificUpgrades(secondaryWeapon, player) : [];
@@ -53,6 +62,7 @@ export class UpgradeSystem {
       return [...this.meleeCommonUpgrades, ...rareUpgrades];
     }
     if (weapon.type === 'projectile' || weapon.type === 'boomerang') return [...this.projectileCommonUpgrades];
+    if (weapon.type === 'aura') return [...this.auraCommonUpgrades, ...this.auraRareUpgrades];
     return [];
   }
 

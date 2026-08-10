@@ -1,5 +1,5 @@
-export type CharacterId = 'barbarian' | 'mage';
-export type PreferredWeaponId = 'staff' | 'sword' | 'boomerang';
+export type CharacterId = 'barbarian' | 'mage' | 'reliquia';
+export type PreferredWeaponId = 'staff' | 'sword' | 'boomerang' | 'amulet';
 
 export interface CharacterConfig {
   id: CharacterId;
@@ -17,7 +17,10 @@ export interface CharacterConfig {
   startingWeaponUpgradeChoices?: number;
   passiveHealAmount?: number;
   passiveHealIntervalMs?: number;
+  /** Scales with missing HP (0 at full, this value at 0 HP) — applied to both attack speed and movement speed, see Player.effectiveAttackSpeedMultiplier/effectiveMovementSpeed. */
   lowHealthAttackSpeedBonus?: number;
+  /** "Transforma quaisquer amuletos em relíquias": replaces the Relíquia Divina's own base stats for this character, regardless of when the amulet was acquired (starting weapon or a mid-run extra-weapon offer). */
+  auraWeaponOverrides?: { baseDamage: number; cooldown: number; range: number };
 }
 
 export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
@@ -35,7 +38,7 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     advantages: [
       'Espada: 3 melhorias iniciais',
       '+30% de dano com armas',
-      'Pouca vida: até +40% velocidade de ataque'
+      'Pouca vida: até +40% velocidade de ataque e movimento'
     ],
     preferredWeaponId: 'sword',
     startingWeaponUpgradeChoices: 3,
@@ -61,5 +64,25 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     startingWeaponUpgradeChoices: 3,
     passiveHealAmount: 1,
     passiveHealIntervalMs: 3000
+  },
+  reliquia: {
+    id: 'reliquia',
+    name: 'Relíquia',
+    texture: 'reliquia',
+    description: 'Caçador de relíquias sempre sorridente, envolto por uma aura de poder ancestral.',
+    maxHealth: 220,
+    movementSpeed: 190,
+    damageMultiplier: 1,
+    attackSpeedMultiplier: 1,
+    pickupRange: 130,
+    armor: 1,
+    advantages: [
+      'Relíquia Divina: 3 melhorias iniciais',
+      'Transforma amuletos em relíquias: +dano, +raio, tick mais rápido',
+      '+40 de alcance de coleta'
+    ],
+    preferredWeaponId: 'amulet',
+    startingWeaponUpgradeChoices: 3,
+    auraWeaponOverrides: { baseDamage: 9, cooldown: 800, range: 80 }
   }
 };

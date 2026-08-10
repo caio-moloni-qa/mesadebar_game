@@ -1,9 +1,10 @@
 ﻿import Phaser from 'phaser';
-import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, WEAPON_CONFIG, requiredExperience } from '../config/balance';
+import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, WEAPON_CONFIG, requiredExperience } from '../config/balance';
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH, RUN_DURATION_MS, WORLD_SIZE } from '../config/gameConfig';
 import { Enemy, EnemyVariantConfig } from '../entities/Enemy';
 import { CurrencyGem } from '../entities/CurrencyGem';
+import { HealthPotion } from '../entities/HealthPotion';
 import { LootChest } from '../entities/LootChest';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
@@ -29,6 +30,12 @@ interface ActiveWeapon {
   thrownSwordVolleyActive: boolean;
   staffAttacksSinceExecute: number;
   staffExecuteToken: number;
+  /** Relíquia Divina's "streak" bonus (+0.25% per connecting tick, reset the moment the player takes damage — see performAuraTick). */
+  auraRampPercent: number;
+  /** Running sum of this streak's tick damage — 10% of it is banked onto Player.auraDamageTakenBonus, consumed by the next hit the player takes. Resets alongside auraRampPercent. */
+  auraTotalDamageDealt: number;
+  /** Last Player.lastDamagedAt value this weapon has observed, so a reset is applied at most once per hit. */
+  auraRampSyncedAt: number;
 }
 
 interface StartingUpgradeSnapshot {
@@ -56,8 +63,25 @@ const UPGRADE_ICON_KEYS: Record<string, string> = {
   'projectile-wide-bolt': 'upgrade-wide-bolt-icon',
   'melee-range': 'upgrade-colossus-arms-icon',
   'melee-extra-attack': 'upgrade-chained-fury-icon',
-  'melee-whirlwind': 'upgrade-whirlwind-attack-icon'
+  'melee-whirlwind': 'upgrade-whirlwind-attack-icon',
+  'aura-radius': 'upgrade-aura-radius-icon',
+  'aura-damage': 'upgrade-aura-damage-icon',
+  'aura-tick-speed': 'upgrade-aura-tick-speed-icon'
 };
+
+/** Chicote's signature trait vs. Espada: every enemy it hits also chains a hit to one more nearby enemy, chaining
+ *  further from that one too, up to this many total enemies struck in a single swing. */
+const WHIP_CHAIN_MAX_TARGETS = 4;
+/** "Nearby" for the whip's chain — searched from the enemy that was just hit, not from the player. */
+const WHIP_CHAIN_RADIUS = 140;
+/** Whip's exclusive buff (5 upgrades + affinity): triggers once a swing (chains included) connects with this many enemies. */
+const WHIP_BUFF_TRIGGER_COUNT = 3;
+const WHIP_BUFF_AOE_RADIUS = 80;
+
+/** Espada's exclusive buff: was 4 swords (one per cardinal direction), now 3x that, evenly spaced around the full circle. */
+const THROWN_SWORD_DIRECTION_COUNT = 12;
+/** Each thrown sword now does 2 full out-and-back trips instead of 1 before despawning. */
+const THROWN_SWORD_CYCLES = 2;
 
 const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
   skeleton: 'skeleton-sword',
@@ -68,14 +92,31 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
 };
 
 export class GameScene extends Phaser.Scene {
-  private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group; private chests!: Phaser.Physics.Arcade.Group;
+  private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group; private chests!: Phaser.Physics.Arcade.Group; private healthPotions!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
   private elapsedMs = 0; private spawnElapsed = 0; private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.variantId, 0])); private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
   private paused = false; private ended = false; private levelPending = false; private chestRollActive = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private startingUpgradeSnapshot?: StartingUpgradeSnapshot; private startingUpgradePool?: Upgrade[]; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
+  /** Boss-wave cycle state (see onBossWaveCleared/continueToNextCycle): cycle 1 is the base 3-minute run; each
+   *  "continue" portal choice bumps this, extending the next phase's duration by 1min, the difficulty multiplier
+   *  by 1x, and next wave's boss count, all keyed off this same number. */
+  private bossCycle = 1;
+  /** elapsedMs value when the current phase began — the next wave triggers phaseDurationMs() after this, not at an absolute elapsedMs threshold, so each cycle's extra minute is relative to when the player actually continued. */
+  private phaseStartedAtMs = 0;
+  private phaseBossTriggered = false;
+  private endRunPortal?: Phaser.GameObjects.Sprite;
+  private continuePortal?: Phaser.GameObjects.Sprite;
+  private portalPrompt?: Phaser.GameObjects.Text;
   private mapFogGraphics: Phaser.GameObjects.Graphics[] = [];
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
+  /** Short-lived combat-feedback tweens/timers/animations tracked so pauseGameplay()/resumeGameplay() can freeze
+   *  them same as BossSystem does for its own — otherwise one already in flight the instant an upgrade/chest
+   *  overlay opens (e.g. the killing hit that triggers the level-up) keeps animating, ticking, or applying delayed
+   *  damage during the "paused" screen. See pauseGameplay() for the full list of what these cover. */
+  private pausableTweens: Phaser.Tweens.Tween[] = [];
+  private pausableTimers: Phaser.Time.TimerEvent[] = [];
+  private pausableSprites: Phaser.GameObjects.Sprite[] = [];
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapons: ActiveWeapon[] = [];
   private get primaryWeapon(): WeaponConfig { return this.weapons[0].config; }
   private affinityFamilies: Set<WeaponFamily> = new Set();
@@ -115,7 +156,8 @@ export class GameScene extends Phaser.Scene {
       setMapFogVisible: (visible) => this.mapFogGraphics.forEach((graphics) => graphics.setVisible(visible)),
       spawnVariantNearPlayer: (id, count) => this.sandboxSpawnVariant(id, count),
       spawnExtraBoss: () => this.bossSystem.spawnExtraBoss(),
-      setPlayerInvincible: (invincible) => { this.player.invincible = invincible; }
+      setPlayerInvincible: (invincible) => { this.player.invincible = invincible; },
+      addPlayerDamageBuffer: (amount) => { this.player.damageBuffer += amount; }
     };
   }
   private buildBossHost(): BossHost {
@@ -140,13 +182,16 @@ export class GameScene extends Phaser.Scene {
     this.affinityFamilies = new Set([weaponFamily(WEAPONS[data.weaponId])]);
     this.elapsedMs = 0; this.spawnElapsed = 0; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, 0)); this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1); this.currency = 0;
     this.paused = false; this.ended = false; this.levelPending = false; this.chestRollActive = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.startingUpgradeSnapshot = undefined; this.startingUpgradePool = undefined; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
+    this.bossCycle = 1; this.phaseStartedAtMs = 0; this.phaseBossTriggered = false;
+    this.destroyBossWavePortals();
     this.bossSystem.reset();
     this.merchant.reset();
+    this.difficulty.resetCycle();
     this.sandbox.resetUiRefs();
     this.mapFogGraphics = [];
   }
   private createActiveWeapon(config: WeaponConfig): ActiveWeapon {
-    return { config, upgradeCount: 0, lastAttackAt: 0, lastWhirlwindAt: 0, thrownSwordCooldownReadyAt: 0, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0 };
+    return { config, upgradeCount: 0, lastAttackAt: 0, lastWhirlwindAt: 0, thrownSwordCooldownReadyAt: 0, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0, auraRampPercent: 0, auraTotalDamageDealt: 0, auraRampSyncedAt: 0 };
   }
 
   create(): void {
@@ -155,11 +200,13 @@ export class GameScene extends Phaser.Scene {
     this.createMapFog();
     this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, CHARACTERS[this.characterId]);
     this.player.invincible = this.sandbox.isInvincible();
+    this.syncDivineRelicFeedback();
     this.enemies = this.physics.add.group({ classType: Enemy, maxSize: this.sandbox.initialSpawnCap(), runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 80, runChildUpdate: false });
     this.soulProjectiles = this.physics.add.group({ classType: SoulProjectile, maxSize: 80, runChildUpdate: false });
     this.gems = this.physics.add.group({ classType: CurrencyGem, maxSize: 120, runChildUpdate: false });
     this.chests = this.physics.add.group({ classType: LootChest, maxSize: 10, runChildUpdate: false });
+    this.healthPotions = this.physics.add.group({ classType: HealthPotion, maxSize: 20, runChildUpdate: false });
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE).startFollow(this.player, true, 0.12, 0.12);
     this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,E,ESC,F9') as Record<string, Phaser.Input.Keyboard.Key>;
     this.mobileMode = this.isTouchDevice();
@@ -169,6 +216,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.enemies, this.playerHit, undefined, this);
     this.physics.add.overlap(this.player, this.gems, this.collectGem, undefined, this);
     this.physics.add.overlap(this.player, this.chests, this.collectChest, undefined, this);
+    this.physics.add.overlap(this.player, this.healthPotions, this.collectHealthPotion, undefined, this);
     this.hud = new GameHud(this); this.updateBuildHud();
     this.updateHud();
     this.hud.setVisible(false);
@@ -229,11 +277,19 @@ export class GameScene extends Phaser.Scene {
       this.updateHud();
       return;
     }
-    this.elapsedMs += delta; if (!this.bossSystem.hasTriggeredMainBoss() && this.elapsedMs >= RUN_DURATION_MS) this.bossSystem.warn();
-    this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta)); this.spawnEnemies(); this.spawnEnemyVariants(); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.bossSystem.updateArrows(); this.merchant.update(delta);
+    this.elapsedMs += delta;
+    if (!this.phaseBossTriggered && this.elapsedMs - this.phaseStartedAtMs >= this.phaseDurationMs()) {
+      this.phaseBossTriggered = true;
+      this.bossSystem.warn(this.bossCycle);
+    }
+    this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta)); this.spawnEnemies(); this.spawnEnemyVariants(); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.updateHealthPotions(); this.bossSystem.updateArrows(); this.merchant.update(delta); this.updateBossWavePortals();
     this.player.updateRottenStatus(delta);
     if (this.player.health <= 0) this.finish(false);
     this.updateHud();
+  }
+  /** Cycle 1 (the base run) is RUN_DURATION_MS; every continuation adds another minute, per the continue-portal's promise. */
+  private phaseDurationMs(cycle: number = this.bossCycle): number {
+    return RUN_DURATION_MS + (cycle - 1) * 60_000;
   }
   private movePlayer(): void {
     const d = new Phaser.Math.Vector2(
@@ -357,6 +413,13 @@ export class GameScene extends Phaser.Scene {
     this.weapons.forEach((weapon) => this.attackWithWeapon(weapon));
   }
   private attackWithWeapon(weapon: ActiveWeapon): void {
+    if (weapon.config.type === 'aura') {
+      const cooldown = Math.max(200, this.auraWeaponStats(weapon).cooldown - this.player.auraTickSpeedBonusMs);
+      if (this.time.now < weapon.lastAttackAt + cooldown / this.player.effectiveAttackSpeedMultiplier()) return;
+      weapon.lastAttackAt = this.time.now;
+      this.performAuraTick(weapon);
+      return;
+    }
     if (this.time.now < weapon.lastAttackAt + weapon.config.cooldown / this.player.effectiveAttackSpeedMultiplier()) return;
     const enemy = this.nearestEnemy(this.attackRange(weapon));
     if (!enemy) return;
@@ -400,7 +463,7 @@ export class GameScene extends Phaser.Scene {
   private performMeleeAttack(weapon: ActiveWeapon, direction: Phaser.Math.Vector2): boolean {
     const attackDirection = direction.clone().normalize();
     const minDot = Math.cos(Phaser.Math.DegToRad((weapon.config.coneAngle ?? 90) / 2));
-    let hit = false;
+    const hitEnemies: Enemy[] = [];
     this.enemies.children.each((child) => {
       const target = child as Enemy;
       if (!target.active) return true;
@@ -409,25 +472,86 @@ export class GameScene extends Phaser.Scene {
       const range = this.attackRange(weapon) + this.enemyRangePadding(target);
       if (vector.lengthSq() <= range ** 2 && attackDirection.dot(vector.normalize()) >= minDot) {
         this.damageEnemy(target, weapon.config.baseDamage * this.player.damageMultiplier, weapon.config.id);
-        hit = true;
+        hitEnemies.push(target);
       }
       return true;
     });
-    this.playSwordSlash(attackDirection);
-    return hit;
+    this.playSwordSlash(attackDirection, this.player, weapon.config.id);
+    if (weapon.config.id === 'whip' && hitEnemies.length > 0) this.applyWhipChainAndBuff(weapon, hitEnemies);
+    return hitEnemies.length > 0;
+  }
+  /** Chains each hit enemy to one more nearby enemy (which then chains onward too), up to WHIP_CHAIN_MAX_TARGETS
+   *  total, then checks whether that connected enough enemies to proc the exclusive buff. Each chained hit (not
+   *  caught by the visible cone swing) gets its own slash rendered right on the enemy it landed on, for visibility. */
+  private applyWhipChainAndBuff(weapon: ActiveWeapon, initialHits: Enemy[]): void {
+    const hit = new Set<Enemy>(initialHits);
+    const queue = [...initialHits];
+    while (queue.length > 0 && hit.size < WHIP_CHAIN_MAX_TARGETS) {
+      const source = queue.shift()!;
+      const next = this.nearestUnhitEnemy(source, hit, WHIP_CHAIN_RADIUS);
+      if (!next) continue;
+      this.damageEnemy(next, weapon.config.baseDamage * this.player.damageMultiplier, weapon.config.id);
+      const direction = new Phaser.Math.Vector2(next.x - source.x, next.y - source.y).normalize();
+      this.playSwordSlash(direction, { x: next.x, y: next.y }, weapon.config.id);
+      hit.add(next);
+      queue.push(next);
+    }
+    const buffUnlocked = weapon.upgradeCount >= 5 && this.affinityFamilies.has(weaponFamily(weapon.config));
+    if (buffUnlocked && hit.size >= WHIP_BUFF_TRIGGER_COUNT) this.triggerWhipAoeBurst(weapon);
+  }
+  private nearestUnhitEnemy(source: Enemy, exclude: Set<Enemy>, radius: number): Enemy | null {
+    let nearest: Enemy | null = null;
+    let best = Number.POSITIVE_INFINITY;
+    this.enemies.children.each((child) => {
+      const enemy = child as Enemy;
+      if (!enemy.active || exclude.has(enemy)) return true;
+      const effectiveRadius = radius + this.enemyRangePadding(enemy);
+      const distSq = Phaser.Math.Distance.Squared(source.x, source.y, enemy.x, enemy.y);
+      if (distSq <= effectiveRadius ** 2 && distSq < best) { best = distSq; nearest = enemy; }
+      return true;
+    });
+    return nearest;
+  }
+  /** Whip's exclusive buff payload: flat AOE damage to everyone within WHIP_BUFF_AOE_RADIUS of the player, plus one
+   *  randomly-chosen enemy among them takes an additional bonus hit on top. */
+  private triggerWhipAoeBurst(weapon: ActiveWeapon): void {
+    const damage = weapon.config.baseDamage * this.player.damageMultiplier;
+    const inRange: Enemy[] = [];
+    this.enemies.children.each((child) => {
+      const enemy = child as Enemy;
+      if (!enemy.active) return true;
+      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y) <= WHIP_BUFF_AOE_RADIUS + this.enemyRangePadding(enemy)) {
+        this.damageEnemy(enemy, damage, weapon.config.id);
+        inRange.push(enemy);
+      }
+      return true;
+    });
+    if (inRange.length > 0) {
+      const bonusTarget = Phaser.Utils.Array.GetRandom(inRange);
+      if (bonusTarget.active) {
+        this.damageEnemy(bonusTarget, damage, weapon.config.id);
+        const direction = new Phaser.Math.Vector2(bonusTarget.x - this.player.x, bonusTarget.y - this.player.y).normalize();
+        this.playSwordSlash(direction, { x: bonusTarget.x, y: bonusTarget.y }, weapon.config.id);
+      }
+    }
+    this.playWhipAoeBurstVisual();
+  }
+  private playWhipAoeBurstVisual(): void {
+    const burst = this.add.circle(this.player.x, this.player.y, WHIP_BUFF_AOE_RADIUS, 0xff6a3d, 0.22).setStrokeStyle(3, 0xffb199, 0.8).setDepth(6);
+    this.trackTween(this.tweens.add({ targets: burst, alpha: 0, scale: 1.15, duration: 300, onComplete: () => burst.destroy() }));
   }
   private queueMeleeExtraAttacks(weapon: ActiveWeapon, direction: Phaser.Math.Vector2): void {
     if (this.player.meleeExtraAttackMax <= 0 || Math.random() >= this.player.meleeExtraAttackChance) return;
     const fallbackDirection = direction.clone().normalize();
     for (let index = 1; index <= this.player.meleeExtraAttackMax; index += 1) {
-      this.time.delayedCall(index * 110, () => {
-        if (this.ended || this.paused || this.levelPending || weapon.config.type !== 'cone') return;
+      this.trackTimer(this.time.delayedCall(index * 110, () => {
+        if (this.ended || weapon.config.type !== 'cone') return;
         const enemy = this.nearestEnemy(this.attackRange(weapon));
         const attackDirection = enemy
           ? new Phaser.Math.Vector2(enemy.x - this.player.x, enemy.y - this.player.y).normalize()
           : fallbackDirection;
         this.performMeleeAttack(weapon, attackDirection);
-      });
+      }));
     }
   }
   private updateMeleeWhirlwind(): void {
@@ -443,10 +567,10 @@ export class GameScene extends Phaser.Scene {
       new Phaser.Math.Vector2(-1, 0),
       new Phaser.Math.Vector2(0, -1)
     ].forEach((direction, index) => {
-      this.time.delayedCall(index * 70, () => {
-        if (this.ended || this.paused || this.levelPending) return;
+      this.trackTimer(this.time.delayedCall(index * 70, () => {
+        if (this.ended) return;
         this.performMeleeAttack(weapon, direction);
-      });
+      }));
     });
   }
   private updateThrownSwordBuff(): void {
@@ -457,18 +581,134 @@ export class GameScene extends Phaser.Scene {
     const enemy = this.nearestEnemy(WORLD_SIZE);
     if (!enemy) return;
     swordWeapon.thrownSwordVolleyActive = true;
-    [
-      new Phaser.Math.Vector2(1, 0),
-      new Phaser.Math.Vector2(0, 1),
-      new Phaser.Math.Vector2(-1, 0),
-      new Phaser.Math.Vector2(0, -1)
-    ].forEach((direction) => this.launchThrownSword(swordWeapon, direction));
+    for (let index = 0; index < THROWN_SWORD_DIRECTION_COUNT; index += 1) {
+      const angle = (Math.PI * 2 * index) / THROWN_SWORD_DIRECTION_COUNT;
+      this.launchThrownSword(swordWeapon, new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle)));
+    }
   }
   private thrownSwordCooldownMs(weapon: ActiveWeapon): number {
     return Math.max(1000, 10000 - Math.max(0, weapon.upgradeCount - 5) * 1000);
   }
   private attackRange(weapon: ActiveWeapon): number {
     return weapon.config.range + (weapon.config.type === 'cone' ? this.player.meleeRangeBonus : 0);
+  }
+  /** "Transforma quaisquer amuletos em relíquias": Relíquia (or any future character with auraWeaponOverrides) replaces the amulet's own base numbers, on top of which the generic damageMultiplier/upgrade bonuses still apply. */
+  private auraWeaponStats(weapon: ActiveWeapon): { baseDamage: number; cooldown: number; range: number } {
+    return CHARACTERS[this.characterId].auraWeaponOverrides ?? { baseDamage: weapon.config.baseDamage, cooldown: weapon.config.cooldown, range: weapon.config.range };
+  }
+  private performAuraTick(weapon: ActiveWeapon): void {
+    if (weapon.auraRampSyncedAt !== this.player.lastDamagedAt) {
+      weapon.auraRampPercent = 0;
+      weapon.auraTotalDamageDealt = 0;
+      weapon.auraRampSyncedAt = this.player.lastDamagedAt;
+    }
+    const stats = this.auraWeaponStats(weapon);
+    const buffUnlocked = weapon.upgradeCount >= 5 && this.affinityFamilies.has(weaponFamily(weapon.config));
+    const radius = stats.range * (1 + this.player.auraRadiusBonusPercent) * (buffUnlocked ? 2 : 1);
+    const multiStrike = buffUnlocked && Math.random() < this.auraMultiStrikeChance(weapon.upgradeCount);
+    const damage = (stats.baseDamage + this.player.auraDamageBonus) * this.player.damageMultiplier * (1 + weapon.auraRampPercent) * (multiStrike ? 2 : 1);
+    let hit = false;
+    this.enemies.children.each((child) => {
+      const enemy = child as Enemy;
+      if (!enemy.active) return true;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+      if (distance <= radius + this.enemyRangePadding(enemy)) {
+        this.damageEnemy(enemy, damage, weapon.config.id);
+        hit = true;
+      }
+      return true;
+    });
+    if (hit) {
+      weapon.auraRampPercent += 0.0025;
+      weapon.auraTotalDamageDealt += damage;
+      // Risk/reward: the aura doesn't hurt the player just for connecting — it banks 1.5% of its streak's total
+      // damage, which the next enemy hit consumes on top of that attack's own damage (see Player.damage()).
+      this.player.auraDamageTakenBonus = weapon.auraTotalDamageDealt * 0.015;
+    }
+    this.playAuraPulse(radius, multiStrike, buffUnlocked);
+  }
+  /** Relíquia Divina's exclusive buff (5 upgrades + affinity, same gate as the other three weapons' exclusives):
+   *  30% at unlock (upgradeCount === 5), +3.5% per upgrade after that — mirrors staffExplosionCount's "value at 5,
+   *  scales past 5" shape rather than boomerangCriticalChance's "scales from 0" shape, per the exact numbers given. */
+  private auraMultiStrikeChance(upgradeCount: number): number {
+    return 0.3 + Math.max(0, upgradeCount - 5) * 0.035;
+  }
+  /** Mirrors BossSystem's pauseAll()/resumeAll() for GameScene's own short-lived combat-feedback effects — every
+   *  weapon's damage numbers/crit callouts (spawnFloatingCombatText), the melee slash (tween + its own sprite
+   *  animation, shared by sword/whip), the staff's execute-explosion, the aura's pulse/bolts, the whip's AOE burst,
+   *  the Relíquia Divina death arrow, the XP orb pop. All of these are created *inside* the already-gated attack/
+   *  death code paths, so no *new* one starts during a pause — but one already in flight the instant an upgrade/
+   *  chest overlay opens (the kill that triggers the level-up is a common trigger) previously kept animating,
+   *  applying delayed damage, or looked like the weapon was still attacking during the "paused" screen. Call at the
+   *  exact points physics.pause()/resume() + bossSystem.pauseAll()/resumeAll() already fire. */
+  private pauseGameplay(): void {
+    // Set first, before anything else: this is the authoritative backstop Player.damage()/applyRottenTick() check —
+    // see gameplayPaused's doc comment for why tracking timers/tweens alone isn't quite watertight.
+    this.player.gameplayPaused = true;
+    this.physics.pause();
+    this.bossSystem.pauseAll();
+    this.prunePausables();
+    this.pausableTweens.forEach((tween) => { if (tween.isPlaying()) tween.pause(); });
+    this.pausableTimers.forEach((timer) => { timer.paused = true; });
+    this.pausableSprites.forEach((sprite) => { if (sprite.anims.isPlaying) sprite.anims.pause(); });
+  }
+  private resumeGameplay(): void {
+    this.player.gameplayPaused = false;
+    this.physics.resume();
+    this.bossSystem.resumeAll();
+    this.prunePausables();
+    this.pausableTweens.forEach((tween) => { if (tween.isPaused()) tween.resume(); });
+    this.pausableTimers.forEach((timer) => { timer.paused = false; });
+    this.pausableSprites.forEach((sprite) => { if (sprite.anims.isPaused) sprite.anims.resume(); });
+  }
+  private prunePausables(): void {
+    this.pausableTweens = this.pausableTweens.filter((tween) => tween.isPlaying() || tween.isPaused());
+    this.pausableTimers = this.pausableTimers.filter((timer) => !timer.hasDispatched);
+    this.pausableSprites = this.pausableSprites.filter((sprite) => sprite.active);
+  }
+  private trackTween(tween: Phaser.Tweens.Tween): Phaser.Tweens.Tween {
+    this.pausableTweens.push(tween);
+    return tween;
+  }
+  private trackTimer(timer: Phaser.Time.TimerEvent): Phaser.Time.TimerEvent {
+    this.pausableTimers.push(timer);
+    return timer;
+  }
+  private trackAnimatedSprite(sprite: Phaser.GameObjects.Sprite): Phaser.GameObjects.Sprite {
+    this.pausableSprites.push(sprite);
+    return sprite;
+  }
+  private playAuraPulse(radius: number, multiStrike = false, buffUnlocked = false): void {
+    // Near-white hex values (e.g. 0xfff9c4) read as a pale white haze once blended at low alpha — using more
+    // saturated amber-yellow tones (and higher alpha) here so the pulse actually reads as yellow, not white.
+    const fillColor = multiStrike ? 0xffd23f : 0xffe066;
+    const strokeColor = multiStrike ? 0xffb300 : 0xffc107;
+    const pulse = this.add.circle(this.player.x, this.player.y, radius, fillColor, multiStrike ? 0.32 : 0.22).setStrokeStyle(multiStrike ? 3 : 2, strokeColor, multiStrike ? 0.85 : 0.75).setDepth(5);
+    this.trackTween(this.tweens.add({ targets: pulse, alpha: 0, scale: multiStrike ? 1.16 : 1.08, duration: multiStrike ? 320 : 260, onComplete: () => pulse.destroy() }));
+    this.spawnAuraBolts(radius, buffUnlocked);
+  }
+  /** Same "scatter a few flickering bolts around a circle, fade fast" pattern as BossSystem.spawnShieldBolts.
+   *  Only aura-bolt-3 is used (aura-bolt-1/2 exist on disk but are no longer wired in); count reflects whether
+   *  the exclusive buff (5 upgrades + affinity) is unlocked, not this specific tick's multi-strike proc. */
+  private spawnAuraBolts(radius: number, buffUnlocked: boolean): void {
+    const count = buffUnlocked ? 6 : 3;
+    for (let index = 0; index < count; index += 1) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Math.sqrt(Math.random()) * radius;
+      const bolt = this.add.image(
+        this.player.x + Math.cos(angle) * distance,
+        this.player.y + Math.sin(angle) * distance,
+        'aura-bolt-3'
+      )
+        // Bolts aren't square (each keeps its own native aspect ratio) — scale uniformly rather than
+        // setDisplaySize with independent width/height, which would stretch/squash the thinner variants.
+        .setScale(Phaser.Math.FloatBetween(0.55, 0.8))
+        .setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2))
+        .setAlpha(Phaser.Math.FloatBetween(0.75, 1))
+        .setDepth(6)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.trackTween(this.tweens.add({ targets: bolt, alpha: 0, duration: Phaser.Math.Between(180, 300), onComplete: () => bolt.destroy() }));
+    }
   }
   private launchThrownSword(weapon: ActiveWeapon, direction: Phaser.Math.Vector2): void {
     let projectile = this.projectiles.getFirstDead(false) as Projectile | null;
@@ -478,12 +718,14 @@ export class GameScene extends Phaser.Scene {
     const edge = this.worldEdgePoint(start, direction);
     const speed = 520;
     const distance = Phaser.Math.Distance.Between(start.x, start.y, edge.x, edge.y);
-    const lifetime = Math.ceil((distance * 2) / speed * 1000) + 600;
+    // Each cycle is one out-and-back leg (distance * 2); THROWN_SWORD_CYCLES of them must fit before expiresAt,
+    // otherwise the projectile would time out and vanish mid-flight instead of completing its last return.
+    const lifetime = Math.ceil((distance * 2 * THROWN_SWORD_CYCLES) / speed * 1000) + 600;
     projectile.fire(start.x, start.y, edge.x, edge.y, weapon.config.baseDamage * this.player.damageMultiplier, speed, lifetime, Number.POSITIVE_INFINITY, 0, this.time.now, false, distance);
     projectile.speed = speed;
     projectile.range = distance;
     projectile.weaponId = weapon.config.id;
-    projectile.configureThrownSword();
+    projectile.configureThrownSword(THROWN_SWORD_CYCLES);
   }
   private worldEdgePoint(start: Phaser.Math.Vector2, direction: Phaser.Math.Vector2): Phaser.Math.Vector2 {
     const candidates: number[] = [];
@@ -540,24 +782,30 @@ export class GameScene extends Phaser.Scene {
     if (side === 2) return new Phaser.Math.Vector2(edge, Phaser.Math.Between(0, WORLD_SIZE));
     return new Phaser.Math.Vector2(WORLD_SIZE - edge, Phaser.Math.Between(0, WORLD_SIZE));
   }
-  private playSwordSlash(direction: Phaser.Math.Vector2): void {
+  /** `origin` defaults to the player (the normal cone swing); the whip's chain/bonus hits pass the struck enemy's
+   *  own position instead, so those "outside the cone" hits get their own visible slash rather than only a damage
+   *  number. `weaponId === 'whip'` tints it light brown instead of the sprite's native light blue, so a chain hit
+   *  reads as the whip's own effect and doesn't look like a second sword swing landing out of nowhere. */
+  private playSwordSlash(direction: Phaser.Math.Vector2, origin: { x: number; y: number } = this.player, weaponId?: string): void {
     // Start the effect on the attacker. Its previous 62px offset placed the
     // 128px-wide slash over a nearby enemy, making it look like their attack.
-    const slash = this.add.sprite(this.player.x, this.player.y, 'sword-air-slash')
+    const slash = this.add.sprite(origin.x, origin.y, 'sword-air-slash')
       .setDisplaySize(112, 112)
       .setDepth(6);
+    if (weaponId === 'whip') slash.setTint(0xc08552);
 
     // The slash artwork faces left at rotation 0, whereas Phaser angles point
     // right at 0. Rotate it 180° so its impact edge faces the target.
     slash.rotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI;
     slash.play('sword-air-slash-swing');
-    this.tweens.add({
+    this.trackAnimatedSprite(slash);
+    this.trackTween(this.tweens.add({
       targets: slash,
-      x: this.player.x + direction.x * 62,
-      y: this.player.y + direction.y * 62,
+      x: origin.x + direction.x * 62,
+      y: origin.y + direction.y * 62,
       duration: 220,
       ease: 'Quad.Out'
-    });
+    }));
     slash.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => slash.destroy());
   }
   private nearestEnemy(range: number): Enemy | null { let nearest: Enemy | null = null; let best = Number.POSITIVE_INFINITY; this.enemies.children.each((child) => { const enemy = child as Enemy; if (!enemy.active) return true; const effectiveRange = range + this.enemyRangePadding(enemy); const distance = Phaser.Math.Distance.Squared(this.player.x, this.player.y, enemy.x, enemy.y); if (distance <= effectiveRange ** 2 && distance < best) { best = distance; nearest = enemy; } return true; }); return nearest; }
@@ -582,6 +830,7 @@ export class GameScene extends Phaser.Scene {
   private updateSoulProjectiles(): void { this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active && this.time.now >= projectile.expiresAt) projectile.deactivate(); return true; }); }
   private updateGems(): void { this.gems.children.each((child) => { const gem = child as CurrencyGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
   private updateChests(): void { this.chests.children.each((child) => { const chest = child as LootChest; if (chest.active) chest.attract(this.player, this.player.pickupRange); return true; }); }
+  private updateHealthPotions(): void { this.healthPotions.children.each((child) => { const potion = child as HealthPotion; if (potion.active) potion.attract(this.player, this.player.pickupRange); return true; }); }
   private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; const { amount, critical } = this.projectileDamage(projectile, enemy); this.damageEnemy(enemy, amount, projectile.weaponId, critical); this.triggerStaffExplosion(projectile, enemy); if (this.tryProjectileRicochet(projectile, enemy)) return; if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
   private projectileDamage(projectile: Projectile, enemy: Enemy): { amount: number; critical: boolean } {
     if (this.shouldExecuteWithStaff(projectile, enemy)) return { amount: enemy.health, critical: false };
@@ -599,7 +848,7 @@ export class GameScene extends Phaser.Scene {
     const upgradeCount = this.weapons.find((weapon) => weapon.config.id === projectile.weaponId)?.upgradeCount ?? 0;
     for (let index = 0; index < this.staffExplosionCount(upgradeCount); index += 1) {
       const explosion = this.add.circle(hitEnemy.x, hitEnemy.y, radius, 0x6ee7ff, 0.18).setStrokeStyle(3, 0xc7f9ff, 0.85).setDepth(7);
-      this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18 + index * 0.1, duration: 220 + index * 45, onComplete: () => explosion.destroy() });
+      this.trackTween(this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18 + index * 0.1, duration: 220 + index * 45, onComplete: () => explosion.destroy() }));
       this.enemies.children.each((child) => {
         const enemy = child as Enemy;
         if (!enemy.active || enemy === hitEnemy) return true;
@@ -619,7 +868,7 @@ export class GameScene extends Phaser.Scene {
   }
   /** Shared by the "CRIT!" callout and enemy damage numbers so both rise/fade identically; `delayMs` staggers the damage number behind a crit on the same hit. */
   private spawnFloatingCombatText(x: number, y: number, message: string, color: string, delayMs: number): void {
-    this.time.delayedCall(delayMs, () => {
+    this.trackTimer(this.time.delayedCall(delayMs, () => {
       const text = this.add.text(x, y, message, {
         fontFamily: TITLE_FONT_FAMILY,
         fontSize: '22px',
@@ -627,8 +876,13 @@ export class GameScene extends Phaser.Scene {
         stroke: '#321b00',
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(15);
-      this.tweens.add({ targets: text, y: text.y - 34, alpha: 0, duration: 520, ease: 'Quad.Out', onComplete: () => text.destroy() });
-    });
+      this.trackTween(this.tweens.add({ targets: text, y: text.y - 34, alpha: 0, duration: 520, ease: 'Quad.Out', onComplete: () => text.destroy() }));
+    }));
+  }
+  /** Relíquia Divina's death marker — every kill while it's in the loadout, boss or not (see defeatEnemy). */
+  private spawnDivineRelicDeathArrow(x: number, y: number): void {
+    const arrow = this.add.text(x, y - 20, '▲', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: '#4dff7a', stroke: '#0a1c0f', strokeThickness: 4 }).setOrigin(0.5).setDepth(16);
+    this.trackTween(this.tweens.add({ targets: arrow, y: arrow.y - 46, alpha: 0, duration: 620, ease: 'Quad.Out', onComplete: () => arrow.destroy() }));
   }
   private tryProjectileRicochet(projectile: Projectile, hitEnemy: Enemy): boolean {
     if (projectile.isBoomerang && projectile.returning) return false;
@@ -653,6 +907,15 @@ export class GameScene extends Phaser.Scene {
     });
     return nearest;
   }
+  /** Relíquia Divina's combat feedback is gated on actually having the weapon in the current loadout, not on the
+   *  active character — any character can end up wielding it via the extra-weapon system. Kept in sync (rather than
+   *  recomputed every hit) at the two places `weapons` actually changes: initial loadout and the extra-weapon pick. */
+  private hasDivineRelic(): boolean {
+    return this.weapons.some((weapon) => weapon.config.id === 'amulet');
+  }
+  private syncDivineRelicFeedback(): void {
+    this.player.divineRelicFeedback = this.hasDivineRelic();
+  }
   private damageEnemy(enemy: Enemy, amount: number, sourceWeaponId?: string, isCritical = false): void {
     const overflow = this.bossSystem.tryAbsorbShieldDamage(enemy, amount);
     if (overflow !== null) {
@@ -660,20 +923,28 @@ export class GameScene extends Phaser.Scene {
       amount = overflow;
     }
     const damageDealt = Math.min(amount, enemy.health);
-    if (sourceWeaponId === 'sword' && this.player.lifeStealPercent > 0) this.player.heal(damageDealt * this.player.lifeStealPercent);
+    // "Roubo de Vida" is offered generically to any melee (cone-type) weapon via meleeCommonUpgrades — gating the
+    // actual heal on the literal id 'sword' meant picking it while wielding the Chicote (also cone-type) silently
+    // never healed anything, even though lifeStealPercent kept going up and the pick showed as active in the HUD.
+    const sourceConfig = sourceWeaponId ? WEAPONS[sourceWeaponId as WeaponConfig['id']] : undefined;
+    if (sourceConfig?.type === 'cone' && this.player.lifeStealPercent > 0) this.player.heal(damageDealt * this.player.lifeStealPercent);
     const textX = enemy.x;
     const textY = enemy.y - enemy.displayHeight / 2 - 10;
     if (isCritical) this.spawnFloatingCombatText(textX, textY, 'CRIT!', '#ffe45c', 0);
     this.spawnFloatingCombatText(textX, textY, `- ${Math.round(amount)}`, '#ff5c5c', isCritical ? 150 : 0);
+    if (this.hasDivineRelic()) {
+      this.spawnFloatingCombatText(this.player.x, this.player.y - this.player.displayHeight / 2 - 10, 'DANO +', '#8effa0', 0);
+    }
     if (enemy.takeDamage(amount)) this.defeatEnemy(enemy);
   }
   private soulProjectileHit(_playerObject: ArcadeColliderObject, projectileObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as SoulProjectile; if (!projectile.active) return; this.player.applySlow(projectile.slowPercent, projectile.slowDurationMs, this.time.now); const damaged = this.player.damage(projectile.damage, this.time.now); projectile.deactivate(); if (damaged && this.player.health <= 0) this.finish(false); }
   private defeatEnemy(enemy: Enemy): void {
     this.kills += 1;
+    if (this.hasDivineRelic()) this.spawnDivineRelicDeathArrow(enemy.x, enemy.y);
     if (this.bossSystem.isBoss(enemy)) {
-      const wasMainBoss = this.bossSystem.defeatBoss(enemy);
+      const wasWaveBoss = this.bossSystem.defeatBoss(enemy);
       enemy.deactivate();
-      if (wasMainBoss) this.finish(true);
+      if (wasWaveBoss && !this.bossSystem.hasActiveWaveBosses()) this.onBossWaveCleared();
       return;
     }
     this.experience += enemy.reward;
@@ -689,16 +960,22 @@ export class GameScene extends Phaser.Scene {
       const chest = this.availableChest();
       chest?.activate(enemy.x, enemy.y);
     }
+    if (Math.random() < HEALTH_POTION_DROP_CHANCE) {
+      const potion = this.availableHealthPotion();
+      potion?.activate(enemy.x, enemy.y);
+    }
     enemy.deactivate();
   }
   private spawnXpOrbEffect(x: number, y: number): void {
     const orb = this.add.image(x, y, 'xp-orb').setDisplaySize(18, 18).setDepth(6);
-    this.tweens.add({ targets: orb, y: y - 30, alpha: 0, duration: 450, ease: 'Quad.Out', onComplete: () => orb.destroy() });
+    this.trackTween(this.tweens.add({ targets: orb, y: y - 30, alpha: 0, duration: 450, ease: 'Quad.Out', onComplete: () => orb.destroy() }));
   }
   private availableGem(): CurrencyGem | null { let gem = this.gems.getFirstDead(false) as CurrencyGem | null; if (!gem && !this.gems.isFull()) { gem = new CurrencyGem(this); this.gems.add(gem); } return gem; }
   private availableChest(): LootChest | null { let chest = this.chests.getFirstDead(false) as LootChest | null; if (!chest && !this.chests.isFull()) { chest = new LootChest(this); this.chests.add(chest); } return chest; }
+  private availableHealthPotion(): HealthPotion | null { let potion = this.healthPotions.getFirstDead(false) as HealthPotion | null; if (!potion && !this.healthPotions.isFull()) { potion = new HealthPotion(this); this.healthPotions.add(potion); } return potion; }
   private playerHit(_playerObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const enemy = enemyObject as unknown as Enemy; if (!enemy.active || enemy.contactDamage <= 0 || !this.player.damage(enemy.contactDamage, this.time.now)) return; if (this.player.health <= 0) this.finish(false); }
   private collectGem(_playerObject: ArcadeColliderObject, gemObject: ArcadeColliderObject): void { const gem = gemObject as unknown as CurrencyGem; if (!gem.active) return; this.currency += gem.value; gem.deactivate(); }
+  private collectHealthPotion(_playerObject: ArcadeColliderObject, potionObject: ArcadeColliderObject): void { const potion = potionObject as unknown as HealthPotion; if (!potion.active) return; this.player.heal(HEALTH_POTION_HEAL_AMOUNT); potion.deactivate(); }
   /** Baú: sorteia 1 melhoria aleatória do mesmo pool de 5 opções da tela de nível ≥5. Se nenhum sorteio já estiver
    *  em tela (raro: dois baús coletados quase juntos), aplica direto sem animação pra não travar em uma segunda tela. */
   private collectChest(_playerObject: ArcadeColliderObject, chestObject: ArcadeColliderObject): void {
@@ -716,7 +993,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.chestRollActive = true;
-    this.physics.pause();
+    this.pauseGameplay();
     this.playChestRollAnimation(choices, upgrade, chestX, chestY);
   }
   private grantChestUpgrade(upgrade: Upgrade, chestX: number, chestY: number): void {
@@ -772,7 +1049,7 @@ export class GameScene extends Phaser.Scene {
       this.grantChestUpgrade(upgrade, chestX, chestY);
       this.destroyChestRollCard(card);
       this.chestRollActive = false;
-      this.physics.resume();
+      this.resumeGameplay();
     });
   }
   private destroyChestRollCard(card: ChestRollCard): void {
@@ -790,7 +1067,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(120, () => this.showStartingWeaponUpgradesScreen());
   }
   private showStartingWeaponUpgradesScreen(): void {
-    this.physics.pause();
+    this.pauseGameplay();
     const character = CHARACTERS[this.characterId];
     this.startingUpgradePool ??= this.upgrades
       .weaponUpgradePool(this.primaryWeapon, this.player)
@@ -842,7 +1119,7 @@ export class GameScene extends Phaser.Scene {
   }
   private startingUpgradeCard(upgrade: Upgrade, x: number, picks: Map<string, number>, title: Phaser.GameObjects.Text): void {
     const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
-    const iconKey = UPGRADE_ICON_KEYS[upgrade.id];
+    const iconKey = UPGRADE_ICON_KEYS[upgrade.id] ?? 'upgrade-damage-icon';
     const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
     const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
     const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
@@ -863,7 +1140,7 @@ export class GameScene extends Phaser.Scene {
         this.startingUpgradeSnapshot = undefined;
         this.startingUpgradePool = undefined;
         this.levelPending = false;
-        this.physics.resume();
+        this.resumeGameplay();
         this.hud.setVisible(true);
         this.processExperience();
         return;
@@ -872,7 +1149,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
   private showUpgradeSelection(titleText: string, onSelect: () => void, amount = 3, extraWeaponOffer: WeaponConfig | null = null): void {
-    this.physics.pause();
+    this.pauseGameplay();
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
@@ -890,16 +1167,16 @@ export class GameScene extends Phaser.Scene {
     const amount = isBonusLevel ? LEVEL_UPGRADE_CONFIG.bonusChoiceAmount : LEVEL_UPGRADE_CONFIG.defaultChoiceAmount;
     const extraWeaponOffer = this.rollExtraWeaponOffer();
     const upgradeAmount = extraWeaponOffer ? amount - 1 : amount;
-    this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.physics.resume(); this.processExperience(); }, upgradeAmount, extraWeaponOffer);
+    this.showUpgradeSelection(`NÍVEL ${this.level}! Escolha uma melhoria`, () => { this.levelPending = false; this.resumeGameplay(); this.processExperience(); }, upgradeAmount, extraWeaponOffer);
   }
   private rollExtraWeaponOffer(): WeaponConfig | null {
-    if (this.level % LEVEL_UPGRADE_CONFIG.bonusChoiceInterval !== 0 || this.weapons.length >= MAX_ACTIVE_WEAPONS || Math.random() >= LEVEL_UPGRADE_CONFIG.extraWeaponOfferChance) return null;
+    if (this.level % LEVEL_UPGRADE_CONFIG.bonusChoiceInterval !== 0 || this.weapons.length >= MAX_ACTIVE_WEAPONS) return null;
     const ownedIds = new Set(this.weapons.map((weapon) => weapon.config.id));
     const candidates = Object.values(WEAPONS).filter((weapon) => !ownedIds.has(weapon.id));
     if (candidates.length === 0) return null;
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
-  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; }); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
+  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; }); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.resumeGameplay(); this.processExperience(); } }); }
   private extraWeaponCard(weapon: WeaponConfig, x: number, onSelect?: () => void): void {
     const card = this.add.rectangle(x, 410, 200, 220, 0x6b4d10).setStrokeStyle(3, 0xffd868).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
     const banner = this.add.text(x, 314, 'ARMA EXTRA!', { fontFamily: TITLE_FONT_FAMILY, fontSize: '14px', color: '#3a2400', backgroundColor: '#ffd868', padding: { x: 8, y: 3 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33);
@@ -911,10 +1188,11 @@ export class GameScene extends Phaser.Scene {
     card.on('pointerout', () => card.setFillStyle(0x6b4d10));
     card.on('pointerup', () => {
       this.weapons.push(this.createActiveWeapon(weapon));
+      this.syncDivineRelicFeedback();
       this.updateBuildHud();
       this.levelOverlay.forEach((object) => object.destroy());
       this.levelOverlay = [];
-      if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); }
+      if (onSelect) onSelect(); else { this.levelPending = false; this.resumeGameplay(); this.processExperience(); }
     });
   }
   private updateBuildHud(): void {
@@ -923,10 +1201,70 @@ export class GameScene extends Phaser.Scene {
     this.hud.setBuild([...weaponEntries, ...upgrades]);
   }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) this.showPauseScreen(); else this.resumeFromPause(); }
-  private showPauseScreen(): void { this.physics.pause(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
+  private showPauseScreen(): void { this.pauseGameplay(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
   private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void { const button = addOverlay(this.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(27).setInteractive({ useHandCursor: true })); button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' })); button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' })); button.on('pointerup', action); }
-  private resumeFromPause(): void { this.physics.resume(); this.destroyPauseOverlay(); }
+  private resumeFromPause(): void { this.resumeGameplay(); this.destroyPauseOverlay(); }
   private destroyPauseOverlay(): void { this.pauseOverlay.forEach((object) => object.destroy()); this.pauseOverlay = []; }
-  private finish(victory: boolean): void { this.ended = true; this.physics.pause(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x070910, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
+  /** All bosses in the current wave are dead — instead of ending the run immediately, offer a choice: end here,
+   *  or push into an escalated continuation (see continueToNextCycle). Regular enemy spawning already resumed on
+   *  its own the instant hasActiveEncounter() went false, so the player isn't standing in a vacuum deciding. */
+  private onBossWaveCleared(): void {
+    const spread = 110;
+    const baseX = this.player.x;
+    const baseY = this.player.y - 160;
+    // portal_borderless_sheet.png doesn't exist on disk yet — referencing a texture key that never actually loaded
+    // throws and freezes the whole game loop, not just a missing-sprite warning. Fall back to the existing bordered
+    // portal art (already guaranteed loaded) until the dedicated borderless asset lands; this line is the only
+    // thing to change once it does.
+    const texture = this.textures.exists('portal-borderless') ? 'portal-borderless' : 'portal';
+    const anim = this.textures.exists('portal-borderless') ? 'portal-borderless-spin' : 'portal-spin';
+    this.endRunPortal = this.add.sprite(baseX - spread, baseY, texture, 0).setDisplaySize(84, 84).setDepth(9).setTint(0x9fb4ff).play(anim);
+    this.continuePortal = this.add.sprite(baseX + spread, baseY, texture, 0).setDisplaySize(84, 84).setDepth(9).setTint(0x7dffa0).play(anim);
+  }
+  private updateBossWavePortals(): void {
+    if (!this.endRunPortal || !this.continuePortal) return;
+    const nearEnd = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.endRunPortal.x, this.endRunPortal.y) <= 70;
+    const nearContinue = !nearEnd && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.continuePortal.x, this.continuePortal.y) <= 70;
+    if (nearEnd) {
+      this.setPortalPrompt(this.endRunPortal.x, this.endRunPortal.y - 60, 'Pressione E para encerrar a run');
+      if (Phaser.Input.Keyboard.JustDown(this.keys.E)) this.finish(true);
+    } else if (nearContinue) {
+      const nextCycle = this.bossCycle + 1;
+      const minutes = Math.round(this.phaseDurationMs(nextCycle) / 60000);
+      this.setPortalPrompt(this.continuePortal.x, this.continuePortal.y - 60, `Pressione E para continuar — Ciclo ${nextCycle} (${minutes}min, dificuldade ${nextCycle}x, ${nextCycle} bosses)`);
+      if (Phaser.Input.Keyboard.JustDown(this.keys.E)) this.continueToNextCycle();
+    } else {
+      this.destroyPortalPrompt();
+    }
+  }
+  /** Escalation per the continue portal's promise: +1 boss, +1min next phase, +1x difficulty (enemy health and
+   *  spawn count both scale with the cycle number — see DifficultySystem.stageFor) — all keyed off bossCycle so
+   *  they stay in lockstep and the loop can repeat indefinitely. */
+  private continueToNextCycle(): void {
+    this.destroyBossWavePortals();
+    this.bossCycle += 1;
+    this.phaseStartedAtMs = this.elapsedMs;
+    this.phaseBossTriggered = false;
+    this.difficulty.setCycleMultiplier(this.bossCycle);
+    this.bossSystem.rearm();
+  }
+  private destroyBossWavePortals(): void {
+    this.endRunPortal?.destroy();
+    this.endRunPortal = undefined;
+    this.continuePortal?.destroy();
+    this.continuePortal = undefined;
+    this.destroyPortalPrompt();
+  }
+  private setPortalPrompt(x: number, y: number, text: string): void {
+    if (!this.portalPrompt) {
+      this.portalPrompt = this.add.text(0, 0, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '16px', color: '#ffe29a', align: 'center', stroke: '#101015', strokeThickness: 4 }).setOrigin(0.5).setDepth(31);
+    }
+    this.portalPrompt.setPosition(x, y).setText(text);
+  }
+  private destroyPortalPrompt(): void {
+    this.portalPrompt?.destroy();
+    this.portalPrompt = undefined;
+  }
+  private finish(victory: boolean): void { this.ended = true; this.pauseGameplay(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x070910, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
   private resultButton(label: string, y: number, action: () => void): void { const button = this.add.text(640, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '21px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 20, y: 10 } }).setOrigin(0.5).setScrollFactor(0).setDepth(41).setInteractive({ useHandCursor: true }); button.on('pointerup', action); }
 }
