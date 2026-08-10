@@ -17,14 +17,12 @@ const FINAL_BOSS_MELEE_DAMAGE = 40;
 const FINAL_BOSS_EXPLOSION_RADIUS = 700;
 const EXTRA_BOSS_SPAWN_DISTANCE = 520;
 /** Telegraph before the melee sweep resolves — gives the player a window to back off after the sword appears. */
-const MELEE_TELEGRAPH_MS = 1500;
+const MELEE_TELEGRAPH_MS = 2000;
 /** Reach of the 360° sweep itself, distinct from the (larger) trigger radius above. */
 const MELEE_SWING_RADIUS = 170;
 /** How close the player must be to the blade's current (moving) position for the swing to actually connect — sized to roughly match the sword sprite's own footprint (140px display size). */
 const MELEE_SWORD_HIT_RADIUS = 70;
-/** The sword icon art is drawn on a diagonal (hilt bottom-left, tip top-right); this nudges it left so it reads as upright. Eyeballed — tune if it still looks off. */
-const MELEE_SWORD_ART_TILT = -Math.PI / 8;
-const MELEE_SWORD_BASE_TINT = 0x2fe86a;
+const MELEE_SWORD_BASE_TINT = 0x45ff90;
 const MELEE_SWORD_BLINK_TINT = 0xd6ffd0;
 const MELEE_SWORD_BLINK_COUNT = 3;
 /** Damage already resolves the instant the telegraph ends — this only paces the follow-through visual (sword + glowing arc)
@@ -369,17 +367,20 @@ export class BossSystem {
     const direction = new Phaser.Math.Vector2(player.x - boss.enemy.x, player.y - boss.enemy.y).normalize();
     const perpendicular = new Phaser.Math.Vector2(-direction.y, direction.x);
     const spawnAngle = Phaser.Math.Angle.Between(0, 0, perpendicular.x, perpendicular.y);
-    // Placeholder art: reuses the sword weapon icon (same sprite as the player's thrown-sword buff), tinted green.
-    // Swap for a dedicated "necromantic sword" sprite once one exists.
+    // Summons in via the growth animation (energy spike -> solid blade); Phaser leaves a non-repeating animation
+    // parked on its last frame, so the sword just stays there (no texture swap needed) through the hold/sweep.
     const sword = scene.add.sprite(
       boss.enemy.x + perpendicular.x * MELEE_SWING_RADIUS,
       boss.enemy.y + perpendicular.y * MELEE_SWING_RADIUS,
-      'boss-sword-icon'
+      'boss-sword-summon',
+      0
     )
-      .setDisplaySize(200, 200)
+      // Frames are 260x480 (tall/thin blade); keep that aspect instead of forcing a square, which squished the art.
+      .setDisplaySize(108, 200)
       .setTint(MELEE_SWORD_BASE_TINT)
       .setDepth(12)
-      .setRotation(spawnAngle + Math.PI / 2 + MELEE_SWORD_ART_TILT);
+      .setRotation(spawnAngle + Math.PI / 2);
+    sword.play('boss-sword-summon-grow');
     this.blinkTelegraphSword(sword);
     scene.time.delayedCall(MELEE_TELEGRAPH_MS, () => this.resolveMeleeSweep(boss, sword, spawnAngle));
   }
@@ -413,7 +414,7 @@ export class BossSystem {
         const swordX = boss.enemy.x + Math.cos(orbit.angle) * MELEE_SWING_RADIUS;
         const swordY = boss.enemy.y + Math.sin(orbit.angle) * MELEE_SWING_RADIUS;
         sword.setPosition(swordX, swordY);
-        sword.setRotation(orbit.angle + Math.PI / 2 + MELEE_SWORD_ART_TILT);
+        sword.setRotation(orbit.angle + Math.PI / 2);
         // Redraws the traced arc every frame so the swing's full path stays visible, unlike the fast-moving
         // sword sprite alone (which was skipping too many pixels between frames to read at a glance).
         ring.clear();

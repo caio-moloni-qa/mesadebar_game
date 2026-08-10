@@ -747,7 +747,10 @@ export class GameScene extends Phaser.Scene {
     return { title, card, icon, name, description };
   }
   private setChestRollCardContent(card: ChestRollCard, upgrade: Upgrade): void {
-    card.icon.setTexture(UPGRADE_ICON_KEYS[upgrade.id] ?? 'upgrade-damage-icon');
+    // setTexture alone keeps the icon's previous scale, not its previous display size — icons with a different
+    // native resolution than the last one shown (e.g. wide-bolt-icon.png at 500x500 vs the usual 64x64) would
+    // render wildly oversized. Re-lock the display size every time regardless of the new texture's native size.
+    card.icon.setTexture(UPGRADE_ICON_KEYS[upgrade.id] ?? 'upgrade-damage-icon').setDisplaySize(76, 76);
     card.name.setText(upgrade.name);
     card.description.setText(upgrade.description);
   }

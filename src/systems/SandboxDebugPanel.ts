@@ -25,7 +25,7 @@ export class SandboxDebugPanel {
   private indicator?: Phaser.GameObjects.Text;
   private panelObjects: Phaser.GameObjects.GameObject[] = [];
   private fogEnabled = true;
-  private merchantEnabled = false;
+  private merchantEnabled = true;
   private skeletonSpawnEnabled = true;
   private variantSpawnEnabled = true;
   private invincible = false;
