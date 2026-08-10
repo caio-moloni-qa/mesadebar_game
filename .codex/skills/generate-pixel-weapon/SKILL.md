@@ -10,11 +10,12 @@ description: Create pixel-art bitmap weapon assets from user descriptions, inclu
 Turn the user's weapon description into a precise image-generation prompt for a pixel-art bitmap asset. Use `imagegen` for new images or weapon edits when available.
 
 1. Extract weapon type, size, intended use, orientation, palette, and background requirement.
-2. If size is missing, choose a practical default and state it briefly: 64x64 for inventory icons, 96x96 for detailed pickups/equipment previews, 32x32 for tiny UI icons.
-3. Default to a transparent background for game assets. In built-in image generation, request a flat chroma-key background and remove it locally before saving to the repo.
-4. Ask a concise clarification only when a missing detail materially changes the asset, such as icon vs pickup, exact size, or whether the weapon must match an existing character.
-5. Generate directly when the request is clear.
-6. Save repo-bound outputs under `src/assets/weapons` unless the project has a more specific existing asset folder.
+2. **Confirm the generation path with the user before producing anything.** Ask whether they want a ready-to-run prompt handed back to execute themselves in an external tool, or whether you should attempt generation directly now — and only attempt direct generation if an image-generation tool is actually available in this environment/session. Don't silently assume either path; confirming first avoids wasted generations and keeps the result aligned with what the user actually wants.
+3. If size is missing, choose a practical default and state it briefly: 64x64 for inventory icons, 96x96 for detailed pickups/equipment previews, 32x32 for tiny UI icons. **The generator won't return that exact canvas size** — expect a fixed canvas (commonly ~1024x1024 or 1536x1024) with the subject centered in padding, and crop toward the target size afterward.
+4. Default to requesting a transparent background directly for game assets — many image tools can output genuine alpha transparency without a chroma-key step. Verify by reading the actual alpha channel at background pixels (an image viewer rendering transparent areas as flat gray/dark is not the same as an opaque background — check alpha=0 programmatically before assuming otherwise). Only fall back to the chroma-key recipe below if the output truly comes back opaque.
+5. Ask a concise clarification only when a missing detail materially changes the asset, such as icon vs pickup, exact size, or whether the weapon must match an existing character.
+6. Generate directly when the request is clear.
+7. Save repo-bound outputs under `src/assets/weapons` unless the project has a more specific existing asset folder.
 
 ## Prompt Recipe
 
