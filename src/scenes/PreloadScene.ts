@@ -16,10 +16,9 @@ export class PreloadScene extends Phaser.Scene {
     // within 1px across all 8 grid cells (far tighter than the door ever was) — cropped with a shared fixed
     // window (same rect every frame) purely to trim the ring's empty margin, not to fix any drift.
     this.load.spritesheet('portal', new URL('../assets/environments/portal_sheet_cropped.png', import.meta.url).href, { frameWidth: 384, frameHeight: 427 });
-    // merchant_sheet.png is cropped from the raw generation (merchant.png) to a shared per-column window — the
-    // 4 frames' vertical alignment came out essentially perfect on its own, so no per-frame content-bbox cropping
-    // was needed here (unlike the door), just a common crop window to trim the surrounding soft glow.
-    this.load.spritesheet('merchant-character', new URL('../assets/characters/merchant_sheet.png', import.meta.url).href, { frameWidth: 384, frameHeight: 362 });
+    // merchant_sheet.png is a 4-frame horizontal strip where each frame is 362x384.
+    // The previous 384x362 grid was transposed, which caused the merchant sprite to render incorrectly.
+    this.load.spritesheet('merchant-character', new URL('../assets/characters/merchant-sheet.png', import.meta.url).href, { frameWidth: 362, frameHeight: 384 });
     this.load.image('merchant-divine-blessing-icon', new URL('../assets/upgrades/merchant-divine-blessing-icon.png', import.meta.url).href);
     this.load.image('merchant-arcane-curse-icon', new URL('../assets/upgrades/merchant-arcane-curse-icon.png', import.meta.url).href);
     this.load.image('merchant-heal-potion-icon', new URL('../assets/upgrades/merchant-heal-potion-icon.png', import.meta.url).href);
@@ -65,6 +64,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('hp-icon', new URL('../assets/ui/hp-icon.png', import.meta.url).href);
     this.load.image('hp-bar-border', new URL('../assets/ui/hp-bar-border.png', import.meta.url).href);
     this.load.image('exp-bar-border', new URL('../assets/ui/exp-bar-border.png', import.meta.url).href);
+    this.load.image('exp-bar-fill-new', new URL('../assets/ui/exp-bar-fill-new.png', import.meta.url).href);
     this.load.spritesheet('boss-shield-bolt', new URL('../assets/effects/boss-shield-bolt-sheet.png', import.meta.url).href, { frameWidth: 64, frameHeight: 64 });
   }
 
@@ -77,9 +77,21 @@ export class PreloadScene extends Phaser.Scene {
     this.createCharacterAnimations('apparition-wraith');
     this.createCharacterAnimations('super-skeleton');
     this.createCharacterAnimations('final-boss', 4);
+    this.createMerchantAnimation();
     this.createAttackAnimations();
     this.createEffectAnimations();
     this.scene.start('menu');
+  }
+
+  private createMerchantAnimation(): void {
+    const key = 'merchant-idle';
+    if (this.anims.exists(key)) return;
+    this.anims.create({
+      key,
+      frames: this.anims.generateFrameNumbers('merchant-character', { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: -1
+    });
   }
 
   private createCharacterAnimations(texture: string, frameRate = 8): void {

@@ -62,11 +62,11 @@ export class SandboxDebugPanel {
     this.destroyPanel();
     const scene = this.host.scene;
     const panelX = GAME_WIDTH - 230;
-    const panelTop = 110;
+    const panelTop = 20;
     const rowHeight = 38;
     const rows = 16;
     const panelHeight = 44 + rows * rowHeight;
-    const background = scene.add.rectangle(panelX, panelTop, 220, panelHeight, 0x14101f, 0.88).setOrigin(0, 0).setStrokeStyle(2, 0x8a6ad8, 0.9).setScrollFactor(0).setDepth(59);
+    const background = scene.add.rectangle(panelX, panelTop, 220, panelHeight, 0x3f2f20, 0.88).setOrigin(0, 0).setStrokeStyle(2, 0xd2b26e, 0.9).setScrollFactor(0).setDepth(59);
     const title = scene.add.text(panelX + 10, panelTop + 8, 'SANDBOX', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffe29a' }).setScrollFactor(0).setDepth(60);
     this.panelObjects = [background, title];
     let row = 0;
@@ -93,25 +93,25 @@ export class SandboxDebugPanel {
     this.panelObjects = [];
   }
   private addButton(x: number, y: number, label: string, action: () => void): void {
-    const button = this.host.scene.add.text(x, y, label, { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#ffffff', backgroundColor: '#4d3d80', padding: { x: 8, y: 6 } }).setScrollFactor(0).setDepth(60).setInteractive({ useHandCursor: true });
-    button.on('pointerover', () => button.setStyle({ backgroundColor: '#6b559e' }));
-    button.on('pointerout', () => button.setStyle({ backgroundColor: '#4d3d80' }));
+    const button = this.host.scene.add.text(x, y, label, { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#f8e6b6', backgroundColor: '#2a1d12', padding: { x: 8, y: 6 } }).setScrollFactor(0).setDepth(60).setInteractive({ useHandCursor: true });
+    button.on('pointerover', () => button.setStyle({ backgroundColor: '#5d4429' }));
+    button.on('pointerout', () => button.setStyle({ backgroundColor: '#2a1d12' }));
     button.on('pointerup', action);
     this.panelObjects.push(button);
   }
   private addToggleButton(x: number, y: number, labelPrefix: string, getState: () => boolean, setState: (value: boolean) => void): void {
-    const button = this.host.scene.add.text(x, y, '', { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#ffffff', backgroundColor: '#4d3d80', padding: { x: 8, y: 6 } }).setScrollFactor(0).setDepth(60).setInteractive({ useHandCursor: true });
+    const button = this.host.scene.add.text(x, y, '', { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#f8e6b6', backgroundColor: '#2a1d12', padding: { x: 8, y: 6 } }).setScrollFactor(0).setDepth(60).setInteractive({ useHandCursor: true });
     const refresh = () => button.setText(`${labelPrefix}: ${getState() ? 'Ligado' : 'Desligado'}`);
     refresh();
-    button.on('pointerover', () => button.setStyle({ backgroundColor: '#6b559e' }));
-    button.on('pointerout', () => button.setStyle({ backgroundColor: '#4d3d80' }));
+    button.on('pointerover', () => button.setStyle({ backgroundColor: '#5d4429' }));
+    button.on('pointerout', () => button.setStyle({ backgroundColor: '#2a1d12' }));
     button.on('pointerup', () => { setState(!getState()); refresh(); });
     this.panelObjects.push(button);
   }
   private addCycleButton(x: number, y: number, getLabel: () => string, cycle: () => void): void {
-    const button = this.host.scene.add.text(x, y, getLabel(), { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#ffffff', backgroundColor: '#4d3d80', padding: { x: 8, y: 6 } }).setScrollFactor(0).setDepth(60).setInteractive({ useHandCursor: true });
-    button.on('pointerover', () => button.setStyle({ backgroundColor: '#6b559e' }));
-    button.on('pointerout', () => button.setStyle({ backgroundColor: '#4d3d80' }));
+    const button = this.host.scene.add.text(x, y, getLabel(), { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#f8e6b6', backgroundColor: '#2a1d12', padding: { x: 8, y: 6 } }).setScrollFactor(0).setDepth(60).setInteractive({ useHandCursor: true });
+    button.on('pointerover', () => button.setStyle({ backgroundColor: '#5d4429' }));
+    button.on('pointerout', () => button.setStyle({ backgroundColor: '#2a1d12' }));
     button.on('pointerup', () => { cycle(); button.setText(getLabel()); });
     this.panelObjects.push(button);
   }

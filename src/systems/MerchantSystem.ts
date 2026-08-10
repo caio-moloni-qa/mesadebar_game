@@ -65,6 +65,7 @@ export interface MerchantHost {
   isMerchantEnabled(): boolean;
   isBossEncounterActive(): boolean;
   setLevelPending(value: boolean): void;
+  getActivePortalPosition(): Phaser.Math.Vector2 | null;
 }
 
 /** Portal spawning, the merchant excursion (path/room/shop) and its shop interactions. Owns all merchant-only state. */
@@ -187,6 +188,9 @@ export class MerchantSystem {
     this.ensureMerchantArrow();
     this.merchantSpawnCount += 1;
     this.announceMerchantPortal();
+  }
+  getActivePortalPosition(): Phaser.Math.Vector2 | null {
+    return this.merchantPortalActive ? this.merchantPortalPosition.clone() : null;
   }
   private closeMerchantPortal(): void {
     if (!this.merchantPortalActive) return;
@@ -433,9 +437,20 @@ export class MerchantSystem {
     this.merchantNpcPosition.set(this.merchantRoomCenter.x - 140, this.merchantRoomCenter.y - 20);
     // merchant-character's own content aspect (217x338 ≈ 0.642) preserved here. Static — just one frame from the
     // idle sheet (frames are near-identical anyway), no animation played.
-    const npc = scene.add.image(this.merchantNpcPosition.x, this.merchantNpcPosition.y, 'merchant-character', 1)
+    if (!scene.anims.exists('merchant-idle')) {
+      scene.anims.create({
+        key: 'merchant-idle',
+        frames: scene.anims.generateFrameNumbers('merchant-character', { start: 0, end: 3 }),
+        frameRate: 6,
+        repeat: -1
+      });
+    }
+
+    const npc = scene.add.sprite(this.merchantNpcPosition.x, this.merchantNpcPosition.y, 'merchant-character', 0)
       .setDisplaySize(64, 100)
+      .setOrigin(0.5, 0.55)
       .setDepth(3);
+    npc.anims.play('merchant-idle', true);
     const npcLabel = scene.add.text(this.merchantNpcPosition.x, this.merchantNpcPosition.y + 60, 'Sergio', { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#ffe29a', stroke: '#101015', strokeThickness: 3 }).setOrigin(0.5).setDepth(3);
     this.merchantAreaVisuals.push(npc, npcLabel);
 

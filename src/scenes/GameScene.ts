@@ -67,15 +67,33 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
   finalBoss: 'final-boss'
 };
 
+const MINIMAP_WIDTH = 200;
+const MINIMAP_HEIGHT = 136;
+const MINIMAP_PADDING = 8;
+const MINIMAP_OFFSET_X = 22;
+const MINIMAP_INNER_PADDING = 10;
+const MINIMAP_BG_COLOR = 0x060814;
+const MINIMAP_BG_ALPHA = 0.28;
+const MINIMAP_BORDER_COLOR = 0xffffff;
+const MINIMAP_BORDER_ALPHA = 0.14;
+const MINIMAP_CORNER_RADIUS = 6;
+const MINIMAP_PLAYER_COLOR = 0x65b7ff;
+const MINIMAP_ENEMY_COLOR = 0xeb5757;
+const MINIMAP_PORTAL_COLOR = 0x7fd37a;
+const MINIMAP_MARKER_SIZE = 8;
+const MINIMAP_SMALL_MARKER_SIZE = 6;
+
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group; private chests!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
+  private minimapGraphics!: Phaser.GameObjects.Graphics;
   private elapsedMs = 0; private spawnElapsed = 0; private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.variantId, 0])); private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
   private paused = false; private ended = false; private levelPending = false; private chestRollActive = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private startingUpgradeSnapshot?: StartingUpgradeSnapshot; private startingUpgradePool?: Upgrade[]; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   private mapFogGraphics: Phaser.GameObjects.Graphics[] = [];
   private levelOverlay: Phaser.GameObjects.GameObject[] = [];
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
+  private chestOverlay: Phaser.GameObjects.GameObject[] = [];
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapons: ActiveWeapon[] = [];
   private get primaryWeapon(): WeaponConfig { return this.weapons[0].config; }
   private affinityFamilies: Set<WeaponFamily> = new Set();
@@ -101,7 +119,8 @@ export class GameScene extends Phaser.Scene {
       addAffinityFamily: (family) => { this.affinityFamilies.add(family); },
       isMerchantEnabled: () => this.sandbox.isMerchantEnabled(),
       isBossEncounterActive: () => this.bossSystem.hasActiveEncounter(),
-      setLevelPending: (value) => { this.levelPending = value; }
+      setLevelPending: (value) => { this.levelPending = value; },
+      getActivePortalPosition: () => this.merchant.getActivePortalPosition()
     };
   }
   private buildSandboxHost(): SandboxDebugHost {
@@ -132,6 +151,54 @@ export class GameScene extends Phaser.Scene {
   }
   private updateHud(): void {
     this.hud.update(this.player.health, this.player.maxHealth, this.level, this.experience, this.experienceNeeded, this.elapsedMs, this.kills, this.currency, this.player.isRotten());
+  }
+
+  private createMinimap(): void {
+    this.minimapGraphics = this.add.graphics().setScrollFactor(0).setDepth(24);
+    this.drawMinimap();
+  }
+
+  private drawMinimap(): void {
+    if (!this.minimapGraphics || this.merchant.isInMerchant()) return;
+
+    const x = MINIMAP_PADDING + MINIMAP_OFFSET_X;
+    let y = GAME_HEIGHT - MINIMAP_PADDING - MINIMAP_HEIGHT - Math.round(GAME_HEIGHT * 0.07); // 3% of screen height, to avoid the very bottom edge on some devices  
+    if (this.mobileMode) y -= 120 + 12;
+    y = Math.max(MINIMAP_PADDING, y);
+    const scaleX = MINIMAP_WIDTH / WORLD_SIZE;
+    const scaleY = MINIMAP_HEIGHT / WORLD_SIZE;
+    const markerMargin = MINIMAP_INNER_PADDING + Math.max(MINIMAP_MARKER_SIZE, MINIMAP_SMALL_MARKER_SIZE) / 2;
+
+    this.minimapGraphics.clear();
+    this.minimapGraphics.fillStyle(MINIMAP_BG_COLOR, MINIMAP_BG_ALPHA);
+    this.minimapGraphics.fillRoundedRect(x, y, MINIMAP_WIDTH, MINIMAP_HEIGHT, MINIMAP_CORNER_RADIUS);
+    this.minimapGraphics.lineStyle(2, MINIMAP_BORDER_COLOR, MINIMAP_BORDER_ALPHA);
+    this.minimapGraphics.strokeRoundedRect(x, y, MINIMAP_WIDTH, MINIMAP_HEIGHT, MINIMAP_CORNER_RADIUS);
+
+    const worldToMinimap = (worldX: number, worldY: number): { x: number; y: number } => ({
+      x: Phaser.Math.Clamp(x + worldX * scaleX, x + markerMargin, x + MINIMAP_WIDTH - markerMargin),
+      y: Phaser.Math.Clamp(y + worldY * scaleY, y + markerMargin, y + MINIMAP_HEIGHT - markerMargin)
+    });
+
+    const portalPosition = this.merchant.getActivePortalPosition();
+    if (portalPosition) {
+      const pos = worldToMinimap(portalPosition.x, portalPosition.y);
+      this.minimapGraphics.fillStyle(MINIMAP_PORTAL_COLOR, 1);
+      this.minimapGraphics.fillRect(pos.x - MINIMAP_SMALL_MARKER_SIZE / 2, pos.y - MINIMAP_SMALL_MARKER_SIZE / 2, MINIMAP_SMALL_MARKER_SIZE, MINIMAP_SMALL_MARKER_SIZE);
+    }
+
+    this.enemies.children.each((child) => {
+      const enemy = child as Enemy;
+      if (!enemy.active) return true;
+      const pos = worldToMinimap(enemy.x, enemy.y);
+      this.minimapGraphics.fillStyle(MINIMAP_ENEMY_COLOR, 1);
+      this.minimapGraphics.fillRect(pos.x - MINIMAP_SMALL_MARKER_SIZE / 2, pos.y - MINIMAP_SMALL_MARKER_SIZE / 2, MINIMAP_SMALL_MARKER_SIZE, MINIMAP_SMALL_MARKER_SIZE);
+      return true;
+    });
+
+    const playerPos = worldToMinimap(this.player.x, this.player.y);
+    this.minimapGraphics.fillStyle(MINIMAP_PLAYER_COLOR, 1);
+    this.minimapGraphics.fillRect(playerPos.x - MINIMAP_MARKER_SIZE / 2, playerPos.y - MINIMAP_MARKER_SIZE / 2, MINIMAP_MARKER_SIZE, MINIMAP_MARKER_SIZE);
   }
 
   init(data: GameSceneData): void {
@@ -171,6 +238,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.chests, this.collectChest, undefined, this);
     this.hud = new GameHud(this); this.updateBuildHud();
     this.updateHud();
+    this.createMinimap();
     this.hud.setVisible(false);
     this.prepareStartingWeaponUpgrades(); this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.removeAllKeys(true);
@@ -234,6 +302,7 @@ export class GameScene extends Phaser.Scene {
     this.player.updateRottenStatus(delta);
     if (this.player.health <= 0) this.finish(false);
     this.updateHud();
+    this.drawMinimap();
   }
   private movePlayer(): void {
     const d = new Phaser.Math.Vector2(
@@ -500,7 +569,8 @@ export class GameScene extends Phaser.Scene {
     if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); }
     const range = weapon.config.range;
     const speed = weapon.config.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed;
-    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, weapon.config.baseDamage * this.player.damageMultiplier, speed, weapon.config.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range, 1 + this.player.projectileSizeBonus);
+    const sizeMultiplier = (weapon.config.id === 'staff' ? 1.35 : 1) + this.player.projectileSizeBonus;
+    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, weapon.config.baseDamage * this.player.damageMultiplier, speed, weapon.config.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range, sizeMultiplier);
     projectile.speed = speed;
     projectile.range = range;
     projectile.weaponId = weapon.config.id;
@@ -739,11 +809,14 @@ export class GameScene extends Phaser.Scene {
   private buildChestRollCard(): ChestRollCard {
     const x = GAME_WIDTH / 2;
     const y = GAME_HEIGHT / 2;
-    const title = this.add.text(x, y - 168, 'Baú Encontrado!', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(35);
-    const card = this.add.rectangle(x, y, 240, 280, 0x49326e, 0.96).setStrokeStyle(4, 0xa888d9).setScrollFactor(0).setDepth(35);
-    const icon = this.add.image(x, y - 68, 'upgrade-damage-icon').setDisplaySize(76, 76).setScrollFactor(0).setDepth(36);
-    const name = this.add.text(x, y + 8, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '19px', color: '#fff0c2', align: 'center', wordWrap: { width: 200 } }).setOrigin(0.5).setScrollFactor(0).setDepth(36);
-    const description = this.add.text(x, y + 76, '', { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 195 } }).setOrigin(0.5).setScrollFactor(0).setDepth(36);
+    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(34).setInteractive();
+    const frame = this.add.rectangle(x, y, 260, 300, 0x3f2f20).setStrokeStyle(4, 0xd2b26e).setScrollFactor(0).setDepth(35);
+    this.chestOverlay = [veil, frame];
+    const title = this.add.text(x, y - 168, 'Baú Encontrado!', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(36);
+    const card = this.add.rectangle(x, y, 240, 280, 0x2a1d12, 0.96).setStrokeStyle(4, 0xd2b26e).setScrollFactor(0).setDepth(37);
+    const icon = this.add.image(x, y - 68, 'upgrade-damage-icon').setScale(1, 1).setDisplaySize(76, 76).setScrollFactor(0).setDepth(38);
+    const name = this.add.text(x, y + 8, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '19px', color: '#fff0c2', align: 'center', wordWrap: { width: 200 } }).setOrigin(0.5).setScrollFactor(0).setDepth(38);
+    const description = this.add.text(x, y + 76, '', { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 195 } }).setOrigin(0.5).setScrollFactor(0).setDepth(38);
     return { title, card, icon, name, description };
   }
   private setChestRollCardContent(card: ChestRollCard, upgrade: Upgrade): void {
@@ -776,8 +849,8 @@ export class GameScene extends Phaser.Scene {
     });
   }
   private destroyChestRollCard(card: ChestRollCard): void {
-    const targets = [card.title, card.card, card.icon, card.name, card.description];
-    this.tweens.add({ targets, alpha: 0, duration: 240, ease: 'Quad.Out', onComplete: () => targets.forEach((target) => target.destroy()) });
+    const targets = [...this.chestOverlay, card.title, card.card, card.icon, card.name, card.description];
+    this.tweens.add({ targets, alpha: 0, duration: 240, ease: 'Quad.Out', onComplete: () => { targets.forEach((target) => target.destroy()); this.chestOverlay = []; } });
   }
   private processExperience(): void { if (this.experience < this.experienceNeeded || this.levelPending) return; this.experience -= this.experienceNeeded; this.level += 1; this.experienceNeeded = requiredExperience(this.level); this.levelPending = true; this.showUpgrades(); }
   private prepareStartingWeaponUpgrades(): void {
@@ -797,7 +870,7 @@ export class GameScene extends Phaser.Scene {
       .sort(() => Math.random() - 0.5)
       .slice(0, this.startingUpgradeChoicesTotal);
     const pool = this.startingUpgradePool;
-    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
+    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30).setInteractive();
     const title = this.add.text(GAME_WIDTH / 2, 160, this.startingWeaponUpgradesTitle(character.name), { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
     const spacing = 230;
@@ -815,17 +888,14 @@ export class GameScene extends Phaser.Scene {
     };
   }
   private startingUpgradeResetButton(picks: Map<string, number>): void {
-    const button = this.add.text(GAME_WIDTH / 2, 610, 'LIMPAR SELEÇÃO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#ffffff', backgroundColor: '#8b3745', padding: { x: 18, y: 10 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33).setInteractive({ useHandCursor: true });
-    this.levelOverlay.push(button);
-    button.on('pointerover', () => button.setStyle({ backgroundColor: '#ad4a5a' }));
-    button.on('pointerout', () => button.setStyle({ backgroundColor: '#8b3745' }));
-    button.on('pointerup', () => {
+    const button = this.createMenuButton('LIMPAR SELEÇÃO', GAME_WIDTH / 2, 610, () => {
       if (picks.size === 0) return;
       this.restoreStartingUpgradeSnapshot();
       this.levelOverlay.forEach((object) => object.destroy());
       this.levelOverlay = [];
       this.showStartingWeaponUpgradesScreen();
-    });
+    }, 3300);
+    this.levelOverlay.push(button);
   }
   private restoreStartingUpgradeSnapshot(): void {
     const snapshot = this.startingUpgradeSnapshot;
@@ -841,13 +911,14 @@ export class GameScene extends Phaser.Scene {
     return `${characterName}: escolha ${this.startingUpgradeChoicesTotal} melhorias iniciais (restam ${this.startingUpgradeChoicesRemaining})`;
   }
   private startingUpgradeCard(upgrade: Upgrade, x: number, picks: Map<string, number>, title: Phaser.GameObjects.Text): void {
-    const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const frame = this.add.rectangle(x, 410, 220, 240, 0x3f2f20).setStrokeStyle(4, 0xd2b26e).setScrollFactor(0).setDepth(30);
+    const card = this.add.rectangle(x, 410, 200, 220, 0x2a1d12).setStrokeStyle(3, 0xd2b26e).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
     const iconKey = UPGRADE_ICON_KEYS[upgrade.id];
     const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
     const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
     const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const badge = this.add.text(x + 84, 306, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffffff', backgroundColor: '#8a5cf6', padding: { x: 6, y: 2 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33).setVisible(false);
-    this.levelOverlay.push(card, icon, name, description, badge);
+    const badge = this.add.text(x + 84, 306, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffffff', backgroundColor: '#d2b26e', padding: { x: 6, y: 2 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33).setVisible(false);
+    this.levelOverlay.push(frame, card, icon, name, description, badge);
     card.on('pointerup', () => {
       if (this.startingUpgradeChoicesRemaining <= 0) return;
       upgrade.apply(this.player);
@@ -873,7 +944,7 @@ export class GameScene extends Phaser.Scene {
   }
   private showUpgradeSelection(titleText: string, onSelect: () => void, amount = 3, extraWeaponOffer: WeaponConfig | null = null): void {
     this.physics.pause();
-    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
+    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30).setInteractive();
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
     const secondaryWeapon = this.weapons[1];
@@ -899,14 +970,32 @@ export class GameScene extends Phaser.Scene {
     if (candidates.length === 0) return null;
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
-  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; }); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); } }); }
+  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void {
+    const frame = this.add.rectangle(x, 410, 220, 240, 0x3f2f20).setStrokeStyle(4, 0xd2b26e).setScrollFactor(0).setDepth(30);
+    const card = this.add.rectangle(x, 410, 200, 220, 0x2a1d12).setStrokeStyle(3, 0xd2b26e).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const iconKey = UPGRADE_ICON_KEYS[upgrade.id];
+    const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
+    const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    this.levelOverlay.push(frame, card, icon, name, description);
+    card.on('pointerup', () => {
+      upgrade.apply(this.player);
+      this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; });
+      this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1);
+      this.updateBuildHud();
+      this.levelOverlay.forEach((object) => object.destroy());
+      this.levelOverlay = [];
+      if (onSelect) onSelect(); else { this.levelPending = false; this.physics.resume(); this.processExperience(); }
+    });
+  }
   private extraWeaponCard(weapon: WeaponConfig, x: number, onSelect?: () => void): void {
-    const card = this.add.rectangle(x, 410, 200, 220, 0x6b4d10).setStrokeStyle(3, 0xffd868).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const frame = this.add.rectangle(x, 410, 220, 240, 0x3f2f20).setStrokeStyle(4, 0xd2b26e).setScrollFactor(0).setDepth(30);
+    const card = this.add.rectangle(x, 410, 200, 220, 0x2a1d12).setStrokeStyle(3, 0xd2b26e).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
     const banner = this.add.text(x, 314, 'ARMA EXTRA!', { fontFamily: TITLE_FONT_FAMILY, fontSize: '14px', color: '#3a2400', backgroundColor: '#ffd868', padding: { x: 8, y: 3 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33);
     const icon = this.add.image(x, 358, `weapon-${weapon.id}-icon`).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
     const name = this.add.text(x, 407, weapon.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff3d2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
     const description = this.add.text(x, 468, weapon.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#fff0d2', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    this.levelOverlay.push(card, banner, icon, name, description);
+    this.levelOverlay.push(frame, card, banner, icon, name, description);
     card.on('pointerover', () => card.setFillStyle(0x86611a));
     card.on('pointerout', () => card.setFillStyle(0x6b4d10));
     card.on('pointerup', () => {
@@ -922,11 +1011,43 @@ export class GameScene extends Phaser.Scene {
     const upgrades = [...this.selectedUpgradeCounts.entries()].map(([id, count]) => ({ textureKey: UPGRADE_ICON_KEYS[id] ?? 'upgrade-damage-icon', count }));
     this.hud.setBuild([...weaponEntries, ...upgrades]);
   }
+  private createMenuButton(text: string, x: number, y: number, action: () => void, depth = 20): Phaser.GameObjects.Container {
+    const background = this.add.rectangle(0, 0, 340, 64, 0x3f2f20)
+      .setStrokeStyle(4, 0xd2b26e)
+      .setScrollFactor(0)
+      .setDepth(depth);
+    const inner = this.add.rectangle(0, 0, 320, 50, 0x2a1d12)
+      .setScrollFactor(0)
+      .setDepth(depth + 1);
+    const label = this.add.text(0, 0, text, {
+      fontFamily: TITLE_FONT_FAMILY,
+      fontSize: '28px',
+      color: '#f8e6b6',
+      stroke: '#3a2435',
+      strokeThickness: 6
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 2);
+
+    const button = this.add.container(x, y, [background, inner, label])
+      .setSize(340, 64)
+      .setDepth(depth)
+      .setScrollFactor(0);
+    background.setInteractive({ useHandCursor: true });
+    background.on('pointerover', () => inner.setFillStyle(0x5d4429));
+    background.on('pointerout', () => inner.setFillStyle(0x2a1d12));
+    background.on('pointerup', action);
+    return button;
+  }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) this.showPauseScreen(); else this.resumeFromPause(); }
-  private showPauseScreen(): void { this.physics.pause(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
-  private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void { const button = addOverlay(this.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(27).setInteractive({ useHandCursor: true })); button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' })); button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' })); button.on('pointerup', action); }
+  private showPauseScreen(): void { this.physics.pause(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x2a1d12, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x3f2f20, 0.96).setStrokeStyle(3, 0xd2b26e).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
+  private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void {
+    const button = addOverlay(this.createMenuButton(label, GAME_WIDTH / 2, y, action, 27));
+    button.setDepth(27);
+  }
   private resumeFromPause(): void { this.physics.resume(); this.destroyPauseOverlay(); }
   private destroyPauseOverlay(): void { this.pauseOverlay.forEach((object) => object.destroy()); this.pauseOverlay = []; }
-  private finish(victory: boolean): void { this.ended = true; this.physics.pause(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x070910, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
-  private resultButton(label: string, y: number, action: () => void): void { const button = this.add.text(640, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '21px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 20, y: 10 } }).setOrigin(0.5).setScrollFactor(0).setDepth(41).setInteractive({ useHandCursor: true }); button.on('pointerup', action); }
+  private finish(victory: boolean): void { this.ended = true; this.physics.pause(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x3f2f20, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
+  private resultButton(label: string, y: number, action: () => void): void {
+    const button = this.createMenuButton(label, 640, y, action, 41);
+    button.setScrollFactor(0);
+  }
 }
