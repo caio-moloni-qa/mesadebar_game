@@ -9,10 +9,10 @@ import { Projectile } from '../entities/Projectile';
 import { SoulProjectile } from '../entities/SoulProjectile';
 
 interface MerchantItemOption { id: string; name: string; cost: number; icon: string; description: string; apply?: (player: Player) => void; }
-const MERCHANT_AFFINITY_TOME_OPTION: MerchantItemOption = { id: 'affinity-tome', name: 'Tomo de Afinidade', cost: 500, icon: 'merchant-affinity-tome-icon', description: 'Escolha uma família de arma para desbloquear afinidade com ela.' };
+const MERCHANT_AFFINITY_TOME_OPTION: MerchantItemOption = { id: 'affinity-tome', name: 'Tomo de Afinidade', cost: 150, icon: 'merchant-affinity-tome-icon', description: 'Escolha uma família de arma para desbloquear afinidade com ela.' };
 /** Falls back into the affinity-tome slot once the player already owns every family (nothing left to unlock) OR
  * has already bought the tome once — see merchantAffinityTomePurchased, the tome is a one-time-only offer now. */
-const MERCHANT_FALLBACK_ITEM_OPTION: MerchantItemOption = { id: 'max-health', name: 'Elixir de Vitalidade', cost: 25, icon: 'merchant-vitality-elixir-icon', description: '+20 de vida máxima e cura 20 de vida.', apply: (player) => { player.maxHealth += 20; player.heal(20); } };
+const MERCHANT_FALLBACK_ITEM_OPTION: MerchantItemOption = { id: 'max-health', name: 'Elixir de Vitalidade', cost: 25, icon: 'merchant-vitality-elixir-icon', description: '+20 de vida máxima e cura 50% da vida máxima.', apply: (player) => { player.maxHealth += 20; player.heal(player.maxHealth * 0.5); } };
 /** Pool for the random-buff slot — one is picked (33% each) per merchant visit and re-priced to MERCHANT_RANDOM_BUFF_COST. */
 const MERCHANT_BASE_ITEM_OPTIONS: MerchantItemOption[] = [
   { id: 'heal', name: 'Poção de Cura', cost: 0, icon: 'merchant-heal-potion-icon', description: 'Cura 40 de vida instantaneamente.', apply: (player) => player.heal(40) },
@@ -20,14 +20,14 @@ const MERCHANT_BASE_ITEM_OPTIONS: MerchantItemOption[] = [
   { id: 'speed', name: 'Botas Ligeiras', cost: 0, icon: 'merchant-swift-boots-icon', description: '+15 de velocidade de movimento.', apply: (player) => { player.movementSpeed += 15; } }
 ];
 const MERCHANT_RANDOM_BUFF_COST = 100;
-const MERCHANT_DIVINE_BLESSING_OPTION: MerchantItemOption = { id: 'divine-blessing', name: 'Bênção Divina', cost: 350, icon: 'merchant-divine-blessing-icon', description: '+5 HP/s de cura passiva. Empilha se comprado de novo.', apply: (player) => player.addDivineBlessing() };
-const MERCHANT_ARCANE_CURSE_OPTION: MerchantItemOption = { id: 'arcane-curse', name: 'Maldição Arcana', cost: 250, icon: 'merchant-arcane-curse-icon', description: '-50 de vida máxima, +30% de dano. Empilha se comprado de novo.', apply: (player) => player.addArcaneCurse() };
+const MERCHANT_DIVINE_BLESSING_OPTION: MerchantItemOption = { id: 'divine-blessing', name: 'Bênção Divina', cost: 150, icon: 'merchant-divine-blessing-icon', description: '+5 HP/s de cura passiva. Empilha se comprado de novo.', apply: (player) => player.addDivineBlessing() };
+const MERCHANT_ARCANE_CURSE_OPTION: MerchantItemOption = { id: 'arcane-curse', name: 'Maldição Arcana', cost: 120, icon: 'merchant-arcane-curse-icon', description: '-50 de vida máxima, +150% de dano. Empilha se comprado de novo.', apply: (player) => player.addArcaneCurse() };
 interface MerchantItemSlot { option: MerchantItemOption; position: Phaser.Math.Vector2; purchased: boolean; marker: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; }
 
 const MERCHANT_PORTAL_INTERVAL_MS = 40000;
 const MERCHANT_PORTAL_OPEN_MS = 20000;
-/** Each merchant spawn after the first inflates every item's cost by this much (compounding — see buildMerchantShop). */
-const MERCHANT_PRICE_INFLATION_PER_SPAWN = 0.3;
+/** Every merchant spawn after the first multiplies every item's cost by this much (compounding — see buildMerchantShop). */
+const MERCHANT_PRICE_INFLATION_MULTIPLIER = 3;
 const MERCHANT_ROOM_SIZE = 480;
 /** Fixed anchor for the merchant's isolated pocket realm — far outside the normal 0..WORLD_SIZE arena so it can
  * never overlap it. World/camera bounds get locked to just this small area on entry (see isolateMerchantRealm),
@@ -224,8 +224,9 @@ export class MerchantSystem {
   private ensureMerchantArrow(): void {
     if (this.merchantArrow) return;
     const scene = this.host.scene;
-    const icon = scene.add.sprite(-16, 0, 'portal', 0).setDisplaySize(34, 38).play('portal-spin');
-    const chevron = scene.add.text(20, 0, '>', { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#ffd868', stroke: '#2b1d00', strokeThickness: 5 }).setOrigin(0.5);
+    // Enlarged (was 34x38 icon / 30px chevron) — it was getting lost against the busy arena background at the old size.
+    const icon = scene.add.sprite(-26, 0, 'portal', 0).setDisplaySize(58, 65).play('portal-spin');
+    const chevron = scene.add.text(32, 0, '>', { fontFamily: TITLE_FONT_FAMILY, fontSize: '46px', color: '#ffd868', stroke: '#2b1d00', strokeThickness: 6 }).setOrigin(0.5);
     this.merchantArrow = scene.add.container(0, 0, [icon, chevron]).setScrollFactor(0).setDepth(44).setVisible(false);
   }
   private updateMerchantArrow(): void {
@@ -236,8 +237,8 @@ export class MerchantSystem {
     const screenY = this.merchantPortalPosition.y - view.y;
     const visible = screenX >= 0 && screenX <= GAME_WIDTH && screenY >= 0 && screenY <= GAME_HEIGHT;
     if (visible) { this.merchantArrow.setVisible(false); return; }
-    const x = Phaser.Math.Clamp(screenX, 48, GAME_WIDTH - 48);
-    const y = Phaser.Math.Clamp(screenY, 48, GAME_HEIGHT - 48);
+    const x = Phaser.Math.Clamp(screenX, 64, GAME_WIDTH - 64);
+    const y = Phaser.Math.Clamp(screenY, 64, GAME_HEIGHT - 64);
     this.merchantArrow.setVisible(true).setPosition(x, y).setRotation(Phaser.Math.Angle.Between(GAME_WIDTH / 2, GAME_HEIGHT / 2, screenX, screenY));
   }
   /** No more "press E" text — getting within range immediately opens the enter/cancel popup (edge-triggered via
@@ -454,8 +455,8 @@ export class MerchantSystem {
     const affinityOption = !this.merchantAffinityTomePurchased && this.availableAffinityFamilies().length > 0 ? MERCHANT_AFFINITY_TOME_OPTION : MERCHANT_FALLBACK_ITEM_OPTION;
     const randomBuffBase = MERCHANT_BASE_ITEM_OPTIONS[Math.floor(Math.random() * MERCHANT_BASE_ITEM_OPTIONS.length)];
     const randomBuffOption: MerchantItemOption = { ...randomBuffBase, cost: MERCHANT_RANDOM_BUFF_COST };
-    // Compounding 30% per spawn, starting from the 2nd spawn (spawn 1 is base price, spawn 2 is x1.3, spawn 3 is x1.69, ...).
-    const priceMultiplier = (1 + MERCHANT_PRICE_INFLATION_PER_SPAWN) ** Math.max(0, this.merchantSpawnCount - 1);
+    // Compounding 3x per spawn, starting from the 2nd spawn (spawn 1 is base price, spawn 2 is x3, spawn 3 is x9, ...).
+    const priceMultiplier = MERCHANT_PRICE_INFLATION_MULTIPLIER ** Math.max(0, this.merchantSpawnCount - 1);
     const scalePrice = (option: MerchantItemOption): MerchantItemOption => ({ ...option, cost: Math.round(option.cost * priceMultiplier) });
     const itemOptions: MerchantItemOption[] = [MERCHANT_DIVINE_BLESSING_OPTION, MERCHANT_ARCANE_CURSE_OPTION, randomBuffOption, affinityOption].map(scalePrice);
     // Kept tight enough (with the label's height factored in) that the bottom-most slot's label still clears the

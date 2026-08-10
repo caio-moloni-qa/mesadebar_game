@@ -8,14 +8,18 @@ export const ENEMY_VARIANTS = {
   finalBoss: { maxHealth: 10000, movementSpeed: 35, contactDamage: 0, reward: 0 }
 };
 export const WEAPON_CONFIG = { damage: 10, cooldownMs: 700, projectileSpeed: 450, range: 600, lifetimeMs: 1500, pierces: 0 };
-/** Level-up rewards: the larger selection and the extra-weapon roll occur every fifth level. */
-export const LEVEL_UPGRADE_CONFIG = { bonusChoiceInterval: 5, defaultChoiceAmount: 3, bonusChoiceAmount: 5, extraWeaponOfferChance: 0.5 };
+/** Level-up rewards: the larger selection and the guaranteed extra-weapon card occur every fifth level. */
+export const LEVEL_UPGRADE_CONFIG = { bonusChoiceInterval: 5, defaultChoiceAmount: 3, bonusChoiceAmount: 5 };
 /** Rotten Aura: constant proximity debuff around Super Esqueleto and the final boss. While inside, healing is cut
  * and the player takes damage-over-time; the status (and the heal cut) persists durationMs after last being inside. */
 export const ROTTEN_AURA_CONFIG = { healReduction: 0.7, dps: 3, tickMs: 1000, durationMs: 5000 };
 /** Super Esqueleto and Necromante têm essa chance de soltar um baú ao morrer; ao ser coletado, aplica automaticamente
  * uma melhoria aleatória sorteada do mesmo pool que a tela de nível ≥5 oferece (5 opções). */
 export const LOOT_CHEST_DROP_CHANCE = 0.4;
+/** Every enemy (any variant, not just superSkeleton/necromancerWraith like the loot chest) has this chance to drop
+ * a Poção de Vida on death — a flat, instant HEALTH_POTION_HEAL_AMOUNT heal on pickup, no upgrade roll involved. */
+export const HEALTH_POTION_DROP_CHANCE = 0.05;
+export const HEALTH_POTION_HEAL_AMOUNT = 40;
 export interface EnemyVariantScheduleEntry { variantId: 'necromancerWraith' | 'apparitionWraith' | 'superSkeleton'; intervalMs: number; }
 export const ENEMY_VARIANT_SCHEDULE: EnemyVariantScheduleEntry[] = [
   { variantId: 'necromancerWraith', intervalMs: 15000 },

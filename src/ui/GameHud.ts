@@ -37,7 +37,7 @@ export class GameHud {
     const style: Phaser.Types.GameObjects.Text.TextStyle = { fontFamily: FONT_FAMILY, fontSize: '20px', color: '#f7f1dc', stroke: '#14101c', strokeThickness: 4 };
     this.healthText = scene.add.text(0, 0, '', style).setScrollFactor(0).setDepth(23);
     this.levelText = scene.add.text(0, 0, '', style).setScrollFactor(0).setDepth(20);
-    this.timerText = scene.add.text(0, 0, '', style).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
+    this.timerText = scene.add.text(0, 0, '', style).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
     this.killsText = scene.add.text(0, 0, '', style).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
     this.healthIcon = scene.add.image(0, 0, 'hp-icon').setOrigin(0, 0).setScrollFactor(0).setDepth(22);
     this.healthBar = scene.add.graphics().setScrollFactor(0).setDepth(20);
@@ -64,8 +64,8 @@ export class GameHud {
 
     this.healthText.setPosition(healthBarX + 140, healthBarY + 16).setOrigin(0.5).setDepth(23);
     this.levelText.setPosition(left, top + 60);
-    this.timerText.setPosition(safe.centerX, top);
     this.killsText.setPosition(safe.right - 26, top);
+    this.timerText.setPosition(safe.right - 26, top + 30);
     this.currencyIcon.setPosition(left, top + 96).setDisplaySize(24, 24);
     this.currencyText.setPosition(left + 32, top + 100);
 
@@ -169,8 +169,13 @@ export class GameHud {
     };
   }
 
+  /** Counts *up* — elapsed time actually survived. Used to be a countdown hardcoded to a fixed 180000ms (3min),
+   *  which clamped to 0:00 and stayed there for the rest of the run once elapsedMs passed that point — invisible
+   *  before the boss-portal continue loop existed (the run always ended at ~3min anyway), but continuing past the
+   *  first boss wave can now push well beyond 3 minutes, so a fixed countdown no longer has a fixed end to count
+   *  down to. */
   private formatTime(ms: number): string {
-    const seconds = Math.max(0, Math.ceil((180000 - ms) / 1000));
+    const seconds = Math.floor(ms / 1000);
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   }
 }

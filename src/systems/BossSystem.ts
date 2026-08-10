@@ -10,6 +10,7 @@ const FINAL_BOSS_MELEE_COOLDOWN_MS = 7000;
 const FINAL_BOSS_CHANNEL_INTERVAL_MS = 15000;
 const FINAL_BOSS_CHANNEL_DURATION_MS = 15000;
 const FINAL_BOSS_SHIELD_DEADLINE_MS = 20000;
+const FINAL_BOSS_CLEANUP_MS = 30000;
 /** Shield capacity is a straight cut of the boss's own max health, so it stays a meaningful check regardless of how strong a build the player has by the time they reach it. */
 const SHIELD_MAX_HEALTH_SCALING = 0.15;
 const FINAL_BOSS_MELEE_TRIGGER_RADIUS = 250;
@@ -78,16 +79,13 @@ const NECRO_BEAM_LAUNCH_STAGGER_MS = 500;
  *  launch, reading as the new beam instantly erasing the old one instead of both briefly overlapping. */
 const NECRO_BEAM_LIFETIME_MS = 2100;
 const METEOR_TELEGRAPH_PHASE2_MS = 1000;
-/** Avanço com Escudo: two different triggers share this same dash/telegraph machinery.
- *  Fase 1 — fires as a 2-hit punish combo the instant the shield is broken by the player (not gated by cooldown).
- *  Fase 2 — fires guaranteed every SHIELD_DASH_COOLDOWN_MS while channeling, up to SHIELD_DASH_MAX_PER_CHANNEL times, with a smaller "mini" explosion. */
+/** Avanço com Escudo: exclusively a Fase 2 ability now — fires guaranteed every SHIELD_DASH_COOLDOWN_MS while
+ *  channeling, up to SHIELD_DASH_MAX_PER_CHANNEL times. (Previously also had a Fase 1 trigger — a punish combo
+ *  the instant the player broke the shield, regardless of boss health — removed since the boss shouldn't be able
+ *  to dash at all above 50% health.) */
 const SHIELD_DASH_BLINK_COUNT = 3;
 const SHIELD_DASH_TELEGRAPH_MS = 600;
 const SHIELD_DASH_TRAVEL_MS = 400;
-const SHIELD_DASH_EXPLOSION_RADIUS = 220;
-const SHIELD_DASH_EXPLOSION_DAMAGE = 35;
-const SHIELD_BREAK_DASH_COUNT = 2;
-const SHIELD_BREAK_DASH_GAP_MS = 3000;
 const SHIELD_DASH_COOLDOWN_MS = 4000;
 const SHIELD_DASH_MAX_PER_CHANNEL = 4;
 const SHIELD_DASH_MINI_RADIUS = 130;
@@ -104,16 +102,26 @@ interface ActiveNecroBeam {
 /** One boss encounter's full runtime state — channel/shield/melee/summon/arrow — generalized from the old single `finalBoss` scalar fields. */
 interface ActiveBoss {
   enemy: Enemy;
-  /** True only for the run's timer-triggered boss: it owns the arena-clear countdown and ends the run on defeat. Sandbox-spawned extras are plain fights. */
+  /** True only for the first boss of a timer-triggered wave: it owns the arena-clear countdown. Sandbox-spawned extras and every other boss in a multi-boss wave are false. */
   isMain: boolean;
-  cleanupAt: number;
+  /** True for every boss belonging to a timer-triggered wave (isMain's one included) — GameScene's onBossWaveCleared()
+   *  fires once none of these remain, regardless of how many there were. Sandbox-spawned extras (spawnExtraBoss) are
+   *  false: they're bonus fights that don't gate anything. */
+  isWaveBoss: boolean;
+  /** Arena-clear countdown state — was a `scene.time.now`-relative deadline (cleanupAt), which kept silently
+   *  draining while the game was "paused" for an overlay (physics.pause() never stopped scene.time). Converted to
+   *  a delta accumulator so it only advances while updateBoss() actually runs, same as summonElapsed/channelElapsed/etc. */
+  cleanupPending: boolean;
+  cleanupElapsed: number;
   countdownText?: Phaser.GameObjects.Text;
   summonElapsed: number;
   channelElapsed: number;
-  meleeLastAt: number;
+  meleeCooldownElapsed: number;
   channelActive: boolean;
   shieldActive: boolean;
-  channelStartedAt: number;
+  /** Elapsed time since the current channel started — drives both the channel-duration check and (once channelActive
+   *  ends but shieldActive lingers) the shield-explosion deadline, since both are anchored to the same start point. */
+  channelRuntimeElapsed: number;
   shield: number;
   /** Snapshotted at the start of each channel as SHIELD_MAX_HEALTH_SCALING * maxHealth. */
   maxShield: number;
@@ -122,7 +130,8 @@ interface ActiveBoss {
   shieldCountdownLastShown: number;
   shieldAura?: Phaser.GameObjects.Arc;
   shieldBolts: Phaser.GameObjects.Sprite[];
-  nextShieldBoltAt: number;
+  shieldBoltCooldownElapsed: number;
+  nextShieldBoltDelayMs: number;
   shieldBack?: Phaser.GameObjects.Rectangle;
   shieldFill?: Phaser.GameObjects.Rectangle;
   arrow?: Phaser.GameObjects.Container;
@@ -146,7 +155,7 @@ interface ActiveBoss {
   beamDurationMs: number;
   dashState: 'idle' | 'telegraph' | 'dashing';
   /** Only relevant to the Fase 2 periodic dash — resets each new channel, capped at SHIELD_DASH_MAX_PER_CHANNEL. */
-  dashLastAt: number;
+  dashCooldownElapsed: number;
   dashCountThisChannel: number;
   dashTarget?: Phaser.Math.Vector2;
 }
@@ -168,7 +177,13 @@ export class BossSystem {
   private mainBossTriggered = false;
   private mainBossPending = false;
   private mainBossMessage?: Phaser.GameObjects.Text;
+  private pendingWaveBossCount = 1;
   private bosses: ActiveBoss[] = [];
+  /** Every scene.time.delayedCall/scene.tweens.add BossSystem creates goes through trackTimer/trackTween so
+   *  pauseAll()/resumeAll() can freeze exactly (and only) boss-owned timers/tweens — not the whole scene's Time/Tweens
+   *  managers, which the upgrade and chest-roll overlays also depend on for their own reveal animations. */
+  private pausableTimers: Phaser.Time.TimerEvent[] = [];
+  private pausableTweens: Phaser.Tweens.Tween[] = [];
 
   constructor(private readonly host: BossHost) {}
 
@@ -176,11 +191,24 @@ export class BossSystem {
     this.mainBossTriggered = false;
     this.mainBossPending = false;
     this.mainBossMessage = undefined;
+    this.pendingWaveBossCount = 1;
     this.bosses = [];
+    this.pausableTimers = [];
+    this.pausableTweens = [];
   }
 
   hasTriggeredMainBoss(): boolean {
     return this.mainBossTriggered;
+  }
+  /** True while any boss belonging to the current timer-triggered wave is still alive — GameScene checks this
+   *  after each boss death to know when to open the end/continue portal choice (see defeatBoss's return value). */
+  hasActiveWaveBosses(): boolean {
+    return this.bosses.some((boss) => boss.isWaveBoss);
+  }
+  /** Lets GameScene trigger another wave later this run (see continueToNextCycle) — warn() itself only guards
+   *  against being called twice for the *same* wave, not across the whole run. */
+  rearm(): void {
+    this.mainBossTriggered = false;
   }
   /** Gates spawning/merchant: true while the timer boss's warning is pending, or any boss (main or extra) is alive. */
   hasActiveEncounter(): boolean {
@@ -196,11 +224,41 @@ export class BossSystem {
     return this.bosses.some((boss) => boss.enemy === enemy);
   }
 
-  /** Shows the warning message and spawns the run-ending boss after a delay. No-op if already triggered this run. */
-  warn(): void {
+  /** Freezes every boss-owned timer/tween in place — called by GameScene (and MerchantSystem) at the exact same
+   *  points physics.pause() already fires, so boss telegraphs/dashes/beams can't fire, damage, or animate while an
+   *  upgrade/chest/pause overlay is open. Deliberately scoped to BossSystem's own tracked timers/tweens rather than
+   *  the scene's global Time/Tweens managers, since those overlays use scene.time/scene.tweens for their own
+   *  reveal animations and would otherwise freeze too. */
+  pauseAll(): void {
+    this.prunePausables();
+    this.pausableTimers.forEach((timer) => { timer.paused = true; });
+    this.pausableTweens.forEach((tween) => { if (tween.isPlaying()) tween.pause(); });
+  }
+  resumeAll(): void {
+    this.prunePausables();
+    this.pausableTimers.forEach((timer) => { timer.paused = false; });
+    this.pausableTweens.forEach((tween) => { if (tween.isPaused()) tween.resume(); });
+  }
+  private prunePausables(): void {
+    this.pausableTimers = this.pausableTimers.filter((timer) => !timer.hasDispatched);
+    this.pausableTweens = this.pausableTweens.filter((tween) => tween.isPlaying() || tween.isPaused());
+  }
+  private trackTimer(timer: Phaser.Time.TimerEvent): Phaser.Time.TimerEvent {
+    this.pausableTimers.push(timer);
+    return timer;
+  }
+  private trackTween(tween: Phaser.Tweens.Tween): Phaser.Tweens.Tween {
+    this.pausableTweens.push(tween);
+    return tween;
+  }
+
+  /** Shows the warning message and spawns `bossCount` wave bosses after a delay. No-op if a wave is already
+   *  pending/active — GameScene calls rearm() before the next cycle's warn() so this can fire again per wave. */
+  warn(bossCount = 1): void {
     if (this.mainBossTriggered) return;
     this.mainBossTriggered = true;
     this.mainBossPending = true;
+    this.pendingWaveBossCount = bossCount;
     const scene = this.host.scene;
     this.mainBossMessage = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'O sobrevivente sente uma presença maligna no ar!', {
       fontFamily: TITLE_FONT_FAMILY,
@@ -211,49 +269,58 @@ export class BossSystem {
       strokeThickness: 5,
       wordWrap: { width: 900 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(45);
-    scene.tweens.add({ targets: this.mainBossMessage, alpha: 0.45, yoyo: true, repeat: 2, duration: 420 });
-    scene.time.delayedCall(FINAL_BOSS_MESSAGE_MS, () => this.spawnMainBoss());
+    this.trackTween(scene.tweens.add({ targets: this.mainBossMessage, alpha: 0.45, yoyo: true, repeat: 2, duration: 420 }));
+    this.trackTimer(scene.time.delayedCall(FINAL_BOSS_MESSAGE_MS, () => this.spawnBossWave()));
   }
-  private spawnMainBoss(): void {
+  /** Spawns pendingWaveBossCount bosses spread evenly around the player — the first is isMain (owns the
+   *  arena-clear countdown), every one of them is isWaveBoss (all must die before GameScene reopens the portals). */
+  private spawnBossWave(): void {
     this.mainBossMessage?.destroy();
     this.mainBossMessage = undefined;
     this.mainBossPending = false;
     const player = this.host.getPlayer();
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const count = this.pendingWaveBossCount;
     const distance = 980;
-    const x = Phaser.Math.Clamp(player.x + Math.cos(angle) * distance, 260, WORLD_SIZE - 260);
-    const y = Phaser.Math.Clamp(player.y + Math.sin(angle) * distance, 260, WORLD_SIZE - 260);
-    this.spawnBossAt(x, y, true);
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + Phaser.Math.FloatBetween(-0.15, 0.15);
+      const x = Phaser.Math.Clamp(player.x + Math.cos(angle) * distance, 260, WORLD_SIZE - 260);
+      const y = Phaser.Math.Clamp(player.y + Math.sin(angle) * distance, 260, WORLD_SIZE - 260);
+      this.spawnBossAt(x, y, index === 0, true);
+    }
   }
-  /** Sandbox-only: spawns an extra boss instantly (no warning), fighting alongside whatever else is active. Does not end the run on defeat. */
+  /** Sandbox-only: spawns an extra boss instantly (no warning), fighting alongside whatever else is active. Not
+   *  a wave boss — doesn't gate the portal choice and gives no reward, purely a bonus fight for testing. */
   spawnExtraBoss(): void {
     const player = this.host.getPlayer();
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
     const x = Phaser.Math.Clamp(player.x + Math.cos(angle) * EXTRA_BOSS_SPAWN_DISTANCE, 260, WORLD_SIZE - 260);
     const y = Phaser.Math.Clamp(player.y + Math.sin(angle) * EXTRA_BOSS_SPAWN_DISTANCE, 260, WORLD_SIZE - 260);
-    this.spawnBossAt(x, y, false);
+    this.spawnBossAt(x, y, false, false);
   }
-  private spawnBossAt(x: number, y: number, isMain: boolean): void {
+  private spawnBossAt(x: number, y: number, isMain: boolean, isWaveBoss: boolean): void {
     const scene = this.host.scene;
     const enemy = this.host.spawnEnemyVariant(x, y, this.host.enemyConfig('finalBoss', { isMiniBoss: true, displaySize: 390, collisionRadius: 58, healthBarWidth: 220 }));
     if (!enemy) return;
     const boss: ActiveBoss = {
       enemy,
       isMain,
-      cleanupAt: isMain ? scene.time.now + 30000 : 0,
+      isWaveBoss,
+      cleanupPending: isMain,
+      cleanupElapsed: 0,
       countdownText: isMain ? scene.add.text(GAME_WIDTH / 2, 84, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '24px', color: '#ffffff', stroke: '#101510', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(44) : undefined,
       summonElapsed: 0,
       channelElapsed: 0,
-      meleeLastAt: scene.time.now - FINAL_BOSS_MELEE_COOLDOWN_MS + 1600,
+      meleeCooldownElapsed: 1600,
       channelActive: false,
       shieldActive: false,
-      channelStartedAt: 0,
+      channelRuntimeElapsed: 0,
       shield: 0,
       maxShield: 0,
       meteorElapsed: 0,
       shieldCountdownLastShown: -1,
       shieldBolts: [],
-      nextShieldBoltAt: 0,
+      shieldBoltCooldownElapsed: 0,
+      nextShieldBoltDelayMs: 0,
       beamElapsed: 0,
       beamState: 'idle',
       beamLockOnElapsed: 0,
@@ -265,7 +332,7 @@ export class BossSystem {
       beamCount: 1,
       beamDurationMs: NECRO_BEAM_DURATION_MS,
       dashState: 'idle',
-      dashLastAt: scene.time.now,
+      dashCooldownElapsed: 0,
       dashCountThisChannel: 0
     };
     this.bosses.push(boss);
@@ -277,34 +344,37 @@ export class BossSystem {
   }
   private updateBoss(boss: ActiveBoss, delta: number): void {
     if (!boss.enemy.active) return;
-    if (boss.isMain && boss.cleanupAt > 0) {
-      const remainingMs = Math.max(0, boss.cleanupAt - this.host.scene.time.now);
+    if (boss.isMain && boss.cleanupPending) {
+      boss.cleanupElapsed += delta;
+      const remainingMs = Math.max(0, FINAL_BOSS_CLEANUP_MS - boss.cleanupElapsed);
       boss.countdownText?.setText(`A escuridão consome a arena em ${Math.ceil(remainingMs / 1000)}s`);
       if (remainingMs <= 0) {
         const clearedEnemies = this.host.clearEnemyField(boss.enemy);
         boss.enemy.maxHealth += clearedEnemies * 20;
         boss.enemy.health += clearedEnemies * 20;
-        boss.cleanupAt = 0;
+        boss.cleanupPending = false;
         boss.countdownText?.destroy();
         boss.countdownText = undefined;
       }
     }
     if (boss.channelActive) {
       boss.enemy.pauseMovement();
-      this.updateShieldVisual(boss);
+      this.updateShieldVisual(boss, delta);
       boss.meteorElapsed += delta;
       if (boss.meteorElapsed >= METEOR_INTERVAL_MS) {
         boss.meteorElapsed = 0;
         this.launchMeteor(boss);
       }
+      boss.dashCooldownElapsed += delta;
       if (this.isPhaseTwo(boss) && boss.dashState === 'idle' && boss.dashCountThisChannel < SHIELD_DASH_MAX_PER_CHANNEL
-        && this.host.scene.time.now >= boss.dashLastAt + SHIELD_DASH_COOLDOWN_MS) {
-        boss.dashLastAt = this.host.scene.time.now;
+        && boss.dashCooldownElapsed >= SHIELD_DASH_COOLDOWN_MS) {
+        boss.dashCooldownElapsed = 0;
         boss.dashCountThisChannel += 1;
         this.startShieldDashTelegraph(boss, SHIELD_DASH_MINI_DAMAGE, SHIELD_DASH_MINI_RADIUS);
       }
+      boss.channelRuntimeElapsed += delta;
       this.updateShieldExplosionCountdown(boss);
-      if (this.host.scene.time.now >= boss.channelStartedAt + FINAL_BOSS_CHANNEL_DURATION_MS) {
+      if (boss.channelRuntimeElapsed >= FINAL_BOSS_CHANNEL_DURATION_MS) {
         boss.channelActive = false;
         boss.enemy.rottenAuraSuppressed = false;
       }
@@ -314,8 +384,9 @@ export class BossSystem {
       // Visible channeling ended but the shield hasn't resolved yet — keep the boss still until the deadline,
       // otherwise it resumes pursue() and walks around while still "channeling" from the player's perspective.
       boss.enemy.pauseMovement();
+      boss.channelRuntimeElapsed += delta;
       this.updateShieldExplosionCountdown(boss);
-      if (this.host.scene.time.now >= boss.channelStartedAt + FINAL_BOSS_SHIELD_DEADLINE_MS) this.completeChannel(boss);
+      if (boss.channelRuntimeElapsed >= FINAL_BOSS_SHIELD_DEADLINE_MS) this.completeChannel(boss);
       return;
     }
     // Mutually exclusive with shield-channel/melee/summon-trigger checks below: while beaming, the boss stands
@@ -327,6 +398,7 @@ export class BossSystem {
     boss.summonElapsed += delta;
     boss.channelElapsed += delta;
     boss.beamElapsed += delta;
+    boss.meleeCooldownElapsed += delta;
     if (boss.summonElapsed >= FINAL_BOSS_SUMMON_INTERVAL_MS) {
       boss.summonElapsed = 0;
       this.summonApparitions(boss);
@@ -353,11 +425,10 @@ export class BossSystem {
     }
   }
   private tryMeleeAttack(boss: ActiveBoss): void {
-    const scene = this.host.scene;
     const player = this.host.getPlayer();
-    if (scene.time.now < boss.meleeLastAt + FINAL_BOSS_MELEE_COOLDOWN_MS) return;
+    if (boss.meleeCooldownElapsed < FINAL_BOSS_MELEE_COOLDOWN_MS) return;
     if (Phaser.Math.Distance.Between(boss.enemy.x, boss.enemy.y, player.x, player.y) > FINAL_BOSS_MELEE_TRIGGER_RADIUS) return;
-    boss.meleeLastAt = scene.time.now;
+    boss.meleeCooldownElapsed = 0;
     this.telegraphMeleeAttack(boss);
   }
   /** Spawns the telegraph sword beside the boss, then resolves the 360° sweep after `MELEE_TELEGRAPH_MS`. */
@@ -382,7 +453,7 @@ export class BossSystem {
       .setRotation(spawnAngle + Math.PI / 2);
     sword.play('boss-sword-summon-grow');
     this.blinkTelegraphSword(sword);
-    scene.time.delayedCall(MELEE_TELEGRAPH_MS, () => this.resolveMeleeSweep(boss, sword, spawnAngle));
+    this.trackTimer(scene.time.delayedCall(MELEE_TELEGRAPH_MS, () => this.resolveMeleeSweep(boss, sword, spawnAngle)));
   }
   /** Flashes the telegraph sword to a light green tint `MELEE_SWORD_BLINK_COUNT` times, spread evenly across the telegraph window. */
   private blinkTelegraphSword(sword: Phaser.GameObjects.Sprite): void {
@@ -390,10 +461,10 @@ export class BossSystem {
     const halfCycles = MELEE_SWORD_BLINK_COUNT * 2;
     const stepMs = MELEE_TELEGRAPH_MS / halfCycles;
     for (let step = 1; step <= halfCycles; step += 1) {
-      scene.time.delayedCall(stepMs * step, () => {
+      this.trackTimer(scene.time.delayedCall(stepMs * step, () => {
         if (!sword.active) return;
         sword.setTint(step % 2 === 1 ? MELEE_SWORD_BLINK_TINT : MELEE_SWORD_BASE_TINT);
-      });
+      }));
     }
   }
   /** Plays the 360° sweep once the telegraph ends; damage only lands when the moving blade actually reaches the player. */
@@ -404,7 +475,7 @@ export class BossSystem {
     const orbit = { angle: startAngle };
     const wind = this.createWindTrail(sword);
     const ring = scene.add.graphics().setDepth(11);
-    scene.tweens.add({
+    this.trackTween(scene.tweens.add({
       targets: orbit,
       angle: startAngle + Math.PI * 2,
       duration: MELEE_SWEEP_VISUAL_MS,
@@ -431,10 +502,10 @@ export class BossSystem {
       onComplete: () => {
         sword.destroy();
         wind.stop();
-        scene.time.delayedCall(250, () => wind.destroy());
-        scene.tweens.add({ targets: ring, alpha: 0, duration: 260, ease: 'Quad.Out', onComplete: () => ring.destroy() });
+        this.trackTimer(scene.time.delayedCall(250, () => wind.destroy()));
+        this.trackTween(scene.tweens.add({ targets: ring, alpha: 0, duration: 260, ease: 'Quad.Out', onComplete: () => ring.destroy() }));
       }
-    });
+    }));
   }
   /** Generates a tiny soft-dot texture once (no dedicated wind asset exists yet) and returns a light-green particle
    *  emitter following `sword`, giving the swing a streaking wind trail. Caller stops/destroys it when the swing ends. */
@@ -471,7 +542,7 @@ export class BossSystem {
     this.ensureBeamReticleTexture();
     const player = this.host.getPlayer();
     boss.beamReticle = this.host.scene.add.image(player.x, player.y - 60, 'necro-beam-reticle').setDepth(46).setScale(0);
-    this.host.scene.tweens.add({ targets: boss.beamReticle, scale: 1, duration: 260, ease: 'Back.Out' });
+    this.trackTween(this.host.scene.tweens.add({ targets: boss.beamReticle, scale: 1, duration: 260, ease: 'Back.Out' }));
     boss.beamLockLine = this.host.scene.add.graphics().setDepth(9);
     this.drawBeamLockLine(boss, player);
   }
@@ -626,14 +697,15 @@ export class BossSystem {
     if (boss.channelActive) return;
     boss.channelActive = true;
     boss.shieldActive = true;
-    boss.channelStartedAt = this.host.scene.time.now;
+    boss.channelRuntimeElapsed = 0;
     boss.maxShield = boss.enemy.maxHealth * SHIELD_MAX_HEALTH_SCALING;
     boss.shield = boss.maxShield;
     boss.channelElapsed = 0;
     boss.meteorElapsed = 0;
     boss.shieldCountdownLastShown = -1;
-    boss.nextShieldBoltAt = 0;
-    boss.dashLastAt = this.host.scene.time.now;
+    boss.shieldBoltCooldownElapsed = 0;
+    boss.nextShieldBoltDelayMs = 0;
+    boss.dashCooldownElapsed = 0;
     boss.dashCountThisChannel = 0;
     boss.enemy.pauseMovement();
     boss.enemy.rottenAuraSuppressed = true;
@@ -644,15 +716,16 @@ export class BossSystem {
     const scene = this.host.scene;
     const player = this.host.getPlayer();
     const explosion = scene.add.circle(boss.enemy.x, boss.enemy.y, FINAL_BOSS_EXPLOSION_RADIUS, 0x52ff45, 0.24).setStrokeStyle(7, 0xd8ffd0, 0.9).setDepth(12);
-    scene.tweens.add({ targets: explosion, alpha: 0, scale: 1.18, duration: 520, onComplete: () => explosion.destroy() });
+    this.trackTween(scene.tweens.add({ targets: explosion, alpha: 0, scale: 1.18, duration: 520, onComplete: () => explosion.destroy() }));
     const playerCaught = Phaser.Math.Distance.Between(boss.enemy.x, boss.enemy.y, player.x, player.y) <= FINAL_BOSS_EXPLOSION_RADIUS;
     this.endChannel(boss);
     // This branch kills by directly zeroing health rather than going through player.damage(), so it needs its
-    // own invincible check — the sandbox toggle wouldn't otherwise cover this one instant-kill bypass.
-    if (playerCaught && !player.invincible) {
+    // own invincible/gameplayPaused checks — neither the sandbox toggle nor the pause backstop in damage() would
+    // otherwise cover this one instant-kill bypass.
+    if (playerCaught && !player.invincible && !player.gameplayPaused) {
       player.health = 0;
       this.host.refreshHud();
-      scene.time.delayedCall(260, () => this.host.finish(false));
+      this.trackTimer(scene.time.delayedCall(260, () => this.host.finish(false)));
     }
   }
   private endChannel(boss: ActiveBoss): void {
@@ -678,7 +751,7 @@ export class BossSystem {
    *  once per integer second (10..0). Called from both the channelActive and shieldActive-only branches of
    *  updateBoss, since that 10s window spans across the boundary between them. */
   private updateShieldExplosionCountdown(boss: ActiveBoss): void {
-    const remainingMs = boss.channelStartedAt + FINAL_BOSS_SHIELD_DEADLINE_MS - this.host.scene.time.now;
+    const remainingMs = FINAL_BOSS_SHIELD_DEADLINE_MS - boss.channelRuntimeElapsed;
     if (remainingMs > 10000 || remainingMs < 0) return;
     const remaining = Math.ceil(remainingMs / 1000);
     if (remaining === boss.shieldCountdownLastShown) return;
@@ -695,23 +768,15 @@ export class BossSystem {
       stroke: '#321b00',
       strokeThickness: 4
     }).setOrigin(0.5).setDepth(15);
-    scene.tweens.add({ targets: text, y: text.y - 34, alpha: 0, duration: 520, ease: 'Quad.Out', onComplete: () => text.destroy() });
+    this.trackTween(scene.tweens.add({ targets: text, y: text.y - 34, alpha: 0, duration: 520, ease: 'Quad.Out', onComplete: () => text.destroy() }));
   }
   private isPhaseTwo(boss: ActiveBoss): boolean {
     return boss.enemy.health <= boss.enemy.maxHealth * PHASE_TWO_HEALTH_RATIO;
   }
-  /** Fase 1 punish combo: fires as soon as the player breaks the shield (see tryAbsorbShieldDamage) — 2 dashes, 3s apart. */
-  private startShieldBreakDashCombo(boss: ActiveBoss): void {
-    for (let index = 0; index < SHIELD_BREAK_DASH_COUNT; index += 1) {
-      this.host.scene.time.delayedCall(index * SHIELD_BREAK_DASH_GAP_MS, () => {
-        if (!boss.enemy.active || boss.dashState !== 'idle') return;
-        this.startShieldDashTelegraph(boss, SHIELD_DASH_EXPLOSION_DAMAGE, SHIELD_DASH_EXPLOSION_RADIUS);
-      });
-    }
-  }
-  /** Blinks a telegraph twice, then dashes the boss to where the player was standing and detonates on arrival.
-   *  Blinks the shield aura if one is still up (Fase 2's version, shield stays active throughout); otherwise
-   *  flashes the boss sprite itself, since Fase 1's version only fires after the shield has already broken. */
+  /** Blinks the shield aura twice as a telegraph, then dashes the boss to where the player was standing and
+   *  detonates on arrival. Only ever called from Fase 2's guaranteed periodic dash now (the shield-break punish
+   *  combo was removed — see tryAbsorbShieldDamage), which only fires during an active channel, so the shield
+   *  aura is always present here. */
   private startShieldDashTelegraph(boss: ActiveBoss, damage: number, radius: number): void {
     boss.dashState = 'telegraph';
     const player = this.host.getPlayer();
@@ -720,14 +785,13 @@ export class BossSystem {
     const halfCycles = SHIELD_DASH_BLINK_COUNT * 2;
     const stepMs = SHIELD_DASH_TELEGRAPH_MS / halfCycles;
     for (let step = 1; step <= halfCycles; step += 1) {
-      scene.time.delayedCall(stepMs * step, () => {
+      this.trackTimer(scene.time.delayedCall(stepMs * step, () => {
         if (boss.dashState !== 'telegraph') return;
         const flashOn = step % 2 === 1;
-        if (boss.shieldAura) boss.shieldAura.setFillStyle(flashOn ? 0xffffff : 0x48ff52, flashOn ? 0.4 : 0.16);
-        else if (flashOn) boss.enemy.setTintFill(0xffffff); else boss.enemy.clearTint();
-      });
+        boss.shieldAura?.setFillStyle(flashOn ? 0xffffff : 0x48ff52, flashOn ? 0.4 : 0.16);
+      }));
     }
-    scene.time.delayedCall(SHIELD_DASH_TELEGRAPH_MS, () => this.beginShieldDash(boss, damage, radius));
+    this.trackTimer(scene.time.delayedCall(SHIELD_DASH_TELEGRAPH_MS, () => this.beginShieldDash(boss, damage, radius)));
   }
   private beginShieldDash(boss: ActiveBoss, damage: number, radius: number): void {
     if (!boss.enemy.active || !boss.dashTarget || boss.dashState !== 'telegraph') return;
@@ -738,7 +802,7 @@ export class BossSystem {
     boss.enemy.stopHitShake();
     boss.enemy.suppressHitShake = true;
     const target = boss.dashTarget;
-    this.host.scene.tweens.add({
+    this.trackTween(this.host.scene.tweens.add({
       targets: boss.enemy,
       x: target.x,
       y: target.y,
@@ -750,12 +814,12 @@ export class BossSystem {
         boss.dashTarget = undefined;
         this.impactShieldDash(target.x, target.y, damage, radius);
       }
-    });
+    }));
   }
   private impactShieldDash(x: number, y: number, damage: number, radius: number): void {
     const scene = this.host.scene;
     const explosion = scene.add.circle(x, y, radius, 0x52ff45, 0.3).setStrokeStyle(6, 0xd8ffd0, 0.9).setDepth(12);
-    scene.tweens.add({ targets: explosion, alpha: 0, scale: 1.2, duration: 380, onComplete: () => explosion.destroy() });
+    this.trackTween(scene.tweens.add({ targets: explosion, alpha: 0, scale: 1.2, duration: 380, onComplete: () => explosion.destroy() }));
     if (this.host.isEnded()) return;
     const player = this.host.getPlayer();
     if (Phaser.Math.Distance.Between(x, y, player.x, player.y) > radius) return;
@@ -769,25 +833,25 @@ export class BossSystem {
     const targetY = player.y;
     const telegraphMs = this.isPhaseTwo(boss) ? METEOR_TELEGRAPH_PHASE2_MS : METEOR_TELEGRAPH_MS;
     const telegraph = scene.add.circle(targetX, targetY, METEOR_RADIUS, METEOR_COLOR, 0.22).setStrokeStyle(3, 0x8cffb0, 0.85).setDepth(9);
-    scene.tweens.add({ targets: telegraph, alpha: 0.8, yoyo: true, repeat: -1, duration: 260 });
+    this.trackTween(scene.tweens.add({ targets: telegraph, alpha: 0.8, yoyo: true, repeat: -1, duration: 260 }));
     const meteor = scene.add.circle(targetX, targetY, 16, 0x2fe86a, 0.95).setStrokeStyle(3, 0xd6ffd0, 1).setDepth(13).setScale(0.2);
-    scene.tweens.add({ targets: meteor, scale: 1, duration: telegraphMs, ease: 'Cubic.In' });
-    scene.time.delayedCall(telegraphMs, () => {
+    this.trackTween(scene.tweens.add({ targets: meteor, scale: 1, duration: telegraphMs, ease: 'Cubic.In' }));
+    this.trackTimer(scene.time.delayedCall(telegraphMs, () => {
       telegraph.destroy();
       meteor.destroy();
       this.impactMeteor(targetX, targetY);
-    });
+    }));
   }
   private impactMeteor(x: number, y: number): void {
     const scene = this.host.scene;
     const explosion = scene.add.circle(x, y, METEOR_RADIUS, 0x52ff45, 0.35).setStrokeStyle(5, 0xd8ffd0, 0.9).setDepth(12);
-    scene.tweens.add({ targets: explosion, alpha: 0, scale: 1.25, duration: 320, onComplete: () => explosion.destroy() });
+    this.trackTween(scene.tweens.add({ targets: explosion, alpha: 0, scale: 1.25, duration: 320, onComplete: () => explosion.destroy() }));
     if (this.host.isEnded()) return;
     const player = this.host.getPlayer();
     if (Phaser.Math.Distance.Between(x, y, player.x, player.y) > METEOR_RADIUS) return;
     if (player.damage(METEOR_DAMAGE, scene.time.now) && player.health <= 0) this.host.finish(false);
   }
-  private updateShieldVisual(boss: ActiveBoss): void {
+  private updateShieldVisual(boss: ActiveBoss, delta = 0): void {
     if (!boss.enemy.active || !boss.shieldActive) return;
     const scene = this.host.scene;
     if (!boss.shieldAura) {
@@ -798,14 +862,16 @@ export class BossSystem {
     const width = Phaser.Math.Clamp(boss.shield / boss.maxShield, 0, 1) * 184;
     const y = boss.enemy.y - boss.enemy.displayHeight / 2 - 34;
     boss.shieldAura.setPosition(boss.enemy.x, boss.enemy.y);
-    this.spawnShieldBolts(boss);
+    this.spawnShieldBolts(boss, delta);
     boss.shieldBack?.setPosition(boss.enemy.x, y);
     boss.shieldFill?.setPosition(boss.enemy.x - 92 + width / 2, y).setSize(width, 5);
   }
-  private spawnShieldBolts(boss: ActiveBoss): void {
+  private spawnShieldBolts(boss: ActiveBoss, delta: number): void {
     const scene = this.host.scene;
-    if (scene.time.now < boss.nextShieldBoltAt) return;
-    boss.nextShieldBoltAt = scene.time.now + Phaser.Math.Between(90, 180);
+    boss.shieldBoltCooldownElapsed += delta;
+    if (boss.shieldBoltCooldownElapsed < boss.nextShieldBoltDelayMs) return;
+    boss.shieldBoltCooldownElapsed = 0;
+    boss.nextShieldBoltDelayMs = Phaser.Math.Between(90, 180);
     const count = Phaser.Math.Between(1, 3);
     for (let index = 0; index < count; index += 1) {
       const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
@@ -822,7 +888,7 @@ export class BossSystem {
         .setBlendMode(Phaser.BlendModes.ADD)
         .play('boss-shield-bolt-flicker');
       boss.shieldBolts.push(bolt);
-      scene.tweens.add({ targets: bolt, alpha: 0, duration: Phaser.Math.Between(180, 320), onComplete: () => { Phaser.Utils.Array.Remove(boss.shieldBolts, bolt); bolt.destroy(); } });
+      this.trackTween(scene.tweens.add({ targets: bolt, alpha: 0, duration: Phaser.Math.Between(180, 320), onComplete: () => { Phaser.Utils.Array.Remove(boss.shieldBolts, bolt); bolt.destroy(); } }));
     }
   }
   private ensureArrow(boss: ActiveBoss): void {
@@ -863,15 +929,11 @@ export class BossSystem {
     boss.shield = Math.max(0, boss.shield - amount);
     enemy.takeDamage(0);
     this.updateShieldVisual(boss);
-    if (boss.shield <= 0) {
-      this.endChannel(boss);
-      // Fase 2 has its own guaranteed periodic dash while channeling (see updateBoss) — this break-triggered
-      // combo is a Fase 1-only punish for popping the shield early.
-      if (!this.isPhaseTwo(boss)) this.startShieldBreakDashCombo(boss);
-    }
+    if (boss.shield <= 0) this.endChannel(boss);
     return overflow;
   }
-  /** Removes a defeated boss from tracking and cleans up its visuals. Returns whether it was the run-ending main boss. */
+  /** Removes a defeated boss from tracking and cleans up its visuals. Returns whether it belonged to the current
+   *  wave — GameScene combines this with hasActiveWaveBosses() to know when the whole wave (1 boss or many) is clear. */
   defeatBoss(enemy: Enemy): boolean {
     const index = this.bosses.findIndex((boss) => boss.enemy === enemy);
     if (index === -1) return false;
@@ -882,6 +944,6 @@ export class BossSystem {
     boss.beamLockLine?.destroy();
     boss.arrow?.destroy();
     boss.countdownText?.destroy();
-    return boss.isMain;
+    return boss.isWaveBoss;
   }
 }

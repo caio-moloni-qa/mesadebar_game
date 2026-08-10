@@ -1,7 +1,7 @@
 export interface WeaponConfig {
-  id: 'staff' | 'sword' | 'boomerang';
+  id: 'staff' | 'sword' | 'boomerang' | 'amulet' | 'whip';
   name: string;
-  type: 'projectile' | 'cone' | 'boomerang';
+  type: 'projectile' | 'cone' | 'boomerang' | 'aura';
   description: string;
   baseDamage: number;
   cooldown: number;
@@ -11,7 +11,7 @@ export interface WeaponConfig {
   coneAngle?: number;
 }
 
-export type WeaponFamily = 'melee' | 'ranged';
+export type WeaponFamily = 'melee' | 'ranged' | 'aura';
 
 export function weaponFamily(weapon: WeaponConfig): WeaponFamily {
   switch (weapon.type) {
@@ -20,6 +20,8 @@ export function weaponFamily(weapon: WeaponConfig): WeaponFamily {
     case 'projectile':
     case 'boomerang':
       return 'ranged';
+    case 'aura':
+      return 'aura';
     default: {
       const exhaustiveCheck: never = weapon.type;
       throw new Error(`weaponFamily: unhandled weapon type "${exhaustiveCheck}"`);
@@ -27,7 +29,7 @@ export function weaponFamily(weapon: WeaponConfig): WeaponFamily {
   }
 }
 
-export const FAMILY_LABELS: Record<WeaponFamily, string> = { melee: 'CORPO A CORPO', ranged: 'À DISTÂNCIA' };
+export const FAMILY_LABELS: Record<WeaponFamily, string> = { melee: 'CORPO A CORPO', ranged: 'À DISTÂNCIA', aura: 'AURA' };
 
 /** Maximum number of weapons a run can have active at once (see GameScene.rollExtraWeaponOffer). */
 export const MAX_ACTIVE_WEAPONS = 2;
@@ -64,6 +66,25 @@ export const WEAPONS: Record<WeaponConfig['id'], WeaponConfig> = {
     range: 300,
     projectileSpeed: 390,
     projectileLifetime: 2000
+  },
+  amulet: {
+    id: 'amulet',
+    name: 'Relíquia Divina',
+    type: 'aura',
+    description: 'Emite uma área circular de dano contínuo ao redor do herói.',
+    baseDamage: 7.5,
+    cooldown: 1000,
+    range: 64
+  },
+  whip: {
+    id: 'whip',
+    name: 'Chicote',
+    type: 'cone',
+    description: 'Golpeia em um arco amplo à frente do herói, atingindo vários inimigos de uma vez.',
+    baseDamage: 10,
+    cooldown: 700,
+    range: 180,
+    coneAngle: 140
   }
 };
 
