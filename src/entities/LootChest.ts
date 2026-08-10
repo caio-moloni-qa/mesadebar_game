@@ -8,7 +8,11 @@ export class LootChest extends Phaser.Physics.Arcade.Sprite {
     super(scene, 0, 0, 'loot-chest');
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setDisplaySize(46, 46).setCircle(15).setDepth(2).disableBody(true, true);
+    // loot-chest-icon-cropped.png's own content aspect (673x642 ≈ 1.05) preserved here. setCircle's radius is
+    // in native (unscaled) texture pixels, then multiplied by the sprite's live scale every physics frame — 259
+    // against this 673px-wide source keeps the same ~21.5px world-space pickup radius the old 15-against-32px
+    // placeholder had, instead of shrinking to near-nothing now that the source texture is much higher-res.
+    this.setDisplaySize(56, 53).setCircle(259).setDepth(2).disableBody(true, true);
     // Sits behind the chest sprite (lower depth) so it reads as a glow surrounding it, not covering the art.
     this.aura = scene.add.circle(0, 0, 34, 0xffd75e, 0.22).setStrokeStyle(2, 0xffe9a8, 0.85).setDepth(1).setVisible(false);
   }
