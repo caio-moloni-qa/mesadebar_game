@@ -72,8 +72,8 @@ export const WEAPONS: Record<WeaponConfig['id'], WeaponConfig> = {
     name: 'Relíquia Divina',
     type: 'aura',
     description: 'Emite uma área circular de dano contínuo ao redor do herói.',
-    baseDamage: 7.5,
-    cooldown: 1000,
+    baseDamage: 5.625,
+    cooldown: 1250,
     range: 64
   },
   whip: {

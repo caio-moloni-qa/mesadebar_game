@@ -77,6 +77,9 @@ const WHIP_CHAIN_RADIUS = 140;
 /** Whip's exclusive buff (5 upgrades + affinity): triggers once a swing (chains included) connects with this many enemies. */
 const WHIP_BUFF_TRIGGER_COUNT = 3;
 const WHIP_BUFF_AOE_RADIUS = 80;
+/** Hard ceiling on the Relíquia Divina's banked "risk/reward" damage bonus (see performAuraTick) — without this, a
+ *  long uninterrupted streak could bank enough damage to one-shot the player on their next hit regardless of HP. */
+const AURA_DAMAGE_TAKEN_BONUS_CAP = 15;
 
 /** Espada's exclusive buff: was 4 swords (one per cardinal direction), now 3x that, evenly spaced around the full circle. */
 const THROWN_SWORD_DIRECTION_COUNT = 12;
@@ -104,6 +107,9 @@ export class GameScene extends Phaser.Scene {
   /** elapsedMs value when the current phase began — the next wave triggers phaseDurationMs() after this, not at an absolute elapsedMs threshold, so each cycle's extra minute is relative to when the player actually continued. */
   private phaseStartedAtMs = 0;
   private phaseBossTriggered = false;
+  /** True from the moment all wave bosses die until the player picks a portal (see onBossWaveCleared) — freezes
+   *  elapsedMs and enemy spawning (the arena is cleared) while movement and the portal prompts stay live. */
+  private awaitingPortalChoice = false;
   private endRunPortal?: Phaser.GameObjects.Sprite;
   private continuePortal?: Phaser.GameObjects.Sprite;
   private portalPrompt?: Phaser.GameObjects.Text;
@@ -181,7 +187,7 @@ export class GameScene extends Phaser.Scene {
     this.characterId = data.characterId; this.weapons = [this.createActiveWeapon(WEAPONS[data.weaponId])];
     this.affinityFamilies = new Set([weaponFamily(WEAPONS[data.weaponId])]);
     this.elapsedMs = 0; this.spawnElapsed = 0; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, 0)); this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1); this.currency = 0;
-    this.paused = false; this.ended = false; this.levelPending = false; this.chestRollActive = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.startingUpgradeSnapshot = undefined; this.startingUpgradePool = undefined; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
+    this.paused = false; this.ended = false; this.levelPending = false; this.chestRollActive = false; this.awaitingPortalChoice = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.startingUpgradeSnapshot = undefined; this.startingUpgradePool = undefined; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
     this.bossCycle = 1; this.phaseStartedAtMs = 0; this.phaseBossTriggered = false;
     this.destroyBossWavePortals();
     this.bossSystem.reset();
@@ -270,10 +276,21 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.F9)) this.toggleSandboxMode();
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) && !this.ended && !this.levelPending) this.togglePause();
-    if (this.paused || this.ended || this.levelPending) return;
+    // chestRollActive must gate this exactly like levelPending does — the chest's slot-machine roll pauses
+    // gameplay the same way an upgrade screen does (see collectChest/pauseGameplay), but this early-return was the
+    // only thing actually stopping boss AI/attacks, portal prompts, and the aura's manual (non-physics) damage
+    // loop from continuing to run every frame; physics.pause() alone doesn't touch any of that.
+    if (this.paused || this.ended || this.levelPending || this.chestRollActive) return;
     this.movePlayer();
     if (this.merchant.isInMerchant()) {
       this.merchant.updateInteraction();
+      this.updateHud();
+      return;
+    }
+    // Arena stays cleared and elapsedMs frozen from the moment the wave boss(es) die until the player commits to a
+    // portal — only movement (above) and the portal prompts themselves stay live while this is true.
+    if (this.awaitingPortalChoice) {
+      this.updateBossWavePortals();
       this.updateHud();
       return;
     }
@@ -282,7 +299,7 @@ export class GameScene extends Phaser.Scene {
       this.phaseBossTriggered = true;
       this.bossSystem.warn(this.bossCycle);
     }
-    this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta)); this.spawnEnemies(); this.spawnEnemyVariants(); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.updateHealthPotions(); this.bossSystem.updateArrows(); this.merchant.update(delta); this.updateBossWavePortals();
+    this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta)); this.spawnEnemies(); this.spawnEnemyVariants(); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.updateHealthPotions(); this.bossSystem.updateArrows(); this.merchant.update(delta);
     this.player.updateRottenStatus(delta);
     if (this.player.health <= 0) this.finish(false);
     this.updateHud();
@@ -310,7 +327,7 @@ export class GameScene extends Phaser.Scene {
     this.joystickKnob = this.add.circle(x, y, 37, 0x8568c3, 0.82).setStrokeStyle(3, 0xf2eaff, 0.8).setScrollFactor(0).setDepth(21);
     this.joystickZone = this.add.zone(x, y, 220, 220).setScrollFactor(0).setDepth(22).setInteractive();
     this.joystickZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.paused || this.ended || this.levelPending || this.joystickPointerId !== null) return;
+      if (this.paused || this.ended || this.levelPending || this.chestRollActive || this.joystickPointerId !== null) return;
       this.joystickPointerId = pointer.id;
       this.updateJoystick(pointer);
     });
@@ -604,7 +621,7 @@ export class GameScene extends Phaser.Scene {
     }
     const stats = this.auraWeaponStats(weapon);
     const buffUnlocked = weapon.upgradeCount >= 5 && this.affinityFamilies.has(weaponFamily(weapon.config));
-    const radius = stats.range * (1 + this.player.auraRadiusBonusPercent) * (buffUnlocked ? 2 : 1);
+    const radius = stats.range * (1 + this.player.auraRadiusBonusPercent) * (buffUnlocked ? 1.5 : 1);
     const multiStrike = buffUnlocked && Math.random() < this.auraMultiStrikeChance(weapon.upgradeCount);
     const damage = (stats.baseDamage + this.player.auraDamageBonus) * this.player.damageMultiplier * (1 + weapon.auraRampPercent) * (multiStrike ? 2 : 1);
     let hit = false;
@@ -622,8 +639,9 @@ export class GameScene extends Phaser.Scene {
       weapon.auraRampPercent += 0.0025;
       weapon.auraTotalDamageDealt += damage;
       // Risk/reward: the aura doesn't hurt the player just for connecting — it banks 1.5% of its streak's total
-      // damage, which the next enemy hit consumes on top of that attack's own damage (see Player.damage()).
-      this.player.auraDamageTakenBonus = weapon.auraTotalDamageDealt * 0.015;
+      // damage, which the next enemy hit consumes on top of that attack's own damage (see Player.damage()), capped
+      // so an uninterrupted streak can never bank enough to one-shot the player regardless of current HP.
+      this.player.auraDamageTakenBonus = Math.min(weapon.auraTotalDamageDealt * 0.015, AURA_DAMAGE_TAKEN_BONUS_CAP);
     }
     this.playAuraPulse(radius, multiStrike, buffUnlocked);
   }
@@ -1206,9 +1224,12 @@ export class GameScene extends Phaser.Scene {
   private resumeFromPause(): void { this.resumeGameplay(); this.destroyPauseOverlay(); }
   private destroyPauseOverlay(): void { this.pauseOverlay.forEach((object) => object.destroy()); this.pauseOverlay = []; }
   /** All bosses in the current wave are dead — instead of ending the run immediately, offer a choice: end here,
-   *  or push into an escalated continuation (see continueToNextCycle). Regular enemy spawning already resumed on
-   *  its own the instant hasActiveEncounter() went false, so the player isn't standing in a vacuum deciding. */
+   *  or push into an escalated continuation (see continueToNextCycle). Clears the arena and freezes elapsedMs/
+   *  spawning (see awaitingPortalChoice) until the player commits to a portal, instead of leaving enemies active
+   *  and the clock running while they decide. */
   private onBossWaveCleared(): void {
+    this.awaitingPortalChoice = true;
+    this.clearArena();
     const spread = 110;
     const baseX = this.player.x;
     const baseY = this.player.y - 160;
@@ -1220,6 +1241,11 @@ export class GameScene extends Phaser.Scene {
     const anim = this.textures.exists('portal-borderless') ? 'portal-borderless-spin' : 'portal-spin';
     this.endRunPortal = this.add.sprite(baseX - spread, baseY, texture, 0).setDisplaySize(84, 84).setDepth(9).setTint(0x9fb4ff).play(anim);
     this.continuePortal = this.add.sprite(baseX + spread, baseY, texture, 0).setDisplaySize(84, 84).setDepth(9).setTint(0x7dffa0).play(anim);
+  }
+  /** Deactivates every remaining active enemy — bosses are already gone by the time this runs (defeatEnemy
+   *  deactivates them), this is only for whatever regular enemies spawned during the encounter and are still up. */
+  private clearArena(): void {
+    this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.deactivate(); return true; });
   }
   private updateBossWavePortals(): void {
     if (!this.endRunPortal || !this.continuePortal) return;
@@ -1241,6 +1267,7 @@ export class GameScene extends Phaser.Scene {
    *  spawn count both scale with the cycle number — see DifficultySystem.stageFor) — all keyed off bossCycle so
    *  they stay in lockstep and the loop can repeat indefinitely. */
   private continueToNextCycle(): void {
+    this.awaitingPortalChoice = false;
     this.destroyBossWavePortals();
     this.bossCycle += 1;
     this.phaseStartedAtMs = this.elapsedMs;
