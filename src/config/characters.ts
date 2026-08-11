@@ -83,6 +83,6 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     ],
     preferredWeaponId: 'amulet',
     startingWeaponUpgradeChoices: 3,
-    auraWeaponOverrides: { baseDamage: 9, cooldown: 800, range: 80 }
+    auraWeaponOverrides: { baseDamage: 6.75, cooldown: 1000, range: 80 }
   }
 };

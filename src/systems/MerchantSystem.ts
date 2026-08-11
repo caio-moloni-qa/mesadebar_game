@@ -26,7 +26,7 @@ interface MerchantItemSlot { option: MerchantItemOption; position: Phaser.Math.V
 
 const MERCHANT_PORTAL_INTERVAL_MS = 40000;
 const MERCHANT_PORTAL_OPEN_MS = 20000;
-/** Every merchant spawn after the first multiplies every item's cost by this much (compounding — see buildMerchantShop). */
+/** Every item already purchased this run multiplies every item's cost by this much (compounding — see buildMerchantShop). */
 const MERCHANT_PRICE_INFLATION_MULTIPLIER = 3;
 const MERCHANT_ROOM_SIZE = 480;
 /** Fixed anchor for the merchant's isolated pocket realm — far outside the normal 0..WORLD_SIZE arena so it can
@@ -90,8 +90,10 @@ export class MerchantSystem {
   private readonly merchantNpcPosition = new Phaser.Math.Vector2();
   private merchantItemSlots: MerchantItemSlot[] = [];
   private merchantColliders: Phaser.Physics.Arcade.Collider[] = [];
-  /** How many times the portal has spawned this run — drives price inflation (see buildMerchantShop). */
+  /** How many times the portal has spawned this run — no longer drives price inflation (see itemsPurchasedCount), kept for the affinity-tome/other spawn-count-relative logic. */
   private merchantSpawnCount = 0;
+  /** Total items bought across the whole run (any shop visit) — drives price inflation (see buildMerchantShop). */
+  private itemsPurchasedCount = 0;
   /** The affinity tome is a one-time-only offer across the whole run — see buildMerchantShop's affinityOption. */
   private merchantAffinityTomePurchased = false;
 
@@ -110,6 +112,7 @@ export class MerchantSystem {
     this.merchantAreaVisuals = [];
     this.inMerchant = false;
     this.merchantSpawnCount = 0;
+    this.itemsPurchasedCount = 0;
     this.merchantAffinityTomePurchased = false;
     this.merchantItemSlots = [];
     this.merchantColliders = [];
@@ -455,8 +458,8 @@ export class MerchantSystem {
     const affinityOption = !this.merchantAffinityTomePurchased && this.availableAffinityFamilies().length > 0 ? MERCHANT_AFFINITY_TOME_OPTION : MERCHANT_FALLBACK_ITEM_OPTION;
     const randomBuffBase = MERCHANT_BASE_ITEM_OPTIONS[Math.floor(Math.random() * MERCHANT_BASE_ITEM_OPTIONS.length)];
     const randomBuffOption: MerchantItemOption = { ...randomBuffBase, cost: MERCHANT_RANDOM_BUFF_COST };
-    // Compounding 3x per spawn, starting from the 2nd spawn (spawn 1 is base price, spawn 2 is x3, spawn 3 is x9, ...).
-    const priceMultiplier = MERCHANT_PRICE_INFLATION_MULTIPLIER ** Math.max(0, this.merchantSpawnCount - 1);
+    // Compounding 3x per item already bought this run (any shop visit) — 0 bought is base price, 1 bought is x3, 2 bought is x9, ...
+    const priceMultiplier = MERCHANT_PRICE_INFLATION_MULTIPLIER ** this.itemsPurchasedCount;
     const scalePrice = (option: MerchantItemOption): MerchantItemOption => ({ ...option, cost: Math.round(option.cost * priceMultiplier) });
     const itemOptions: MerchantItemOption[] = [MERCHANT_DIVINE_BLESSING_OPTION, MERCHANT_ARCANE_CURSE_OPTION, randomBuffOption, affinityOption].map(scalePrice);
     // Kept tight enough (with the label's height factored in) that the bottom-most slot's label still clears the
@@ -521,6 +524,7 @@ export class MerchantSystem {
   private purchaseMerchantItem(slot: MerchantItemSlot): void {
     if (slot.purchased || this.host.getCurrency() < slot.option.cost) return;
     this.host.spendCurrency(slot.option.cost);
+    this.itemsPurchasedCount += 1;
     slot.purchased = true;
     slot.marker.setTint(0x555555).setAlpha(0.6);
     slot.label.setText(`${slot.option.name}\n(comprado)`);
