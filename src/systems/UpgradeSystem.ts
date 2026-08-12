@@ -56,6 +56,12 @@ export class UpgradeSystem {
     return this.weaponSpecificUpgrades(weapon, player);
   }
 
+  /** The generic, weapon-agnostic pool (damage/attack speed/movement speed) — same pool `choices()` always mixes
+   *  in regardless of equipped weapons. Exposed for the sandbox's "atributo aleatório" test button. */
+  basicUpgradePool(): Upgrade[] {
+    return [...this.upgrades];
+  }
+
   private weaponSpecificUpgrades(weapon: WeaponConfig, player?: Player): Upgrade[] {
     if (weapon.type === 'cone') {
       const rareUpgrades = player?.whirlwindUnlocked ? [] : this.meleeRareUpgrades;
