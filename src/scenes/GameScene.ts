@@ -168,7 +168,9 @@ export class GameScene extends Phaser.Scene {
       spawnVariantNearPlayer: (id, count) => this.enemySpawner.spawnNearPlayer(id, count),
       spawnExtraBoss: () => this.bossSystem.spawnExtraBoss(),
       setPlayerInvincible: (invincible) => { this.player.invincible = invincible; },
-      addPlayerDamageBuffer: (amount) => { this.player.damageBuffer += amount; }
+      addPlayerDamageBuffer: (amount) => { this.player.damageBuffer += amount; },
+      grantRandomWeaponUpgrade: () => this.sandboxGrantRandomWeaponUpgrade(),
+      grantRandomAttributeUpgrade: () => this.sandboxGrantUpgrade(this.upgrades.basicUpgradePool())
     };
   }
   private buildBossHost(): BossHost {
@@ -251,6 +253,25 @@ export class GameScene extends Phaser.Scene {
     const activeEnemies: Enemy[] = [];
     this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) activeEnemies.push(enemy); return true; });
     activeEnemies.forEach((enemy) => this.defeatEnemy(enemy));
+  }
+  /** Combines the weapon-specific pool of every currently equipped weapon (deduped by id, since two melee weapons
+   *  would otherwise share the same pool and double its odds) and grants one at random — sandbox shortcut so
+   *  testing a weapon's upgrade kit doesn't require grinding level-ups or chests for it. */
+  private sandboxGrantRandomWeaponUpgrade(): void {
+    const pools = this.weapons.map((weapon) => this.upgrades.weaponUpgradePool(weapon.config, this.player));
+    const pool = [...new Map(pools.flat().map((upgrade) => [upgrade.id, upgrade])).values()];
+    this.sandboxGrantUpgrade(pool);
+  }
+  /** Shared apply path for both sandbox upgrade buttons — mirrors grantChestUpgrade's effect (apply, bump every
+   *  weapon's upgradeCount, track the pick, refresh the build HUD) minus the chest-specific roll animation. */
+  private sandboxGrantUpgrade(pool: Upgrade[]): void {
+    if (pool.length === 0) return;
+    const upgrade = pool[Math.floor(Math.random() * pool.length)];
+    upgrade.apply(this.player);
+    this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; });
+    this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1);
+    this.updateBuildHud();
+    this.spawnFloatingCombatText(this.player.x, this.player.y - this.player.displayHeight / 2 - 10, `Sandbox: ${upgrade.name}!`, '#8bff8b', 0);
   }
   private createMapFog(): void {
     const fogWidth = 320;
@@ -795,7 +816,7 @@ export class GameScene extends Phaser.Scene {
       // Late game stacks many of these on the same spot (staffExplosionCount grows with upgradeCount) — kept
       // noticeably more transparent than a single explosion would need, since overlapping rings compound their
       // opacity and used to read as a near-solid, screen-obscuring blob.
-      const explosion = this.add.circle(hitEnemy.x, hitEnemy.y, radius, 0x6ee7ff, 0.1).setStrokeStyle(2, 0xc7f9ff, 0.45).setDepth(7);
+      const explosion = this.add.circle(hitEnemy.x, hitEnemy.y, radius, 0x6ee7ff, 0.03).setStrokeStyle(2, 0xc7f9ff, 0.45).setDepth(7);
       this.trackTween(this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18 + index * 0.06, duration: 220 + index * 45, onComplete: () => explosion.destroy() }));
       this.enemies.children.each((child) => {
         const enemy = child as Enemy;
