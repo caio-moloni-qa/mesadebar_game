@@ -15,10 +15,10 @@ export const LEVEL_UPGRADE_CONFIG = { bonusChoiceInterval: 5, defaultChoiceAmoun
 export const ROTTEN_AURA_CONFIG = { healReduction: 0.7, dps: 3, tickMs: 1000, durationMs: 5000 };
 /** Super Esqueleto and Necromante têm essa chance de soltar um baú ao morrer; ao ser coletado, aplica automaticamente
  * uma melhoria aleatória sorteada do mesmo pool que a tela de nível ≥5 oferece (5 opções). */
-export const LOOT_CHEST_DROP_CHANCE = 0.4;
+export const LOOT_CHEST_DROP_CHANCE = 0.15;
 /** Every enemy (any variant, not just superSkeleton/necromancerWraith like the loot chest) has this chance to drop
  * a Poção de Vida on death — a flat, instant HEALTH_POTION_HEAL_AMOUNT heal on pickup, no upgrade roll involved. */
-export const HEALTH_POTION_DROP_CHANCE = 0.05;
+export const HEALTH_POTION_DROP_CHANCE = 0.01;
 export const HEALTH_POTION_HEAL_AMOUNT = 40;
 export interface EnemyVariantScheduleEntry { variantId: 'necromancerWraith' | 'apparitionWraith' | 'superSkeleton'; intervalMs: number; }
 export const ENEMY_VARIANT_SCHEDULE: EnemyVariantScheduleEntry[] = [

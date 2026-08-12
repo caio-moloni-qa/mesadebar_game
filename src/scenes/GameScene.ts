@@ -1,8 +1,8 @@
 ﻿import Phaser from 'phaser';
-import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, WEAPON_CONFIG, requiredExperience } from '../config/balance';
+import { HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, WEAPON_CONFIG, requiredExperience } from '../config/balance';
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH, RUN_DURATION_MS, WORLD_SIZE } from '../config/gameConfig';
-import { Enemy, EnemyVariantConfig } from '../entities/Enemy';
+import { Enemy } from '../entities/Enemy';
 import { CurrencyGem } from '../entities/CurrencyGem';
 import { HealthPotion } from '../entities/HealthPotion';
 import { LootChest } from '../entities/LootChest';
@@ -11,6 +11,7 @@ import { Projectile } from '../entities/Projectile';
 import { SoulProjectile } from '../entities/SoulProjectile';
 import { BossHost, BossSystem } from '../systems/BossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
+import { EnemySpawnHost, EnemySpawnSystem } from '../systems/EnemySpawnSystem';
 import { MerchantHost, MerchantSystem } from '../systems/MerchantSystem';
 import { SandboxDebugHost, SandboxDebugPanel } from '../systems/SandboxDebugPanel';
 import { sandboxState } from '../systems/SandboxState';
@@ -86,19 +87,11 @@ const THROWN_SWORD_DIRECTION_COUNT = 12;
 /** Each thrown sword now does 2 full out-and-back trips instead of 1 before despawning. */
 const THROWN_SWORD_CYCLES = 2;
 
-const ENEMY_TEXTURE_KEYS: Record<EnemyVariantConfig['id'], string> = {
-  skeleton: 'skeleton-sword',
-  necromancerWraith: 'necromancer-wraith',
-  apparitionWraith: 'apparition-wraith',
-  superSkeleton: 'super-skeleton',
-  finalBoss: 'final-boss'
-};
-
 export class GameScene extends Phaser.Scene {
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group; private chests!: Phaser.Physics.Arcade.Group; private healthPotions!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
-  private elapsedMs = 0; private spawnElapsed = 0; private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.variantId, 0])); private apparitionHordeLevel = 0; private superSkeletonSpawnCount = 1; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
+  private elapsedMs = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
   private paused = false; private ended = false; private levelPending = false; private chestRollActive = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private startingUpgradeSnapshot?: StartingUpgradeSnapshot; private startingUpgradePool?: Upgrade[]; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
   /** Boss-wave cycle state (see onBossWaveCleared/continueToNextCycle): cycle 1 is the base 3-minute run; each
    *  "continue" portal choice bumps this, extending the next phase's duration by 1min, the difficulty multiplier
@@ -130,9 +123,21 @@ export class GameScene extends Phaser.Scene {
   private readonly merchant: MerchantSystem = new MerchantSystem(this.buildMerchantHost());
   private readonly sandbox: SandboxDebugPanel = new SandboxDebugPanel(this.buildSandboxHost());
   private readonly bossSystem: BossSystem = new BossSystem(this.buildBossHost());
+  private readonly enemySpawner: EnemySpawnSystem = new EnemySpawnSystem(this.buildEnemySpawnHost());
 
   constructor() { super('game'); }
 
+  private buildEnemySpawnHost(): EnemySpawnHost {
+    return {
+      scene: this,
+      getPlayer: () => this.player,
+      getEnemies: () => this.enemies,
+      isSkeletonSpawnEnabled: () => this.sandbox.isSkeletonSpawnEnabled(),
+      isVariantSpawnEnabled: () => this.sandbox.isVariantSpawnEnabled(),
+      hasActiveEncounter: () => this.bossSystem.hasActiveEncounter(),
+      difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs)
+    };
+  }
   private buildMerchantHost(): MerchantHost {
     return {
       scene: this,
@@ -160,7 +165,7 @@ export class GameScene extends Phaser.Scene {
       setForcedDifficultyStage: (stage) => this.difficulty.setForcedStage(stage),
       setEnemySpawnCap: (cap) => { this.enemies.maxSize = cap; },
       setMapFogVisible: (visible) => this.mapFogGraphics.forEach((graphics) => graphics.setVisible(visible)),
-      spawnVariantNearPlayer: (id, count) => this.sandboxSpawnVariant(id, count),
+      spawnVariantNearPlayer: (id, count) => this.enemySpawner.spawnNearPlayer(id, count),
       spawnExtraBoss: () => this.bossSystem.spawnExtraBoss(),
       setPlayerInvincible: (invincible) => { this.player.invincible = invincible; },
       addPlayerDamageBuffer: (amount) => { this.player.damageBuffer += amount; }
@@ -171,8 +176,8 @@ export class GameScene extends Phaser.Scene {
       scene: this,
       getPlayer: () => this.player,
       isEnded: () => this.ended,
-      spawnEnemyVariant: (x, y, config) => this.spawnEnemyVariant(x, y, config),
-      enemyConfig: (id, overrides) => this.enemyConfig(id, overrides),
+      spawnEnemyVariant: (x, y, config) => this.enemySpawner.spawnEnemyVariant(x, y, config),
+      enemyConfig: (id, overrides) => this.enemySpawner.enemyConfig(id, overrides),
       clearEnemyField: (preserve) => this.clearEnemyField(preserve),
       finish: (victory) => this.finish(victory),
       refreshHud: () => this.updateHud()
@@ -186,7 +191,7 @@ export class GameScene extends Phaser.Scene {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
     this.characterId = data.characterId; this.weapons = [this.createActiveWeapon(WEAPONS[data.weaponId])];
     this.affinityFamilies = new Set([weaponFamily(WEAPONS[data.weaponId])]);
-    this.elapsedMs = 0; this.spawnElapsed = 0; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, 0)); this.apparitionHordeLevel = 0; this.superSkeletonSpawnCount = 1; this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1); this.currency = 0;
+    this.elapsedMs = 0; this.enemySpawner.reset(); this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1); this.currency = 0;
     this.paused = false; this.ended = false; this.levelPending = false; this.chestRollActive = false; this.awaitingPortalChoice = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.startingUpgradeSnapshot = undefined; this.startingUpgradePool = undefined; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
     this.bossCycle = 1; this.phaseStartedAtMs = 0; this.phaseBossTriggered = false;
     this.destroyBossWavePortals();
@@ -210,7 +215,11 @@ export class GameScene extends Phaser.Scene {
     this.enemies = this.physics.add.group({ classType: Enemy, maxSize: this.sandbox.initialSpawnCap(), runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 80, runChildUpdate: false });
     this.soulProjectiles = this.physics.add.group({ classType: SoulProjectile, maxSize: 80, runChildUpdate: false });
-    this.gems = this.physics.add.group({ classType: CurrencyGem, maxSize: 120, runChildUpdate: false });
+    // Unlike projectiles (which expire on a timer and always free their slot back), gems never despawn on their
+    // own — a fixed cap here can be exhausted permanently by uncollected gems (e.g. Cajado's 800-range kills
+    // landing far outside pickupRange, or Relíquia Divina bursting many kills at once) and silently stop currency
+    // from dropping for the rest of the run. Unbounded, same as `enemies`' sandbox "-1" option.
+    this.gems = this.physics.add.group({ classType: CurrencyGem, maxSize: -1, runChildUpdate: false });
     this.chests = this.physics.add.group({ classType: LootChest, maxSize: 10, runChildUpdate: false });
     this.healthPotions = this.physics.add.group({ classType: HealthPotion, maxSize: 20, runChildUpdate: false });
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE).startFollow(this.player, true, 0.12, 0.12);
@@ -242,17 +251,6 @@ export class GameScene extends Phaser.Scene {
     const activeEnemies: Enemy[] = [];
     this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) activeEnemies.push(enemy); return true; });
     activeEnemies.forEach((enemy) => this.defeatEnemy(enemy));
-  }
-  private sandboxSpawnVariant(id: EnemyVariantConfig['id'], count: number): void {
-    const overrides: Partial<Omit<EnemyVariantConfig, 'id'>> =
-      id === 'necromancerWraith' ? { isStatic: true, displaySize: 68 } :
-      id === 'apparitionWraith' ? { displaySize: 68 } :
-      id === 'superSkeleton' ? { isMiniBoss: true, displaySize: 92 } : {};
-    for (let index = 0; index < count; index += 1) {
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const distance = Phaser.Math.Between(160, 260);
-      this.spawnEnemyVariant(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, this.enemyConfig(id, overrides));
-    }
   }
   private createMapFog(): void {
     const fogWidth = 320;
@@ -291,6 +289,7 @@ export class GameScene extends Phaser.Scene {
     // portal — only movement (above) and the portal prompts themselves stay live while this is true.
     if (this.awaitingPortalChoice) {
       this.updateBossWavePortals();
+      this.collectRemainingLoot();
       this.updateHud();
       return;
     }
@@ -299,7 +298,7 @@ export class GameScene extends Phaser.Scene {
       this.phaseBossTriggered = true;
       this.bossSystem.warn(this.bossCycle);
     }
-    this.player.updatePassiveEffects(delta); this.spawnElapsed += delta; ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta)); this.spawnEnemies(); this.spawnEnemyVariants(); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.updateHealthPotions(); this.bossSystem.updateArrows(); this.merchant.update(delta);
+    this.player.updatePassiveEffects(delta); this.enemySpawner.update(delta, this.elapsedMs); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.updateHealthPotions(); this.bossSystem.updateArrows(); this.merchant.update(delta);
     this.player.updateRottenStatus(delta);
     if (this.player.health <= 0) this.finish(false);
     this.updateHud();
@@ -354,64 +353,6 @@ export class GameScene extends Phaser.Scene {
     this.joystickPointerId = null;
     this.mobileDirection.set(0, 0);
     this.joystickKnob?.setPosition(120, GAME_HEIGHT - 120);
-  }
-  private spawnEnemies(): void { if (!this.sandbox.isSkeletonSpawnEnabled() || this.bossSystem.hasActiveEncounter()) return; const stage = this.difficulty.stageFor(this.elapsedMs); if (this.spawnElapsed < stage.spawnInterval) return; this.spawnElapsed = 0; for (let i = 0; i < stage.count; i += 1) this.spawnEnemy(stage.healthMultiplier); }
-  private spawnEnemy(multiplier: number): void {
-    let enemy = this.enemies.getFirstDead(false) as Enemy | null;
-
-    // `Group.add` ignores additions after maxSize. Creating an Enemy before
-    // checking the capacity left sprites with physics bodies outside the group:
-    // they stayed on screen but were neither updated nor considered by overlaps.
-    if (!enemy && this.enemies.isFull()) return;
-    if (!enemy) {
-      enemy = new Enemy(this);
-      this.enemies.add(enemy);
-    }
-
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-    const distance = Phaser.Math.Between(700, 900);
-    enemy.activate(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, this.enemyConfig('skeleton', { maxHealth: ENEMY_VARIANTS.skeleton.maxHealth * multiplier }));
-  }
-  private spawnEnemyVariants(): void {
-    if (!this.sandbox.isVariantSpawnEnabled() || this.bossSystem.hasActiveEncounter()) return;
-    ENEMY_VARIANT_SCHEDULE.forEach((entry) => {
-      const elapsed = this.variantSpawnElapsed.get(entry.variantId) ?? 0;
-      if (elapsed < entry.intervalMs) return;
-      this.variantSpawnElapsed.set(entry.variantId, 0);
-      this.spawnScheduledVariant(entry.variantId);
-    });
-  }
-  private spawnScheduledVariant(variantId: EnemyVariantScheduleEntry['variantId']): void {
-    if (variantId === 'necromancerWraith') {
-      const position = this.randomMapPosition();
-      this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('necromancerWraith', { isStatic: true, displaySize: 68 }));
-      return;
-    }
-    if (variantId === 'apparitionWraith') {
-      const count = 10 + this.apparitionHordeLevel * 2;
-      const health = ENEMY_VARIANTS.apparitionWraith.maxHealth + this.apparitionHordeLevel * 12;
-      for (let index = 0; index < count; index += 1) {
-        const position = this.randomBorderPosition();
-        this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('apparitionWraith', { maxHealth: health, displaySize: 68 }));
-      }
-      this.apparitionHordeLevel += 1;
-      return;
-    }
-    for (let index = 0; index < this.superSkeletonSpawnCount; index += 1) {
-      const position = this.randomBorderPosition();
-      this.spawnEnemyVariant(position.x, position.y, this.enemyConfig('superSkeleton', { isMiniBoss: true, displaySize: 92 }));
-    }
-    this.superSkeletonSpawnCount += 2;
-  }
-  private spawnEnemyVariant(x: number, y: number, config: EnemyVariantConfig): Enemy | null {
-    let enemy = this.enemies.getFirstDead(false) as Enemy | null;
-    if (!enemy && this.enemies.isFull()) return null;
-    if (!enemy) {
-      enemy = new Enemy(this);
-      this.enemies.add(enemy);
-    }
-    enemy.activate(x, y, config);
-    return enemy;
   }
   private updateEnemies(): void { this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) { if (this.bossSystem.isChanneling(enemy)) enemy.pauseMovement(); else enemy.pursue(this.player); } return true; }); }
   /** Rotten Aura: refreshes the player's rotten-status timer whenever they're within range of any active rotten-aura enemy (Super Esqueleto, the final boss). The actual DoT/heal-cut lives on Player, ticked separately in update(). */
@@ -786,20 +727,6 @@ export class GameScene extends Phaser.Scene {
     this.soulProjectiles.children.each((child) => { const projectile = child as SoulProjectile; if (projectile.active) projectile.deactivate(); return true; });
     return clearedEnemies;
   }
-  private enemyConfig(id: EnemyVariantConfig['id'], overrides: Partial<Omit<EnemyVariantConfig, 'id'>> = {}): EnemyVariantConfig {
-    return { id, texture: ENEMY_TEXTURE_KEYS[id], ...ENEMY_VARIANTS[id], ...overrides };
-  }
-  private randomMapPosition(): Phaser.Math.Vector2 {
-    return new Phaser.Math.Vector2(Phaser.Math.Between(120, WORLD_SIZE - 120), Phaser.Math.Between(120, WORLD_SIZE - 120));
-  }
-  private randomBorderPosition(): Phaser.Math.Vector2 {
-    const side = Phaser.Math.Between(0, 3);
-    const edge = 40;
-    if (side === 0) return new Phaser.Math.Vector2(Phaser.Math.Between(0, WORLD_SIZE), edge);
-    if (side === 1) return new Phaser.Math.Vector2(Phaser.Math.Between(0, WORLD_SIZE), WORLD_SIZE - edge);
-    if (side === 2) return new Phaser.Math.Vector2(edge, Phaser.Math.Between(0, WORLD_SIZE));
-    return new Phaser.Math.Vector2(WORLD_SIZE - edge, Phaser.Math.Between(0, WORLD_SIZE));
-  }
   /** `origin` defaults to the player (the normal cone swing); the whip's chain/bonus hits pass the struck enemy's
    *  own position instead, so those "outside the cone" hits get their own visible slash rather than only a damage
    *  number. `weaponId === 'whip'` tints it light brown instead of the sprite's native light blue, so a chain hit
@@ -865,8 +792,11 @@ export class GameScene extends Phaser.Scene {
     const radius = 50;
     const upgradeCount = this.weapons.find((weapon) => weapon.config.id === projectile.weaponId)?.upgradeCount ?? 0;
     for (let index = 0; index < this.staffExplosionCount(upgradeCount); index += 1) {
-      const explosion = this.add.circle(hitEnemy.x, hitEnemy.y, radius, 0x6ee7ff, 0.18).setStrokeStyle(3, 0xc7f9ff, 0.85).setDepth(7);
-      this.trackTween(this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18 + index * 0.1, duration: 220 + index * 45, onComplete: () => explosion.destroy() }));
+      // Late game stacks many of these on the same spot (staffExplosionCount grows with upgradeCount) — kept
+      // noticeably more transparent than a single explosion would need, since overlapping rings compound their
+      // opacity and used to read as a near-solid, screen-obscuring blob.
+      const explosion = this.add.circle(hitEnemy.x, hitEnemy.y, radius, 0x6ee7ff, 0.1).setStrokeStyle(2, 0xc7f9ff, 0.45).setDepth(7);
+      this.trackTween(this.tweens.add({ targets: explosion, alpha: 0, scale: 1.18 + index * 0.06, duration: 220 + index * 45, onComplete: () => explosion.destroy() }));
       this.enemies.children.each((child) => {
         const enemy = child as Enemy;
         if (!enemy.active || enemy === hitEnemy) return true;
@@ -1246,6 +1176,16 @@ export class GameScene extends Phaser.Scene {
    *  deactivates them), this is only for whatever regular enemies spawned during the encounter and are still up. */
   private clearArena(): void {
     this.enemies.children.each((child) => { const enemy = child as Enemy; if (enemy.active) enemy.deactivate(); return true; });
+  }
+  /** Sucks every gem/chest/potion still on the field straight to the player while the portal-choice screen is up
+   *  (see the awaitingPortalChoice branch in update()) — attract() with an unbounded range instead of pickupRange,
+   *  so nothing from the phase that just ended gets left behind unreachable once the next cycle starts. Actual
+   *  collection still happens through the normal overlap handlers (collectGem/collectChest/collectHealthPotion)
+   *  once each item physically reaches the player — this only forces the pull, not the pickup itself. */
+  private collectRemainingLoot(): void {
+    this.gems.children.each((child) => { const gem = child as CurrencyGem; if (gem.active) gem.attract(this.player, Number.POSITIVE_INFINITY); return true; });
+    this.chests.children.each((child) => { const chest = child as LootChest; if (chest.active) chest.attract(this.player, Number.POSITIVE_INFINITY); return true; });
+    this.healthPotions.children.each((child) => { const potion = child as HealthPotion; if (potion.active) potion.attract(this.player, Number.POSITIVE_INFINITY); return true; });
   }
   private updateBossWavePortals(): void {
     if (!this.endRunPortal || !this.continuePortal) return;
