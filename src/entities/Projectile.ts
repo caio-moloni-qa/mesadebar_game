@@ -6,6 +6,10 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   public remainingRicochets = 0;
   public expiresAt = 0;
   public isBoomerang = false;
+  /** Fabri's exclusive: true once the boomerang firing this shot has crossed its upgrade threshold — swaps the
+   *  boomerang texture for the banana one and tells projectileHit to stack a slow on the enemy struck. Always
+   *  false unless isBoomerang is also true (see GameScene.attackWithWeapon). */
+  public isBanana = false;
   public isThrownSword = false;
   public returning = false;
   public executesCommonEnemy = false;
@@ -32,13 +36,14 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.setDisplaySize(24, 24).setCircle(6, 6, 6).setDepth(5).disableBody(true, true);
   }
 
-  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number, lifetime: number, pierces: number, ricochets: number, now: number, isBoomerang = false, outboundDistance = 0, sizeMultiplier = 1): void {
+  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number, lifetime: number, pierces: number, ricochets: number, now: number, isBoomerang = false, outboundDistance = 0, sizeMultiplier = 1, isBanana = false): void {
     this.enableBody(true, x, y, true, true);
     this.damage = damage;
     this.remainingPierces = pierces;
     this.remainingRicochets = ricochets;
     this.expiresAt = now + lifetime;
     this.isBoomerang = isBoomerang;
+    this.isBanana = isBanana;
     this.isThrownSword = false;
     this.returning = false;
     this.executesCommonEnemy = false;
@@ -50,7 +55,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.outboundHits.clear();
     this.returnHits.clear();
     this.rotation = Phaser.Math.Angle.Between(x, y, targetX, targetY);
-    this.setTexture(isBoomerang ? 'weapon-boomerang-icon' : 'bolt');
+    this.setTexture(isBanana ? 'weapon-banana-icon' : isBoomerang ? 'weapon-boomerang-icon' : 'bolt');
     const displaySize = (isBoomerang ? 42 : 24) * sizeMultiplier;
     this.setDisplaySize(displaySize, displaySize);
     this.updateHitCircle((isBoomerang ? 17 : 7) * sizeMultiplier);
@@ -77,7 +82,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.scene.physics.velocityFromRotation(angle, this.speed, (this.body as Phaser.Physics.Arcade.Body).velocity);
       if (Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY) < 26) this.deactivate();
     }
-    this.rotation += this.returning ? -0.34 : 0.34;
+    this.rotation += this.returning ? -0.2 : 0.2;
   }
 
   updateThrownSword(playerX: number, playerY: number): void {
@@ -126,6 +131,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (this.anims.isPlaying) this.anims.stop();
     this.disableBody(true, true);
     this.isBoomerang = false;
+    this.isBanana = false;
     this.isThrownSword = false;
     this.thrownSwordCyclesRemaining = 0;
     this.remainingRicochets = 0;

@@ -3,6 +3,7 @@ import { HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CON
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH, RUN_DURATION_MS, WORLD_SIZE } from '../config/gameConfig';
 import { Enemy } from '../entities/Enemy';
+import { BananaPeel } from '../entities/BananaPeel';
 import { CurrencyGem } from '../entities/CurrencyGem';
 import { HealthPotion } from '../entities/HealthPotion';
 import { LootChest } from '../entities/LootChest';
@@ -82,13 +83,28 @@ const WHIP_BUFF_AOE_RADIUS = 80;
  *  long uninterrupted streak could bank enough damage to one-shot the player on their next hit regardless of HP. */
 const AURA_DAMAGE_TAKEN_BONUS_CAP = 15;
 
+/** Fabri's banana-boomerang exclusive: ceiling on a single enemy's cumulative slow stack (see Enemy.addSlowStack) —
+ *  without this, an enemy hit enough times could be slowed to a near-standstill. */
+const BANANA_SLOW_CAP = 0.5;
+/** Fabri's banana-boomerang exclusive: chance, per enemy hit while the transform is active, to drop a banana peel
+ *  hazard near the player (see applyBananaSlow/spawnBananaPeelNearPlayer). */
+const BANANA_PEEL_SPAWN_CHANCE = 0.03;
+/** Banana peels land at a random point in this ring around the player, not at the struck enemy — per design, Fabri
+ *  is dropping them from his own belt as he fights, not leaving them at the impact site. */
+const BANANA_PEEL_MIN_RADIUS = 40;
+const BANANA_PEEL_MAX_RADIUS = 130;
+/** Peels despawn on their own if no enemy ever steps on one, so missed drops don't clutter the field forever. */
+const BANANA_PEEL_LIFETIME_MS = 12000;
+/** How long an enemy that steps on a peel is frozen in place — see Enemy.slipOnBanana. */
+const BANANA_PEEL_SLIP_DURATION_MS = 900;
+
 /** Espada's exclusive buff: was 4 swords (one per cardinal direction), now 3x that, evenly spaced around the full circle. */
 const THROWN_SWORD_DIRECTION_COUNT = 12;
 /** Each thrown sword now does 2 full out-and-back trips instead of 1 before despawning. */
 const THROWN_SWORD_CYCLES = 2;
 
 export class GameScene extends Phaser.Scene {
-  private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group; private chests!: Phaser.Physics.Arcade.Group; private healthPotions!: Phaser.Physics.Arcade.Group;
+  private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group; private chests!: Phaser.Physics.Arcade.Group; private healthPotions!: Phaser.Physics.Arcade.Group; private bananaPeels!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
   private elapsedMs = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
@@ -224,6 +240,7 @@ export class GameScene extends Phaser.Scene {
     this.gems = this.physics.add.group({ classType: CurrencyGem, maxSize: -1, runChildUpdate: false });
     this.chests = this.physics.add.group({ classType: LootChest, maxSize: 10, runChildUpdate: false });
     this.healthPotions = this.physics.add.group({ classType: HealthPotion, maxSize: 20, runChildUpdate: false });
+    this.bananaPeels = this.physics.add.group({ classType: BananaPeel, maxSize: 24, runChildUpdate: false });
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE).startFollow(this.player, true, 0.12, 0.12);
     this.cursors = this.input.keyboard!.createCursorKeys(); this.keys = this.input.keyboard!.addKeys('W,A,S,D,E,ESC,F9') as Record<string, Phaser.Input.Keyboard.Key>;
     this.mobileMode = this.isTouchDevice();
@@ -234,6 +251,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.gems, this.collectGem, undefined, this);
     this.physics.add.overlap(this.player, this.chests, this.collectChest, undefined, this);
     this.physics.add.overlap(this.player, this.healthPotions, this.collectHealthPotion, undefined, this);
+    this.physics.add.overlap(this.enemies, this.bananaPeels, this.bananaPeelHit, undefined, this);
     this.hud = new GameHud(this); this.updateBuildHud();
     this.updateHud();
     this.hud.setVisible(false);
@@ -319,7 +337,7 @@ export class GameScene extends Phaser.Scene {
       this.phaseBossTriggered = true;
       this.bossSystem.warn(this.bossCycle);
     }
-    this.player.updatePassiveEffects(delta); this.enemySpawner.update(delta, this.elapsedMs); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.updateHealthPotions(); this.bossSystem.updateArrows(); this.merchant.update(delta);
+    this.player.updatePassiveEffects(delta); this.enemySpawner.update(delta, this.elapsedMs); this.bossSystem.update(delta); this.updateEnemies(); this.updateRottenAuras(); this.updateNecromancerAttacks(); this.autoAttack(); this.updateMeleeWhirlwind(); this.updateThrownSwordBuff(); this.updateProjectiles(); this.updateSoulProjectiles(); this.updateGems(); this.updateChests(); this.updateHealthPotions(); this.updateBananaPeels(); this.bossSystem.updateArrows(); this.merchant.update(delta);
     this.player.updateRottenStatus(delta);
     if (this.player.health <= 0) this.finish(false);
     this.updateHud();
@@ -412,11 +430,21 @@ export class GameScene extends Phaser.Scene {
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
     const count = 1 + this.player.projectileExtraCount;
     const staffExecuteToken = this.staffExecuteTokenForAttack(weapon);
+    const isBoomerang = weapon.config.type === 'boomerang';
+    const isBanana = isBoomerang && this.isBananaTransformActive(weapon);
     let launched = false;
     this.projectileAngles(baseAngle, count).forEach((angle) => {
-      launched = this.launchProjectile(weapon, angle, weapon.config.type === 'boomerang', staffExecuteToken) || launched;
+      launched = this.launchProjectile(weapon, angle, isBoomerang, staffExecuteToken, isBanana) || launched;
     });
     if (launched) weapon.lastAttackAt = this.time.now;
+  }
+  /** Fabri's exclusive gate: same "upgradeCount + affinity" guardrail every other weapon exclusive uses (see
+   *  staffExecuteTokenForAttack's comment) — owning the boomerang without ranged affinity must not silently unlock
+   *  the transform just because upgradeCount (shared across all owned weapons) happens to have climbed high enough. */
+  private isBananaTransformActive(weapon: ActiveWeapon): boolean {
+    const transform = CHARACTERS[this.characterId].boomerangBananaTransform;
+    if (!transform || weapon.config.id !== 'boomerang') return false;
+    return weapon.upgradeCount >= transform.upgradeThreshold && this.affinityFamilies.has(weaponFamily(weapon.config));
   }
   private projectileAngles(baseAngle: number, count: number): number[] {
     const spread = Phaser.Math.DegToRad(30);
@@ -716,13 +744,13 @@ export class GameScene extends Phaser.Scene {
     const distance = Math.max(0, Math.min(...candidates.filter((candidate) => candidate > 0)));
     return new Phaser.Math.Vector2(start.x + direction.x * distance, start.y + direction.y * distance);
   }
-  private launchProjectile(weapon: ActiveWeapon, angle: number, isBoomerang: boolean, staffExecuteToken = 0): boolean {
+  private launchProjectile(weapon: ActiveWeapon, angle: number, isBoomerang: boolean, staffExecuteToken = 0, isBanana = false): boolean {
     let projectile = this.projectiles.getFirstDead(false) as Projectile | null;
     if (!projectile && this.projectiles.isFull()) return false;
     if (!projectile) { projectile = new Projectile(this); this.projectiles.add(projectile); }
     const range = weapon.config.range;
     const speed = weapon.config.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed;
-    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, weapon.config.baseDamage * this.player.damageMultiplier, speed, weapon.config.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range, 1 + this.player.projectileSizeBonus);
+    projectile.fire(this.player.x, this.player.y, this.player.x + Math.cos(angle) * range, this.player.y + Math.sin(angle) * range, weapon.config.baseDamage * this.player.damageMultiplier, speed, weapon.config.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs, WEAPON_CONFIG.pierces, this.player.projectileRicochetMax, this.time.now, isBoomerang, range, 1 + this.player.projectileSizeBonus, isBanana);
     projectile.speed = speed;
     projectile.range = range;
     projectile.weaponId = weapon.config.id;
@@ -797,7 +825,31 @@ export class GameScene extends Phaser.Scene {
   private updateGems(): void { this.gems.children.each((child) => { const gem = child as CurrencyGem; if (gem.active) gem.attract(this.player, this.player.pickupRange); return true; }); }
   private updateChests(): void { this.chests.children.each((child) => { const chest = child as LootChest; if (chest.active) chest.attract(this.player, this.player.pickupRange); return true; }); }
   private updateHealthPotions(): void { this.healthPotions.children.each((child) => { const potion = child as HealthPotion; if (potion.active) potion.attract(this.player, this.player.pickupRange); return true; }); }
-  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; const { amount, critical } = this.projectileDamage(projectile, enemy); this.damageEnemy(enemy, amount, projectile.weaponId, critical); this.triggerStaffExplosion(projectile, enemy); if (this.tryProjectileRicochet(projectile, enemy)) return; if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
+  private projectileHit(projectileObject: ArcadeColliderObject, enemyObject: ArcadeColliderObject): void { const projectile = projectileObject as unknown as Projectile; const enemy = enemyObject as unknown as Enemy; if (!projectile.active || !enemy.active || !projectile.canDamage(enemy)) return; const { amount, critical } = this.projectileDamage(projectile, enemy); this.damageEnemy(enemy, amount, projectile.weaponId, critical); if (projectile.isBanana) this.applyBananaSlow(enemy); this.triggerStaffExplosion(projectile, enemy); if (this.tryProjectileRicochet(projectile, enemy)) return; if (!projectile.isBoomerang) { if (projectile.remainingPierces <= 0) projectile.deactivate(); else projectile.remainingPierces -= 1; } }
+  private applyBananaSlow(enemy: Enemy): void {
+    const transform = CHARACTERS[this.characterId].boomerangBananaTransform;
+    if (!transform) return;
+    enemy.addSlowStack(transform.slowPercentPerHit, BANANA_SLOW_CAP);
+    if (Math.random() < BANANA_PEEL_SPAWN_CHANCE) this.spawnBananaPeelNearPlayer();
+  }
+  private spawnBananaPeelNearPlayer(): void {
+    let peel = this.bananaPeels.getFirstDead(false) as BananaPeel | null;
+    if (!peel && this.bananaPeels.isFull()) return;
+    if (!peel) { peel = new BananaPeel(this); this.bananaPeels.add(peel); }
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const distance = Phaser.Math.FloatBetween(BANANA_PEEL_MIN_RADIUS, BANANA_PEEL_MAX_RADIUS);
+    const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 20, WORLD_SIZE - 20);
+    const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, 20, WORLD_SIZE - 20);
+    peel.activate(x, y, this.time.now, BANANA_PEEL_LIFETIME_MS);
+  }
+  private bananaPeelHit(enemyObject: ArcadeColliderObject, peelObject: ArcadeColliderObject): void {
+    const enemy = enemyObject as unknown as Enemy;
+    const peel = peelObject as unknown as BananaPeel;
+    if (!enemy.active || !peel.active) return;
+    enemy.slipOnBanana(this.time.now, BANANA_PEEL_SLIP_DURATION_MS);
+    peel.deactivate();
+  }
+  private updateBananaPeels(): void { this.bananaPeels.children.each((child) => { const peel = child as BananaPeel; if (peel.active && this.time.now >= peel.expiresAt) peel.deactivate(); return true; }); }
   private projectileDamage(projectile: Projectile, enemy: Enemy): { amount: number; critical: boolean } {
     if (this.shouldExecuteWithStaff(projectile, enemy)) return { amount: enemy.health, critical: false };
     if (projectile.criticalChance > 0 && Math.random() < projectile.criticalChance) return { amount: projectile.damage * 2, critical: true };
@@ -1165,9 +1217,12 @@ export class GameScene extends Phaser.Scene {
     });
   }
   private updateBuildHud(): void {
-    const weaponEntries = this.weapons.map((weapon) => ({ textureKey: `weapon-${weapon.config.id}-icon`, count: 1 }));
+    const weaponEntries = this.weapons.map((weapon) => ({ textureKey: this.weaponIconKey(weapon), count: 1 }));
     const upgrades = [...this.selectedUpgradeCounts.entries()].map(([id, count]) => ({ textureKey: UPGRADE_ICON_KEYS[id] ?? 'upgrade-damage-icon', count }));
     this.hud.setBuild([...weaponEntries, ...upgrades]);
+  }
+  private weaponIconKey(weapon: ActiveWeapon): string {
+    return this.isBananaTransformActive(weapon) ? 'weapon-banana-icon' : `weapon-${weapon.config.id}-icon`;
   }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) this.showPauseScreen(); else this.resumeFromPause(); }
   private showPauseScreen(): void { this.pauseGameplay(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }

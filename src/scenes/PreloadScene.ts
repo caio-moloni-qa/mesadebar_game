@@ -33,6 +33,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('barbarian', new URL('../assets/characters/barbarian-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('mage', new URL('../assets/characters/mage-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('reliquia', new URL('../assets/characters/reliquia-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('fabri', new URL('../assets/characters/fabri-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('skeleton-sword', new URL('../assets/characters/skeleton-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('necromancer-wraith', new URL('../assets/characters/necromancer-wraith-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('apparition-wraith', new URL('../assets/characters/apparition-wraith-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
@@ -49,6 +50,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('weapon-boomerang-icon', new URL('../assets/weapons/boomerang-icon.png', import.meta.url).href);
     this.load.image('weapon-amulet-icon', new URL('../assets/weapons/aura-amulet-icon.png', import.meta.url).href);
     this.load.image('weapon-whip-icon', new URL('../assets/weapons/whip-icon.png', import.meta.url).href);
+    this.load.image('weapon-banana-icon', new URL('../assets/weapons/banana-boomerang-icon.png', import.meta.url).href);
+    this.load.image('banana-peel', new URL('../assets/weapons/banana-peel-icon.png', import.meta.url).href);
     this.load.image('gem', new URL('../assets/pickups/exp-crystal.png', import.meta.url).href);
     this.load.image('xp-orb', new URL('../assets/pickups/xp-orb.png', import.meta.url).href);
     // Cropped from the raw generation (loot-chest-icon.png) to a tight alpha content bbox — the source already
@@ -83,6 +86,7 @@ export class PreloadScene extends Phaser.Scene {
     this.createCharacterAnimations('barbarian');
     this.createCharacterAnimations('mage');
     this.createCharacterAnimations('reliquia');
+    this.createCharacterAnimations('fabri');
     this.createCharacterAnimations('skeleton-sword');
     this.createCharacterAnimations('necromancer-wraith');
     this.createCharacterAnimations('apparition-wraith');
