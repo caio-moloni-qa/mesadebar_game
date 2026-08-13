@@ -42,16 +42,18 @@ export class MenuScene extends Phaser.Scene {
     };
 
     addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x070910, 0.72).setDepth(10));
-    addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 1080, 540, 0x21182f).setStrokeStyle(3, 0xa888d9).setDepth(11));
+    addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 1200, 540, 0x21182f).setStrokeStyle(3, 0xa888d9).setDepth(11));
     addOverlay(this.add.text(GAME_WIDTH / 2, 116, 'ESCOLHA SEU PERSONAGEM', { fontFamily: TITLE_FONT_FAMILY, fontSize: '31px', color: '#ffe29a' }).setOrigin(0.5).setDepth(12));
 
     const cards: CharacterCard[] = [
       { locked: false, character: CHARACTERS.barbarian },
       { locked: false, character: CHARACTERS.mage },
-      { locked: false, character: CHARACTERS.reliquia }
+      { locked: false, character: CHARACTERS.reliquia },
+      { locked: false, character: CHARACTERS.fabri }
     ];
-    const startX = GAME_WIDTH / 2 - 330;
-    cards.forEach((card, index) => this.renderCharacterCard(card, startX + index * 330, addOverlay));
+    const spacing = 300;
+    const startX = GAME_WIDTH / 2 - ((cards.length - 1) * spacing) / 2;
+    cards.forEach((card, index) => this.renderCharacterCard(card, startX + index * spacing, addOverlay));
 
     const close = addOverlay(this.add.text(GAME_WIDTH / 2, 608, 'CANCELAR', { fontFamily: TITLE_FONT_FAMILY, fontSize: '20px', color: '#c9cfe2' }).setOrigin(0.5).setDepth(12).setInteractive({ useHandCursor: true }));
     close.on('pointerup', () => overlay.forEach((object) => object.destroy()));

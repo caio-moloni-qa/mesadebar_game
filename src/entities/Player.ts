@@ -196,7 +196,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   addProjectileSizeBonus(): void {
-    this.projectileSizeBonus += this.projectileSizeBonus === 0 ? 0.35 : 0.15;
+    this.projectileSizeBonus += this.projectileSizeBonus === 0 ? 0.21 : 0.09;
   }
 
   addAuraRadiusPercent(): void {

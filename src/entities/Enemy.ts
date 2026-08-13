@@ -50,6 +50,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   public rottenAuraSuppressed = false;
   private rottenAuraVisual?: Phaser.GameObjects.Arc;
   private nextRottenSmokeAt = 0;
+  /** Fabri's banana-boomerang exclusive: cumulative movement slow (0-1), never expires on its own — only cleared
+   *  when the enemy is deactivated (dies or gets recycled from the pool). See addSlowStack/effectiveMovementSpeed. */
+  private slowStackPercent = 0;
+  /** Fabri's banana-peel exclusive: while now < slipUntil, pursue() can't move this enemy — see slipOnBanana. */
+  private slipUntil = 0;
+  private slipTween?: Phaser.Tweens.Tween;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0, 'skeleton-sword');
@@ -76,6 +82,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.healthBarWidth = config.healthBarWidth ?? 72;
     this.nextSoulAttackAt = this.scene.time.now + (config.soulCooldownMs ?? 0);
     this.hitStunUntil = 0;
+    this.slowStackPercent = 0;
+    this.slipUntil = 0;
+    this.slipTween?.stop();
+    this.slipTween = undefined;
+    this.rotation = 0;
     this.shakeTween?.stop();
     this.setPosition(x, y);
     this.setTexture(this.animationTexture);
@@ -138,7 +149,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   pursue(target: Phaser.GameObjects.Components.Transform): void {
-    if (this.scene.time.now < this.hitStunUntil) {
+    if (this.scene.time.now < this.hitStunUntil || this.scene.time.now < this.slipUntil) {
       (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
       return;
     }
@@ -146,9 +157,33 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
       return;
     }
-    this.scene.physics.moveToObject(this, target, this.movementSpeed);
+    this.scene.physics.moveToObject(this, target, this.effectiveMovementSpeed());
     const direction = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y);
     if (direction.lengthSq() > 0) this.playWalkAnimation(direction.normalize());
+  }
+
+  /** Adds `percent` to this enemy's cumulative slow stack, clamped to `cap` — see slowStackPercent's doc comment. */
+  addSlowStack(percent: number, cap: number): void {
+    this.slowStackPercent = Math.min(cap, this.slowStackPercent + percent);
+  }
+
+  /** Fabri's banana-peel exclusive: freezes movement for `durationMs` and spins the sprite once for it, so a
+   *  slip visibly reads as a slip rather than the usual brief hit-stun flash. */
+  slipOnBanana(now: number, durationMs: number): void {
+    this.slipUntil = now + durationMs;
+    this.slipTween?.stop();
+    this.rotation = 0;
+    this.slipTween = this.scene.tweens.add({
+      targets: this,
+      rotation: Math.PI * 2 * (Math.random() < 0.5 ? 1 : -1),
+      duration: durationMs,
+      ease: 'Cubic.Out',
+      onComplete: () => { this.rotation = 0; this.slipTween = undefined; }
+    });
+  }
+
+  private effectiveMovementSpeed(): number {
+    return this.movementSpeed * (1 - this.slowStackPercent);
   }
 
   pauseMovement(): void {
@@ -187,6 +222,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.rottenAuraVisual = undefined;
     this.clearTint();
     this.hitStunUntil = 0;
+    this.slowStackPercent = 0;
+    this.slipUntil = 0;
+    this.slipTween?.stop();
+    this.slipTween = undefined;
+    this.rotation = 0;
     this.healthBarWidth = 72;
     this.healthBarBack?.destroy();
     this.healthBarBack = undefined;

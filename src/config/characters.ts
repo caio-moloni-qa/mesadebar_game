@@ -1,4 +1,4 @@
-export type CharacterId = 'barbarian' | 'mage' | 'reliquia';
+export type CharacterId = 'barbarian' | 'mage' | 'reliquia' | 'fabri';
 export type PreferredWeaponId = 'staff' | 'sword' | 'boomerang' | 'amulet';
 
 export interface CharacterConfig {
@@ -21,6 +21,11 @@ export interface CharacterConfig {
   lowHealthAttackSpeedBonus?: number;
   /** "Transforma quaisquer amuletos em relíquias": replaces the Relíquia Divina's own base stats for this character, regardless of when the amulet was acquired (starting weapon or a mid-run extra-weapon offer). */
   auraWeaponOverrides?: { baseDamage: number; cooldown: number; range: number };
+  /** Fabri's exclusive: once the Bumerangue Rúnico reaches `upgradeThreshold` upgrades (+ ranged affinity, same
+   *  guardrail every other weapon exclusive uses), it permanently transforms into bananas — same projectile family,
+   *  new visuals, and every hit stacks `slowPercentPerHit` of cumulative slow onto the enemy struck (see
+   *  GameScene.applyBananaSlow / Enemy.addSlowStack). */
+  boomerangBananaTransform?: { upgradeThreshold: number; slowPercentPerHit: number };
 }
 
 export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
@@ -84,5 +89,25 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     preferredWeaponId: 'amulet',
     startingWeaponUpgradeChoices: 3,
     auraWeaponOverrides: { baseDamage: 6.75, cooldown: 1000, range: 80 }
+  },
+  fabri: {
+    id: 'fabri',
+    name: 'Fabri',
+    texture: 'fabri',
+    description: 'Macaco guerreiro blindado, cinto cheio de bananas e pontaria certeira com o bumerangue.',
+    maxHealth: 210,
+    movementSpeed: 200,
+    damageMultiplier: 1,
+    attackSpeedMultiplier: 1.05,
+    pickupRange: 100,
+    armor: 1,
+    advantages: [
+      'Bumerangue Rúnico: 3 melhorias iniciais',
+      'Aos 10 upgrades, o bumerangue vira banana: lentidão acumulativa de 1% por acerto',
+      '+20 de velocidade de movimento'
+    ],
+    preferredWeaponId: 'boomerang',
+    startingWeaponUpgradeChoices: 3,
+    boomerangBananaTransform: { upgradeThreshold: 10, slowPercentPerHit: 0.01 }
   }
 };
