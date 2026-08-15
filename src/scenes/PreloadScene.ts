@@ -1,11 +1,15 @@
 import Phaser from 'phaser';
-import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
+import { FONT_FAMILY, MANUSCRIPT_FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() { super('preload'); }
   preload(): void {
-    this.load.image('grass-ruins-ground', new URL('../assets/backgrounds/background_greenfield.png', import.meta.url).href);
+    this.load.image('grass-ruins-ground', new URL('../assets/environments/background_greenfield.png', import.meta.url).href);
     this.load.image('mist', new URL('../assets/environments/mist.png', import.meta.url).href);
+    // Menu title screen: side-view sky/ground backdrop (MenuScene.createTitleScene) — both already tile seamlessly
+    // horizontally as generated, verified with a 2x1 self-tile check before wiring in.
+    this.load.image('menu-sky', new URL('../assets/environments/sky_background.png', import.meta.url).href);
+    this.load.image('menu-ground', new URL('../assets/environments/grass_ground.png', import.meta.url).href);
     this.load.image('merchant-store-floor', new URL('../assets/environments/merchant_store_floor.png', import.meta.url).href);
     // merchant_table.png has a lot of transparent padding around the actual table art (1024x1536 canvas, content
     // only ~324x1292) — merchant_table_cropped.png is a tightly-cropped derivative so setDisplaySize scales the
@@ -19,26 +23,34 @@ export class PreloadScene extends Phaser.Scene {
     // Boss-wave end/continue portals (GameScene.onBossWaveCleared): same spin animation as the merchant portal but
     // without its ornate gold ring border, tinted per-purpose (blue = end run, green = continue) via setTint().
     this.load.spritesheet('portal-borderless', new URL('../assets/environments/portal_borderless_sheet.png', import.meta.url).href, { frameWidth: 384, frameHeight: 427 });
-    // merchant_sheet.png is cropped from the raw generation (merchant.png) to a shared per-column window — the
-    // 4 frames' vertical alignment came out essentially perfect on its own, so no per-frame content-bbox cropping
-    // was needed here (unlike the door), just a common crop window to trim the surrounding soft glow.
-    this.load.spritesheet('merchant-character', new URL('../assets/characters/merchant_sheet.png', import.meta.url).href, { frameWidth: 384, frameHeight: 362 });
-    this.load.image('merchant-divine-blessing-icon', new URL('../assets/upgrades/merchant-divine-blessing-icon.png', import.meta.url).href);
-    this.load.image('merchant-arcane-curse-icon', new URL('../assets/upgrades/merchant-arcane-curse-icon.png', import.meta.url).href);
-    this.load.image('merchant-heal-potion-icon', new URL('../assets/upgrades/merchant-heal-potion-icon.png', import.meta.url).href);
-    this.load.image('merchant-sharp-blade-icon', new URL('../assets/upgrades/merchant-sharp-blade-icon.png', import.meta.url).href);
-    this.load.image('merchant-swift-boots-icon', new URL('../assets/upgrades/merchant-swift-boots-icon.png', import.meta.url).href);
-    this.load.image('merchant-affinity-tome-icon', new URL('../assets/upgrades/merchant-affinity-tome-icon.png', import.meta.url).href);
-    this.load.image('merchant-vitality-elixir-icon', new URL('../assets/upgrades/merchant-vitality-elixir-icon.png', import.meta.url).href);
-    this.load.spritesheet('barbarian', new URL('../assets/characters/barbarian-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('mage', new URL('../assets/characters/mage-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('reliquia', new URL('../assets/characters/reliquia-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('fabri', new URL('../assets/characters/fabri-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('skeleton-sword', new URL('../assets/characters/skeleton-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('necromancer-wraith', new URL('../assets/characters/necromancer-wraith-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('apparition-wraith', new URL('../assets/characters/apparition-wraith-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('super-skeleton', new URL('../assets/characters/super-skeleton-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('final-boss', new URL('../assets/characters/final-boss-walk-sheet.png', import.meta.url).href, { frameWidth: 192, frameHeight: 192 });
+    // merchant-sheet.png (362x384 per frame, 4 frames) — only frame 0 is used (see MerchantSystem.buildMerchantShop):
+    // it's the only one with a fully transparent backdrop, frames 1-3 have a baked-in vignette glow behind the
+    // character that would show as a flashing box if animated, so this stays a static single-frame display.
+    this.load.spritesheet('merchant-character', new URL('../assets/characters/npcs/merchant-sheet.png', import.meta.url).href, { frameWidth: 362, frameHeight: 384 });
+    this.load.image('merchant-divine-blessing-icon', new URL('../assets/upgrades/merchant/merchant-divine-blessing-icon.png', import.meta.url).href);
+    this.load.image('merchant-arcane-curse-icon', new URL('../assets/upgrades/merchant/merchant-arcane-curse-icon.png', import.meta.url).href);
+    this.load.image('merchant-heal-potion-icon', new URL('../assets/upgrades/merchant/merchant-heal-potion-icon.png', import.meta.url).href);
+    this.load.image('merchant-sharp-blade-icon', new URL('../assets/upgrades/merchant/merchant-sharp-blade-icon.png', import.meta.url).href);
+    this.load.image('merchant-swift-boots-icon', new URL('../assets/upgrades/merchant/merchant-swift-boots-icon.png', import.meta.url).href);
+    this.load.image('merchant-affinity-tome-icon', new URL('../assets/upgrades/merchant/merchant-affinity-tome-icon.png', import.meta.url).href);
+    this.load.image('merchant-vitality-elixir-icon', new URL('../assets/upgrades/merchant/merchant-vitality-elixir-icon.png', import.meta.url).href);
+    this.load.spritesheet('barbarian', new URL('../assets/characters/players/barbarian-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.image('barbarian-card-idle', new URL('../assets/characters/players/barbarian-card-idle.png', import.meta.url).href);
+    this.load.image('barbarian-card-hover', new URL('../assets/characters/players/barbarian-card-hover.png', import.meta.url).href);
+    this.load.spritesheet('mage', new URL('../assets/characters/players/mage-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.image('mage-card-idle', new URL('../assets/characters/players/mage-card-idle.png', import.meta.url).href);
+    this.load.image('mage-card-hover', new URL('../assets/characters/players/mage-card-hover.png', import.meta.url).href);
+    this.load.spritesheet('reliquia', new URL('../assets/characters/players/reliquia-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.image('reliquia-card-idle', new URL('../assets/characters/players/reliquia-card-idle.png', import.meta.url).href);
+    this.load.image('reliquia-card-hover', new URL('../assets/characters/players/reliquia-card-hover.png', import.meta.url).href);
+    this.load.spritesheet('fabri', new URL('../assets/characters/players/fabri-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.image('fabri-card-idle', new URL('../assets/characters/players/fabri-card-idle.png', import.meta.url).href);
+    this.load.image('fabri-card-hover', new URL('../assets/characters/players/fabri-card-hover.png', import.meta.url).href);
+    this.load.spritesheet('skeleton-sword', new URL('../assets/characters/enemies/skeleton-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('necromancer-wraith', new URL('../assets/characters/enemies/necromancer-wraith-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('apparition-wraith', new URL('../assets/characters/enemies/apparition-wraith-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('super-skeleton', new URL('../assets/characters/enemies/super-skeleton-walk-sheet.png', import.meta.url).href, { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('final-boss', new URL('../assets/characters/enemies/final-boss-walk-sheet.png', import.meta.url).href, { frameWidth: 192, frameHeight: 192 });
     this.load.svg('game-icon', new URL('../assets/icons/game-icon.svg', import.meta.url).href, { width: 192, height: 192 });
     this.load.image('weapon-staff-icon', new URL('../assets/weapons/staff-icon.png', import.meta.url).href);
     this.load.image('weapon-sword-icon', new URL('../assets/weapons/sword-icon.png', import.meta.url).href);
@@ -58,25 +70,38 @@ export class PreloadScene extends Phaser.Scene {
     // has a clean, softly-feathered silhouette (glow + contact shadow baked in, not a big opaque halo), so no
     // fixed-window trick was needed here.
     this.load.image('loot-chest', new URL('../assets/pickups/loot-chest-icon-cropped.png', import.meta.url).href);
-    this.load.image('upgrade-damage-icon', new URL('../assets/upgrades/damage-icon.png', import.meta.url).href);
-    this.load.image('upgrade-cooldown-icon', new URL('../assets/upgrades/cooldown-icon.png', import.meta.url).href);
-    this.load.image('upgrade-speed-icon', new URL('../assets/upgrades/speed-icon.png', import.meta.url).href);
-    this.load.image('upgrade-life-steal-icon', new URL('../assets/upgrades/life-steal-icon.png', import.meta.url).href);
-    this.load.image('upgrade-colossus-arms-icon', new URL('../assets/upgrades/colossus-arms-icon.png', import.meta.url).href);
-    this.load.image('upgrade-chained-fury-icon', new URL('../assets/upgrades/chained-fury-icon.png', import.meta.url).href);
-    this.load.image('upgrade-whirlwind-attack-icon', new URL('../assets/upgrades/whirlwind-attack-icon.png', import.meta.url).href);
-    this.load.image('upgrade-arcane-blessing-icon', new URL('../assets/upgrades/arcane-blessing-icon.png', import.meta.url).href);
-    this.load.image('upgrade-arcane-bounce-icon', new URL('../assets/upgrades/arcane-bounce-icon.png', import.meta.url).href);
-    this.load.image('upgrade-wide-bolt-icon', new URL('../assets/upgrades/wide-bolt-icon.png', import.meta.url).href);
-    this.load.image('upgrade-aura-radius-icon', new URL('../assets/upgrades/aura-radius-icon.png', import.meta.url).href);
-    this.load.image('upgrade-aura-damage-icon', new URL('../assets/upgrades/aura-damage-icon.png', import.meta.url).href);
-    this.load.image('upgrade-aura-tick-speed-icon', new URL('../assets/upgrades/aura-tick-speed-icon.png', import.meta.url).href);
+    this.load.image('upgrade-damage-icon', new URL('../assets/upgrades/core/damage-icon.png', import.meta.url).href);
+    this.load.image('upgrade-cooldown-icon', new URL('../assets/upgrades/core/cooldown-icon.png', import.meta.url).href);
+    this.load.image('upgrade-speed-icon', new URL('../assets/upgrades/core/speed-icon.png', import.meta.url).href);
+    this.load.image('upgrade-life-steal-icon', new URL('../assets/upgrades/core/life-steal-icon.png', import.meta.url).href);
+    this.load.image('upgrade-colossus-arms-icon', new URL('../assets/upgrades/core/colossus-arms-icon.png', import.meta.url).href);
+    this.load.image('upgrade-chained-fury-icon', new URL('../assets/upgrades/core/chained-fury-icon.png', import.meta.url).href);
+    this.load.image('upgrade-whirlwind-attack-icon', new URL('../assets/upgrades/core/whirlwind-attack-icon.png', import.meta.url).href);
+    this.load.image('upgrade-arcane-blessing-icon', new URL('../assets/upgrades/core/arcane-blessing-icon.png', import.meta.url).href);
+    this.load.image('upgrade-arcane-bounce-icon', new URL('../assets/upgrades/core/arcane-bounce-icon.png', import.meta.url).href);
+    this.load.image('upgrade-wide-bolt-icon', new URL('../assets/upgrades/core/wide-bolt-icon.png', import.meta.url).href);
+    this.load.image('upgrade-aura-radius-icon', new URL('../assets/upgrades/core/aura-radius-icon.png', import.meta.url).href);
+    this.load.image('upgrade-aura-damage-icon', new URL('../assets/upgrades/core/aura-damage-icon.png', import.meta.url).href);
+    this.load.image('upgrade-aura-tick-speed-icon', new URL('../assets/upgrades/core/aura-tick-speed-icon.png', import.meta.url).href);
     this.load.spritesheet('bolt', new URL('../assets/attacks/bolt-lightning-sphere-sheet.png', import.meta.url).href, { frameWidth: 24, frameHeight: 24 });
     this.load.spritesheet('sword-air-slash', new URL('../assets/attacks/sword-air-slash-sheet.png', import.meta.url).href, { frameWidth: 128, frameHeight: 128 });
     this.load.image('soul-projectile', new URL('../assets/attacks/soul-skull-projectile.png', import.meta.url).href);
-    this.load.image('hp-icon', new URL('../assets/ui/hp-icon.png', import.meta.url).href);
-    this.load.image('hp-bar-border', new URL('../assets/ui/hp-bar-border.png', import.meta.url).href);
-    this.load.image('exp-bar-border', new URL('../assets/ui/exp-bar-border.png', import.meta.url).href);
+    this.load.image('hp-icon', new URL('../assets/ui/hud/hp-icon.png', import.meta.url).href);
+    this.load.image('hp-bar-border', new URL('../assets/ui/hud/hp-bar-border.png', import.meta.url).href);
+    this.load.image('exp-bar-border', new URL('../assets/ui/hud/exp-bar-border.png', import.meta.url).href);
+    // Wood/brass HUD chrome (see config/theme.ts THEME_ASSETS for the 9-slice insets) — replaces the old flat
+    // purple rectangles across every panel/button/badge in the game.
+    this.load.image('ui-panel-wood', new URL('../assets/ui/theme/wood_plank_background.png', import.meta.url).href);
+    this.load.image('ui-upgrade-card-panel', new URL('../assets/ui/theme/upgrade_card_panel_v2.png', import.meta.url).href);
+    this.load.image('ui-button-wood', new URL('../assets/ui/theme/button_cta.png', import.meta.url).href);
+    this.load.image('ui-badge-wood', new URL('../assets/ui/theme/circular_badge.png', import.meta.url).href);
+    // Menu title-screen side panel only (see MenuScene.createSidePanel) — a self-contained scroll shape sized to
+    // its own native aspect ratio, not stretched/9-sliced like the other wood chrome.
+    this.load.image('ui-parchment-scroll', new URL('../assets/ui/menu/parchment_initial_screen_v2.png', import.meta.url).href);
+    this.load.image('ui-game-title', new URL('../assets/ui/menu/venivium_game_title.png', import.meta.url).href);
+    // Character-select full-screen backdrop (MenuScene.showCharacterSelector) — native 1672x941 is already
+    // ~GAME_WIDTH/GAME_HEIGHT's own aspect ratio, so it displays at 1280x720 with no stretching.
+    this.load.image('ui-character-select-parchment', new URL('../assets/ui/menu/parchment_character_selector_v2.png', import.meta.url).href);
     this.load.spritesheet('boss-shield-bolt', new URL('../assets/effects/boss-shield-bolt-sheet.png', import.meta.url).href, { frameWidth: 64, frameHeight: 64 });
     this.load.image('aura-bolt-3', new URL('../assets/effects/aura-bolt-3.png', import.meta.url).href);
   }
@@ -171,7 +196,8 @@ export class PreloadScene extends Phaser.Scene {
     if (!document.fonts) return;
     await Promise.all([
       document.fonts.load(`16px ${FONT_FAMILY}`),
-      document.fonts.load(`16px ${TITLE_FONT_FAMILY}`)
+      document.fonts.load(`16px ${TITLE_FONT_FAMILY}`),
+      document.fonts.load(`16px ${MANUSCRIPT_FONT_FAMILY}`)
     ]);
     await document.fonts.ready;
   }

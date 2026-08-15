@@ -52,6 +52,14 @@ Asking for "seamless edges" in the prompt is necessary but not sufficient — im
    - The image's outer edges are never touched by this process — they now correspond to what used to be the middle of the original image, which was never a wrap boundary and needs no repair.
 3. Re-run the 2x2 tile test after repair to confirm the fix actually helped before wiring the asset into the game.
 
+## Self-Contained Panel/Scroll Backdrops
+
+Some "backgrounds" aren't tileable environment art at all — they're a single self-contained shaped asset meant to fill one exact screen region (a parchment scroll side panel, a full-screen character-select backdrop, a decorative frame). These follow different rules than tileable textures:
+
+- **Generate at the target region's own aspect ratio**, computed before writing the prompt, so the asset displays at its native proportions (`setDisplaySize` to that same ratio) instead of stretching to fill an arbitrary rectangle.
+- **If the asset must fill its region completely with no gaps** (e.g. a full-screen backdrop), explicitly require the artwork to extend flush to all four canvas edges with zero border/margin — a generator will often leave a vignette or padding around the "subject" by default, which then shows as a visible gap or mismatched-color margin once placed at the target size.
+- **Request genuine alpha transparency, not a baked-in solid color, for anything with an irregular silhouette** (scroll dowels with rounded finials, a beveled-corner card) that will sit over other content — read the actual alpha channel at the shape's outer corners to confirm (same caveat as the character/upgrade skills: a viewer can render alpha=0 as a solid gray/black fill that looks opaque at a glance).
+
 ## Examples
 
 User: "I want a grass background with 1920x1080 pixel shape"

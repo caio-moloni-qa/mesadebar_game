@@ -20,6 +20,8 @@ import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { GameHud } from '../ui/GameHud';
 import { CHARACTERS } from '../config/characters';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../config/weapons';
+import { THEME, THEME_ASSETS, THEME_CSS, THEME_TEXT } from '../config/theme';
+import { createTextButton, createUpgradeCardPanel } from '../ui/uiFactory';
 
 type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile;
 interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; playerTexture?: string; }
@@ -48,7 +50,7 @@ interface StartingUpgradeSnapshot {
 /** The single center-screen card used by the chest "slot machine" roll — see playChestRollAnimation. */
 interface ChestRollCard {
   title: Phaser.GameObjects.Text;
-  card: Phaser.GameObjects.Rectangle;
+  card: Phaser.GameObjects.Image;
   icon: Phaser.GameObjects.Image;
   name: Phaser.GameObjects.Text;
   description: Phaser.GameObjects.Text;
@@ -361,8 +363,8 @@ export class GameScene extends Phaser.Scene {
   private createMobileControls(): void {
     const x = 120;
     const y = GAME_HEIGHT - 120;
-    this.add.circle(x, y, 88, 0x111827, 0.48).setStrokeStyle(4, 0xb7a3e5, 0.62).setScrollFactor(0).setDepth(20);
-    this.joystickKnob = this.add.circle(x, y, 37, 0x8568c3, 0.82).setStrokeStyle(3, 0xf2eaff, 0.8).setScrollFactor(0).setDepth(21);
+    this.add.circle(x, y, 88, 0x111827, 0.48).setStrokeStyle(4, THEME.border, 0.62).setScrollFactor(0).setDepth(20);
+    this.joystickKnob = this.add.circle(x, y, 37, THEME.joystickKnob, 0.82).setStrokeStyle(3, THEME.roundelBorder, 0.8).setScrollFactor(0).setDepth(21);
     this.joystickZone = this.add.zone(x, y, 220, 220).setScrollFactor(0).setDepth(22).setInteractive();
     this.joystickZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.paused || this.ended || this.levelPending || this.chestRollActive || this.joystickPointerId !== null) return;
@@ -373,7 +375,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerup', this.releaseJoystick, this);
     this.input.on('pointerupoutside', this.releaseJoystick, this);
     this.input.addPointer(2);
-    this.add.text(x, y + 118, 'MOVER', { fontFamily: FONT_FAMILY, fontSize: '14px', color: '#e9e0ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(21).setAlpha(0.8);
+    this.add.text(x, y + 118, 'MOVER', { fontFamily: FONT_FAMILY, fontSize: '14px', color: THEME_TEXT.cream }).setOrigin(0.5).setScrollFactor(0).setDepth(21).setAlpha(0.8);
   }
   private updateJoystick(pointer: Phaser.Input.Pointer): void {
     if (pointer.id !== this.joystickPointerId || !this.joystickKnob) return;
@@ -1038,10 +1040,10 @@ export class GameScene extends Phaser.Scene {
     const x = GAME_WIDTH / 2;
     const y = GAME_HEIGHT / 2;
     const title = this.add.text(x, y - 168, 'Baú Encontrado!', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(35);
-    const card = this.add.rectangle(x, y, 240, 280, 0x49326e, 0.96).setStrokeStyle(4, 0xa888d9).setScrollFactor(0).setDepth(35);
+    const card = createUpgradeCardPanel(this, x, y, 240, 280).setScrollFactor(0).setDepth(35);
     const icon = this.add.image(x, y - 68, 'upgrade-damage-icon').setDisplaySize(76, 76).setScrollFactor(0).setDepth(36);
-    const name = this.add.text(x, y + 8, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '19px', color: '#fff0c2', align: 'center', wordWrap: { width: 200 } }).setOrigin(0.5).setScrollFactor(0).setDepth(36);
-    const description = this.add.text(x, y + 76, '', { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 195 } }).setOrigin(0.5).setScrollFactor(0).setDepth(36);
+    const name = this.add.text(x, y + 8, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '19px', color: THEME_TEXT.gold, align: 'center', wordWrap: { width: 200 } }).setOrigin(0.5).setScrollFactor(0).setDepth(36);
+    const description = this.add.text(x, y + 76, '', { fontFamily: FONT_FAMILY, fontSize: '11px', color: THEME_TEXT.cream, align: 'center', wordWrap: { width: 195 } }).setOrigin(0.5).setScrollFactor(0).setDepth(36);
     return { title, card, icon, name, description };
   }
   private setChestRollCardContent(card: ChestRollCard, upgrade: Upgrade): void {
@@ -1062,7 +1064,8 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(stepDelaysMs[index], () => this.runChestRollStep(card, sequence, stepDelaysMs, index + 1, chestX, chestY));
   }
   private finishChestRoll(card: ChestRollCard, upgrade: Upgrade, chestX: number, chestY: number): void {
-    card.card.setStrokeStyle(5, 0xfff3b0);
+    card.card.setTint(0xfff3b0);
+    this.time.delayedCall(260, () => card.card.clearTint());
     const baseIconSize = 76;
     this.tweens.add({ targets: card.icon, displayWidth: baseIconSize * 1.25, displayHeight: baseIconSize * 1.25, duration: 180, yoyo: true, ease: 'Back.Out' });
     this.tweens.add({ targets: card.card, scaleX: 1.05, scaleY: 1.05, duration: 180, yoyo: true, ease: 'Back.Out' });
@@ -1095,7 +1098,7 @@ export class GameScene extends Phaser.Scene {
       .sort(() => Math.random() - 0.5)
       .slice(0, this.startingUpgradeChoicesTotal);
     const pool = this.startingUpgradePool;
-    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
+    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, THEME.overlayDim, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 160, this.startingWeaponUpgradesTitle(character.name), { fontFamily: TITLE_FONT_FAMILY, fontSize: '30px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
     const spacing = 230;
@@ -1139,12 +1142,12 @@ export class GameScene extends Phaser.Scene {
     return `${characterName}: escolha ${this.startingUpgradeChoicesTotal} melhorias iniciais (restam ${this.startingUpgradeChoicesRemaining})`;
   }
   private startingUpgradeCard(upgrade: Upgrade, x: number, picks: Map<string, number>, title: Phaser.GameObjects.Text): void {
-    const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const card = createUpgradeCardPanel(this, x, 410, 200, 220).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
     const iconKey = UPGRADE_ICON_KEYS[upgrade.id] ?? 'upgrade-damage-icon';
     const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
-    const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const badge = this.add.text(x + 84, 306, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffffff', backgroundColor: '#8a5cf6', padding: { x: 6, y: 2 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33).setVisible(false);
+    const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: THEME_TEXT.gold, align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '11px', color: THEME_TEXT.cream, align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const badge = this.add.text(x + 84, 306, '', { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: THEME_TEXT.cream, backgroundColor: THEME_CSS.buttonBg, padding: { x: 6, y: 2 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33).setVisible(false);
     this.levelOverlay.push(card, icon, name, description, badge);
     card.on('pointerup', () => {
       if (this.startingUpgradeChoicesRemaining <= 0) return;
@@ -1171,7 +1174,7 @@ export class GameScene extends Phaser.Scene {
   }
   private showUpgradeSelection(titleText: string, onSelect: () => void, amount = 3, extraWeaponOffer: WeaponConfig | null = null): void {
     this.pauseGameplay();
-    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
+    const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, THEME.overlayDim, 0.84).setScrollFactor(0).setDepth(30);
     const title = this.add.text(GAME_WIDTH / 2, 190, titleText, { fontFamily: TITLE_FONT_FAMILY, fontSize: '32px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.levelOverlay = [veil, title];
     const secondaryWeapon = this.weapons[1];
@@ -1197,16 +1200,18 @@ export class GameScene extends Phaser.Scene {
     if (candidates.length === 0) return null;
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
-  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = this.add.rectangle(x, 410, 200, 220, 0x49326e).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff0c2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; }); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.resumeGameplay(); this.processExperience(); } }); }
+  private upgradeCard(upgrade: Upgrade, x: number, onSelect?: () => void): void { const card = createUpgradeCardPanel(this, x, 410, 200, 220).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true }); const iconKey = UPGRADE_ICON_KEYS[upgrade.id]; const icon = this.add.image(x, 350, iconKey).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32); const name = this.add.text(x, 407, upgrade.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: THEME_TEXT.gold, align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); const description = this.add.text(x, 468, upgrade.description, { fontFamily: FONT_FAMILY, fontSize: '11px', color: THEME_TEXT.cream, align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32); this.levelOverlay.push(card, icon, name, description); card.on('pointerup', () => { upgrade.apply(this.player); this.weapons.forEach((activeWeapon) => { activeWeapon.upgradeCount += 1; }); this.selectedUpgradeCounts.set(upgrade.id, (this.selectedUpgradeCounts.get(upgrade.id) ?? 0) + 1); this.updateBuildHud(); this.levelOverlay.forEach((object) => object.destroy()); this.levelOverlay = []; if (onSelect) onSelect(); else { this.levelPending = false; this.resumeGameplay(); this.processExperience(); } }); }
   private extraWeaponCard(weapon: WeaponConfig, x: number, onSelect?: () => void): void {
-    const card = this.add.rectangle(x, 410, 200, 220, 0x6b4d10).setStrokeStyle(3, 0xffd868).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    // Same ornate card art as the upgrade cards, but tinted golden-yellow so the bonus-weapon offer visually
+    // stands out from the regular wood-brown upgrade choices sitting right next to it.
+    const card = createUpgradeCardPanel(this, x, 410, 200, 220).setTint(0xffd24d).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
     const banner = this.add.text(x, 314, 'ARMA EXTRA!', { fontFamily: TITLE_FONT_FAMILY, fontSize: '14px', color: '#3a2400', backgroundColor: '#ffd868', padding: { x: 8, y: 3 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33);
     const icon = this.add.image(x, 358, `weapon-${weapon.id}-icon`).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
-    const name = this.add.text(x, 407, weapon.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff3d2', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const description = this.add.text(x, 468, weapon.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#fff0d2', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const name = this.add.text(x, 407, weapon.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#ffffff', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32).setStroke('#3a2400', 3);
+    const description = this.add.text(x, 468, weapon.description, { fontFamily: FONT_FAMILY, fontSize: '11px', color: '#ffffff', align: 'center', wordWrap: { width: 165 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32).setStroke('#3a2400', 2);
     this.levelOverlay.push(card, banner, icon, name, description);
-    card.on('pointerover', () => card.setFillStyle(0x86611a));
-    card.on('pointerout', () => card.setFillStyle(0x6b4d10));
+    card.on('pointerover', () => card.setTint(0xffe488));
+    card.on('pointerout', () => card.setTint(0xffd24d));
     card.on('pointerup', () => {
       this.weapons.push(this.createActiveWeapon(weapon));
       this.syncDivineRelicFeedback();
@@ -1225,8 +1230,11 @@ export class GameScene extends Phaser.Scene {
     return this.isBananaTransformActive(weapon) ? 'weapon-banana-icon' : `weapon-${weapon.config.id}-icon`;
   }
   private togglePause(): void { this.paused = !this.paused; if (this.paused) this.showPauseScreen(); else this.resumeFromPause(); }
-  private showPauseScreen(): void { this.pauseGameplay(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x080a10, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 420, 300, 0x21182f, 0.96).setStrokeStyle(3, 0xa888d9).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
-  private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void { const button = addOverlay(this.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(27).setInteractive({ useHandCursor: true })); button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' })); button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' })); button.on('pointerup', action); }
+  // Parchment modal (same texture as the menu's scroll panels) instead of the plain wood tile — sized to the
+  // art's own aspect ratio (420 wide -> 525 tall) rather than a stretched 420x300, which distorted it badly.
+  // Dark ink title text, since parchment is light and gold/cream (the dark-wood convention) has poor contrast on it.
+  private showPauseScreen(): void { this.pauseGameplay(); this.destroyPauseOverlay(); const addOverlay = <T extends Phaser.GameObjects.GameObject>(object: T): T => { this.pauseOverlay.push(object); return object; }; addOverlay(this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, THEME.overlayDim, 0.72).setScrollFactor(0).setDepth(25)); addOverlay(this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, THEME_ASSETS.parchmentTexture).setDisplaySize(420, 420 / THEME_ASSETS.parchmentAspect).setScrollFactor(0).setDepth(26)); addOverlay(this.add.text(GAME_WIDTH / 2, 280, 'PAUSADO', { fontFamily: TITLE_FONT_FAMILY, fontSize: '44px', color: THEME_TEXT.ink }).setOrigin(0.5).setScrollFactor(0).setDepth(27)); this.pauseButton('CONTINUAR', 370, () => this.togglePause(), addOverlay); this.pauseButton('VOLTAR AO MENU', 445, () => { this.paused = false; this.destroyPauseOverlay(); this.scene.start('menu'); }, addOverlay); }
+  private pauseButton(label: string, y: number, action: () => void, addOverlay: <T extends Phaser.GameObjects.GameObject>(object: T) => T): void { const button = addOverlay(createTextButton(this, GAME_WIDTH / 2, y, label, { fontSize: '22px' })).setScrollFactor(0).setDepth(27); button.on('pointerup', action); }
   private resumeFromPause(): void { this.resumeGameplay(); this.destroyPauseOverlay(); }
   private destroyPauseOverlay(): void { this.pauseOverlay.forEach((object) => object.destroy()); this.pauseOverlay = []; }
   /** All bosses in the current wave are dead — instead of ending the run immediately, offer a choice: end here,
@@ -1308,6 +1316,6 @@ export class GameScene extends Phaser.Scene {
     this.portalPrompt?.destroy();
     this.portalPrompt = undefined;
   }
-  private finish(victory: boolean): void { this.ended = true; this.pauseGameplay(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, 0x070910, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
-  private resultButton(label: string, y: number, action: () => void): void { const button = this.add.text(640, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '21px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 20, y: 10 } }).setOrigin(0.5).setScrollFactor(0).setDepth(41).setInteractive({ useHandCursor: true }); button.on('pointerup', action); }
+  private finish(victory: boolean): void { this.ended = true; this.pauseGameplay(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, THEME.overlayDim, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
+  private resultButton(label: string, y: number, action: () => void): void { const button = createTextButton(this, 640, y, label, { fontSize: '21px' }).setScrollFactor(0).setDepth(41); button.on('pointerup', action); }
 }

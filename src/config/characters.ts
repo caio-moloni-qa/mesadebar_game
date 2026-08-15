@@ -26,6 +26,13 @@ export interface CharacterConfig {
    *  new visuals, and every hit stacks `slowPercentPerHit` of cumulative slow onto the enemy struck (see
    *  GameScene.applyBananaSlow / Enemy.addSlowStack). */
   boomerangBananaTransform?: { upgradeThreshold: number; slowPercentPerHit: number };
+  /** Full-bleed character-select card art (see MenuScene.renderCharacterCard) — replaces the plain wood
+   *  badge/turning-sprite roundel with a unique illustrated scene per character, texture-swapped on hover.
+   *  Optional: characters without a pair here keep the badge/roundel presentation. */
+  cardArt?: { idle: string; hover: string };
+  /** This character's signature color — drives the detail panel's background gradient (see
+   *  MenuScene.renderCharacterCard) so each character's info column reads as "theirs" at a glance. */
+  accentColor: number;
 }
 
 export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
@@ -47,7 +54,9 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     ],
     preferredWeaponId: 'sword',
     startingWeaponUpgradeChoices: 3,
-    lowHealthAttackSpeedBonus: 0.4
+    lowHealthAttackSpeedBonus: 0.4,
+    cardArt: { idle: 'barbarian-card-idle', hover: 'barbarian-card-hover' },
+    accentColor: 0x8a3324
   },
   mage: {
     id: 'mage',
@@ -68,7 +77,9 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     preferredWeaponId: 'staff',
     startingWeaponUpgradeChoices: 3,
     passiveHealAmount: 1,
-    passiveHealIntervalMs: 3000
+    passiveHealIntervalMs: 3000,
+    cardArt: { idle: 'mage-card-idle', hover: 'mage-card-hover' },
+    accentColor: 0x2c4f8c
   },
   reliquia: {
     id: 'reliquia',
@@ -88,7 +99,9 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     ],
     preferredWeaponId: 'amulet',
     startingWeaponUpgradeChoices: 3,
-    auraWeaponOverrides: { baseDamage: 6.75, cooldown: 1000, range: 80 }
+    auraWeaponOverrides: { baseDamage: 6.75, cooldown: 1000, range: 80 },
+    cardArt: { idle: 'reliquia-card-idle', hover: 'reliquia-card-hover' },
+    accentColor: 0xa8541a
   },
   fabri: {
     id: 'fabri',
@@ -108,6 +121,8 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     ],
     preferredWeaponId: 'boomerang',
     startingWeaponUpgradeChoices: 3,
-    boomerangBananaTransform: { upgradeThreshold: 10, slowPercentPerHit: 0.01 }
+    boomerangBananaTransform: { upgradeThreshold: 10, slowPercentPerHit: 0.01 },
+    cardArt: { idle: 'fabri-card-idle', hover: 'fabri-card-hover' },
+    accentColor: 0x9c7a1e
   }
 };

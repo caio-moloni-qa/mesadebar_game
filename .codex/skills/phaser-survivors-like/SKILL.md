@@ -1012,6 +1012,18 @@ A interface deve ficar separada da lógica das entidades.
 
 ---
 
+# Sistema de tema visual (UI)
+
+Toda a arte de UI (painéis, botões, badges, cards) deve passar por um tema central em vez de valores soltos espalhados pelas cenas.
+
+* `src/config/theme.ts` centraliza cores (`THEME`, `THEME_CSS`, `THEME_TEXT`) e chaves/proporções de asset (`THEME_ASSETS`) — nunca hardcodar um hex de cor ou uma chave de textura de UI direto numa cena quando já existe uma constante de tema para aquele papel.
+* `src/ui/uiFactory.ts` concentra os construtores reutilizáveis de UI (painel de madeira, painel de card com moldura ornamentada, badge, botão). Uma cena não deve montar manualmente um `NineSlice`/`TileSprite`/`Rectangle` como se fosse um painel de card quando um helper já existe — criar um novo helper em vez de duplicar a lógica inline se um terceiro lugar precisar do mesmo padrão visual.
+* **Botão padrão do jogo:** texto simples sobre uma "pill" de cor marrom-clara (`THEME_CSS.buttonBg`, clareando para `THEME_CSS.buttonHover` no hover), sem imagem de botão — `createTextButton` em `uiFactory.ts`. Não reintroduzir um botão com imagem/NineSlice de fundo sem pedido explícito; a convenção atual do projeto é texto + pill de cor.
+* **Contraste texto/fundo:** painéis de madeira escura usam texto claro (creme/dourado); parchment/scroll claro e pills de cor clara usam texto escuro (tinta/preto). Ao trocar o fundo de um elemento, sempre revisar se a cor do texto por cima ainda contrasta — esse é o bug mais recorrente neste projeto ao reestilizar UI.
+* Ao adotar uma nova arte de card/painel com bordas ornamentadas, ver a seção "Card Frame/Panel Art" em `generate-pixel-upgrade` e o guardrail de 9-slice em `integrate-pixel-assets` antes de fazer o wiring — cortar o canto ornamentado numa moldura pequena é um erro recorrente.
+
+---
+
 # Câmera e mapa
 
 A câmera deve seguir o jogador.

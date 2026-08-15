@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=MedievalSharp&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=MedievalSharp&family=Uncial+Antiqua&display=swap');
 
 html, body, #app { width: 100%; height: 100%; }
 :root { font-family: Cinzel, Georgia, serif; background: #0d101a; color: #fff; }
