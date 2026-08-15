@@ -3,6 +3,7 @@ import { DIFFICULTY_STAGES, ENEMY_CONFIG } from '../config/balance';
 import { FONT_FAMILY, TITLE_FONT_FAMILY } from '../config/fonts';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { EnemyVariantConfig } from '../entities/Enemy';
+import { THEME, THEME_CSS } from '../config/theme';
 
 const SANDBOX_SPAWN_CAP_OPTIONS = [ENEMY_CONFIG.maxActive, 500, 1000, -1];
 
@@ -89,7 +90,7 @@ export class SandboxDebugPanel {
     const panelTop = 110;
     const viewportY = panelTop + TITLE_HEIGHT;
     const panelHeight = TITLE_HEIGHT + VIEWPORT_HEIGHT + 8;
-    const background = scene.add.rectangle(panelX, panelTop, PANEL_WIDTH, panelHeight, 0x14101f, 0.88).setOrigin(0, 0).setStrokeStyle(2, 0x8a6ad8, 0.9).setScrollFactor(0).setDepth(59);
+    const background = scene.add.rectangle(panelX, panelTop, PANEL_WIDTH, panelHeight, THEME.panelBg, 0.88).setOrigin(0, 0).setStrokeStyle(2, THEME.border, 0.9).setScrollFactor(0).setDepth(59);
     const title = scene.add.text(panelX + 8, panelTop + 6, 'SANDBOX (scroll ↕)', { fontFamily: TITLE_FONT_FAMILY, fontSize: '12px', color: '#ffe29a' }).setScrollFactor(0).setDepth(60);
     // Clips the button list to the viewport strip below the title — content past VISIBLE_ROWS is reached by
     // scrolling (see registerScroll) instead of growing the panel to fit every button.
@@ -159,9 +160,9 @@ export class SandboxDebugPanel {
     // hit-testing reads that real property directly (InputManager.hitTest), so without setting it here too, every
     // row still hit-tests as a normal scrollFactor-1 world object: clicks land in the wrong spot the moment the
     // camera scrolls away from the world origin (i.e. as soon as the player moves), even though it renders fine.
-    const button = this.host.scene.add.text(8, row * ROW_HEIGHT, label, { fontFamily: FONT_FAMILY, fontSize: '11px', color: '#ffffff', backgroundColor: '#4d3d80', padding: { x: 6, y: 4 } }).setScrollFactor(0).setInteractive({ useHandCursor: true });
-    button.on('pointerover', () => button.setStyle({ backgroundColor: '#6b559e' }));
-    button.on('pointerout', () => button.setStyle({ backgroundColor: '#4d3d80' }));
+    const button = this.host.scene.add.text(8, row * ROW_HEIGHT, label, { fontFamily: FONT_FAMILY, fontSize: '11px', color: '#ffffff', backgroundColor: THEME_CSS.buttonBg, padding: { x: 6, y: 4 } }).setScrollFactor(0).setInteractive({ useHandCursor: true });
+    button.on('pointerover', () => button.setStyle({ backgroundColor: THEME_CSS.buttonHover }));
+    button.on('pointerout', () => button.setStyle({ backgroundColor: THEME_CSS.buttonBg }));
     container.add(button);
     this.scrollRows.push({ object: button, row });
     return button;

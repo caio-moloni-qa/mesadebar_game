@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FONT_FAMILY } from '../config/fonts';
+import { THEME } from '../config/theme';
 
 interface SafeArea {
   left: number;
@@ -124,10 +125,10 @@ export class GameHud {
   }
 
   private createBuildIcon(textureKey: string, count: number): Phaser.GameObjects.Container {
-    const background = this.scene.add.rectangle(0, 0, 42, 42, 0x171222, 0.9).setStrokeStyle(2, 0x9a7bca, 0.92);
+    const background = this.scene.add.rectangle(0, 0, 42, 42, THEME.panelBg, 0.9).setStrokeStyle(2, THEME.border, 0.92);
     const icon = this.scene.add.image(0, 0, textureKey).setDisplaySize(34, 34);
-    const counterBackground = this.scene.add.circle(15, -15, 11, 0x382353, 0.98).setStrokeStyle(2, 0xf5dc91, 0.92);
-    const counter = this.scene.add.text(15, -15, `×${count}`, { fontFamily: FONT_FAMILY, fontSize: '14px', color: '#fff7d8', stroke: '#160d22', strokeThickness: 3 })
+    const counterBackground = this.scene.add.circle(15, -15, 11, THEME.roundelBg, 0.98).setStrokeStyle(2, THEME.roundelBorder, 0.92);
+    const counter = this.scene.add.text(15, -15, `×${count}`, { fontFamily: FONT_FAMILY, fontSize: '14px', color: '#fff7d8', stroke: '#1a0f06', strokeThickness: 3 })
       .setOrigin(0.5);
     const showCounter = count > 1;
     counterBackground.setVisible(showCounter);

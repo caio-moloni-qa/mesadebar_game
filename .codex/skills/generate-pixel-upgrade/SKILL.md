@@ -45,6 +45,13 @@ Use `#ff00ff` instead of `#00ff00` when the icon itself is green, such as healin
 - Pickup range or magnetism: gem pulled by rings, magnet, teal/cyan aura.
 - Magic or spell power: book, staff head, starburst, violet/blue runes.
 
+## Card Frame/Panel Art (Distinct From The Icon)
+
+The upgrade card's background frame is a separate asset from the icon glued to it — when the request is to redesign "the card" or "the upgrade card modal," generate a dedicated bordered-panel texture, not another icon. Two rules that avoid a failure mode this project hit twice:
+
+- **Design the frame at the card's actual final display aspect ratio**, computed before writing the prompt (e.g. a 200x220 card is a 0.91 aspect ratio) — not an arbitrary square canvas. An ornate corner-decorated frame generated at the wrong aspect and then force-fit into the card via a NineSlice/9-slice with a small inset will crop the corner ornamentation, because the inset needed to preserve the corners is bigger than what a small card can spare. If the same texture needs to serve a few card sizes with slightly different aspect ratios, skip 9-slicing and use a plain stretched `Image` instead — see `integrate-pixel-assets` for why.
+- **Keep the frame's interior plain and blank** (a flat or lightly-textured surface, no baked-in imagery) so the icon and text placed on top in-engine stay legible no matter where they land on the card.
+
 ## Examples
 
 User: "Create an icon for +25% damage"

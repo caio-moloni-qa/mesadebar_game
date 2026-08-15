@@ -7,6 +7,8 @@ import { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { SoulProjectile } from '../entities/SoulProjectile';
+import { THEME, THEME_TEXT } from '../config/theme';
+import { createTextButton, createUpgradeCardPanel } from '../ui/uiFactory';
 
 interface MerchantItemOption { id: string; name: string; cost: number; icon: string; description: string; apply?: (player: Player) => void; }
 const MERCHANT_AFFINITY_TOME_OPTION: MerchantItemOption = { id: 'affinity-tome', name: 'Tomo de Afinidade', cost: 150, icon: 'merchant-affinity-tome-icon', description: 'Escolha uma família de arma para desbloquear afinidade com ela.' };
@@ -208,9 +210,9 @@ export class MerchantSystem {
     const message = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Um portal misterioso surgiu na arena!', {
       fontFamily: TITLE_FONT_FAMILY,
       fontSize: '34px',
-      color: '#e3caff',
+      color: THEME_TEXT.gold,
       align: 'center',
-      stroke: '#1a1025',
+      stroke: '#1a0f06',
       strokeThickness: 5,
       wordWrap: { width: 900 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(45);
@@ -267,8 +269,8 @@ export class MerchantSystem {
     this.host.setLevelPending(true);
     scene.physics.pause();
     this.destroyMerchantPrompt();
-    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.78).setScrollFactor(0).setDepth(30);
-    const title = scene.add.text(GAME_WIDTH / 2, 280, 'Um portal misterioso surge à sua frente.\nDeseja entrar?', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: '#ffe29a', align: 'center', stroke: '#101015', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
+    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, THEME.overlayDim, 0.78).setScrollFactor(0).setDepth(30);
+    const title = scene.add.text(GAME_WIDTH / 2, 280, 'Um portal misterioso surge à sua frente.\nDeseja entrar?', { fontFamily: TITLE_FONT_FAMILY, fontSize: '26px', color: THEME_TEXT.gold, align: 'center', stroke: '#101015', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.merchantOverlay = [veil, title];
     this.merchantPromptButton('ENTRAR', 370, () => this.enterMerchantPortal());
     this.merchantPromptButton('CANCELAR', 435, () => {
@@ -278,13 +280,13 @@ export class MerchantSystem {
       scene.physics.resume();
     });
   }
+  /** House button style (see uiFactory.createTextButton) — light-brown pill, no button-image background. Used
+   *  for every ENTRAR/CANCELAR prompt in the merchant flow. */
   private merchantPromptButton(label: string, y: number, action: () => void): void {
     const scene = this.host.scene;
-    const button = scene.add.text(GAME_WIDTH / 2, y, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '22px', color: '#ffffff', backgroundColor: '#6b4db3', padding: { x: 24, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
-    button.on('pointerover', () => button.setStyle({ backgroundColor: '#896bd0' }));
-    button.on('pointerout', () => button.setStyle({ backgroundColor: '#6b4db3' }));
-    button.on('pointerup', action);
-    this.merchantOverlay.push(button);
+    const text = createTextButton(scene, GAME_WIDTH / 2, y, label, { fontSize: '22px' }).setScrollFactor(0).setDepth(31);
+    text.on('pointerup', action);
+    this.merchantOverlay.push(text);
   }
   private enterMerchantPortal(): void {
     const scene = this.host.scene;
@@ -435,9 +437,9 @@ export class MerchantSystem {
   private buildMerchantShop(): void {
     const scene = this.host.scene;
     this.merchantNpcPosition.set(this.merchantRoomCenter.x - 140, this.merchantRoomCenter.y - 20);
-    // merchant-character's own content aspect (217x338 ≈ 0.642) preserved here. Static — just one frame from the
-    // idle sheet (frames are near-identical anyway), no animation played.
-    const npc = scene.add.image(this.merchantNpcPosition.x, this.merchantNpcPosition.y, 'merchant-character', 1)
+    // merchant-character's own content aspect (~220x334 ≈ 0.66) preserved here. Static — frame 0 specifically
+    // (the only one with a clean transparent backdrop; frames 1-3 bake in a vignette glow), no animation played.
+    const npc = scene.add.image(this.merchantNpcPosition.x, this.merchantNpcPosition.y, 'merchant-character', 0)
       .setDisplaySize(64, 100)
       .setDepth(3);
     const npcLabel = scene.add.text(this.merchantNpcPosition.x, this.merchantNpcPosition.y + 60, 'Sergio', { fontFamily: FONT_FAMILY, fontSize: '13px', color: '#ffe29a', stroke: '#101015', strokeThickness: 3 }).setOrigin(0.5).setDepth(3);
@@ -499,15 +501,15 @@ export class MerchantSystem {
     this.host.setLevelPending(true);
     scene.physics.pause();
     const x = GAME_WIDTH / 2;
-    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
-    const card = scene.add.rectangle(x, 380, 280, 300, 0x49326e, 1).setStrokeStyle(3, 0xa888d9, 1).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, THEME.overlayDim, 0.84).setScrollFactor(0).setDepth(30);
+    const card = createUpgradeCardPanel(scene, x, 380, 280, 300).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
     const icon = scene.add.image(x, 300, slot.option.icon).setDisplaySize(72, 72).setScrollFactor(0).setDepth(32);
-    const name = scene.add.text(x, 365, slot.option.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '20px', color: '#fff0c2', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const description = scene.add.text(x, 420, slot.option.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: '#eee8ff', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const price = scene.add.text(x, 495, `Comprar por ${slot.option.cost} moedas`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: '#ffe29a' }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const name = scene.add.text(x, 365, slot.option.name, { fontFamily: TITLE_FONT_FAMILY, fontSize: '20px', color: THEME_TEXT.gold, align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const description = scene.add.text(x, 420, slot.option.description, { fontFamily: FONT_FAMILY, fontSize: '15px', color: THEME_TEXT.cream, align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const price = scene.add.text(x, 495, `Comprar por ${slot.option.cost} moedas`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '15px', color: THEME_TEXT.gold }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
     this.merchantOverlay = [veil, card, icon, name, description, price];
-    card.on('pointerover', () => card.setFillStyle(0x5c3f8a));
-    card.on('pointerout', () => card.setFillStyle(0x49326e));
+    card.on('pointerover', () => card.setTint(0xddb877));
+    card.on('pointerout', () => card.clearTint());
     card.on('pointerup', () => this.confirmItemPurchase(slot));
     this.merchantPromptButton('CANCELAR', 580, () => this.closeItemPurchaseConfirm());
   }
@@ -537,7 +539,7 @@ export class MerchantSystem {
     this.host.setLevelPending(true);
     scene.physics.pause();
     const families = this.availableAffinityFamilies();
-    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090b12, 0.84).setScrollFactor(0).setDepth(30);
+    const veil = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, THEME.overlayDim, 0.84).setScrollFactor(0).setDepth(30);
     const title = scene.add.text(GAME_WIDTH / 2, 190, 'Tomo de Afinidade: escolha a família de arma', { fontFamily: TITLE_FONT_FAMILY, fontSize: '28px', color: '#ffe29a', align: 'center', wordWrap: { width: 900 } }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
     this.merchantOverlay = [veil, title];
     const spacing = 260;
@@ -548,14 +550,14 @@ export class MerchantSystem {
     const scene = this.host.scene;
     const representative = Object.values(WEAPONS).find((weapon) => weaponFamily(weapon) === family)!;
     const label = FAMILY_LABELS[family];
-    const card = scene.add.rectangle(x, 410, 220, 240, 0x6b4d10, 1).setStrokeStyle(3, 0xffd868, 0.95).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
+    const card = createUpgradeCardPanel(scene, x, 410, 220, 240).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true });
     const banner = scene.add.text(x, 314, label, { fontFamily: TITLE_FONT_FAMILY, fontSize: '14px', color: '#3a2400', backgroundColor: '#ffd868', padding: { x: 8, y: 3 } }).setOrigin(0.5).setScrollFactor(0).setDepth(33);
     const icon = scene.add.image(x, 360, `weapon-${representative.id}-icon`).setDisplaySize(64, 64).setScrollFactor(0).setDepth(32);
-    const name = scene.add.text(x, 415, `Afinidade ${label}`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: '#fff3d2', align: 'center', wordWrap: { width: 190 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
-    const description = scene.add.text(x, 470, `Desbloqueia as melhorias de armas ${label.toLowerCase()} que você já possui ou vier a possuir`, { fontFamily: FONT_FAMILY, fontSize: '14px', color: '#fff0d2', align: 'center', wordWrap: { width: 190 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const name = scene.add.text(x, 415, `Afinidade ${label}`, { fontFamily: TITLE_FONT_FAMILY, fontSize: '18px', color: THEME_TEXT.gold, align: 'center', wordWrap: { width: 190 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+    const description = scene.add.text(x, 470, `Desbloqueia as melhorias de armas ${label.toLowerCase()} que você já possui ou vier a possuir`, { fontFamily: FONT_FAMILY, fontSize: '11px', color: THEME_TEXT.cream, align: 'center', wordWrap: { width: 190 } }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
     this.merchantOverlay.push(card, banner, icon, name, description);
-    card.on('pointerover', () => card.setFillStyle(0x86611a));
-    card.on('pointerout', () => card.setFillStyle(0x6b4d10));
+    card.on('pointerover', () => card.setTint(0xddb877));
+    card.on('pointerout', () => card.clearTint());
     card.on('pointerup', () => this.confirmAffinityChoice(family));
   }
   private confirmAffinityChoice(family: WeaponFamily): void {

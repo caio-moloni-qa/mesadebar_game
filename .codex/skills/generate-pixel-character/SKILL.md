@@ -79,6 +79,21 @@ Even a well-crafted prompt asking for "identical framing in every cell" often do
 3. Instead, pick one shared, fixed crop rectangle (the same absolute pixel coordinates) and apply it identically to every frame. This guarantees zero positional jitter regardless of the underlying art's inconsistency, at the acceptable cost of sometimes including a little extra background or clipping a decorative edge slightly on the frames that drifted most.
 4. When the sheet has a static anchor element (see above), it's fine and often better to pick the fixed window so it deliberately excludes an inconsistent decorative fringe (e.g. an outer frame/corner-post) if that fringe is redundant with something else already rendered in-game (another sprite layered behind/around it) — the fixed window only needs to keep the part that actually needs to read as animating.
 
+## Style Tiers Within One Project
+
+A single project can deliberately run more than one art register for the same character, as long as each register is used consistently once chosen — don't assume every character asset must match the in-game sprite sheet's exact pixel-grid style:
+
+- **Gameplay sprite sheets** (walk cycles, attack frames): strict retro pixel art — crisp square pixels, no gradients, no soft shading, per the Prompt Recipe above.
+- **Character-select / hero-portrait cards**: can intentionally use a more illustrated register instead — this project settled on "Seinen-style anime illustration" (sharp clean linework, dramatic cel-shading, mature manga register, explicitly *not* a visible pixel grid) for its character-select cards, confirmed with the user before generating any of them. Whichever register is chosen, apply it identically to every character's card so the roster reads as one consistent set, not a mix of styles.
+- **Before drafting a companion illustration in a different register, study the character's existing gameplay sprite first** (palette, costume details, weapon, proportions) and carry those specifics into the new prompt explicitly — the new art should read as "the same character, different medium," not a reinterpretation. Note any deliberate reference-vs-actual mismatch you find (e.g. a sprite holding a different weapon than its config says it wields) and ask the user which one the new art should follow rather than silently picking one.
+
+### Idle/Hover Portrait Pairs
+
+For an interactive character-select card that swaps art on hover, generate the idle and hover images as one pair sharing the exact same background, composition, and character scale/position — only the pose and any glow/effect layer should differ. This makes the hover swap read as "the character reacts," not a scene cut. Suggested split:
+
+- **Idle**: calm/ready pose, holding the character's signature weapon at rest.
+- **Hover**: a dynamic action pose using that same weapon (mid-swing, mid-throw, casting), optionally with one small confirmed-with-the-user "personality" flourish (glowing eyes, an expression change, a particle effect) that becomes that character's signature hover tell.
+
 ## Examples
 
 User: "Make a 32x32 slime enemy sprite"
