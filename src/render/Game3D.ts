@@ -16,6 +16,7 @@ import { simToWorld } from './space';
 import { FloatingTexts } from './ui/FloatingTexts';
 import { RunScreens } from './ui/RunScreens';
 import { ChestRoll } from './ui/ChestRoll';
+import { Joystick, isTouchDevice } from './ui/Joystick';
 import { CombatEffects } from './vfx/CombatEffects';
 import { EnemyHordeView } from './views/EnemyHordeView';
 import { HazardView, ParticleView, PickupView, ProjectileView } from './views/PickupAndProjectileViews';
@@ -27,6 +28,8 @@ import { createCollisionOverlay } from './world/CollisionOverlay';
 const MAX_FRAME_MS = 250;
 
 export interface Game3DOptions {
+  /** Show the on-screen joystick even off a touch screen (it shows on touch screens by default). */
+  touch?: boolean;
   /** Skip the start menu and go straight into this run (test URLs: ?hero=…&weapon=…). */
   initialRun?: RunChoice;
   /** Fixed seed for every run (reproducible tests); otherwise each run rolls a new one. */
@@ -59,6 +62,8 @@ export class Game3D {
   private readonly hud: Hud;
   private readonly screens: RunScreens;
   private readonly chestRoll: ChestRoll;
+  private readonly joystick: Joystick;
+  private readonly showJoystick: boolean;
   private readonly choices: ChoiceOverlay;
   private readonly menu: StartMenu;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
@@ -101,6 +106,9 @@ export class Game3D {
     this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
     this.chestRoll = new ChestRoll(container);
+    this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
+    this.showJoystick = Boolean(options.touch) || isTouchDevice();
+    this.joystick.setVisible(false);
     this.menu = new StartMenu(container, (choice) => this.startRun(choice));
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
@@ -117,6 +125,7 @@ export class Game3D {
     this.inMenu = false;
     this.menu.hide();
     this.hud.setVisible(true);
+    this.joystick.setVisible(this.showJoystick);
     this.restart();
   }
 
@@ -125,6 +134,7 @@ export class Game3D {
   showMenu(): void {
     this.inMenu = true;
     this.hud.setVisible(false);
+    this.joystick.setVisible(false);
     this.createSession({ skipStartingUpgrades: true, attract: true });
     this.menu.show();
   }
@@ -281,8 +291,10 @@ export class Game3D {
       this.session.setMoveInput(0, 0);
       return;
     }
-    const right = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
-    const up = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
+    let right = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
+    let up = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
+    // The stick takes over while it's held (like Phaser's mobileDirection overriding the keys).
+    if (this.joystick.direction.x !== 0 || this.joystick.direction.y !== 0) ({ x: right, y: up } = this.joystick.direction);
     const ground = this.cameraRig.screenToGround(right, up);
     this.session.setMoveInput(ground.x, ground.y);
   }

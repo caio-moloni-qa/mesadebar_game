@@ -125,3 +125,13 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .floating-texts span { position: absolute; top: 0; left: 0; white-space: nowrap; will-change: transform, opacity;
   font-family: MedievalSharp, Georgia, serif; line-height: 1;
   text-shadow: 2px 0 #321b00, -2px 0 #321b00, 0 2px #321b00, 0 -2px #321b00, 2px 2px #321b00, -2px 2px #321b00, 2px -2px #321b00, -2px -2px #321b00; }
+
+/* Mobile joystick (Phaser: createMobileControls) — base r88 at 120 units from the bottom-left, knob r37, MOVER label. */
+.joystick { position: absolute; left: calc(32 * var(--ui-unit)); bottom: calc(40 * var(--ui-unit)); z-index: 4; display: grid; justify-items: center;
+  gap: calc(10 * var(--ui-unit)); color: #f3ead2; font-size: calc(14 * var(--ui-unit)); opacity: 0.9; }
+.joystick[hidden] { display: none; }
+.joystick-base { display: grid; place-items: center; width: calc(176 * var(--ui-unit)); height: calc(176 * var(--ui-unit)); border-radius: 50%;
+  background: rgba(17, 24, 39, 0.48); border: calc(4 * var(--ui-unit)) solid rgba(201, 150, 63, 0.62); box-sizing: border-box; touch-action: none; }
+.joystick-knob { width: calc(74 * var(--ui-unit)); height: calc(74 * var(--ui-unit)); border-radius: 50%; box-sizing: border-box; pointer-events: none;
+  background: rgba(90, 61, 34, 0.82); border: calc(3 * var(--ui-unit)) solid rgba(224, 180, 92, 0.8); }
+@media (pointer: coarse) { :root { --touch-scale: 1.4; } .joystick { transform-origin: bottom left; transform: scale(var(--touch-scale)); } }
