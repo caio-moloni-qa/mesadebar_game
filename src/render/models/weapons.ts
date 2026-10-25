@@ -63,10 +63,10 @@ export function weaponGeometry(id: WeaponModelId): THREE.BufferGeometry {
 
 /** How far each weapon tips forward out of a hanging hand (radians about X): blades point ahead, the staff is
  *  carried mostly upright so it doesn't skewer the ground in front of the hero. */
-const HAND_TILT: Record<Exclude<WeaponConfig['id'], 'amulet'>, number> = { staff: 0.45, sword: 1.35, whip: 1.2, boomerang: 1.4 };
+const HAND_TILT: Record<Exclude<WeaponModelId, 'amulet'>, number> = { staff: 0.45, sword: 1.35, whip: 1.2, boomerang: 1.4, banana: 1.4 };
 
 /** Hand-held weapon mesh (the amulet is returned untilted — it's worn on the chest). */
-export function heldWeapon(id: WeaponConfig['id'], material: THREE.Material): THREE.Object3D {
+export function heldWeapon(id: WeaponModelId, material: THREE.Material): THREE.Object3D {
   const mesh = new THREE.Mesh(weaponGeometry(id), material);
   mesh.castShadow = true;
   if (id !== 'amulet') {

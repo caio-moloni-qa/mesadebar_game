@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ENEMY_CONFIG } from '../config/balance';
 import { CHARACTERS } from '../config/characters';
-import { WEAPONS } from '../config/weapons';
+import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { ArenaMap } from '../core/world/ArenaMap';
 import { snapPrevious } from '../core/session/entities';
@@ -20,7 +20,7 @@ import { Joystick, isTouchDevice } from './ui/Joystick';
 import { CombatEffects } from './vfx/CombatEffects';
 import { EnemyHordeView } from './views/EnemyHordeView';
 import { HazardView, ParticleView, PickupView, ProjectileView } from './views/PickupAndProjectileViews';
-import { HeroView } from './views/HeroView';
+import { Hand, HeroView } from './views/HeroView';
 import { Arena } from './world/Arena';
 import { createCollisionOverlay } from './world/CollisionOverlay';
 
@@ -85,6 +85,8 @@ export class Game3D {
   private readonly projected = new THREE.Vector3();
   /** Device pixels per CSS pixel the canvas is drawn at (see resize). */
   private pixelRatio = 1;
+  /** Weapons currently attached to the hero's hands (see syncHeldWeapons). */
+  private heldKey = '';
 
   constructor(private readonly container: HTMLElement, private readonly options: Game3DOptions) {
     this.cameraRig = new CameraRig(options.zoom);
@@ -170,6 +172,7 @@ export class Game3D {
       snapPrevious(this.session.player);
     }
     this.playerView = new HeroView(characterId, weaponId);
+    this.heldKey = weaponId;
     this.scene.add(this.playerView.root);
     this.accumulator = 0;
     this.bindSessionEffects();
@@ -204,9 +207,15 @@ export class Game3D {
     events.on('melee-swing', ({ x, y, dirX, dirY, range, coneAngle, weaponId }) => {
       this.effects.swing(x, y, dirX, dirY, range, coneAngle, weaponId);
       // Whip chain links also emit swings, centred on the enemy they jump to — only the hero's own swing animates.
-      if (x === this.session.player.x && y === this.session.player.y) this.playerView.play('swing');
+      if (x === this.session.player.x && y === this.session.player.y) {
+        this.playerView.aim(dirX, dirY);
+        this.playerView.play(weaponId === 'whip' ? 'lash' : 'swing', this.handOf(weaponId));
+      }
     });
-    events.on('projectile-fired', ({ kind }) => this.playerView.play(kind === 'bolt' ? 'cast' : 'throw'));
+    events.on('projectile-fired', ({ kind, dirX, dirY, weaponId }) => {
+      this.playerView.aim(dirX, dirY);
+      this.playerView.play(kind === 'bolt' ? 'cast' : 'throw', this.handOf(weaponId));
+    });
     events.on('player-damaged', ({ amount }) => {
       this.playerView.play('hit');
       // With the Relíquia Divina equipped the hero's own damage reads green ("DANO -N"), like the Phaser build.
@@ -218,7 +227,7 @@ export class Game3D {
     events.on('aura-pulse', ({ radius, multiStrike, buffUnlocked }) => {
       const { player } = this.session;
       this.effects.pulse(player.x, player.y, radius, multiStrike ? 0xfff2a0 : buffUnlocked ? 0xffc94d : 0xe8b04a, 0.35, multiStrike ? 0.8 : 0.5);
-      this.playerView.play('pulse');
+      this.playerView.play('pulse', this.handOf('amulet'));
     });
     events.on('whip-burst', ({ radius }) => this.effects.burst(this.session.player.x, this.session.player.y, radius, 0xff6a3d, 0.3, 0.3));
     events.on('staff-explosion', ({ x, y, radius, index }) => this.effects.pulse(x, y, radius * (1 + index * 0.06), 0x6ee7ff, 0.22 + index * 0.045, 0.35));
@@ -235,6 +244,28 @@ export class Game3D {
     events.on('chest-opened', ({ upgrade, rolled }) => {
       this.effects.pulse(this.session.player.x, this.session.player.y, 60, 0xffd868, 0.5, 0.7);
       this.chestRoll.play(this.session, upgrade, rolled, () => this.floatAboveHero(`Baú: ${upgrade.name}!`, '#ffe29a'));
+    });
+  }
+
+  /** First weapon in the right hand, second in the left. */
+  private handOf(weaponId: WeaponConfig['id']): Hand {
+    return this.session.weapons.weapons.findIndex((weapon) => weapon.config.id === weaponId) === 1 ? 'L' : 'R';
+  }
+
+  /** Keeps the hands matching the run: re-equips when a weapon is added or the boomerang becomes the banana, and
+   *  empties a hand while its thrown weapon (boomerang, banana) is in the air. */
+  private syncHeldWeapons(): void {
+    const { weapons } = this.session.weapons;
+    const ids = weapons.map((weapon) => (this.session.weapons.isBananaTransformActive(weapon) ? 'banana' : weapon.config.id));
+    const key = ids.join(',');
+    if (key !== this.heldKey) {
+      this.heldKey = key;
+      this.playerView.setWeapons(ids);
+    }
+    weapons.forEach((weapon, slot) => {
+      let inFlight = false;
+      this.session.projectiles.forEachActive((projectile) => { if (projectile.kind !== 'bolt' && projectile.weaponId === weapon.config.id) inFlight = true; });
+      this.playerView.setWeaponVisible(slot, !inFlight);
     });
   }
 
@@ -327,6 +358,7 @@ export class Game3D {
 
     // The hero keeps animating after death (the fall plays out) but freezes with pause / choice screens.
     this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.syncHeldWeapons();
     this.enemyView.update(this.session.enemies, alpha, simNow, deltaSeconds);
     this.projectileView.update(this.session.projectiles, alpha, simNow);
     this.pickupView.update(this.session.pickups, alpha, simNow);
