@@ -2,35 +2,90 @@
 
 html, body, #app { width: 100%; height: 100%; margin: 0; }
 body { overflow: hidden; background: #0d0b14; color: #f7f1dc; font-family: MedievalSharp, Georgia, serif; }
-#app { position: relative; }
+#app { position: relative; --ui-unit: min(calc(100vw / 1280), calc(100vh / 720)); }
 canvas { display: block; width: 100%; height: 100%; touch-action: none; image-rendering: pixelated; }
 
-.hud { position: absolute; inset: 0; pointer-events: none; text-shadow: 0 2px 0 #14101c, 0 0 4px #14101c; }
-.hud-top-left { position: absolute; top: 16px; left: 16px; width: min(280px, 60vw); display: grid; gap: 6px; }
-.hud-top-right { position: absolute; top: 16px; right: 16px; display: grid; justify-items: end; gap: 4px; font-size: 20px; }
-.hud-bar { position: relative; height: 18px; background: #2b1c10; border: 2px solid #c9963f; overflow: hidden; }
-.hud-bar.hud-xp { height: 8px; }
-.hud-fill { position: absolute; inset: 0 auto 0 0; width: 100%; background: #c0392b; }
-.hud-xp .hud-fill { background: #4fc3a1; }
-.hud-bar span { position: relative; display: block; font-size: 13px; line-height: 14px; text-align: center; }
-.hud-line { font-size: 16px; }
-.hud-stats { position: absolute; bottom: 8px; left: 16px; font: 12px/1.2 ui-monospace, monospace; opacity: 0.75; }
-.hud-banner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 16px 28px; font-size: 28px;
-  background: rgba(13, 7, 4, 0.85); border: 2px solid #c9963f; pointer-events: auto; cursor: pointer; text-align: center; }
+/* HUD — the Phaser GameHud layout in 1280×720 units (u = --ui-unit). Text: cream with the dark 4 px stroke. */
+.hud { position: absolute; inset: 0; pointer-events: none; color: #f7f1dc; font-size: calc(20 * var(--ui-unit));
+  --stroke: #14101c; --s: calc(2 * var(--ui-unit));
+  text-shadow: var(--s) 0 var(--stroke), calc(-1 * var(--s)) 0 var(--stroke), 0 var(--s) var(--stroke), 0 calc(-1 * var(--s)) var(--stroke),
+    var(--s) var(--s) var(--stroke), calc(-1 * var(--s)) var(--s) var(--stroke), var(--s) calc(-1 * var(--s)) var(--stroke), calc(-1 * var(--s)) calc(-1 * var(--s)) var(--stroke); }
+.hud img { image-rendering: pixelated; }
+.hud-top-left { position: absolute; top: calc(9 * var(--ui-unit)); left: calc(26 * var(--ui-unit)); display: grid; justify-items: start; }
+.hud-build { display: flex; gap: calc(6 * var(--ui-unit)); min-height: calc(42 * var(--ui-unit)); margin-left: calc(32 * var(--ui-unit)); }
+.hud-build-slot { position: relative; display: grid; place-items: center; width: calc(42 * var(--ui-unit)); height: calc(42 * var(--ui-unit)); box-sizing: border-box;
+  background: rgba(43, 28, 16, 0.9); border: calc(2 * var(--ui-unit)) solid rgba(201, 150, 63, 0.92); }
+.hud-build-slot img { width: calc(34 * var(--ui-unit)); height: calc(34 * var(--ui-unit)); object-fit: contain; }
+.hud-build-slot span { position: absolute; top: calc(-8 * var(--ui-unit)); right: calc(-8 * var(--ui-unit)); display: grid; place-items: center;
+  min-width: calc(22 * var(--ui-unit)); height: calc(22 * var(--ui-unit)); box-sizing: border-box; border-radius: 50%; font-size: calc(13 * var(--ui-unit));
+  color: #fff7d8; background: #241708; border: calc(2 * var(--ui-unit)) solid rgba(224, 180, 92, 0.92); }
+.hud-health { display: flex; align-items: center; }
+.hud-health-icon { width: calc(32 * var(--ui-unit)); height: calc(32 * var(--ui-unit)); }
+.hud-health-bar { position: relative; width: calc(280 * var(--ui-unit)); height: calc(32 * var(--ui-unit)); }
+.hud-health-bar::before { content: ''; position: absolute; left: calc(15 * var(--ui-unit)); top: calc(10 * var(--ui-unit)); width: calc(250 * var(--ui-unit));
+  height: calc(12 * var(--ui-unit)); border-radius: calc(4 * var(--ui-unit)); background: rgba(11, 13, 20, 0.8); }
+.hud-health-bar .hud-fill { position: absolute; left: calc(15 * var(--ui-unit)); top: calc(10 * var(--ui-unit)); width: 100%; max-width: calc(250 * var(--ui-unit));
+  height: calc(12 * var(--ui-unit)); border-radius: calc(4 * var(--ui-unit)); background: #d94d59; }
+.hud-health-bar img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hud-health-bar span { position: absolute; inset: 0; display: grid; place-items: center; }
+.hud-level { margin-top: calc(-2 * var(--ui-unit)); }
+.hud-currency { display: flex; align-items: center; gap: calc(8 * var(--ui-unit)); margin-top: calc(6 * var(--ui-unit)); }
+.hud-currency > img { width: calc(24 * var(--ui-unit)); height: calc(24 * var(--ui-unit)); }
+.hud-rotten { display: flex; align-items: center; gap: calc(4 * var(--ui-unit)); margin-left: calc(26 * var(--ui-unit)); font-size: calc(14 * var(--ui-unit)); }
+.hud-rotten[hidden] { display: none; }
+.hud-rotten img { width: calc(22 * var(--ui-unit)); height: calc(22 * var(--ui-unit)); }
+.hud-rotten b { color: #ff5c5c; font-weight: normal; font-size: calc(16 * var(--ui-unit)); }
+.hud-top-right { position: absolute; top: calc(22 * var(--ui-unit)); right: calc(26 * var(--ui-unit)); display: grid; justify-items: end; gap: calc(6 * var(--ui-unit)); }
+.hud-xp { position: absolute; left: 0; right: 0; bottom: 0; height: calc(32 * var(--ui-unit)); }
+.hud-xp img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hud-xp-track { position: absolute; left: 4.2%; right: 4.2%; top: calc(8 * var(--ui-unit)); height: calc(14 * var(--ui-unit)); background: rgba(11, 13, 20, 0.8); }
+.hud-xp .hud-fill { height: 100%; width: 0; background: #58b8e8; }
+.hud-stats { position: absolute; bottom: calc(40 * var(--ui-unit)); left: calc(16 * var(--ui-unit)); font: 12px/1.2 ui-monospace, monospace; opacity: 0.75; text-shadow: none; }
+.hud[hidden], .hud-stats[hidden] { display: none; }
 
-.choice-overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 20px; padding: 16px;
-  background: rgba(13, 7, 4, 0.78); text-align: center; z-index: 5; }
-.choice-overlay[hidden] { display: none; }
-.choice-overlay h2 { margin: 0; color: #ffe29a; font-size: clamp(20px, 3vw, 30px); font-weight: normal; }
-.choice-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-.choice-card { display: grid; gap: 8px; align-content: start; width: 190px; min-height: 150px; padding: 14px; cursor: pointer;
-  font: inherit; color: #f7f1dc; text-align: center; background: #3f2a17; border: 2px solid #c9963f; }
-.choice-card:hover, .choice-card:focus-visible { background: #5a3d22; outline: none; }
-.choice-card strong { color: #ffe29a; font-size: 17px; font-weight: normal; }
-.choice-card span { font-size: 13px; line-height: 1.35; }
-.choice-card.rare { border-color: #b98cff; }
-.choice-card.weapon { background: #6b5214; border-color: #ffd868; }
-.hud-weapons { font-size: 14px; opacity: 0.9; }
+/* Leather text button (Phaser: createTextButton). */
+.ui-button { padding: calc(12 * var(--ui-unit)) calc(24 * var(--ui-unit)); cursor: pointer; border: none; font-family: MedievalSharp, Georgia, serif;
+  font-size: calc(22 * var(--ui-unit)); color: #f3ead2; background: #7a4a20; }
+.ui-button:hover, .ui-button:focus-visible { background: #9c6530; outline: none; }
+
+/* Pause (parchment scroll, dark ink) and end-of-run screens. */
+.run-screen { position: absolute; inset: 0; z-index: 6; display: grid; place-content: center; justify-items: center; }
+.run-screen[hidden] { display: none; }
+.run-pause { background: rgba(13, 7, 4, 0.72); }
+.run-pause-scroll { width: calc(420 * var(--ui-unit)); aspect-ratio: 1024 / 1536; background: center / 100% 100% no-repeat;
+  display: grid; align-content: center; justify-items: center; gap: calc(22 * var(--ui-unit)); }
+.run-pause h2 { margin: 0 0 calc(18 * var(--ui-unit)); color: #3a2510; font-size: calc(44 * var(--ui-unit)); font-weight: normal; }
+.run-end { background: rgba(13, 7, 4, 0.88); gap: calc(18 * var(--ui-unit)); }
+.run-end h2 { margin: 0; color: #ef7780; font-size: calc(52 * var(--ui-unit)); font-weight: normal; }
+.run-end-stats { margin: calc(24 * var(--ui-unit)) 0 calc(60 * var(--ui-unit)); white-space: pre-line; text-align: center; color: #f1f1f4;
+  font-size: calc(24 * var(--ui-unit)); line-height: 1.6; }
+
+/* Upgrade choice + chest roll: the Phaser framed wood cards (upgrade_card_panel art, 9-sliced at its ~240 px corners). */
+.choice-overlay, .chest-roll { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center;
+  gap: calc(28 * var(--ui-unit)); padding: 16px; background: rgba(13, 7, 4, 0.78); text-align: center; }
+.choice-overlay[hidden], .chest-roll[hidden] { display: none; }
+.choice-overlay h2, .chest-roll h2 { margin: 0; color: #f5cf79; font-size: calc(28 * var(--ui-unit)); font-weight: normal;
+  text-shadow: 0 calc(2 * var(--ui-unit)) 0 #14101c; }
+.choice-row { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(20 * var(--ui-unit)); }
+.upgrade-card { position: relative; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; align-content: start;
+  gap: calc(8 * var(--ui-unit)); width: calc(214 * var(--ui-unit)); min-height: calc(240 * var(--ui-unit)); box-sizing: border-box;
+  padding: calc(38 * var(--ui-unit)) calc(32 * var(--ui-unit)) calc(32 * var(--ui-unit)); cursor: pointer; font-family: MedievalSharp, Georgia, serif;
+  color: #f3ead2; background: none; border: none; border-image: url('./assets/ui/theme/upgrade_card_panel_v2.png') 240 fill / calc(46 * var(--ui-unit)) stretch;
+  transition: transform 120ms ease-out, filter 120ms ease-out; }
+.upgrade-card:hover, .upgrade-card:focus-visible { transform: translateY(calc(-6 * var(--ui-unit))); filter: brightness(1.15); outline: none; }
+.upgrade-card:disabled { cursor: default; }
+.upgrade-card img { width: calc(64 * var(--ui-unit)); height: calc(64 * var(--ui-unit)); object-fit: contain; image-rendering: pixelated; }
+.upgrade-card strong { color: #f5cf79; font-size: calc(18 * var(--ui-unit)); font-weight: normal; line-height: 1.15; }
+.upgrade-card span { font-size: calc(13 * var(--ui-unit)); line-height: 1.35; }
+.upgrade-card.rare { filter: drop-shadow(0 0 calc(10 * var(--ui-unit)) #b98cff); }
+.upgrade-card.rare strong { color: #d9bcff; }
+.upgrade-card.weapon { filter: drop-shadow(0 0 calc(12 * var(--ui-unit)) #ffd868); }
+.chest-card { width: calc(240 * var(--ui-unit)); min-height: calc(280 * var(--ui-unit)); }
+.chest-card img { width: calc(76 * var(--ui-unit)); height: calc(76 * var(--ui-unit)); }
+.chest-card.shuffle img { animation: chest-shimmer 140ms ease-out; }
+.chest-card.landed { animation: chest-land 360ms ease-out; filter: drop-shadow(0 0 calc(14 * var(--ui-unit)) #fff3b0); }
+@keyframes chest-shimmer { from { opacity: 0.35; } to { opacity: 1; } }
+@keyframes chest-land { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } }
 
 .start-menu { position: absolute; inset: 0; z-index: 10; overflow-y: auto; padding: 24px 16px;
   background: radial-gradient(ellipse at center, rgba(13, 7, 4, 0.55), rgba(13, 7, 4, 0.9)); }
@@ -64,6 +119,19 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .weapon-row em { grid-column: 2; font-style: normal; font-size: 13px; color: #ffe08a; }
 .start-back { justify-self: center; padding: 8px 18px; cursor: pointer; font: inherit; color: #f7f1dc; background: #7a4a20; border: none; }
 .start-back:hover { background: #9c6530; }
-.hud[hidden] { display: none; }
-.hud-banner button { margin: 12px 6px 0; padding: 8px 18px; cursor: pointer; font: inherit; font-size: 18px; color: #f7f1dc; background: #7a4a20; border: none; }
-.hud-banner button:hover { background: #9c6530; }
+
+/* Floating combat text: MedievalSharp with the Phaser build's dark-brown 4 px stroke (8-way shadow). */
+.floating-texts { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.floating-texts span { position: absolute; top: 0; left: 0; white-space: nowrap; will-change: transform, opacity;
+  font-family: MedievalSharp, Georgia, serif; line-height: 1;
+  text-shadow: 2px 0 #321b00, -2px 0 #321b00, 0 2px #321b00, 0 -2px #321b00, 2px 2px #321b00, -2px 2px #321b00, 2px -2px #321b00, -2px -2px #321b00; }
+
+/* Mobile joystick (Phaser: createMobileControls) — base r88 at 120 units from the bottom-left, knob r37, MOVER label. */
+.joystick { position: absolute; left: calc(32 * var(--ui-unit)); bottom: calc(40 * var(--ui-unit)); z-index: 4; display: grid; justify-items: center;
+  gap: calc(10 * var(--ui-unit)); color: #f3ead2; font-size: calc(14 * var(--ui-unit)); opacity: 0.9; }
+.joystick[hidden] { display: none; }
+.joystick-base { display: grid; place-items: center; width: calc(176 * var(--ui-unit)); height: calc(176 * var(--ui-unit)); border-radius: 50%;
+  background: rgba(17, 24, 39, 0.48); border: calc(4 * var(--ui-unit)) solid rgba(201, 150, 63, 0.62); box-sizing: border-box; touch-action: none; }
+.joystick-knob { width: calc(74 * var(--ui-unit)); height: calc(74 * var(--ui-unit)); border-radius: 50%; box-sizing: border-box; pointer-events: none;
+  background: rgba(90, 61, 34, 0.82); border: calc(3 * var(--ui-unit)) solid rgba(224, 180, 92, 0.8); }
+@media (pointer: coarse) { :root { --touch-scale: 1.4; } .joystick { transform-origin: bottom left; transform: scale(var(--touch-scale)); } }

@@ -1,7 +1,8 @@
 import { GameSession, PendingChoice } from '../core/session/GameSession';
+import { upgradeIcon, weaponIcon } from './ui/icons';
 
-/** Placeholder upgrade picker for the vertical slice (the themed card screens are Etapa 4): renders whatever choice
- *  the session has open — starting upgrades or a level-up, with its bonus weapon card — as plain DOM cards.
+/** Upgrade picker: whatever choice the session has open — starting upgrades or a level-up, with its bonus weapon
+ *  card — as the Phaser build's framed wood cards (upgrade_card_panel art, icon, gold name, cream description).
  *  Click a card or press 1–5. Re-renders only when the open choice (or its remaining picks) changes. */
 export class ChoiceOverlay {
   private readonly root: HTMLDivElement;
@@ -14,9 +15,10 @@ export class ChoiceOverlay {
     this.root.hidden = true;
     container.appendChild(this.root);
     window.addEventListener('keydown', (event) => {
+      if (this.root.hidden) return;
       const index = Number(event.key) - 1;
       if (!Number.isInteger(index) || index < 0) return;
-      this.root.querySelectorAll<HTMLButtonElement>('.choice-card')[index]?.click();
+      this.root.querySelectorAll<HTMLButtonElement>('.upgrade-card')[index]?.click();
     });
   }
 
@@ -39,24 +41,39 @@ export class ChoiceOverlay {
     heading.textContent = title;
     const row = document.createElement('div');
     row.className = 'choice-row';
-    choice.upgrades.forEach((upgrade) => row.appendChild(this.card(upgrade.name, upgrade.description, upgrade.tier === 'rare' ? 'rare' : '', () => this.session?.chooseUpgrade(upgrade.id))));
+    choice.upgrades.forEach((upgrade, index) => row.appendChild(upgradeCard({ icon: upgradeIcon(upgrade.id), name: upgrade.name, description: upgrade.description, variant: upgrade.tier === 'rare' ? 'rare' : '', hotkey: index + 1 }, () => this.session?.chooseUpgrade(upgrade.id))));
     if (choice.kind === 'level-up' && choice.extraWeapon) {
       const weapon = choice.extraWeapon;
-      row.appendChild(this.card(`ARMA EXTRA: ${weapon.name}`, weapon.description, 'weapon', () => this.session?.chooseExtraWeapon()));
+      row.appendChild(upgradeCard({ icon: weaponIcon(weapon.id), name: `ARMA EXTRA: ${weapon.name}`, description: weapon.description, variant: 'weapon', hotkey: choice.upgrades.length + 1 }, () => this.session?.chooseExtraWeapon()));
     }
     this.root.append(heading, row);
+    row.querySelector<HTMLButtonElement>('.upgrade-card')?.focus({ preventScroll: true });
   }
+}
 
-  private card(name: string, description: string, variant: string, onPick: () => void): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `choice-card ${variant}`.trim();
-    const label = document.createElement('strong');
-    label.textContent = name;
-    const text = document.createElement('span');
-    text.textContent = description;
-    button.append(label, text);
-    button.addEventListener('click', onPick);
-    return button;
-  }
+export interface UpgradeCardContent {
+  icon: string;
+  name: string;
+  description: string;
+  variant?: '' | 'rare' | 'weapon';
+  hotkey?: number;
+}
+
+/** One framed card. A <button> so it's focusable and works with keyboard and touch. */
+export function upgradeCard(content: UpgradeCardContent, onPick?: () => void): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `upgrade-card ${content.variant ?? ''}`.trim();
+  button.innerHTML = '<img alt=""><strong></strong><span></span>';
+  fillUpgradeCard(button, content);
+  if (content.hotkey) button.dataset.hotkey = String(content.hotkey);
+  if (onPick) button.addEventListener('click', onPick);
+  else button.disabled = true;
+  return button;
+}
+
+export function fillUpgradeCard(card: HTMLElement, { icon, name, description }: UpgradeCardContent): void {
+  card.querySelector('img')!.src = icon;
+  card.querySelector('strong')!.textContent = name;
+  card.querySelector('span')!.textContent = description;
 }

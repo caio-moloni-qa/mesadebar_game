@@ -10,9 +10,13 @@ import { CameraRig } from './CameraRig';
 import { ChoiceOverlay } from './ChoiceOverlay';
 import { Hud } from './Hud';
 import { PALETTE } from './materials';
-import { PixelPipeline } from './PixelPipeline';
+import { PixelPipeline, ndcToCanvas } from './PixelPipeline';
 import { RunChoice, StartMenu } from './StartMenu';
 import { simToWorld } from './space';
+import { FloatingTexts } from './ui/FloatingTexts';
+import { RunScreens } from './ui/RunScreens';
+import { ChestRoll } from './ui/ChestRoll';
+import { Joystick, isTouchDevice } from './ui/Joystick';
 import { CombatEffects } from './vfx/CombatEffects';
 import { EnemyHordeView } from './views/EnemyHordeView';
 import { HazardView, ParticleView, PickupView, ProjectileView } from './views/PickupAndProjectileViews';
@@ -24,6 +28,8 @@ import { createCollisionOverlay } from './world/CollisionOverlay';
 const MAX_FRAME_MS = 250;
 
 export interface Game3DOptions {
+  /** Show the on-screen joystick even off a touch screen (it shows on touch screens by default). */
+  touch?: boolean;
   /** Skip the start menu and go straight into this run (test URLs: ?hero=…&weapon=…). */
   initialRun?: RunChoice;
   /** Fixed seed for every run (reproducible tests); otherwise each run rolls a new one. */
@@ -41,6 +47,9 @@ export interface Game3DOptions {
   debug?: boolean;
 }
 
+/** Floating callout colours per player-status tone (Phaser: Player.spawnFloatingStatusText call sites). */
+const STATUS_COLORS: Record<'heal-cut' | 'slow' | 'rot' | 'heal', string> = { 'heal-cut': '#ffb347', slow: '#8bbcff', rot: '#b98bff', heal: '#8effa0' };
+
 /** The Three.js run: owns the WebGL renderer, the fixed-step loop and the views over one GameSession. */
 export class Game3D {
   private readonly renderer: THREE.WebGLRenderer;
@@ -51,6 +60,10 @@ export class Game3D {
   /** One map per page load: the authored layout with this load's detail seed, shared by every run (fixed zones). */
   private readonly arenaMap: ArenaMap;
   private readonly hud: Hud;
+  private readonly screens: RunScreens;
+  private readonly chestRoll: ChestRoll;
+  private readonly joystick: Joystick;
+  private readonly showJoystick: boolean;
   private readonly choices: ChoiceOverlay;
   private readonly menu: StartMenu;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
@@ -68,6 +81,10 @@ export class Game3D {
   private lastFrameAt = 0;
   private readonly fps = { frames: 0, since: 0, value: 0 };
   private readonly scratch = new THREE.Vector3();
+  private readonly floating: FloatingTexts;
+  private readonly projected = new THREE.Vector3();
+  /** Device pixels per CSS pixel the canvas is drawn at (see resize). */
+  private pixelRatio = 1;
 
   constructor(private readonly container: HTMLElement, private readonly options: Game3DOptions) {
     this.cameraRig = new CameraRig(options.zoom);
@@ -84,8 +101,14 @@ export class Game3D {
     this.arena = new Arena(this.arenaMap, arenaSeed);
     if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
-    this.hud = new Hud(container, () => this.restart(), () => this.showMenu());
+    this.floating = new FloatingTexts(container);
+    this.hud = new Hud(container, Boolean(options.debug));
+    this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
+    this.chestRoll = new ChestRoll(container);
+    this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
+    this.showJoystick = Boolean(options.touch) || isTouchDevice();
+    this.joystick.setVisible(false);
     this.menu = new StartMenu(container, (choice) => this.startRun(choice));
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
@@ -102,6 +125,7 @@ export class Game3D {
     this.inMenu = false;
     this.menu.hide();
     this.hud.setVisible(true);
+    this.joystick.setVisible(this.showJoystick);
     this.restart();
   }
 
@@ -110,6 +134,7 @@ export class Game3D {
   showMenu(): void {
     this.inMenu = true;
     this.hud.setVisible(false);
+    this.joystick.setVisible(false);
     this.createSession({ skipStartingUpgrades: true, attract: true });
     this.menu.show();
   }
@@ -120,6 +145,8 @@ export class Game3D {
 
   private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
     this.playerView?.dispose();
+    this.floating.clear();
+    this.chestRoll.stop();
     const { characterId, weaponId } = this.run;
     this.session = new GameSession({
       characterId,
@@ -155,11 +182,20 @@ export class Game3D {
     events.on('enemy-defeated', ({ x, y, variantId, divineRelic }) => {
       const point = at(x, y);
       this.particles.burst(point.x, point.z, variantId === 'skeleton' || variantId === 'superSkeleton' ? PALETTE.bone : 0xb98cff, 10);
-      if (divineRelic) this.particles.burst(point.x, point.z, 0x4dff7a, 4, 1.6, 0.6);
+      if (divineRelic) {
+        this.particles.burst(point.x, point.z, 0x4dff7a, 4, 1.6, 0.6);
+        this.floating.spawn(simToWorld(x, y, 1.6, this.scratch), '▲', { color: '#4dff7a', size: 26, rise: 46, durationMs: 620 }, performance.now());
+      }
     });
-    events.on('enemy-hit', ({ enemy, critical }) => {
+    events.on('enemy-hit', ({ enemy, amount, critical }) => {
       const point = at(enemy.x, enemy.y);
       this.particles.burst(point.x, point.z, critical ? 0xffe45c : PALETTE.boltCore, critical ? 8 : 3, 1.1, 2);
+      // Same callouts as the Phaser build: CRIT! then the number 150 ms later; Relíquia Divina adds "DANO +" on the hero.
+      const head = simToWorld(enemy.x, enemy.y, 2.1 * (enemy.displaySize / 62), this.scratch);
+      const now = performance.now();
+      if (critical) this.floating.spawn(head, 'CRIT!', { color: '#ffe45c' }, now);
+      this.floating.spawn(head, `- ${Math.round(amount)}`, { color: '#ff5c5c', delayMs: critical ? 150 : 0 }, now);
+      if (this.session.weapons.has('amulet')) this.floatAboveHero('DANO +', '#8effa0');
     });
     events.on('pickup-collected', ({ kind }) => {
       const color = kind === 'gem' ? PALETTE.gem : kind === 'potion' ? 0xff6b6b : 0xffd868;
@@ -171,7 +207,13 @@ export class Game3D {
       if (x === this.session.player.x && y === this.session.player.y) this.playerView.play('swing');
     });
     events.on('projectile-fired', ({ kind }) => this.playerView.play(kind === 'bolt' ? 'cast' : 'throw'));
-    events.on('player-damaged', () => this.playerView.play('hit'));
+    events.on('player-damaged', ({ amount }) => {
+      this.playerView.play('hit');
+      // With the Relíquia Divina equipped the hero's own damage reads green ("DANO -N"), like the Phaser build.
+      if (this.session.weapons.has('amulet')) this.floatAboveHero(`DANO -${Math.round(amount)}`, '#8effa0');
+      else this.floatAboveHero(`- ${Math.round(amount)}`, '#ff5c5c');
+    });
+    events.on('player-status', ({ text, tone }) => this.floatAboveHero(text, STATUS_COLORS[tone]));
     events.on('player-died', () => this.playerView.die());
     events.on('aura-pulse', ({ radius, multiStrike, buffUnlocked }) => {
       const { player } = this.session;
@@ -190,15 +232,33 @@ export class Game3D {
       this.particles.burst(point.x, point.z, 0xbfb3a0, 5, 1.0, 1.6);
       if (kind === 'bolt') this.particles.burst(point.x, point.z, PALETTE.boltCore, 4, 1.1, 2.2);
     });
-    events.on('chest-opened', () => this.effects.pulse(this.session.player.x, this.session.player.y, 60, 0xffd868, 0.5, 0.7));
+    events.on('chest-opened', ({ upgrade, rolled }) => {
+      this.effects.pulse(this.session.player.x, this.session.player.y, 60, 0xffd868, 0.5, 0.7);
+      this.chestRoll.play(this.session, upgrade, rolled, () => this.floatAboveHero(`Baú: ${upgrade.name}!`, '#ffe29a'));
+    });
   }
+
+  private floatAboveHero(text: string, color: string): void {
+    const { player } = this.session;
+    this.floating.spawn(simToWorld(player.x, player.y, 2.4, this.scratch), text, { color }, performance.now());
+  }
+
+  /** World point → CSS px over the canvas, matching the pixelated image (see ndcToCanvas). */
+  private projectToScreen = (world: THREE.Vector3, out: { x: number; y: number }): boolean => {
+    const ndc = this.projected.copy(world).project(this.cameraRig.camera);
+    if (Math.abs(ndc.x) > 1.05 || Math.abs(ndc.y) > 1.05) return false;
+    const canvas = ndcToCanvas(ndc.x, ndc.y, this.pipeline.layout, this.renderer.domElement.height, this.cameraRig.subTexelOffset);
+    out.x = canvas.x / this.pixelRatio;
+    out.y = canvas.y / this.pixelRatio;
+    return true;
+  };
 
   private bindInput(): void {
     window.addEventListener('keydown', (event) => {
       if (this.inMenu) return;
       this.keys.add(event.code);
       // ESC stays blocked while a choice screen is open, like the Phaser build.
-      if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice) this.session.paused = !this.session.paused;
+      if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
       if (event.code === 'KeyM' && (this.session.over || this.session.paused)) this.showMenu();
       if (this.options.debug) this.debugKey(event.code);
@@ -231,14 +291,17 @@ export class Game3D {
       this.session.setMoveInput(0, 0);
       return;
     }
-    const right = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
-    const up = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
+    let right = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
+    let up = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
+    // The stick takes over while it's held (like Phaser's mobileDirection overriding the keys).
+    if (this.joystick.direction.x !== 0 || this.joystick.direction.y !== 0) ({ x: right, y: up } = this.joystick.direction);
     const ground = this.cameraRig.screenToGround(right, up);
     this.session.setMoveInput(ground.x, ground.y);
   }
 
   private resize(): void {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    this.pixelRatio = ratio;
     const width = Math.floor(this.container.clientWidth * ratio);
     const height = Math.floor(this.container.clientHeight * ratio);
     this.renderer.setSize(width, height, false);
@@ -274,6 +337,7 @@ export class Game3D {
     this.arena.followFocus(this.cameraRig.focus);
     this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
+    this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset, [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions], [this.playerView.root]);
 
@@ -283,6 +347,7 @@ export class Game3D {
       this.fps.frames = 0;
       this.fps.since = now;
     }
+    this.screens.update(this.session, this.inMenu);
     this.hud.update(this.session, {
       fps: this.fps.value,
       drawCalls: this.renderer.info.render.calls,
