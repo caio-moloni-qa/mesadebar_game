@@ -11,12 +11,13 @@ import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { SoulProjectile } from '../entities/SoulProjectile';
 import { BossHost, BossSystem } from '../systems/BossSystem';
-import { DifficultySystem } from '../systems/DifficultySystem';
+import { createRng, Rng } from '../core/math';
+import { DifficultySystem } from '../core/systems/DifficultySystem';
 import { EnemySpawnHost, EnemySpawnSystem } from '../systems/EnemySpawnSystem';
 import { MerchantHost, MerchantSystem } from '../systems/MerchantSystem';
 import { SandboxDebugHost, SandboxDebugPanel } from '../systems/SandboxDebugPanel';
 import { sandboxState } from '../systems/SandboxState';
-import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
+import { Upgrade, UpgradeSystem } from '../core/systems/UpgradeSystem';
 import { GameHud } from '../ui/GameHud';
 import { CHARACTERS } from '../config/characters';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../config/weapons';
@@ -106,11 +107,13 @@ const THROWN_SWORD_DIRECTION_COUNT = 12;
 const THROWN_SWORD_CYCLES = 2;
 
 export class GameScene extends Phaser.Scene {
+  /** Single source of randomness for the core systems (seeded per scene instance; see core/math.ts). */
+  private readonly rng: Rng = createRng(Date.now());
   private player!: Player; private enemies!: Phaser.Physics.Arcade.Group; private projectiles!: Phaser.Physics.Arcade.Group; private soulProjectiles!: Phaser.Physics.Arcade.Group; private gems!: Phaser.Physics.Arcade.Group; private chests!: Phaser.Physics.Arcade.Group; private healthPotions!: Phaser.Physics.Arcade.Group; private bananaPeels!: Phaser.Physics.Arcade.Group;
   private hud!: GameHud; private cursors!: Phaser.Types.Input.Keyboard.CursorKeys; private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mobileMode = false; private mobileDirection = new Phaser.Math.Vector2(); private joystickKnob?: Phaser.GameObjects.Arc; private joystickZone?: Phaser.GameObjects.Zone; private joystickPointerId: number | null = null;
   private elapsedMs = 0; private kills = 0; private level = 1; private experience = 0; private experienceNeeded = requiredExperience(1); private currency = 0;
-  private paused = false; private ended = false; private levelPending = false; private chestRollActive = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private startingUpgradeSnapshot?: StartingUpgradeSnapshot; private startingUpgradePool?: Upgrade[]; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem();
+  private paused = false; private ended = false; private levelPending = false; private chestRollActive = false; private startingUpgradeChoicesRemaining = 0; private startingUpgradeChoicesTotal = 0; private startingUpgradeSnapshot?: StartingUpgradeSnapshot; private startingUpgradePool?: Upgrade[]; private readonly consumedStaffExecuteTokens = new Set<number>(); private readonly selectedUpgradeCounts = new Map<string, number>(); private readonly difficulty = new DifficultySystem(); private readonly upgrades = new UpgradeSystem(this.rng);
   /** Boss-wave cycle state (see onBossWaveCleared/continueToNextCycle): cycle 1 is the base 3-minute run; each
    *  "continue" portal choice bumps this, extending the next phase's duration by 1min, the difficulty multiplier
    *  by 1x, and next wave's boss count, all keyed off this same number. */
@@ -143,7 +146,7 @@ export class GameScene extends Phaser.Scene {
   private readonly merchant: MerchantSystem = new MerchantSystem(this.buildMerchantHost());
   private readonly sandbox: SandboxDebugPanel = new SandboxDebugPanel(this.buildSandboxHost());
   private readonly bossSystem: BossSystem = new BossSystem(this.buildBossHost());
-  private readonly enemySpawner: EnemySpawnSystem = new EnemySpawnSystem(this.buildEnemySpawnHost());
+  private readonly enemySpawner: EnemySpawnSystem = new EnemySpawnSystem(this.buildEnemySpawnHost(), this.rng);
 
   constructor() { super('game'); }
 
