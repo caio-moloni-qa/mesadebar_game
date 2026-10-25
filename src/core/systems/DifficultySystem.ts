@@ -1,4 +1,4 @@
-import { DIFFICULTY_STAGES } from '../config/balance';
+import { DIFFICULTY_STAGES } from '../../config/balance';
 
 export interface DifficultyStage { startMs: number; spawnInterval: number; count: number; healthMultiplier: number; }
 

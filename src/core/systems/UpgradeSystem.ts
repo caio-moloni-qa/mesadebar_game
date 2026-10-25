@@ -1,17 +1,38 @@
-import { Player } from '../entities/Player';
-import { WeaponConfig } from '../config/weapons';
+import { WeaponConfig } from '../../config/weapons';
+import { Rng, shuffled } from '../math';
 
 export type UpgradeTier = 'common' | 'rare';
+
+/** The slice of the player an upgrade can touch — entities/Player satisfies it structurally, and so will the
+ *  engine-agnostic PlayerState once it exists, so upgrade definitions never depend on a rendering engine. */
+export interface UpgradeTarget {
+  damageMultiplier: number;
+  attackSpeedMultiplier: number;
+  movementSpeed: number;
+  readonly whirlwindUnlocked: boolean;
+  addLifeSteal(): void;
+  addMeleeRangeBonus(amount: number): void;
+  addMeleeExtraAttack(): void;
+  unlockWhirlwind(): void;
+  addProjectileExtraCount(): void;
+  addProjectileRicochet(): void;
+  addProjectileSizeBonus(): void;
+  addAuraRadiusPercent(): void;
+  addAuraDamageBonus(): void;
+  addAuraTickSpeedBonus(): void;
+}
 
 export interface Upgrade {
   id: string;
   name: string;
   description: string;
   tier: UpgradeTier;
-  apply: (player: Player) => void;
+  apply: (player: UpgradeTarget) => void;
 }
 
 export class UpgradeSystem {
+  constructor(private readonly rng: Rng) {}
+
   private readonly upgrades: Upgrade[] = [
     { id: 'damage', name: 'Poder Arcano', description: '+25% de dano dos projéteis mágicos', tier: 'common', apply: (player) => { player.damageMultiplier += 0.25; } },
     { id: 'cooldown', name: 'Ritual Veloz', description: '+20% de velocidade de ataque', tier: 'common', apply: (player) => { player.attackSpeedMultiplier += 0.2; } },
@@ -43,16 +64,16 @@ export class UpgradeSystem {
     { id: 'aura-tick-speed', name: 'Ressonância Acelerada', description: '-0,1s no intervalo de dano da aura', tier: 'rare', apply: (player) => player.addAuraTickSpeedBonus() }
   ];
 
-  choices(primaryWeapon: WeaponConfig, player?: Player, amount = 3, secondaryWeapon?: WeaponConfig): Upgrade[] {
+  choices(primaryWeapon: WeaponConfig, player?: UpgradeTarget, amount = 3, secondaryWeapon?: WeaponConfig): Upgrade[] {
     const primaryPool = this.weaponSpecificUpgrades(primaryWeapon, player);
     const secondaryPool = secondaryWeapon ? this.weaponSpecificUpgrades(secondaryWeapon, player) : [];
     const combinedWeaponPool = this.uniqueUpgrades([...primaryPool, ...secondaryPool]);
-    if (combinedWeaponPool.length === 0) return [...this.upgrades].sort(() => Math.random() - 0.5).slice(0, amount);
+    if (combinedWeaponPool.length === 0) return shuffled(this.rng, this.upgrades).slice(0, amount);
     const guaranteedPools = secondaryPool.length > 0 ? [this.upgrades, secondaryPool] : [this.upgrades];
     return this.weightedChoices([...this.upgrades, ...combinedWeaponPool], amount, guaranteedPools);
   }
 
-  weaponUpgradePool(weapon: WeaponConfig, player?: Player): Upgrade[] {
+  weaponUpgradePool(weapon: WeaponConfig, player?: UpgradeTarget): Upgrade[] {
     return this.weaponSpecificUpgrades(weapon, player);
   }
 
@@ -62,7 +83,7 @@ export class UpgradeSystem {
     return [...this.upgrades];
   }
 
-  private weaponSpecificUpgrades(weapon: WeaponConfig, player?: Player): Upgrade[] {
+  private weaponSpecificUpgrades(weapon: WeaponConfig, player?: UpgradeTarget): Upgrade[] {
     if (weapon.type === 'cone') {
       const rareUpgrades = player?.whirlwindUnlocked ? [] : this.meleeRareUpgrades;
       return [...this.meleeCommonUpgrades, ...rareUpgrades];
@@ -83,16 +104,16 @@ export class UpgradeSystem {
       if (choices.length >= amount) return;
       const guaranteedChoices = remaining.filter((upgrade) => guaranteedPool.some((guaranteed) => guaranteed.id === upgrade.id));
       if (guaranteedChoices.length === 0) return;
-      const selected = guaranteedChoices[Math.floor(Math.random() * guaranteedChoices.length)];
+      const selected = guaranteedChoices[Math.floor(this.rng() * guaranteedChoices.length)];
       choices.push(selected);
       remaining.splice(remaining.indexOf(selected), 1);
     });
     while (choices.length < amount && remaining.length > 0) {
-      const preferredTier: UpgradeTier = Math.random() < 0.7 ? 'common' : 'rare';
+      const preferredTier: UpgradeTier = this.rng() < 0.7 ? 'common' : 'rare';
       const tierPool = remaining.filter((upgrade) => upgrade.tier === preferredTier);
       const fallbackPool = remaining.filter((upgrade) => upgrade.tier !== preferredTier);
       const pool = tierPool.length > 0 ? tierPool : fallbackPool;
-      const selected = pool[Math.floor(Math.random() * pool.length)];
+      const selected = pool[Math.floor(this.rng() * pool.length)];
       choices.push(selected);
       remaining.splice(remaining.indexOf(selected), 1);
     }
