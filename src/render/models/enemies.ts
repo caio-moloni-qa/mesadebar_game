@@ -156,7 +156,9 @@ function bake(model: RiggedModel, clip: THREE.AnimationClip, frames: number): TH
   return baked;
 }
 
-const WALK_FRAMES = 8;
+/** Frames baked per cycle; the horde view blends the two around each enemy's phase. 12 keeps the smoothed run
+ *  curve readable (8 cut corners) for 1.5× the morph texture. */
+const WALK_FRAMES = 12;
 const material = () => new THREE.MeshBasicMaterial();
 
 /** Builds every enemy variant once: rig the procedural model, bake its cycle, keep only the baked geometry. */
