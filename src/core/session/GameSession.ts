@@ -108,6 +108,7 @@ export class GameSession implements WeaponHost {
   private readonly flowField: FlowField | null;
   private flowFieldRefreshIn = 0;
   private userPaused = false;
+  private revealHold = false;
   private moveX = 0;
   private moveY = 0;
   private readonly scratch: EnemyState[] = [];
@@ -154,7 +155,18 @@ export class GameSession implements WeaponHost {
     this.syncClockPause();
   }
 
-  /** True while anything (pause menu, upgrade choice) is holding the simulation still. */
+  /** Set by the renderer while a reveal plays (the chest roll): the simulation holds still, like the Phaser build's
+   *  pauseGameplay() during it, without counting as the pause menu. */
+  get revealing(): boolean {
+    return this.revealHold;
+  }
+
+  set revealing(value: boolean) {
+    this.revealHold = value;
+    this.syncClockPause();
+  }
+
+  /** True while anything (pause menu, upgrade choice, a reveal) is holding the simulation still. */
   get frozen(): boolean {
     return this.clock.paused;
   }
@@ -554,7 +566,7 @@ export class GameSession implements WeaponHost {
   }
 
   private syncClockPause(): void {
-    this.clock.paused = this.userPaused || this.pendingChoice !== null;
+    this.clock.paused = this.userPaused || this.revealHold || this.pendingChoice !== null;
   }
 
   // ── WeaponHost queries ────────────────────────────────────────────────────────────────────────────────────

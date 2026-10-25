@@ -363,3 +363,21 @@ describe('pickups, pooling and determinism', () => {
     expect(snapshot(99)).toEqual(snapshot(99));
   });
 });
+
+describe('reveal hold', () => {
+  it('freezes the simulation without counting as the pause menu, and releases it', () => {
+    const session = quietSession('mage', 3);
+    session.setMoveInput(1, 0);
+    session.revealing = true;
+    expect(session.frozen).toBe(true);
+    expect(session.paused).toBe(false);
+    const x = session.player.x;
+    const elapsed = session.elapsedMs;
+    run(session, 30);
+    expect(session.player.x).toBe(x);
+    expect(session.elapsedMs).toBe(elapsed);
+    session.revealing = false;
+    run(session, 30);
+    expect(session.player.x).toBeGreaterThan(x);
+  });
+});

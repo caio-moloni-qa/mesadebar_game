@@ -60,18 +60,32 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .run-end-stats { margin: calc(24 * var(--ui-unit)) 0 calc(60 * var(--ui-unit)); white-space: pre-line; text-align: center; color: #f1f1f4;
   font-size: calc(24 * var(--ui-unit)); line-height: 1.6; }
 
-.choice-overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 20px; padding: 16px;
-  background: rgba(13, 7, 4, 0.78); text-align: center; z-index: 5; }
-.choice-overlay[hidden] { display: none; }
-.choice-overlay h2 { margin: 0; color: #ffe29a; font-size: clamp(20px, 3vw, 30px); font-weight: normal; }
-.choice-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-.choice-card { display: grid; gap: 8px; align-content: start; width: 190px; min-height: 150px; padding: 14px; cursor: pointer;
-  font: inherit; color: #f7f1dc; text-align: center; background: #3f2a17; border: 2px solid #c9963f; }
-.choice-card:hover, .choice-card:focus-visible { background: #5a3d22; outline: none; }
-.choice-card strong { color: #ffe29a; font-size: 17px; font-weight: normal; }
-.choice-card span { font-size: 13px; line-height: 1.35; }
-.choice-card.rare { border-color: #b98cff; }
-.choice-card.weapon { background: #6b5214; border-color: #ffd868; }
+/* Upgrade choice + chest roll: the Phaser framed wood cards (upgrade_card_panel art, 9-sliced at its ~240 px corners). */
+.choice-overlay, .chest-roll { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center;
+  gap: calc(28 * var(--ui-unit)); padding: 16px; background: rgba(13, 7, 4, 0.78); text-align: center; }
+.choice-overlay[hidden], .chest-roll[hidden] { display: none; }
+.choice-overlay h2, .chest-roll h2 { margin: 0; color: #f5cf79; font-size: calc(28 * var(--ui-unit)); font-weight: normal;
+  text-shadow: 0 calc(2 * var(--ui-unit)) 0 #14101c; }
+.choice-row { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(20 * var(--ui-unit)); }
+.upgrade-card { position: relative; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; align-content: start;
+  gap: calc(8 * var(--ui-unit)); width: calc(214 * var(--ui-unit)); min-height: calc(240 * var(--ui-unit)); box-sizing: border-box;
+  padding: calc(38 * var(--ui-unit)) calc(32 * var(--ui-unit)) calc(32 * var(--ui-unit)); cursor: pointer; font-family: MedievalSharp, Georgia, serif;
+  color: #f3ead2; background: none; border: none; border-image: url('./assets/ui/theme/upgrade_card_panel_v2.png') 240 fill / calc(46 * var(--ui-unit)) stretch;
+  transition: transform 120ms ease-out, filter 120ms ease-out; }
+.upgrade-card:hover, .upgrade-card:focus-visible { transform: translateY(calc(-6 * var(--ui-unit))); filter: brightness(1.15); outline: none; }
+.upgrade-card:disabled { cursor: default; }
+.upgrade-card img { width: calc(64 * var(--ui-unit)); height: calc(64 * var(--ui-unit)); object-fit: contain; image-rendering: pixelated; }
+.upgrade-card strong { color: #f5cf79; font-size: calc(18 * var(--ui-unit)); font-weight: normal; line-height: 1.15; }
+.upgrade-card span { font-size: calc(13 * var(--ui-unit)); line-height: 1.35; }
+.upgrade-card.rare { filter: drop-shadow(0 0 calc(10 * var(--ui-unit)) #b98cff); }
+.upgrade-card.rare strong { color: #d9bcff; }
+.upgrade-card.weapon { filter: drop-shadow(0 0 calc(12 * var(--ui-unit)) #ffd868); }
+.chest-card { width: calc(240 * var(--ui-unit)); min-height: calc(280 * var(--ui-unit)); }
+.chest-card img { width: calc(76 * var(--ui-unit)); height: calc(76 * var(--ui-unit)); }
+.chest-card.shuffle img { animation: chest-shimmer 140ms ease-out; }
+.chest-card.landed { animation: chest-land 360ms ease-out; filter: drop-shadow(0 0 calc(14 * var(--ui-unit)) #fff3b0); }
+@keyframes chest-shimmer { from { opacity: 0.35; } to { opacity: 1; } }
+@keyframes chest-land { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } }
 
 .start-menu { position: absolute; inset: 0; z-index: 10; overflow-y: auto; padding: 24px 16px;
   background: radial-gradient(ellipse at center, rgba(13, 7, 4, 0.55), rgba(13, 7, 4, 0.9)); }

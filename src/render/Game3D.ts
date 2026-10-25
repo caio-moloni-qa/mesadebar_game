@@ -15,6 +15,7 @@ import { RunChoice, StartMenu } from './StartMenu';
 import { simToWorld } from './space';
 import { FloatingTexts } from './ui/FloatingTexts';
 import { RunScreens } from './ui/RunScreens';
+import { ChestRoll } from './ui/ChestRoll';
 import { CombatEffects } from './vfx/CombatEffects';
 import { EnemyHordeView } from './views/EnemyHordeView';
 import { HazardView, ParticleView, PickupView, ProjectileView } from './views/PickupAndProjectileViews';
@@ -57,6 +58,7 @@ export class Game3D {
   private readonly arenaMap: ArenaMap;
   private readonly hud: Hud;
   private readonly screens: RunScreens;
+  private readonly chestRoll: ChestRoll;
   private readonly choices: ChoiceOverlay;
   private readonly menu: StartMenu;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
@@ -98,6 +100,7 @@ export class Game3D {
     this.hud = new Hud(container, Boolean(options.debug));
     this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
+    this.chestRoll = new ChestRoll(container);
     this.menu = new StartMenu(container, (choice) => this.startRun(choice));
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
@@ -133,6 +136,7 @@ export class Game3D {
   private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
     this.playerView?.dispose();
     this.floating.clear();
+    this.chestRoll.stop();
     const { characterId, weaponId } = this.run;
     this.session = new GameSession({
       characterId,
@@ -218,9 +222,9 @@ export class Game3D {
       this.particles.burst(point.x, point.z, 0xbfb3a0, 5, 1.0, 1.6);
       if (kind === 'bolt') this.particles.burst(point.x, point.z, PALETTE.boltCore, 4, 1.1, 2.2);
     });
-    events.on('chest-opened', ({ upgrade }) => {
+    events.on('chest-opened', ({ upgrade, rolled }) => {
       this.effects.pulse(this.session.player.x, this.session.player.y, 60, 0xffd868, 0.5, 0.7);
-      this.floatAboveHero(`Baú: ${upgrade.name}!`, '#ffe29a');
+      this.chestRoll.play(this.session, upgrade, rolled, () => this.floatAboveHero(`Baú: ${upgrade.name}!`, '#ffe29a'));
     });
   }
 
@@ -244,7 +248,7 @@ export class Game3D {
       if (this.inMenu) return;
       this.keys.add(event.code);
       // ESC stays blocked while a choice screen is open, like the Phaser build.
-      if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice) this.session.paused = !this.session.paused;
+      if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
       if (event.code === 'KeyM' && (this.session.over || this.session.paused)) this.showMenu();
       if (this.options.debug) this.debugKey(event.code);
