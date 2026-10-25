@@ -24,7 +24,7 @@ import { THEME, THEME_ASSETS, THEME_CSS, THEME_TEXT } from '../config/theme';
 import { createTextButton, createUpgradeCardPanel } from '../ui/uiFactory';
 
 type ArcadeColliderObject = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile;
-interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; playerTexture?: string; }
+interface GameSceneData { characterId?: keyof typeof CHARACTERS; weaponId?: keyof typeof WEAPONS; }
 interface ActiveWeapon {
   config: WeaponConfig;
   upgradeCount: number;
@@ -137,7 +137,9 @@ export class GameScene extends Phaser.Scene {
   private characterId: keyof typeof CHARACTERS = 'barbarian'; private weapons: ActiveWeapon[] = [];
   private get primaryWeapon(): WeaponConfig { return this.weapons[0].config; }
   private affinityFamilies: Set<WeaponFamily> = new Set();
-  private get selectedPlayerTexture(): string { return CHARACTERS[this.characterId].texture; }
+  /** The run's starting weapon, kept separately from `weapons` (which grows with extra-weapon picks) so REINICIAR
+   *  can restart with the exact same character + weapon the menu originally passed in. */
+  private startingWeaponId: keyof typeof WEAPONS = 'sword';
   private readonly merchant: MerchantSystem = new MerchantSystem(this.buildMerchantHost());
   private readonly sandbox: SandboxDebugPanel = new SandboxDebugPanel(this.buildSandboxHost());
   private readonly bossSystem: BossSystem = new BossSystem(this.buildBossHost());
@@ -209,7 +211,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data: GameSceneData): void {
     if (!data.characterId || !data.weaponId) { this.scene.start('menu'); return; }
-    this.characterId = data.characterId; this.weapons = [this.createActiveWeapon(WEAPONS[data.weaponId])];
+    this.characterId = data.characterId; this.startingWeaponId = data.weaponId; this.weapons =[this.createActiveWeapon(WEAPONS[data.weaponId])];
     this.affinityFamilies = new Set([weaponFamily(WEAPONS[data.weaponId])]);
     this.elapsedMs = 0; this.enemySpawner.reset(); this.kills = 0; this.level = 1; this.experience = 0; this.experienceNeeded = requiredExperience(1); this.currency = 0;
     this.paused = false; this.ended = false; this.levelPending = false; this.chestRollActive = false; this.awaitingPortalChoice = false; this.startingUpgradeChoicesRemaining = 0; this.startingUpgradeChoicesTotal = 0; this.startingUpgradeSnapshot = undefined; this.startingUpgradePool = undefined; this.consumedStaffExecuteTokens.clear(); this.selectedUpgradeCounts.clear(); this.levelOverlay = []; this.pauseOverlay = [];
@@ -1316,6 +1318,6 @@ export class GameScene extends Phaser.Scene {
     this.portalPrompt?.destroy();
     this.portalPrompt = undefined;
   }
-  private finish(victory: boolean): void { this.ended = true; this.pauseGameplay(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, THEME.overlayDim, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ playerTexture: this.selectedPlayerTexture })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
+  private finish(victory: boolean): void { this.ended = true; this.pauseGameplay(); const title = victory ? 'VITÓRIA!' : 'DERROTA'; this.add.rectangle(640, 360, 1280, 720, THEME.overlayDim, 0.88).setScrollFactor(0).setDepth(40); this.add.text(640, 215, title, { fontFamily: TITLE_FONT_FAMILY, fontSize: '52px', color: victory ? '#ffe07a' : '#ef7780' }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.add.text(640, 320, `Tempo sobrevivido: ${Math.floor(this.elapsedMs / 1000)}s\nNível alcançado: ${this.level}\nEliminações: ${this.kills}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#f1f1f4', align: 'center', lineSpacing: 12 }).setOrigin(0.5).setScrollFactor(0).setDepth(41); this.resultButton('REINICIAR', 555, () => this.scene.restart({ characterId: this.characterId, weaponId: this.startingWeaponId })); this.resultButton('VOLTAR AO MENU', 620, () => this.scene.start('menu')); }
   private resultButton(label: string, y: number, action: () => void): void { const button = createTextButton(this, 640, y, label, { fontSize: '21px' }).setScrollFactor(0).setDepth(41); button.on('pointerup', action); }
 }
