@@ -143,11 +143,13 @@ export function humanoidClips(hipHeight: number): Record<HeroClipName, THREE.Ani
       { t: 0.22, pose: { upperArmR: [-60, 0, 0], foreArmR: [0, 0, 0], chest: [12, -25, 0] } },
       { t: 0.4, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0] } }
     ], hips),
-    // Relíquia Divina tick: arms flare out.
-    pulse: additiveClip('pulse', 0.4, [
-      { t: 0, pose: { upperArmL: [0, 0, 0], upperArmR: [0, 0, 0], chest: [0, 0, 0] } },
-      { t: 0.12, pose: { upperArmL: [0, 0, 60], upperArmR: [0, 0, -60], chest: [-8, 0, 0] } },
-      { t: 0.4, pose: { upperArmL: [0, 0, 0], upperArmR: [0, 0, 0], chest: [0, 0, 0] } }
+    // Relíquia Divina tick: the right hand comes up and grips the relic on the chest, the body leans into it and the
+    // head dips, then lets go — channelling rather than flailing (it fires every aura tick, so it stays small).
+    pulse: additiveClip('pulse', 0.55, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] } },
+      { t: 0.12, pose: { upperArmR: [-40, 0, 28], foreArmR: [-95, 0, 0], handR: [0, 0, 0], chest: [6, 0, 0], head: [6, 0, 0] } },
+      { t: 0.32, pose: { upperArmR: [-42, 0, 30], foreArmR: [-100, 0, 0], handR: [15, 0, 0], chest: [9, -6, 0], head: [9, 0, 0] } },
+      { t: 0.55, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] } }
     ], hips),
     hit: additiveClip('hit', 0.24, [
       { t: 0, pose: { chest: [0, 0, 0], head: [0, 0, 0] } },
