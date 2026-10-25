@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CharacterConfig } from '../../config/characters';
+import { WeaponConfig } from '../../config/weapons';
 import { PlayerState } from '../../core/session/entities';
 import { PALETTE, toonMaterial } from '../materials';
 import { simToWorld, yawFromSimDirection } from '../space';
@@ -17,7 +18,7 @@ export class PlayerView {
   private walkPhase = 0;
   private readonly position = new THREE.Vector3();
 
-  constructor(character: CharacterConfig) {
+  constructor(character: CharacterConfig, weaponId: WeaponConfig['id']) {
     const accent = toonMaterial({ color: character.accentColor, flatShading: true });
     const skin = toonMaterial({ color: character.id === 'fabri' ? 0x8a5a32 : 0xe8b98f, flatShading: true });
     const dark = toonMaterial({ color: 0x3a2a22, flatShading: true });
@@ -52,12 +53,7 @@ export class PlayerView {
       this.body.add(amulet);
     }
 
-    // The slice always fights with the Cajado: staff + glowing crystal in the right hand.
-    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 4), toonMaterial({ color: PALETTE.wood }));
-    staff.position.set(0.5, 1.0, 0.1);
-    const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: PALETTE.bolt }));
-    crystal.position.set(0.5, 1.9, 0.1);
-    this.body.add(staff, crystal);
+    this.body.add(weaponProp(weaponId));
 
     this.body.traverse((child) => { if (child instanceof THREE.Mesh) child.castShadow = true; });
     this.root.add(this.body);
@@ -80,10 +76,47 @@ export class PlayerView {
     this.body.rotation.z = moving ? Math.sin(this.walkPhase) * 0.06 : 0;
 
     const flashing = nowMs - player.lastDamagedAt < DAMAGE_FLASH_MS;
-    this.materials.forEach((material) => material.emissive.setHex(flashing ? 0xaa1f1f : 0x000000));
+    const emissive = flashing ? 0xaa1f1f : player.isSlowed(nowMs) ? 0x1f3f8a : 0x000000;
+    this.materials.forEach((material) => material.emissive.setHex(emissive));
   }
 
   get worldPosition(): THREE.Vector3 {
     return this.position;
   }
+}
+
+/** The starting weapon, held in the right hand — chunky enough to read from the high camera. */
+function weaponProp(weaponId: WeaponConfig['id']): THREE.Group {
+  const prop = new THREE.Group();
+  const wood = toonMaterial({ color: PALETTE.wood, flatShading: true });
+  const steel = toonMaterial({ color: PALETTE.steel, flatShading: true });
+  if (weaponId === 'staff') {
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 4), wood);
+    staff.position.y = 1.0;
+    const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: PALETTE.bolt }));
+    crystal.position.y = 1.9;
+    prop.add(staff, crystal);
+  } else if (weaponId === 'sword') {
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 0.04), steel);
+    blade.position.y = 1.35;
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.07, 0.1), wood);
+    guard.position.y = 0.75;
+    prop.add(blade, guard);
+  } else if (weaponId === 'whip') {
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 4), wood);
+    handle.position.y = 0.9;
+    const lash = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.03, 3, 10, Math.PI * 1.5), wood);
+    lash.position.set(0, 0.55, 0.1);
+    prop.add(handle, lash);
+  } else if (weaponId === 'boomerang') {
+    const boomerang = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.14).rotateY(0.6), toonMaterial({ color: 0xb07a3c, flatShading: true }));
+    boomerang.position.y = 1.0;
+    prop.add(boomerang);
+  } else {
+    const amulet = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), new THREE.MeshBasicMaterial({ color: 0xffd36a }));
+    amulet.position.set(-0.5, 1.15, 0.36);
+    prop.add(amulet);
+  }
+  prop.position.set(0.5, 0, 0.1);
+  return prop;
 }

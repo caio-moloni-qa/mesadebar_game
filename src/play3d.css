@@ -17,3 +17,17 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .hud-stats { position: absolute; bottom: 8px; left: 16px; font: 12px/1.2 ui-monospace, monospace; opacity: 0.75; }
 .hud-banner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 16px 28px; font-size: 28px;
   background: rgba(13, 7, 4, 0.85); border: 2px solid #c9963f; pointer-events: auto; cursor: pointer; text-align: center; }
+
+.choice-overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 20px; padding: 16px;
+  background: rgba(13, 7, 4, 0.78); text-align: center; z-index: 5; }
+.choice-overlay[hidden] { display: none; }
+.choice-overlay h2 { margin: 0; color: #ffe29a; font-size: clamp(20px, 3vw, 30px); font-weight: normal; }
+.choice-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.choice-card { display: grid; gap: 8px; align-content: start; width: 190px; min-height: 150px; padding: 14px; cursor: pointer;
+  font: inherit; color: #f7f1dc; text-align: center; background: #3f2a17; border: 2px solid #c9963f; }
+.choice-card:hover, .choice-card:focus-visible { background: #5a3d22; outline: none; }
+.choice-card strong { color: #ffe29a; font-size: 17px; font-weight: normal; }
+.choice-card span { font-size: 13px; line-height: 1.35; }
+.choice-card.rare { border-color: #b98cff; }
+.choice-card.weapon { background: #6b5214; border-color: #ffd868; }
+.hud-weapons { font-size: 14px; opacity: 0.9; }
