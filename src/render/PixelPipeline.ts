@@ -8,6 +8,11 @@ export const MAX_INTERNAL_HEIGHT = 360;
 export const INTERNAL_PADDING = 2;
 /** 40 m across 640 px → 16 px per meter, fixed: the texel size never changes, only how many fit on screen. */
 export const METERS_PER_TEXEL = 40 / MAX_INTERNAL_WIDTH;
+/** Characters render at this many texels per world texel, so a ~2 m hero is ~64 texels tall instead of ~32: faces,
+ *  belts and fur read while the world keeps its chunky pixels. */
+export const CHARACTER_DENSITY = 2;
+/** Layer the character pass draws (characters and the lights that shade them). */
+export const CHARACTER_LAYER = 1;
 
 export interface PipelineLayout {
   /** Whole-number device pixels per internal pixel. */
@@ -56,12 +61,16 @@ const compositeFragment = /* glsl */ `
   uniform float outlineDarken;
   uniform float highlightBoost;
   uniform float ditherLevels;
+  uniform sampler2D tCharColor;
+  uniform sampler2D tCharDepth;
+  uniform vec2 charTargetSize;
+  uniform float charDensity;
 
   float linearDepth(vec2 texel) {
-    return texture2D(tDepth, (texel + 0.5) / targetSize).r * depthRange;
+    return textureLod(tDepth, (texel + 0.5) / targetSize, 0.0).r * depthRange;
   }
   vec3 viewNormal(vec2 texel) {
-    return texture2D(tNormal, (texel + 0.5) / targetSize).xyz * 2.0 - 1.0;
+    return textureLod(tNormal, (texel + 0.5) / targetSize, 0.0).xyz * 2.0 - 1.0;
   }
   float bayer4(vec2 p) {
     int x = int(mod(p.x, 4.0));
@@ -76,15 +85,43 @@ const compositeFragment = /* glsl */ `
     return 0.0;
   }
 
+  // Explicit LOD everywhere: reads happen inside branches and after an early return, where implicit derivatives are undefined.
+  vec4 charColor(vec2 texel) {
+    return textureLod(tCharColor, (texel + 0.5) / charTargetSize, 0.0);
+  }
+  float charDepth(vec2 texel) {
+    return textureLod(tCharDepth, (texel + 0.5) / charTargetSize, 0.0).r * depthRange;
+  }
+  vec3 quantise(vec3 color, vec2 texel) {
+    color = clamp(color, 0.0, 1.0);
+    color = mix(pow(color, vec3(1.0 / 2.4)) * 1.055 - 0.055, color * 12.92, vec3(lessThanEqual(color, vec3(0.0031308))));
+    return floor(color * ditherLevels + 0.5 + bayer4(texel) - 0.5) / ditherLevels;
+  }
+
   void main() {
     vec2 internalPx = (gl_FragCoord.xy - viewportOrigin) / pixelScale;
     vec2 texel = floor(internalPx + subTexelOffset) + padding;
     vec3 color = texture2D(tColor, (texel + 0.5) / targetSize).rgb;
-
     float depth = linearDepth(texel);
-    vec3 normal = viewNormal(texel);
     vec2 offsets[4];
     offsets[0] = vec2(1.0, 0.0); offsets[1] = vec2(-1.0, 0.0); offsets[2] = vec2(0.0, 1.0); offsets[3] = vec2(0.0, -1.0);
+
+    // Characters: their own finer texels, in front of the world unless the world is closer at this texel (a wall or
+    // tree between hero and camera). Outlined at their silhouette and where a limb overlaps the body.
+    vec2 charTexel = floor((internalPx + subTexelOffset) * charDensity) + padding * charDensity;
+    vec4 character = charColor(charTexel);
+    float ownDepth = charDepth(charTexel);
+    if (character.a > 0.5 && ownDepth <= depth + 0.1) {
+      float edge = 0.0;
+      for (int i = 0; i < 4; i++) {
+        vec2 neighbour = charTexel + offsets[i];
+        edge += charColor(neighbour).a < 0.5 ? 1.0 : clamp(charDepth(neighbour) - ownDepth - 0.25, 0.0, 1.0);
+      }
+      gl_FragColor = vec4(quantise(edge > 0.0 ? character.rgb * outlineDarken : character.rgb, charTexel), 1.0);
+      return;
+    }
+
+    vec3 normal = viewNormal(texel);
 
     float depthEdge = 0.0;
     float normalEdge = 0.0;
@@ -105,18 +142,14 @@ const compositeFragment = /* glsl */ `
 
     // Encode to sRGB first so the quantisation steps are perceptually even, then ordered-dither while quantising —
     // keeps gradients (shadow falloff, fog) reading as pixel art. Output is already sRGB, so no colorspace chunk.
-    color = clamp(color, 0.0, 1.0);
-    color = mix(pow(color, vec3(1.0 / 2.4)) * 1.055 - 0.055, color * 12.92, vec3(lessThanEqual(color, vec3(0.0031308))));
-    float threshold = bayer4(texel) - 0.5;
-    color = floor(color * ditherLevels + 0.5 + threshold) / ditherLevels;
-
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(quantise(color, texel), 1.0);
   }
 `;
 
 export class PixelPipeline {
   private readonly colorTarget: THREE.WebGLRenderTarget;
   private readonly normalTarget: THREE.WebGLRenderTarget;
+  private readonly characterTarget: THREE.WebGLRenderTarget;
   private readonly normalMaterial = new THREE.MeshNormalMaterial();
   private readonly compositeScene = new THREE.Scene();
   private readonly compositeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -133,6 +166,11 @@ export class PixelPipeline {
     this.colorTarget.depthTexture!.minFilter = THREE.NearestFilter;
     this.colorTarget.depthTexture!.magFilter = THREE.NearestFilter;
     this.normalTarget = new THREE.WebGLRenderTarget(targetWidth, targetHeight, targetOptions);
+    const charWidth = targetWidth * CHARACTER_DENSITY;
+    const charHeight = targetHeight * CHARACTER_DENSITY;
+    this.characterTarget = new THREE.WebGLRenderTarget(charWidth, charHeight, { ...targetOptions, depthTexture: new THREE.DepthTexture(charWidth, charHeight) });
+    this.characterTarget.depthTexture!.minFilter = THREE.NearestFilter;
+    this.characterTarget.depthTexture!.magFilter = THREE.NearestFilter;
     this.compositeMaterial = new THREE.ShaderMaterial({
       vertexShader: compositeVertex,
       fragmentShader: compositeFragment,
@@ -148,7 +186,11 @@ export class PixelPipeline {
         depthRange: { value: 1 },
         outlineDarken: { value: 0.55 },
         highlightBoost: { value: 1.3 },
-        ditherLevels: { value: 28 }
+        ditherLevels: { value: 28 },
+        tCharColor: { value: this.characterTarget.texture },
+        tCharDepth: { value: this.characterTarget.depthTexture },
+        charTargetSize: { value: new THREE.Vector2(charWidth, charHeight) },
+        charDensity: { value: CHARACTER_DENSITY }
       },
       depthTest: false,
       depthWrite: false
@@ -165,21 +207,32 @@ export class PixelPipeline {
     const targetHeight = this.layout.internalHeight + INTERNAL_PADDING * 2;
     this.colorTarget.setSize(targetWidth, targetHeight);
     this.normalTarget.setSize(targetWidth, targetHeight);
+    this.characterTarget.setSize(targetWidth * CHARACTER_DENSITY, targetHeight * CHARACTER_DENSITY);
     (this.compositeMaterial.uniforms.targetSize.value as THREE.Vector2).set(targetWidth, targetHeight);
+    (this.compositeMaterial.uniforms.charTargetSize.value as THREE.Vector2).set(targetWidth * CHARACTER_DENSITY, targetHeight * CHARACTER_DENSITY);
     return this.layout;
   }
 
   /** `hideInNormalPass` objects (transparent blob shadows, particles) are skipped while normals are drawn so they
-   *  don't create fake edges. */
-  render(scene: THREE.Scene, camera: THREE.OrthographicCamera, subTexelOffset: THREE.Vector2, hideInNormalPass: THREE.Object3D[]): void {
+   *  don't create fake edges. `characters` get their own pass at CHARACTER_DENSITY; in the world pass they only
+   *  cast their shadow (colour and depth writes off). */
+  render(scene: THREE.Scene, camera: THREE.OrthographicCamera, subTexelOffset: THREE.Vector2, hideInNormalPass: THREE.Object3D[], characters: THREE.Object3D[] = []): void {
     const { renderer } = this;
+    const characterMaterials = new Set<THREE.Material>();
+    characters.forEach((root) => root.traverse((object) => {
+      object.layers.enable(CHARACTER_LAYER);
+      if (object instanceof THREE.Mesh) (Array.isArray(object.material) ? object.material : [object.material]).forEach((material) => characterMaterials.add(material));
+    }));
+    characterMaterials.forEach((material) => { material.colorWrite = false; material.depthWrite = false; });
     renderer.setRenderTarget(this.colorTarget);
     renderer.clear();
     renderer.render(scene, camera);
+    characterMaterials.forEach((material) => { material.colorWrite = true; material.depthWrite = true; });
 
     const previousBackground = scene.background;
-    const visibility = hideInNormalPass.map((object) => object.visible);
-    hideInNormalPass.forEach((object) => { object.visible = false; });
+    const normalHidden = [...hideInNormalPass, ...characters];
+    const visibility = normalHidden.map((object) => object.visible);
+    normalHidden.forEach((object) => { object.visible = false; });
     scene.overrideMaterial = this.normalMaterial;
     scene.background = null;
     renderer.setRenderTarget(this.normalTarget);
@@ -188,7 +241,22 @@ export class PixelPipeline {
     renderer.render(scene, camera);
     scene.overrideMaterial = null;
     scene.background = previousBackground;
-    hideInNormalPass.forEach((object, index) => { object.visible = visibility[index]; });
+    normalHidden.forEach((object, index) => { object.visible = visibility[index]; });
+
+    // Character pass: only the character layer (characters + every light), transparent background, reusing the
+    // shadow map the world pass just rendered.
+    scene.traverse((object) => { if ((object as THREE.Light).isLight) object.layers.enable(CHARACTER_LAYER); });
+    const autoUpdate = renderer.shadowMap.autoUpdate;
+    renderer.shadowMap.autoUpdate = false;
+    camera.layers.set(CHARACTER_LAYER);
+    scene.background = null;
+    renderer.setRenderTarget(this.characterTarget);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear();
+    if (characters.length) renderer.render(scene, camera);
+    camera.layers.set(0);
+    scene.background = previousBackground;
+    renderer.shadowMap.autoUpdate = autoUpdate;
 
     const uniforms = this.compositeMaterial.uniforms;
     const { layout } = this;
@@ -208,6 +276,7 @@ export class PixelPipeline {
   dispose(): void {
     this.colorTarget.dispose();
     this.normalTarget.dispose();
+    this.characterTarget.dispose();
     this.normalMaterial.dispose();
     this.compositeMaterial.dispose();
   }

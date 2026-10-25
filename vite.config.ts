@@ -3,6 +3,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: '/mesadebar_game/',
+  // Imported 3D models (src/assets/3d) are plain assets: URLs at runtime, ?inline in tests.
+  assetsInclude: ['**/*.glb'],
   build: {
     rollupOptions: {
       // index.html = the Phaser game; play3d.html = the Three.js migration's vertical slice (THREEJS_3D_MIGRATION_TEMP.md, Etapa 2).
