@@ -6,6 +6,7 @@ import { HAND_ATTACKS, HandAttack, HeroClipName } from '../models/clips';
 import { HeroModel, attachWeapons, createHeroModel } from '../models/heroes';
 import { WeaponModelId } from '../models/weapons';
 import { simToWorld, yawFromSimDirection } from '../space';
+import { RelicGlow } from '../vfx/RelicGlow';
 
 const TURN_SHARPNESS = 10;
 const DAMAGE_FLASH_MS = 160;
@@ -27,6 +28,9 @@ const TWIST_SHARPNESS = 18;
  *  reactions are additive one-shots layered on top, so they never interrupt the legs. */
 export class HeroView {
   readonly root = new THREE.Group();
+  /** Effects that follow the hero but render with the world, not in the character pass (Game3D adds it to the scene). */
+  readonly effects = new THREE.Group();
+  private readonly relicGlow = new RelicGlow();
   private readonly model: HeroModel;
   private readonly mixer: THREE.AnimationMixer;
   private readonly actions: Record<HeroClipName, THREE.AnimationAction>;
@@ -41,6 +45,7 @@ export class HeroView {
   constructor(characterId: CharacterId, weaponId: WeaponConfig['id']) {
     this.model = createHeroModel(characterId, weaponId);
     this.root.add(this.model.root);
+    this.effects.add(this.relicGlow.root);
     this.mixer = new THREE.AnimationMixer(this.model.root);
     this.actions = Object.fromEntries(Object.entries(this.model.clips).map(([name, clip]) => [name, this.mixer.clipAction(clip)])) as Record<HeroClipName, THREE.AnimationAction>;
     ([...HAND_ATTACKS, ...HAND_ATTACKS.map((name) => `${name}L` as const), 'hit'] as const).forEach((name) => {
@@ -75,6 +80,8 @@ export class HeroView {
     if (this.dead) return;
     const name: HeroClipName = action === 'hit' || hand === 'R' ? action : `${action}L`;
     this.actions[name].reset().setEffectiveWeight(1).fadeIn(0.06).play();
+    // The hand gripping the relic glows with the tick.
+    if (action === 'pulse') this.relicGlow.flash(hand === 'L' ? this.model.bones.handL : this.model.bones.handR);
   }
 
   die(): void {
@@ -113,6 +120,8 @@ export class HeroView {
     const twistTarget = aiming ? THREE.MathUtils.clamp(wrapAngle(this.aimYaw - this.yaw), -MAX_TWIST, MAX_TWIST) : 0;
     this.twist += (twistTarget - this.twist) * (1 - Math.exp(-TWIST_SHARPNESS * deltaSeconds));
     if (this.model.bones.spine) this.model.bones.spine.rotation.y = this.twist;
+    this.model.root.updateMatrixWorld();
+    this.relicGlow.update(deltaSeconds);
 
     const flashing = nowMs - player.lastDamagedAt < DAMAGE_FLASH_MS;
     const emissive = flashing ? 0xaa1f1f : player.isSlowed(nowMs) ? 0x1f3f8a : 0x000000;
@@ -140,6 +149,8 @@ export class HeroView {
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.model.root);
     this.root.removeFromParent();
+    this.relicGlow.dispose();
+    this.effects.removeFromParent();
     this.root.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
       child.geometry.dispose();
