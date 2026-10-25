@@ -147,3 +147,52 @@ export const BARBARIAN_JOINTS: JointSpec[] = [
 ];
 
 export const BARBARIAN_HIP_HEIGHT = 0.85;
+
+/** The Mage's Tripo mesh (src/assets/3d/characters/mage.glb, art-source/3d/mage/): hooded, with a coat skirt down to
+ *  the knees. The skirt sits between the thighs and the hips, so it blends between the two and stretches with the
+ *  stride instead of tearing. */
+export const MAGE_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.82, 0], radius: 0.3, minY: 0.45 },
+  { name: 'spine', parent: 'hips', at: [0, 1.0, 0], radius: 0.24, minY: 0.75 },
+  { name: 'chest', parent: 'spine', at: [0, 1.2, 0], radius: 0.26, minY: 1.0, maxY: 1.55 },
+  { name: 'head', parent: 'chest', at: [0, 1.47, 0], tip: [0, 1.86, 0], radius: 0.18, minY: 1.42 },
+  { name: 'upperArmL', parent: 'chest', at: [0.26, 1.36, -0.02], radius: 0.08, side: 'L', minAbsX: 0.22, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.43, 1.1, 0], radius: 0.08, side: 'L', minAbsX: 0.28 },
+  { name: 'handL', parent: 'foreArmL', at: [0.52, 0.88, 0.03], tip: [0.56, 0.74, 0.02], radius: 0.06, side: 'L', minAbsX: 0.4 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.26, 1.36, -0.02], radius: 0.08, side: 'R', minAbsX: 0.22, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.43, 1.1, 0], radius: 0.08, side: 'R', minAbsX: 0.28 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.52, 0.88, 0.03], tip: [-0.56, 0.74, 0.02], radius: 0.06, side: 'R', minAbsX: 0.4 },
+  { name: 'thighL', parent: 'hips', at: [0.12, 0.78, 0], radius: 0.1, side: 'L', maxY: 0.9 },
+  { name: 'shinL', parent: 'thighL', at: [0.17, 0.44, 0], radius: 0.08, side: 'L', maxY: 0.6 },
+  { name: 'footL', parent: 'shinL', at: [0.21, 0.15, -0.02], tip: [0.26, 0.03, 0.16], radius: 0.07, side: 'L', maxY: 0.3 },
+  { name: 'thighR', parent: 'hips', at: [-0.12, 0.78, 0], radius: 0.1, side: 'R', maxY: 0.9 },
+  { name: 'shinR', parent: 'thighR', at: [-0.17, 0.44, 0], radius: 0.08, side: 'R', maxY: 0.6 },
+  { name: 'footR', parent: 'shinR', at: [-0.21, 0.15, -0.02], tip: [-0.26, 0.03, 0.16], radius: 0.07, side: 'R', maxY: 0.3 }
+];
+
+export const MAGE_HIP_HEIGHT = 0.82;
+
+/** The Relíquia's Tripo mesh (src/assets/3d/characters/reliquia.glb, art-source/3d/reliquia/): the cloak hangs down
+ *  the back to mid-thigh and stays with the hips (it's closer to the hips capsule than to the thighs). */
+export const RELIQUIA_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.85, 0], radius: 0.23, minY: 0.6 },
+  { name: 'spine', parent: 'hips', at: [0, 1.05, 0], radius: 0.25, minY: 0.85 },
+  { name: 'chest', parent: 'spine', at: [0, 1.28, 0], radius: 0.26, minY: 1.05, maxY: 1.66 },
+  { name: 'head', parent: 'chest', at: [0, 1.58, 0], tip: [0, 1.92, 0], radius: 0.16, minY: 1.52 },
+  { name: 'upperArmL', parent: 'chest', at: [0.3, 1.38, -0.01], radius: 0.08, side: 'L', minAbsX: 0.24, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.45, 1.1, 0], radius: 0.08, side: 'L', minAbsX: 0.3 },
+  { name: 'handL', parent: 'foreArmL', at: [0.52, 0.9, 0.04], tip: [0.56, 0.76, 0.02], radius: 0.06, side: 'L', minAbsX: 0.42 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.3, 1.38, -0.01], radius: 0.08, side: 'R', minAbsX: 0.24, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.45, 1.1, 0], radius: 0.08, side: 'R', minAbsX: 0.3 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.52, 0.9, 0.04], tip: [-0.56, 0.76, 0.02], radius: 0.06, side: 'R', minAbsX: 0.42 },
+  { name: 'thighL', parent: 'hips', at: [0.13, 0.8, -0.02], radius: 0.12, side: 'L', maxY: 0.95 },
+  { name: 'shinL', parent: 'thighL', at: [0.21, 0.44, -0.04], radius: 0.1, side: 'L', maxY: 0.62 },
+  { name: 'footL', parent: 'shinL', at: [0.25, 0.16, -0.02], tip: [0.28, 0.03, 0.15], radius: 0.08, side: 'L', maxY: 0.3 },
+  { name: 'thighR', parent: 'hips', at: [-0.13, 0.8, -0.02], radius: 0.12, side: 'R', maxY: 0.95 },
+  { name: 'shinR', parent: 'thighR', at: [-0.21, 0.44, -0.04], radius: 0.1, side: 'R', maxY: 0.62 },
+  { name: 'footR', parent: 'shinR', at: [-0.25, 0.16, -0.02], tip: [-0.28, 0.03, 0.15], radius: 0.08, side: 'R', maxY: 0.3 }
+];
+
+export const RELIQUIA_HIP_HEIGHT = 0.85;

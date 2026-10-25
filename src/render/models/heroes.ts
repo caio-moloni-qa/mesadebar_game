@@ -4,7 +4,7 @@ import { WeaponConfig } from '../../config/weapons';
 import { toonMaterial } from '../materials';
 import { HeroClipName, humanoidClips } from './clips';
 import { heroMesh } from './heroMeshes';
-import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, JointSpec, rigImportedMesh } from './importedRig';
+import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, JointSpec, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, rigImportedMesh } from './importedRig';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { RigPart, RiggedModel, buildRiggedModel, clipForBones, humanoidBones } from './rig';
 import { heldWeapon } from './weapons';
@@ -133,7 +133,9 @@ const CLIPS = humanoidClips(HIP_HEIGHT);
  *  in-game scale (the rig is measured on the mesh at its processed height; scaling the model keeps them in sync). */
 const IMPORTED: Partial<Record<CharacterId, { joints: JointSpec[]; clips: Record<HeroClipName, THREE.AnimationClip>; extras: (accent: number) => RigPart[]; scale: number }>> = {
   barbarian: { joints: BARBARIAN_JOINTS, clips: humanoidClips(BARBARIAN_HIP_HEIGHT), extras: () => [], scale: 1 },
-  fabri: { joints: FABRI_JOINTS, clips: humanoidClips(FABRI_HIP_HEIGHT), extras: (accent) => fabriTail(accent), scale: 1 }
+  fabri: { joints: FABRI_JOINTS, clips: humanoidClips(FABRI_HIP_HEIGHT), extras: (accent) => fabriTail(accent), scale: 1 },
+  mage: { joints: MAGE_JOINTS, clips: humanoidClips(MAGE_HIP_HEIGHT), extras: () => [], scale: 1 },
+  reliquia: { joints: RELIQUIA_JOINTS, clips: humanoidClips(RELIQUIA_HIP_HEIGHT), extras: () => [], scale: 1 }
 };
 
 export interface HeroModel extends RiggedModel {

@@ -4,9 +4,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createHeroModel } from './heroes';
 import { registerHeroMesh, unregisterHeroMesh } from './heroMeshes';
-import { BARBARIAN_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, JointSpec, rigImportedMesh } from './importedRig';
+import { BARBARIAN_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, JointSpec, MAGE_JOINTS, RELIQUIA_JOINTS, rigImportedMesh } from './importedRig';
 import barbarianGlb from '../../assets/3d/characters/barbarian.glb?inline';
 import fabriGlb from '../../assets/3d/characters/fabri.glb?inline';
+import mageGlb from '../../assets/3d/characters/mage.glb?inline';
+import reliquiaGlb from '../../assets/3d/characters/reliquia.glb?inline';
 import { box, mergeParts, part } from './parts';
 
 /** A blocky stand-in for the Tripo mesh at Fabri's proportions: torso, head, A-pose arms, legs (limbs subdivided
@@ -101,7 +103,9 @@ describe('imported hero model', () => {
   // [file, joints, hand x, hand y]: a hand point and a foot point that must follow the limbs, the crown the head.
   it.each([
     ['fabri.glb', fabriGlb, FABRI_JOINTS, 0.48, 0.76],
-    ['barbarian.glb', barbarianGlb, BARBARIAN_JOINTS, 0.54, 0.84]
+    ['barbarian.glb', barbarianGlb, BARBARIAN_JOINTS, 0.54, 0.84],
+    ['mage.glb', mageGlb, MAGE_JOINTS, 0.55, 0.8],
+    ['reliquia.glb', reliquiaGlb, RELIQUIA_JOINTS, 0.55, 0.82]
   ] as [string, string, JointSpec[], number, number][])('rigs the shipped %s: hands follow the arms and feet the legs', async (_name, url, joints, handX, handY) => {
     const file = await (await fetch(url)).arrayBuffer();
     const gltf = await new GLTFLoader().parseAsync(file, '');
