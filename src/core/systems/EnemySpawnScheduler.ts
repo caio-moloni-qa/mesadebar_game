@@ -40,7 +40,8 @@ export class EnemySpawnScheduler {
    *  by design: count is this variant's only difficulty lever besides the healthMultiplier applied per spawn. */
   private superSkeletonSpawnCount = 1;
 
-  constructor(private readonly host: EnemySpawnSchedulerHost, private readonly rng: Rng) {}
+  /** `worldSize`: side of the square play area (the 2D build's WORLD_SIZE, or the 3D arena's size). */
+  constructor(private readonly host: EnemySpawnSchedulerHost, private readonly rng: Rng, private readonly worldSize: number = WORLD_SIZE) {}
 
   reset(): void {
     this.skeletonSpawnElapsed = 0;
@@ -114,14 +115,15 @@ export class EnemySpawnScheduler {
   }
 
   private randomMapPosition(): Vec2 {
-    return { x: intBetween(this.rng, MAP_SPAWN_MARGIN, WORLD_SIZE - MAP_SPAWN_MARGIN), y: intBetween(this.rng, MAP_SPAWN_MARGIN, WORLD_SIZE - MAP_SPAWN_MARGIN) };
+    return { x: intBetween(this.rng, MAP_SPAWN_MARGIN, this.worldSize - MAP_SPAWN_MARGIN), y: intBetween(this.rng, MAP_SPAWN_MARGIN, this.worldSize - MAP_SPAWN_MARGIN) };
   }
 
   private randomBorderPosition(): Vec2 {
     const side = intBetween(this.rng, 0, 3);
-    if (side === 0) return { x: intBetween(this.rng, 0, WORLD_SIZE), y: BORDER_SPAWN_EDGE };
-    if (side === 1) return { x: intBetween(this.rng, 0, WORLD_SIZE), y: WORLD_SIZE - BORDER_SPAWN_EDGE };
-    if (side === 2) return { x: BORDER_SPAWN_EDGE, y: intBetween(this.rng, 0, WORLD_SIZE) };
-    return { x: WORLD_SIZE - BORDER_SPAWN_EDGE, y: intBetween(this.rng, 0, WORLD_SIZE) };
+    const size = this.worldSize;
+    if (side === 0) return { x: intBetween(this.rng, 0, size), y: BORDER_SPAWN_EDGE };
+    if (side === 1) return { x: intBetween(this.rng, 0, size), y: size - BORDER_SPAWN_EDGE };
+    if (side === 2) return { x: BORDER_SPAWN_EDGE, y: intBetween(this.rng, 0, size) };
+    return { x: size - BORDER_SPAWN_EDGE, y: intBetween(this.rng, 0, size) };
   }
 }

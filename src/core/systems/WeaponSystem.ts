@@ -1,7 +1,6 @@
 import { WEAPON_CONFIG } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
-import { WORLD_SIZE } from '../../config/world';
 import { EventBus } from '../EventBus';
 import { Pool } from '../Pool';
 import { SimClock } from '../SimClock';
@@ -67,6 +66,8 @@ export interface WeaponHost {
   readonly clock: SimClock;
   readonly rng: Rng;
   readonly characterId: CharacterId;
+  /** Side of the square play area — thrown swords fly to its edge. */
+  readonly worldSize: number;
   readonly projectiles: Pool<ProjectileState>;
   /** Only emits — any bus whose event map includes WeaponEvents (the session's) fits. */
   readonly events: Pick<EventBus<WeaponEvents>, 'emit'>;
@@ -252,7 +253,7 @@ export class WeaponSystem {
       return;
     }
     if (!this.exclusiveUnlocked(sword) || this.host.clock.now < sword.thrownSwordReadyAt) return;
-    if (!this.host.nearestEnemy(this.host.player, WORLD_SIZE)) return;
+    if (!this.host.nearestEnemy(this.host.player, this.host.worldSize)) return;
     sword.thrownSwordVolleyActive = true;
     for (let index = 0; index < WEAPON_TUNING.thrownSwordDirections; index += 1) {
       this.launchThrownSword(sword, (Math.PI * 2 * index) / WEAPON_TUNING.thrownSwordDirections);
@@ -265,7 +266,7 @@ export class WeaponSystem {
     const { player, clock } = this.host;
     const direction = { x: Math.cos(angle), y: Math.sin(angle) };
     const start = { x: player.x + direction.x * WEAPON_TUNING.thrownSwordSpawnOffset, y: player.y + direction.y * WEAPON_TUNING.thrownSwordSpawnOffset };
-    const distance = distanceToWorldEdge(start, direction);
+    const distance = distanceToWorldEdge(start, direction, this.host.worldSize);
     const speed = WEAPON_TUNING.thrownSwordSpeed;
     resetProjectile(projectile, 'thrownSword', weapon.config.id, start.x, start.y, speed, distance);
     projectile.radius = BODY_RADIUS.thrownSword;
@@ -461,11 +462,11 @@ export function projectileAngles(baseAngle: number, count: number): number[] {
   return angles;
 }
 
-function distanceToWorldEdge(start: Vec2, direction: Vec2): number {
+function distanceToWorldEdge(start: Vec2, direction: Vec2, worldSize: number): number {
   const candidates: number[] = [];
-  if (direction.x > 0) candidates.push((WORLD_SIZE - start.x) / direction.x);
+  if (direction.x > 0) candidates.push((worldSize - start.x) / direction.x);
   if (direction.x < 0) candidates.push(-start.x / direction.x);
-  if (direction.y > 0) candidates.push((WORLD_SIZE - start.y) / direction.y);
+  if (direction.y > 0) candidates.push((worldSize - start.y) / direction.y);
   if (direction.y < 0) candidates.push(-start.y / direction.y);
   const positive = candidates.filter((candidate) => candidate > 0);
   return positive.length > 0 ? Math.min(...positive) : 0;

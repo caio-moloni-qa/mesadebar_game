@@ -19,6 +19,7 @@ export class CameraRig {
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private readonly groundForward = new THREE.Vector3();
+  private readonly viewDir = new THREE.Vector3();
   private initialized = false;
   /** Debug close-up (?zoom=3): fewer meters per texel, same pixel look — for reviewing models up close. */
   private readonly metersPerTexel: number;
@@ -75,6 +76,11 @@ export class CameraRig {
 
   get focus(): THREE.Vector3 {
     return this.target;
+  }
+
+  /** Unit vector the camera looks along (towards the ground). */
+  get viewDirection(): THREE.Vector3 {
+    return this.viewDir.copy(this.offset).normalize().negate();
   }
 
   /** Converts screen-relative input (x right, y up; e.g. WASD) into a game-plane direction, so W always moves

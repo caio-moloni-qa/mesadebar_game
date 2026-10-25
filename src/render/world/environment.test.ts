@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { createRng } from '../../core/math';
 import { mergeParts } from '../models/parts';
 import { environmentUniforms, withEnvironment } from './environmentShader';
-import { FOOTPRINT, PROP_BUILDERS, brazierBase, placeProp } from './props';
+import { ArenaMap, Obstacle } from '../../core/world/ArenaMap';
+import { WORLD_SCALE } from '../space';
+import { decorParts, obstacleParts } from './props';
 
 /** Runs a material's onBeforeCompile against the real r186 toon shader source, like the renderer would. */
 function compile(material: THREE.Material): { vertexShader: string; fragmentShader: string; uniforms: Record<string, THREE.IUniform> } {
@@ -33,26 +34,58 @@ describe('withEnvironment', () => {
     expect(new Set(keys).size).toBe(3);
   });
 
+  it('declares and wires every uniform the injected code uses (GLSL lives in strings, so tsc cannot catch this)', () => {
+    const shader = compile(withEnvironment(new THREE.MeshToonMaterial(), { wind: true, clouds: true, occlusion: true }));
+    const source = shader.vertexShader + shader.fragmentShader;
+    ['uEnvTime', 'uCloudOffset', 'uFocus', 'uViewDirection'].forEach((name) => {
+      if (!source.includes(name)) return;
+      expect(shader.fragmentShader, `${name} declared`).toContain(`uniform`);
+      expect(shader.fragmentShader).toMatch(new RegExp(`uniform \\w+ ${name};`));
+      expect(shader.uniforms[name], `${name} wired`).toBe(environmentUniforms[name as keyof typeof environmentUniforms]);
+    });
+    expect(shader.fragmentShader).toMatch(/#include <clipping_planes_fragment>[\s\S]*discard/);
+  });
+
   it('leaves the wind out when only clouds are asked for', () => {
     expect(compile(withEnvironment(new THREE.MeshToonMaterial(), { clouds: true })).vertexShader).not.toContain('envGust');
   });
 });
 
-describe('props', () => {
-  it.each(Object.keys(PROP_BUILDERS) as Array<keyof typeof PROP_BUILDERS>)('%s builds vertex-coloured parts that merge, within its footprint', (kind) => {
-    const rng = createRng(3);
-    const parts = placeProp(PROP_BUILDERS[kind](rng), 0, 0, 0);
-    const merged = mergeParts(parts);
-    expect(merged.attributes.color).toBeDefined();
-    merged.computeBoundingBox();
-    const box = merged.boundingBox!;
-    const reach = Math.max(Math.abs(box.min.x), Math.abs(box.max.x), Math.abs(box.min.z), Math.abs(box.max.z));
-    // Footprints are the spacing radius used by the layout; a prop may overhang it slightly, never by much.
-    expect(reach).toBeLessThan(FOOTPRINT[kind] + 1.5);
-    expect(box.min.y).toBeGreaterThan(-0.6);
+describe('obstacle visuals match their collision', () => {
+  const map = ArenaMap.generate(7);
+  const sample = new Map<string, Obstacle[]>();
+  map.obstacles.forEach((obstacle) => {
+    const list = sample.get(obstacle.kind) ?? [];
+    if (list.length < 6) list.push(obstacle);
+    sample.set(obstacle.kind, list);
   });
 
-  it('brazier base merges with the other props', () => {
-    expect(() => mergeParts([...brazierBase(), ...PROP_BUILDERS.rock(createRng(1))])).not.toThrow();
+  it.each([...sample.keys()])('%s stays inside its collision shape up to 1 m high (what you see is what blocks you)', (kind) => {
+    const tolerance = 0.3;
+    sample.get(kind)!.forEach((obstacle) => {
+      const geometry = mergeParts(obstacleParts(obstacle));
+      expect(geometry.attributes.color).toBeDefined();
+      const position = geometry.attributes.position;
+      for (let index = 0; index < position.count; index += 1) {
+        const x = position.getX(index);
+        const y = position.getY(index);
+        const z = position.getZ(index);
+        // Flat ground dressing (grave mounds) and anything above head-butting height (branches, roofs) may overhang.
+        if (y <= 0.06 || y > 1.0) continue;
+        if (obstacle.shape === 'circle') {
+          expect(Math.hypot(x, z), `${kind} vertex at y=${y.toFixed(2)}`).toBeLessThanOrEqual(obstacle.radius * WORLD_SCALE + tolerance);
+        } else {
+          expect(Math.abs(x), `${kind} x at y=${y.toFixed(2)}`).toBeLessThanOrEqual(obstacle.halfWidth * WORLD_SCALE + tolerance);
+          expect(Math.abs(z), `${kind} z at y=${y.toFixed(2)}`).toBeLessThanOrEqual(obstacle.halfHeight * WORLD_SCALE + tolerance);
+        }
+      }
+    });
+  });
+
+  it('builds every decoration kind that is merged into the prop chunks', () => {
+    (['bush', 'rubble', 'lilyPad'] as const).forEach((kind) => {
+      const decor = map.decor.find((item) => item.kind === kind)!;
+      expect(mergeParts(decorParts(decor)).attributes.position.count).toBeGreaterThan(0);
+    });
   });
 });

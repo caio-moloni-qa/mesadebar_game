@@ -10,6 +10,9 @@ const FIRE_LIGHT = { color: 0xff8a3a, intensity: 26, distance: 9, decay: 2 };
 
 interface Ember { brazier: number; age: number; life: number; x: number; z: number; }
 
+/** A fire on the map: ground position (meters) and the height its flame burns at (brazier bowl vs. campfire). */
+export interface FireSpot { position: THREE.Vector3; flameHeight: number; scale: number; }
+
 /** Things that move on their own in the arena: brazier flames (flickering mesh + warm point light + rising embers)
  *  and fireflies drifting around wherever the camera is looking. All pixel-sized unlit cubes, so the pixel pipeline
  *  turns them into single glowing dots. Advanced with the environment clock, so they freeze with pause. */
@@ -26,7 +29,7 @@ export class Ambient {
   private readonly matrix = new THREE.Matrix4();
   private readonly focus = new THREE.Vector3();
 
-  constructor(private readonly braziers: THREE.Vector3[], private readonly rng: () => number) {
+  constructor(private readonly braziers: FireSpot[], private readonly rng: () => number) {
     // Flame: two stacked tapered cones, inner bright, outer orange.
     const outerFlame = new THREE.ConeGeometry(0.3, 0.75, 5).translate(0, 0.37, 0).toNonIndexed();
     const outerCount = outerFlame.attributes.position.count;
@@ -40,9 +43,9 @@ export class Ambient {
     flameGeometry.setAttribute('color', new THREE.BufferAttribute(flameColors, 3));
     this.flames = new THREE.InstancedMesh(flameGeometry, new THREE.MeshBasicMaterial({ vertexColors: true }), Math.max(1, braziers.length));
     this.flames.frustumCulled = false;
-    braziers.forEach((position) => {
-      const light = new THREE.PointLight(FIRE_LIGHT.color, FIRE_LIGHT.intensity, FIRE_LIGHT.distance, FIRE_LIGHT.decay);
-      light.position.set(position.x, position.y + 0.9, position.z);
+    braziers.forEach(({ position, flameHeight, scale }) => {
+      const light = new THREE.PointLight(FIRE_LIGHT.color, FIRE_LIGHT.intensity * scale, FIRE_LIGHT.distance * Math.sqrt(scale), FIRE_LIGHT.decay);
+      light.position.set(position.x, flameHeight + 0.6, position.z);
       this.lights.push(light);
       this.root.add(light);
     });
@@ -66,11 +69,11 @@ export class Ambient {
 
   update(time: number, deltaSeconds: number, focus: THREE.Vector3): void {
     this.focus.copy(focus);
-    this.braziers.forEach((position, index) => {
+    this.braziers.forEach(({ position, flameHeight, scale }, index) => {
       // Flicker: two incommensurate sines + a little per-brazier offset.
       const flicker = 0.85 + Math.sin(time * 11 + index * 3.1) * 0.08 + Math.sin(time * 23.7 + index) * 0.07;
-      this.lights[index].intensity = FIRE_LIGHT.intensity * flicker;
-      this.matrix.makeScale(0.9 + flicker * 0.2, 0.75 + flicker * 0.5, 0.9 + flicker * 0.2).setPosition(position.x, position.y + 1.1, position.z);
+      this.lights[index].intensity = FIRE_LIGHT.intensity * scale * flicker;
+      this.matrix.makeScale((0.9 + flicker * 0.2) * scale, (0.75 + flicker * 0.5) * scale, (0.9 + flicker * 0.2) * scale).setPosition(position.x, flameHeight, position.z);
       this.flames.setMatrixAt(index, this.matrix);
     });
     this.flames.instanceMatrix.needsUpdate = true;
@@ -78,10 +81,10 @@ export class Ambient {
     this.emberState.forEach((ember, index) => {
       ember.age += deltaSeconds;
       if (ember.age >= ember.life) Object.assign(ember, this.newEmber(ember.brazier, 0));
-      const origin = this.braziers[ember.brazier];
+      const { position: origin, flameHeight } = this.braziers[ember.brazier];
       const t = ember.age / ember.life;
       const size = 1 - t;
-      this.matrix.makeScale(size, size, size).setPosition(origin.x + ember.x + Math.sin(time * 3 + index) * 0.15 * t, origin.y + 1.3 + t * 2.4, origin.z + ember.z);
+      this.matrix.makeScale(size, size, size).setPosition(origin.x + ember.x + Math.sin(time * 3 + index) * 0.15 * t, flameHeight + 0.2 + t * 2.4, origin.z + ember.z);
       this.embers.setMatrixAt(index, this.matrix);
     });
     this.embers.instanceMatrix.needsUpdate = true;

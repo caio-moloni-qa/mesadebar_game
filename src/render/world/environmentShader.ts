@@ -6,7 +6,10 @@ import * as THREE from 'three';
 export const environmentUniforms = {
   uEnvTime: { value: 0 },
   /** World-space drift of the cloud-shadow pattern (meters). */
-  uCloudOffset: { value: new THREE.Vector2() }
+  uCloudOffset: { value: new THREE.Vector2() },
+  /** The hero (meters) and the camera's viewing direction — tall props between them dissolve (see `occlusion`). */
+  uFocus: { value: new THREE.Vector3() },
+  uViewDirection: { value: new THREE.Vector3(0, -1, 0) }
 };
 
 export interface EnvironmentFeatures {
@@ -14,6 +17,9 @@ export interface EnvironmentFeatures {
   wind?: boolean;
   /** Darken direct sunlight under slowly drifting cloud shadows. */
   clouds?: boolean;
+  /** Screen-door dissolve of whatever stands between the camera and the hero, so tall walls, trees and towers never
+   *  hide the player (the standard isometric fix; a pixel checkerboard reads as pixel art and needs no sorting). */
+  occlusion?: boolean;
 }
 
 // Small 2D value noise + 3-octave fbm, enough for soft cloud blobs at 16 px per meter.
@@ -34,11 +40,13 @@ const NOISE_GLSL = /* glsl */ `
  *  inject at begin_vertex for displacement, and adjust the summed direct light right before lights_fragment_end
  *  applies it). customProgramCacheKey keeps each feature combination in its own shader program. */
 export function withEnvironment<T extends THREE.Material>(material: T, features: EnvironmentFeatures): T {
-  const key = `env:${features.wind ? 'w' : ''}${features.clouds ? 'c' : ''}`;
+  const key = `env:${features.wind ? 'w' : ''}${features.clouds ? 'c' : ''}${features.occlusion ? 'o' : ''}`;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uEnvTime = environmentUniforms.uEnvTime;
     shader.uniforms.uCloudOffset = environmentUniforms.uCloudOffset;
-    const header = `uniform float uEnvTime;\nuniform vec2 uCloudOffset;\nvarying vec3 vEnvWorld;\n${NOISE_GLSL}\n`;
+    shader.uniforms.uFocus = environmentUniforms.uFocus;
+    shader.uniforms.uViewDirection = environmentUniforms.uViewDirection;
+    const header = `uniform float uEnvTime;\nuniform vec2 uCloudOffset;\nuniform vec3 uFocus;\nuniform vec3 uViewDirection;\nvarying vec3 vEnvWorld;\n${NOISE_GLSL}\n`;
     shader.vertexShader = header + shader.vertexShader;
     shader.fragmentShader = header + shader.fragmentShader;
 
@@ -60,6 +68,18 @@ export function withEnvironment<T extends THREE.Material>(material: T, features:
       #else
         vEnvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
       #endif`);
+
+    if (features.occlusion) {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <clipping_planes_fragment>', /* glsl */ `#include <clipping_planes_fragment>
+        // Fragment's offset from the hero, split into "towards the camera" and "sideways from the sight line".
+        vec3 envFromFocus = vEnvWorld - uFocus;
+        float envTowardCamera = dot(envFromFocus, -uViewDirection);
+        float envOffLine = length(envFromFocus + uViewDirection * envTowardCamera);
+        if (envTowardCamera > 0.4 && envOffLine < 1.9 && vEnvWorld.y > 0.35) {
+          // 50% checkerboard on the low-res target: everything behind shows through, still reads as the object.
+          if (mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0) discard;
+        }`);
+    }
 
     if (features.clouds) {
       shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_end>', /* glsl */ `

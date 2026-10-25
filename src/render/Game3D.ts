@@ -3,6 +3,9 @@ import { ENEMY_CONFIG } from '../config/balance';
 import { CHARACTERS } from '../config/characters';
 import { WEAPONS } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
+import { ArenaMap } from '../core/world/ArenaMap';
+import { snapPrevious } from '../core/session/entities';
+import { ZONES, ZoneKind } from '../config/arenaLayout';
 import { CameraRig } from './CameraRig';
 import { ChoiceOverlay } from './ChoiceOverlay';
 import { Hud } from './Hud';
@@ -26,6 +29,8 @@ export interface Game3DOptions {
   seed?: number;
   stressEnemyCount?: number;
   invincible?: boolean;
+  /** Debug: start the hero in a zone instead of the spawn clearing (?at=ruins|lake|forest|graveyard|camp|meadow). */
+  startZone?: ZoneKind;
   /** Debug close-up camera (1 = normal gameplay framing). */
   zoom?: number;
   /** Test keys: U random upgrade, I +5 upgrades on every weapon, O add another weapon, T toggle enemy separation,
@@ -40,6 +45,8 @@ export class Game3D {
   private readonly cameraRig: CameraRig;
   private readonly pipeline: PixelPipeline;
   private readonly arena: Arena;
+  /** One map per page load: the authored layout with this load's detail seed, shared by every run (fixed zones). */
+  private readonly arenaMap: ArenaMap;
   private readonly hud: Hud;
   private readonly choices: ChoiceOverlay;
   private readonly menu: StartMenu;
@@ -69,7 +76,9 @@ export class Game3D {
     container.appendChild(this.renderer.domElement);
     this.pipeline = new PixelPipeline(this.renderer);
     this.scene.background = new THREE.Color(PALETTE.background);
-    this.arena = new Arena(options.seed ?? randomSeed());
+    const arenaSeed = options.seed ?? randomSeed();
+    this.arenaMap = ArenaMap.generate(arenaSeed);
+    this.arena = new Arena(this.arenaMap, arenaSeed);
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
     this.hud = new Hud(container, () => this.restart(), () => this.showMenu());
     this.choices = new ChoiceOverlay(container);
@@ -113,13 +122,22 @@ export class Game3D {
       startingWeaponId: weaponId,
       seed: this.options.seed ?? randomSeed(),
       stressEnemyCount: attract ? undefined : this.options.stressEnemyCount,
-      skipStartingUpgrades
+      skipStartingUpgrades,
+      arena: this.arenaMap
     });
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
       this.session.variantSpawnEnabled = false;
     }
     this.session.player.invincible = Boolean(this.options.invincible);
+    const zone = ZONES.find((spec) => spec.kind === this.options.startZone);
+    if (zone && !attract) {
+      // The lake's blob centre is deep water; aim at its south shore instead.
+      const target = zone.kind === 'lake' ? { x: zone.blobs[0].x, y: zone.blobs[0].y + 560 } : zone.blobs[0];
+      const spot = this.arenaMap.nearestWalkable(target.x, target.y, this.session.player.radius);
+      Object.assign(this.session.player, spot);
+      snapPrevious(this.session.player);
+    }
     this.playerView = new HeroView(characterId, weaponId);
     this.scene.add(this.playerView.root);
     this.accumulator = 0;
@@ -244,7 +262,7 @@ export class Game3D {
     this.effects.update(deltaSeconds);
     this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
     this.arena.followFocus(this.cameraRig.focus);
-    this.arena.update(deltaSeconds, this.cameraRig.focus);
+    this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset, [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions]);
