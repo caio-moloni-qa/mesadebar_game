@@ -1,6 +1,7 @@
 import { DIFFICULTY_STAGES, SANDBOX_SPAWN_CAPS } from '../../config/balance';
 import { WEAPONS } from '../../config/weapons';
 import { GameSession } from '../../core/session/GameSession';
+import { BOSS_TUNING, BOSS_TUNING_DEFAULTS, BossTuning } from '../../core/systems/BossSystem';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
 
 /** Toggles the panel keeps across runs (and page reloads, via localStorage when it's available). */
@@ -15,6 +16,39 @@ interface SandboxSettings {
 }
 
 const STORAGE_KEY = 'mesadebar.sandbox';
+const BOSS_STORAGE_KEY = 'mesadebar.bossTuning';
+
+/** Boss values the panel tunes live: label, step, bounds and how to show it. */
+interface BossKnob { key: keyof BossTuning; label: string; step: number; min: number; max: number; format?: (value: number) => string }
+const seconds = (value: number) => `${(value / 1000).toFixed(1)}s`;
+const percent = (value: number) => `${Math.round(value * 100)}%`;
+const BOSS_KNOBS: BossKnob[] = [
+  { key: 'apparitionCount', label: 'Aparições/invocação', step: 1, min: 0, max: 40 },
+  { key: 'summonIntervalMs', label: 'Intervalo invocação', step: 1000, min: 2000, max: 30000, format: seconds },
+  { key: 'undeadSquadSize', label: 'Mortos-vivos (Solo)', step: 1, min: 0, max: 30 },
+  { key: 'undeadRiseMs', label: 'Aviso do Solo', step: 100, min: 0, max: 3000, format: seconds },
+  { key: 'meleeDamage', label: 'Dano da espada', step: 5, min: 0, max: 200 },
+  { key: 'shieldMaxHealthScaling', label: 'Escudo (% vida)', step: 0.05, min: 0.05, max: 1, format: percent },
+  { key: 'explosionDamageRatio', label: 'Explosão (% vida jogador)', step: 0.1, min: 0, max: 1, format: (value) => (value >= 1 ? 'Letal' : percent(value)) },
+  { key: 'meteorIntervalMs', label: 'Intervalo meteoros', step: 250, min: 250, max: 5000, format: seconds },
+  { key: 'staggerMs', label: 'Atordoamento', step: 500, min: 0, max: 10000, format: seconds },
+  { key: 'staggerDamageMultiplier', label: 'Dano no atordoado', step: 0.25, min: 1, max: 4, format: (value) => `${value.toFixed(2)}x` },
+  { key: 'phaseTwoHealthRatio', label: 'Fase 2 em', step: 0.1, min: 0.1, max: 0.9, format: percent },
+  { key: 'beamCountPhase1', label: 'Feixes fase 1', step: 1, min: 1, max: 20 },
+  { key: 'beamCountPhase2', label: 'Feixes fase 2', step: 1, min: 1, max: 20 },
+  { key: 'lungeMinDistance', label: 'Investida a partir de', step: 100, min: 200, max: 2000 },
+  { key: 'cleanupMs', label: 'Escuridão consome em', step: 5000, min: 5000, max: 120000, format: seconds },
+  { key: 'cleanupHealthPerEnemy', label: 'Vida por inimigo limpo', step: 5, min: 0, max: 50 },
+  { key: 'enrageSpeedMultiplier', label: 'Velocidade enfurecido', step: 0.1, min: 1, max: 3, format: (value) => `${value.toFixed(1)}x` }
+];
+
+function loadBossTuning(): void {
+  try {
+    Object.assign(BOSS_TUNING, JSON.parse(localStorage.getItem(BOSS_STORAGE_KEY) ?? '{}'));
+  } catch {
+    // Blocked storage: keep the shipped values.
+  }
+}
 const DEFAULTS: SandboxSettings = { enabled: false, fog: true, skeletons: true, variants: true, invincible: false, difficultyStage: null, capIndex: 0 };
 
 function loadSettings(): SandboxSettings {
@@ -48,6 +82,7 @@ export class SandboxPanel {
   private readonly indicator: HTMLDivElement;
   private readonly settings = loadSettings();
   private readonly controls: Control[];
+  private readonly knobValues = new Map<keyof BossTuning, HTMLElement>();
   private allowed = false;
 
   constructor(container: HTMLElement, private readonly host: SandboxHost) {
@@ -71,6 +106,8 @@ export class SandboxPanel {
       });
       this.list.appendChild(button);
     });
+    loadBossTuning();
+    this.buildBossSection();
     window.addEventListener('keydown', (event) => {
       if (event.code !== 'F9' || !this.allowed) return;
       event.preventDefault();
@@ -162,8 +199,60 @@ export class SandboxPanel {
     ];
   }
 
+  /** "BOSS" section: a −/+ row per tunable value (applied live, kept across reloads) and a reset button. */
+  private buildBossSection(): void {
+    const heading = document.createElement('h4');
+    heading.textContent = 'BOSS';
+    this.list.appendChild(heading);
+    BOSS_KNOBS.forEach((knob) => {
+      const row = document.createElement('div');
+      row.className = 'sandbox-knob';
+      row.innerHTML = '<span></span><output></output><button type="button" aria-label="menos">−</button><button type="button" aria-label="mais">+</button>';
+      row.querySelector('span')!.textContent = knob.label;
+      this.knobValues.set(knob.key, row.querySelector('output')!);
+      const buttons = row.querySelectorAll('button');
+      const less = buttons[0];
+      const more = buttons[1];
+      const nudge = (direction: number) => {
+        const next = Math.min(knob.max, Math.max(knob.min, BOSS_TUNING[knob.key] + knob.step * direction));
+        BOSS_TUNING[knob.key] = Math.round(next * 1000) / 1000;
+        this.saveBossTuning();
+        this.refreshKnobs();
+      };
+      less.addEventListener('click', () => nudge(-1));
+      more.addEventListener('click', () => nudge(1));
+      this.list.appendChild(row);
+    });
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.textContent = 'Restaurar padrões do boss';
+    reset.addEventListener('click', () => {
+      Object.assign(BOSS_TUNING, BOSS_TUNING_DEFAULTS);
+      this.saveBossTuning();
+      this.refreshKnobs();
+    });
+    this.list.appendChild(reset);
+    this.refreshKnobs();
+  }
+
+  private refreshKnobs(): void {
+    BOSS_KNOBS.forEach((knob) => {
+      const value = BOSS_TUNING[knob.key];
+      this.knobValues.get(knob.key)!.textContent = knob.format ? knob.format(value) : String(value);
+    });
+  }
+
+  private saveBossTuning(): void {
+    try {
+      const changed = Object.fromEntries(BOSS_KNOBS.map(({ key }) => [key, BOSS_TUNING[key]]).filter(([key, value]) => value !== BOSS_TUNING_DEFAULTS[key as keyof BossTuning]));
+      localStorage.setItem(BOSS_STORAGE_KEY, JSON.stringify(changed));
+    } catch {
+      // Blocked storage: the values still apply for this page.
+    }
+  }
+
   private refreshLabels(): void {
-    this.list.querySelectorAll('button').forEach((button, index) => { button.textContent = this.controls[index].label(); });
+    this.list.querySelectorAll<HTMLButtonElement>(':scope > button').forEach((button, index) => { if (this.controls[index]) button.textContent = this.controls[index].label(); });
   }
 
   private render(): void {
