@@ -1,43 +1,52 @@
 import { GameSession } from '../core/session/GameSession';
+import { HUD_ART, LIFE_STEAL_ICON, upgradeIcon, weaponIcon } from './ui/icons';
 
 export interface RenderStats { fps: number; drawCalls: number; triangles: number; pixelScale: number; geometries: number; textures: number; }
 
-/** Minimal DOM HUD for the vertical slice (the full themed HUD is Etapa 4). Writes to the DOM only when a value
- *  actually changes, so it costs nothing on frames where nothing moved. */
+/** The run HUD, laid out like the Phaser build's GameHud (1280×720 coordinates scaled by --ui-unit): build icons over
+ *  the HP bar with its art border, level, crystals and the Aura Podre status row top-left; kills and survival time
+ *  top-right; the XP bar across the bottom. Writes to the DOM only when a value actually changes. */
 export class Hud {
   private readonly root: HTMLDivElement;
-  private readonly fields: Record<'health' | 'level' | 'time' | 'kills' | 'currency' | 'weapons' | 'stats' | 'banner', HTMLElement>;
+  private readonly fields: Record<'health' | 'level' | 'time' | 'kills' | 'currency' | 'stats', HTMLElement>;
   private readonly healthFill: HTMLDivElement;
   private readonly xpFill: HTMLDivElement;
+  private readonly build: HTMLDivElement;
+  private readonly rotten: HTMLDivElement;
   private readonly last = new Map<string, string>();
-  private readonly bannerBox: HTMLDivElement;
 
-  setVisible(visible: boolean): void {
-    this.root.hidden = !visible;
-  }
-
-  constructor(container: HTMLElement, onRestart: () => void, onMenu: () => void) {
+  /** `showStats` shows the renderer counters (fps, draws, tris); they're always written, so tools can read them. */
+  constructor(container: HTMLElement, showStats = false) {
     this.root = document.createElement('div');
     this.root.className = 'hud';
     this.root.innerHTML = `
       <div class="hud-top-left">
-        <div class="hud-bar hud-health"><div class="hud-fill"></div><span data-field="health"></span></div>
-        <div class="hud-bar hud-xp"><div class="hud-fill"></div></div>
-        <div class="hud-line"><span data-field="level"></span> · <span data-field="currency"></span></div>
-        <div class="hud-weapons" data-field="weapons"></div>
+        <div class="hud-build"></div>
+        <div class="hud-health">
+          <img class="hud-health-icon" src="${HUD_ART.hpIcon}" alt="">
+          <div class="hud-health-bar"><div class="hud-fill"></div><img src="${HUD_ART.hpBarBorder}" alt=""><span data-field="health"></span></div>
+        </div>
+        <div class="hud-level" data-field="level"></div>
+        <div class="hud-currency">
+          <img src="${HUD_ART.gem}" alt=""><span data-field="currency"></span>
+          <div class="hud-rotten" hidden><img src="${LIFE_STEAL_ICON}" alt="Cura reduzida"><b>↓</b><span>HP</span><b>↓</b></div>
+        </div>
       </div>
-      <div class="hud-top-right"><span data-field="time"></span><span data-field="kills"></span></div>
-      <div class="hud-stats" data-field="stats"></div>
-      <div class="hud-banner" hidden><p data-field="banner"></p><div class="hud-banner-actions"><button type="button" data-action="restart">Recomeçar (R)</button><button type="button" data-action="menu">Menu (M)</button></div></div>
+      <div class="hud-top-right"><span data-field="kills"></span><span data-field="time"></span></div>
+      <div class="hud-xp"><div class="hud-xp-track"><div class="hud-fill"></div></div><img src="${HUD_ART.expBarBorder}" alt=""></div>
+      <div class="hud-stats" data-field="stats"${showStats ? '' : ' hidden'}></div>
     `;
     container.appendChild(this.root);
     const field = (name: string) => this.root.querySelector<HTMLElement>(`[data-field="${name}"]`)!;
-    this.fields = { health: field('health'), level: field('level'), time: field('time'), kills: field('kills'), currency: field('currency'), weapons: field('weapons'), stats: field('stats'), banner: field('banner') };
-    this.healthFill = this.root.querySelector<HTMLDivElement>('.hud-health .hud-fill')!;
+    this.fields = { health: field('health'), level: field('level'), time: field('time'), kills: field('kills'), currency: field('currency'), stats: field('stats') };
+    this.healthFill = this.root.querySelector<HTMLDivElement>('.hud-health-bar .hud-fill')!;
     this.xpFill = this.root.querySelector<HTMLDivElement>('.hud-xp .hud-fill')!;
-    this.bannerBox = this.root.querySelector<HTMLDivElement>('.hud-banner')!;
-    this.root.querySelector('[data-action="restart"]')!.addEventListener('click', onRestart);
-    this.root.querySelector('[data-action="menu"]')!.addEventListener('click', onMenu);
+    this.build = this.root.querySelector<HTMLDivElement>('.hud-build')!;
+    this.rotten = this.root.querySelector<HTMLDivElement>('.hud-rotten')!;
+  }
+
+  setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
   }
 
   update(session: GameSession, stats: RenderStats): void {
@@ -47,15 +56,33 @@ export class Hud {
     this.setWidth('healthPct', this.healthFill, player.health / player.maxHealth);
     this.setWidth('xpPct', this.xpFill, session.experience / session.experienceNeeded);
     this.set('level', `Nível ${session.level}`);
-    this.set('currency', `◆ ${session.currency}`);
-    this.set('time', `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
-    this.set('kills', `☠ ${session.kills}`);
-    this.set('weapons', session.weapons.weapons.map((weapon) => `${weapon.config.name} +${weapon.upgradeCount}`).join(' · '));
+    this.set('currency', `${session.currency}`);
+    this.set('time', `Sobreviva: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
+    this.set('kills', `Eliminações: ${session.kills}`);
     this.set('stats', `${stats.fps} fps · ${stats.drawCalls} draws · ${(stats.triangles / 1000).toFixed(0)}k tris · ${session.enemies.activeCount} inimigos · ${stats.pixelScale}× · ${stats.geometries} geo · ${stats.textures} tex`);
-    const banner = session.over ? 'DERROTA' : session.paused ? 'PAUSADO — ESC para continuar' : '';
-    this.set('banner', banner);
-    // Restart / menu buttons live inside the box, so they show on game over and on the pause screen.
-    this.bannerBox.hidden = banner === '';
+    const rotten = player.isRotten(session.clock.now);
+    if (this.last.get('rotten') !== String(rotten)) {
+      this.last.set('rotten', String(rotten));
+      this.rotten.hidden = !rotten;
+    }
+    this.updateBuild(session);
+  }
+
+  /** Weapons first (the banana icon once Fabri's boomerang transforms), then each picked upgrade with a ×N counter. */
+  private updateBuild(session: GameSession): void {
+    const weapons = session.weapons.weapons.map((weapon) => ({ icon: weaponIcon(session.weapons.isBananaTransformActive(weapon) ? 'banana' : weapon.config.id), count: 1, title: weapon.config.name }));
+    const upgrades = [...session.selectedUpgradeCounts.entries()].map(([id, count]) => ({ icon: upgradeIcon(id), count, title: id }));
+    const items = [...weapons, ...upgrades];
+    const key = items.map((item) => `${item.icon}×${item.count}`).join('|');
+    if (this.last.get('build') === key) return;
+    this.last.set('build', key);
+    this.build.replaceChildren(...items.map(({ icon, count, title }) => {
+      const slot = document.createElement('div');
+      slot.className = 'hud-build-slot';
+      slot.title = title;
+      slot.innerHTML = `<img src="${icon}" alt="">${count > 1 ? `<span>×${count}</span>` : ''}`;
+      return slot;
+    }));
   }
 
   private set(name: keyof Hud['fields'], text: string): void {

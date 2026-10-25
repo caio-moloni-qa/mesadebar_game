@@ -292,7 +292,7 @@ export class WeaponSystem {
   // ── Projectiles (Cajado / Bumerangue) ──────────────────────────────────────────────────────────────────────
 
   /** Fabri's transform: same "upgrades + affinity" gate as every other weapon exclusive. */
-  private isBananaTransformActive(weapon: ActiveWeapon): boolean {
+  isBananaTransformActive(weapon: ActiveWeapon): boolean {
     const transform = CHARACTERS[this.host.characterId].boomerangBananaTransform;
     if (!transform || weapon.config.id !== 'boomerang') return false;
     return weapon.upgradeCount >= transform.upgradeThreshold && this.host.hasAffinity(weapon.config);

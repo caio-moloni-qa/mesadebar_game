@@ -14,6 +14,7 @@ import { PixelPipeline, ndcToCanvas } from './PixelPipeline';
 import { RunChoice, StartMenu } from './StartMenu';
 import { simToWorld } from './space';
 import { FloatingTexts } from './ui/FloatingTexts';
+import { RunScreens } from './ui/RunScreens';
 import { CombatEffects } from './vfx/CombatEffects';
 import { EnemyHordeView } from './views/EnemyHordeView';
 import { HazardView, ParticleView, PickupView, ProjectileView } from './views/PickupAndProjectileViews';
@@ -55,6 +56,7 @@ export class Game3D {
   /** One map per page load: the authored layout with this load's detail seed, shared by every run (fixed zones). */
   private readonly arenaMap: ArenaMap;
   private readonly hud: Hud;
+  private readonly screens: RunScreens;
   private readonly choices: ChoiceOverlay;
   private readonly menu: StartMenu;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
@@ -93,7 +95,8 @@ export class Game3D {
     if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
     this.floating = new FloatingTexts(container);
-    this.hud = new Hud(container, () => this.restart(), () => this.showMenu());
+    this.hud = new Hud(container, Boolean(options.debug));
+    this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
     this.menu = new StartMenu(container, (choice) => this.startRun(choice));
     if (options.initialRun) this.startRun(options.initialRun);
@@ -328,6 +331,7 @@ export class Game3D {
       this.fps.frames = 0;
       this.fps.since = now;
     }
+    this.screens.update(this.session, this.inMenu);
     this.hud.update(this.session, {
       fps: this.fps.value,
       drawCalls: this.renderer.info.render.calls,
