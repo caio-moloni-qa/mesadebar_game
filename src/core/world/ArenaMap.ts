@@ -58,6 +58,16 @@ export class ArenaMap {
     return new ArenaMap(size, false);
   }
 
+  /** A square field with exactly these obstacles (tests: a wall between an enemy and the hero, etc.). */
+  static withObstacles(size: number, obstacles: Obstacle[]): ArenaMap {
+    const map = new ArenaMap(size, false);
+    obstacles.forEach((obstacle) => {
+      map.obstacles.push(obstacle);
+      map.hash.insert(obstacle, obstacle.bound);
+    });
+    return map;
+  }
+
   get center(): Vec2 {
     return { x: this.size / 2, y: this.size / 2 };
   }
@@ -117,6 +127,18 @@ export class ArenaMap {
     this.scratch.length = 0;
     const probe = { x, y, radius };
     return this.hash.queryRadius(probe, radius, this.scratch).some((obstacle) => obstacle.tall && pushOut(probe, obstacle) !== null);
+  }
+
+  /** True when nothing tall stands on the straight line between two points (sampled every 16 units) — what a
+   *  projectile weapon needs before it bothers aiming at a target. */
+  hasLineOfSight(from: Vec2, to: Vec2): boolean {
+    const distance = Math.hypot(to.x - from.x, to.y - from.y);
+    const steps = Math.ceil(distance / 16);
+    for (let step = 1; step < steps; step += 1) {
+      const t = step / steps;
+      if (this.blocksProjectile(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, 4)) return false;
+    }
+    return true;
   }
 
   isWalkable(x: number, y: number, radius: number): boolean {

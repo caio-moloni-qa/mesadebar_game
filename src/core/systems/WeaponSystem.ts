@@ -58,6 +58,8 @@ export interface WeaponEvents extends Record<string, unknown> {
   'whip-burst': { radius: number };
   'staff-explosion': { x: number; y: number; radius: number; index: number };
   'projectile-fired': { x: number; y: number; kind: ProjectileKind };
+  /** A projectile hit a tall obstacle (wall, tree, pillar...) - bolts vanish, boomerangs/thrown swords turn back. */
+  'projectile-blocked': { x: number; y: number; kind: ProjectileKind };
 }
 
 /** What WeaponSystem needs from the session — kept narrow (same Host pattern as the other systems). */
@@ -77,6 +79,11 @@ export interface WeaponHost {
   nearestEnemy(from: Vec2, range: number, exclude?: (enemy: EnemyState) => boolean): EnemyState | null;
   /** Living enemies whose center is within `radius` (+ rangePadding) of `from`. */
   enemiesWithin(from: Vec2, radius: number): EnemyState[];
+  /** Nearest living enemy within `range` with a clear line of sight from `from` - projectile weapons don't
+   *  waste shots on enemies behind walls. */
+  nearestVisibleEnemy(from: Vec2, range: number): EnemyState | null;
+  /** True when a projectile body at this point is inside a tall obstacle. */
+  blocksProjectile(x: number, y: number, radius: number): boolean;
   /** Living enemies overlapping a circle (broad phase + exact test) — projectile hits. Pass `out` to reuse an
    *  array on hot paths; never share one `out` between nested calls. */
   enemiesOverlapping(x: number, y: number, radius: number, out?: EnemyState[]): EnemyState[];
@@ -144,7 +151,10 @@ export class WeaponSystem {
       return;
     }
     if (now < weapon.lastAttackAt + weapon.config.cooldown / attackSpeed) return;
-    const enemy = this.host.nearestEnemy(player, this.attackRange(weapon));
+    // Melee swings reach around corners; projectile weapons only aim at what they can actually see.
+    const enemy = weapon.config.type === 'cone'
+      ? this.host.nearestEnemy(player, this.attackRange(weapon))
+      : this.host.nearestVisibleEnemy(player, this.attackRange(weapon));
     if (!enemy) return;
     if (weapon.config.type === 'cone') {
       weapon.lastAttackAt = now;
@@ -331,6 +341,14 @@ export class WeaponSystem {
       projectile.x += (projectile.velocityX * deltaMs) / 1000;
       projectile.y += (projectile.velocityY * deltaMs) / 1000;
       if (now >= projectile.expiresAt) { spent.push(projectile); return; }
+      if (this.host.blocksProjectile(projectile.x, projectile.y, projectile.radius)) {
+        this.host.events.emit('projectile-blocked', { x: projectile.x, y: projectile.y, kind: projectile.kind });
+        // A bolt is spent on the wall; boomerangs and thrown swords bounce back to the hero instead - unless
+        // they're already coming back, in which case they would only grind against it.
+        if (projectile.kind === 'bolt' || projectile.returning) { spent.push(projectile); return; }
+        projectile.returning = true;
+        projectile.aimAt(Math.atan2(this.host.player.y - projectile.y, this.host.player.x - projectile.x));
+      }
       for (const enemy of this.host.enemiesOverlapping(projectile.x, projectile.y, projectile.radius, this.hitCandidates)) {
         if (!projectile.claimHit(enemy)) continue;
         if (this.resolveProjectileHit(projectile, enemy)) { spent.push(projectile); return; }
