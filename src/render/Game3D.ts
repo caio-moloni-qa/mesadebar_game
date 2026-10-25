@@ -18,6 +18,7 @@ import { EnemyHordeView } from './views/EnemyHordeView';
 import { HazardView, ParticleView, PickupView, ProjectileView } from './views/PickupAndProjectileViews';
 import { HeroView } from './views/HeroView';
 import { Arena } from './world/Arena';
+import { createCollisionOverlay } from './world/CollisionOverlay';
 
 /** Frame time is capped so a long stall (tab switch, breakpoint) can't make the sim run hundreds of catch-up steps. */
 const MAX_FRAME_MS = 250;
@@ -31,6 +32,8 @@ export interface Game3DOptions {
   invincible?: boolean;
   /** Debug: start the hero in a zone instead of the spawn clearing (?at=ruins|lake|forest|graveyard|camp|meadow). */
   startZone?: ZoneKind;
+  /** Debug: draw every collision shape (?debug=collision). */
+  showCollision?: boolean;
   /** Debug close-up camera (1 = normal gameplay framing). */
   zoom?: number;
   /** Test keys: U random upgrade, I +5 upgrades on every weapon, O add another weapon, T toggle enemy separation,
@@ -79,6 +82,7 @@ export class Game3D {
     const arenaSeed = options.seed ?? randomSeed();
     this.arenaMap = ArenaMap.generate(arenaSeed);
     this.arena = new Arena(this.arenaMap, arenaSeed);
+    if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
     this.hud = new Hud(container, () => this.restart(), () => this.showMenu());
     this.choices = new ChoiceOverlay(container);
@@ -179,6 +183,12 @@ export class Game3D {
     events.on('enemy-slipped', ({ enemy }) => {
       const point = at(enemy.x, enemy.y);
       this.particles.burst(point.x, point.z, 0xf2d33b, 6, 0.3, 1.5);
+    });
+    events.on('projectile-blocked', ({ x, y, kind }) => {
+      const point = at(x, y);
+      // Stone chips off the wall; bolts also spark.
+      this.particles.burst(point.x, point.z, 0xbfb3a0, 5, 1.0, 1.6);
+      if (kind === 'bolt') this.particles.burst(point.x, point.z, PALETTE.boltCore, 4, 1.1, 2.2);
     });
     events.on('chest-opened', () => this.effects.pulse(this.session.player.x, this.session.player.y, 60, 0xffd868, 0.5, 0.7));
   }

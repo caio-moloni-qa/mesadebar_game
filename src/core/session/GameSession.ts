@@ -12,6 +12,7 @@ import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnSchedu
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponEvents, WeaponHost, WeaponSystem, WEAPON_TUNING } from '../systems/WeaponSystem';
 import { ArenaMap } from '../world/ArenaMap';
+import { FlowField } from '../world/FlowField';
 import { BODY_RADIUS, ENEMY_DYING_MS, ENEMY_HIT_STUN_MS, EnemyState, PeelState, PickupKind, PickupState, PlayerState, ProjectileState, SOUL_CONFIG, SoulState, snapPrevious } from './entities';
 
 /** Fixed simulation step. The renderer accumulates frame time and calls step() this many ms at a time. */
@@ -31,6 +32,8 @@ const PEEL = { spawnChance: 0.03, minRadius: 40, maxRadius: 130, lifetimeMs: 120
 /** Soft push between overlapping enemies (fraction of the overlap resolved per step). New in 3D: without it a horde
  *  converging on the hero collapses into one solid block of models. Static enemies and bosses are never pushed. */
 const SEPARATION_STRENGTH = 0.25;
+/** How often the enemy flow field is rebuilt from the hero's position (only when the hero changed grid cell). */
+const FLOW_FIELD_REFRESH_MS = 250;
 
 export type PendingChoice =
   | { kind: 'starting'; upgrades: Upgrade[]; picksRemaining: number; picksTotal: number }
@@ -101,6 +104,9 @@ export class GameSession implements WeaponHost {
   private readonly upgradeSystem: UpgradeSystem;
   private readonly scheduler: EnemySpawnScheduler;
   private readonly enemyHash = new SpatialHash<EnemyState>(SPATIAL_CELL_SIZE);
+  /** Pathing for the horde (null on an open map, where walking straight at the hero is already optimal). */
+  private readonly flowField: FlowField | null;
+  private flowFieldRefreshIn = 0;
   private userPaused = false;
   private moveX = 0;
   private moveY = 0;
@@ -116,6 +122,7 @@ export class GameSession implements WeaponHost {
     this.player.x = this.arena.center.x;
     this.player.y = this.arena.center.y;
     snapPrevious(this.player);
+    this.flowField = this.arena.obstacles.length > 0 || this.arena.authored ? new FlowField(this.arena) : null;
     this.upgradeSystem = new UpgradeSystem(this.rng);
     this.weapons = new WeaponSystem(this);
     const startingWeapon = WEAPONS[options.startingWeaponId ?? character.preferredWeaponId ?? 'staff'];
@@ -208,6 +215,12 @@ export class GameSession implements WeaponHost {
     const enemy = this.enemies.acquire();
     if (!enemy) return null;
     enemy.activate(variantId, x, y, maxHealth, this.clock.now);
+    // Spawn points come from the schedule (rings around the hero, the border, anywhere for necromancers) and know
+    // nothing about the map - move them to the nearest ground the enemy actually fits on.
+    const spot = this.arena.nearestWalkable(enemy.x, enemy.y, enemy.radius);
+    enemy.x = spot.x;
+    enemy.y = spot.y;
+    snapPrevious(enemy);
     return enemy;
   }
 
@@ -220,6 +233,7 @@ export class GameSession implements WeaponHost {
     const now = this.clock.now;
     this.snapshotPositions();
     this.movePlayer(deltaMs, now);
+    this.refreshFlowField(deltaMs);
     this.scheduler.update(deltaMs, this.elapsedMs);
     this.topUpStressEnemies();
     this.rebuildEnemyHash();
@@ -248,10 +262,19 @@ export class GameSession implements WeaponHost {
     const { radius } = this.player;
     this.player.x = clamp(this.player.x + this.moveX * distance, radius, this.arena.size - radius);
     this.player.y = clamp(this.player.y + this.moveY * distance, radius, this.arena.size - radius);
+    this.arena.resolve(this.player);
     if (this.moveX !== 0 || this.moveY !== 0) {
       this.player.facingX = this.moveX;
       this.player.facingY = this.moveY;
     }
+  }
+
+  private refreshFlowField(deltaMs: number): void {
+    if (!this.flowField) return;
+    this.flowFieldRefreshIn -= deltaMs;
+    if (this.flowFieldRefreshIn > 0) return;
+    this.flowFieldRefreshIn = FLOW_FIELD_REFRESH_MS;
+    this.flowField.update(this.player);
   }
 
   private topUpStressEnemies(): void {
@@ -278,6 +301,8 @@ export class GameSession implements WeaponHost {
       }
       if (!enemy.isStatic && now >= enemy.hitStunUntil && now >= enemy.slipUntil) this.pursuePlayer(enemy, deltaMs);
       if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss') this.separate(enemy);
+      // Every walker - floating wraiths included - slides along walls and stays out of the lake.
+      if (!enemy.isStatic) this.arena.resolve(enemy);
       if (enemy.contactDamage > 0 && circlesOverlap(enemy, this.player)) this.hurtPlayer(enemy.contactDamage, now);
       if (enemy.variantId === 'necromancerWraith' && now >= enemy.nextSoulAt) {
         enemy.nextSoulAt = now + ENEMY_VARIANTS.necromancerWraith.soulCooldownMs;
@@ -288,14 +313,17 @@ export class GameSession implements WeaponHost {
     finished.forEach((enemy) => this.enemies.release(enemy));
   }
 
+  /** Follow the flow field downhill (routes around walls, through doorways), or walk straight at the hero on an
+   *  open map / once close enough that the field has nothing better to say. */
   private pursuePlayer(enemy: EnemyState, deltaMs: number): void {
     const dx = this.player.x - enemy.x;
     const dy = this.player.y - enemy.y;
     const length = Math.hypot(dx, dy);
     if (length === 0) return;
+    const route = this.flowField?.direction(enemy.x, enemy.y) ?? null;
     const step = Math.min(length, (enemy.effectiveMovementSpeed() * deltaMs) / 1000);
-    enemy.facingX = dx / length;
-    enemy.facingY = dy / length;
+    enemy.facingX = route ? route.x : dx / length;
+    enemy.facingY = route ? route.y : dy / length;
     enemy.x += enemy.facingX * step;
     enemy.y += enemy.facingY * step;
   }
@@ -372,11 +400,13 @@ export class GameSession implements WeaponHost {
     const pickup = this.pickups.acquire();
     if (!pickup) return;
     pickup.kind = kind;
-    pickup.x = x;
-    pickup.y = y;
-    snapPrevious(pickup);
     pickup.value = value;
     pickup.radius = kind === 'gem' ? BODY_RADIUS.gem : kind === 'chest' ? BODY_RADIUS.chest : BODY_RADIUS.potion;
+    // Never inside a wall or the lake (a burst of gems from a kill next to a wall would otherwise be unreachable).
+    const spot = this.arena.nearestWalkable(x, y, pickup.radius);
+    pickup.x = spot.x;
+    pickup.y = spot.y;
+    snapPrevious(pickup);
   }
 
   private updatePickups(deltaMs: number): void {
@@ -435,7 +465,8 @@ export class GameSession implements WeaponHost {
     this.souls.forEachActive((soul) => {
       soul.x += (soul.velocityX * deltaMs) / 1000;
       soul.y += (soul.velocityY * deltaMs) / 1000;
-      if (now >= soul.expiresAt) { spent.push(soul); return; }
+      // Walls are cover against the necromancer's skulls too.
+      if (now >= soul.expiresAt || this.arena.blocksProjectile(soul.x, soul.y, soul.radius)) { spent.push(soul); return; }
       if (!circlesOverlap(soul, this.player)) return;
       this.player.applySlow(SOUL_CONFIG.slowPercent, SOUL_CONFIG.slowDurationMs, now);
       this.events.emit('player-status', { text: `LENTO +${Math.round(SOUL_CONFIG.slowPercent * 100)}%`, tone: 'slow' });
@@ -454,8 +485,9 @@ export class GameSession implements WeaponHost {
     if (!peel) return;
     const angle = floatBetween(this.rng, 0, Math.PI * 2);
     const distance = floatBetween(this.rng, PEEL.minRadius, PEEL.maxRadius);
-    peel.x = clamp(this.player.x + Math.cos(angle) * distance, 20, this.arena.size - 20);
-    peel.y = clamp(this.player.y + Math.sin(angle) * distance, 20, this.arena.size - 20);
+    const spot = this.arena.nearestWalkable(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, peel.radius);
+    peel.x = spot.x;
+    peel.y = spot.y;
     snapPrevious(peel);
     peel.expiresAt = this.clock.now + PEEL.lifetimeMs;
   }
@@ -549,6 +581,17 @@ export class GameSession implements WeaponHost {
       }
     }
     return best;
+  }
+
+  nearestVisibleEnemy(from: Vec2, range: number): EnemyState | null {
+    // Closest first, then the first with a clear line - usually the very first candidate.
+    const distanceSq = (enemy: EnemyState) => (enemy.x - from.x) ** 2 + (enemy.y - from.y) ** 2;
+    const candidates = this.enemiesWithin(from, range).sort((a, b) => distanceSq(a) - distanceSq(b));
+    return candidates.find((enemy) => this.arena.hasLineOfSight(from, enemy)) ?? null;
+  }
+
+  blocksProjectile(x: number, y: number, radius: number): boolean {
+    return this.arena.blocksProjectile(x, y, radius);
   }
 
   enemiesWithin(from: Vec2, radius: number): EnemyState[] {
