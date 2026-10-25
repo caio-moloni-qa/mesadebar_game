@@ -244,9 +244,10 @@ export class Game3D {
     this.effects.update(deltaSeconds);
     this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
     this.arena.followFocus(this.cameraRig.focus);
+    this.arena.update(deltaSeconds, this.cameraRig.focus);
 
     this.renderer.info.reset();
-    this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset, [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root]);
+    this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset, [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions]);
 
     this.fps.frames += 1;
     if (now - this.fps.since >= 500) {

@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeParts } from '../models/parts';
+import { Ambient } from './Ambient';
+import { EdgeMist } from './EdgeMist';
+import { environmentUniforms, withEnvironment } from './environmentShader';
+import { FOOTPRINT, PROP_BUILDERS, PropKind, brazierBase, placeProp } from './props';
 import { WORLD_SIZE } from '../../config/world';
 import { Rng, createRng, floatBetween, intBetween } from '../../core/math';
 import { PALETTE, toonMaterial } from '../materials';
@@ -13,21 +18,33 @@ const CLEAR_RADIUS = 9;
 /** Low warm sun, about 30° up — long shadows falling down-left across the screen like the style reference. */
 const SUN_DIRECTION = new THREE.Vector3(-0.55, 0.5, -0.67).normalize();
 const SHADOW_HALF_EXTENT = 34;
+/** Props stay this far inside the border, where the edge mist starts to thicken. */
+const EDGE_MARGIN = 5;
+/** Cool, slightly violet mist — matches the shadow tone so the border reads as dusk haze, not a wall. */
+const MIST_COLOR = 0xb8b2c8;
 
-/** The arena (THREEJS_3D_MIGRATION_TEMP.md §4.2/§3.1): hand-painted-looking grass ground generated procedurally,
- *  medieval ruins playing the role of the reference's ribs/walls, instanced grass tufts, and the light rig. Props
- *  are decoration only — no collision, so the arena plays exactly like the open 2D map. */
+/** The arena (THREEJS_3D_MIGRATION_TEMP.md §4.2/§3.1): procedurally painted ground with dirt trails, medieval set
+ *  dressing (colonnades, arches, walls, a stone circle, graveyards, dead trees, bushes, rocks), wind-swept grass,
+ *  drifting cloud shadows, braziers with real firelight, fireflies, mist at the borders, and the light rig.
+ *  Props are decoration only — no collision, so the arena plays exactly like the open 2D map. */
 export class Arena {
   readonly root = new THREE.Group();
   readonly sun: THREE.DirectionalLight;
+  readonly mist: EdgeMist;
+  private readonly ambient: Ambient;
+  private time = 0;
   private readonly sunOffset = SUN_DIRECTION.clone().multiplyScalar(60);
 
   constructor(seed: number) {
     const rng = createRng(seed);
     this.root.add(this.createGround(rng));
     this.root.add(this.createOuterGround());
-    this.root.add(this.createRuins(rng));
+    const props = this.createProps(rng);
+    this.root.add(props.mesh);
     this.root.add(this.createGrass(rng));
+    this.mist = new EdgeMist(ARENA_METERS, MIST_COLOR);
+    this.ambient = new Ambient(props.braziers, rng);
+    this.root.add(this.mist.root, this.ambient.root);
     // Ambient is cool purple-blue from above (that's what shadowed, upward-facing ground sees), warmth comes only
     // from the sun — gives the reference's golden light / violet shadow split.
     this.root.add(new THREE.HemisphereLight(PALETTE.shadowLight, PALETTE.shadowGround, 3.6));
@@ -44,6 +61,19 @@ export class Arena {
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.02;
     this.root.add(this.sun, this.sun.target);
+  }
+
+  /** Objects the pixel pipeline must skip in its normal pass (transparent / glowing — they'd add fake edges). */
+  get normalPassExclusions(): THREE.Object3D[] {
+    return [this.mist.root, ...this.ambient.glows];
+  }
+
+  /** Advances the environment clock (wind, cloud drift, mist, flames, fireflies). Pass 0 while the run is frozen. */
+  update(deltaSeconds: number, focus: THREE.Vector3): void {
+    this.time += deltaSeconds;
+    environmentUniforms.uEnvTime.value = this.time;
+    environmentUniforms.uCloudOffset.value.set(this.time * 0.9, this.time * 0.4);
+    this.ambient.update(this.time, deltaSeconds, focus);
   }
 
   /** Keeps the shadow frustum centered on what the camera sees, snapped to whole shadow texels to avoid shimmer. */
@@ -96,7 +126,7 @@ export class Arena {
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
     texture.generateMipmaps = false;
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_METERS, ARENA_METERS), toonMaterial({ map: texture }));
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_METERS, ARENA_METERS), withEnvironment(toonMaterial({ map: texture }), { clouds: true }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(ARENA_METERS / 2, 0, ARENA_METERS / 2);
     ground.receiveShadow = true;
@@ -135,7 +165,7 @@ export class Arena {
 
   /** Dark ring outside the arena so the edge of the world fades instead of ending in the void. */
   private createOuterGround(): THREE.Mesh {
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_METERS * 4, ARENA_METERS * 4), toonMaterial({ color: 0x3c4a2c }));
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_METERS * 4, ARENA_METERS * 4), withEnvironment(toonMaterial({ color: 0x627c3a }), { clouds: true }));
     outer.rotation.x = -Math.PI / 2;
     outer.position.set(ARENA_METERS / 2, -0.02, ARENA_METERS / 2);
     outer.receiveShadow = true;
@@ -143,105 +173,54 @@ export class Arena {
     return outer;
   }
 
-  private createRuins(rng: Rng): THREE.Group {
-    const group = new THREE.Group();
-    const stone = toonMaterial({ color: PALETTE.stone, flatShading: true });
-    const stoneDark = toonMaterial({ color: PALETTE.stoneDark, flatShading: true });
-    const deadWood = toonMaterial({ color: PALETTE.wood, flatShading: true });
+  /** Scatters the props with simple rejection sampling: every prop kind has a footprint radius and nothing is placed
+   *  overlapping another prop, inside the spawn clearing, or too close to the arena edge (where the mist is). All of
+   *  it is merged into ONE vertex-coloured mesh — a single draw call per pass for the whole set dressing. Braziers
+   *  are returned separately because their flames and lights animate. */
+  private createProps(rng: Rng): { mesh: THREE.Mesh; braziers: THREE.Vector3[] } {
     const center = ARENA_METERS / 2;
-    const place = (object: THREE.Object3D) => {
-      object.traverse((child) => {
-        if (child instanceof THREE.Mesh) { child.castShadow = true; child.receiveShadow = true; }
-      });
-      group.add(object);
-    };
-    const randomSpot = (): THREE.Vector2 => {
-      for (;;) {
-        const spot = new THREE.Vector2(floatBetween(rng, 3, ARENA_METERS - 3), floatBetween(rng, 3, ARENA_METERS - 3));
-        if (spot.distanceTo(new THREE.Vector2(center, center)) > CLEAR_RADIUS) return spot;
+    const placed: Array<{ x: number; z: number; radius: number }> = [];
+    const parts: THREE.BufferGeometry[] = [];
+    const braziers: THREE.Vector3[] = [];
+    const findSpot = (radius: number, near?: { x: number; z: number; within: number }): { x: number; z: number } | null => {
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const x = near ? near.x + floatBetween(rng, -near.within, near.within) : floatBetween(rng, EDGE_MARGIN, ARENA_METERS - EDGE_MARGIN);
+        const z = near ? near.z + floatBetween(rng, -near.within, near.within) : floatBetween(rng, EDGE_MARGIN, ARENA_METERS - EDGE_MARGIN);
+        if (Math.hypot(x - center, z - center) < CLEAR_RADIUS + radius) continue;
+        if (x < EDGE_MARGIN || z < EDGE_MARGIN || x > ARENA_METERS - EDGE_MARGIN || z > ARENA_METERS - EDGE_MARGIN) continue;
+        if (placed.some((other) => Math.hypot(other.x - x, other.z - z) < other.radius + radius)) continue;
+        placed.push({ x, z, radius });
+        return { x, z };
       }
+      return null;
     };
-
-    // Ruined colonnades — rows of broken pillars, the medieval stand-in for the reference's giant ribs.
-    for (let row = 0; row < 7; row += 1) {
-      const start = randomSpot();
-      const angle = floatBetween(rng, 0, Math.PI);
-      const count = intBetween(rng, 3, 6);
+    const scatter = (kind: Exclude<PropKind, 'brazier'>, count: number) => {
       for (let index = 0; index < count; index += 1) {
-        if (rng() < 0.2) continue;
-        const height = floatBetween(rng, 1.4, 4.2);
-        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, height, 6), rng() < 0.7 ? stone : stoneDark);
-        pillar.position.set(start.x + Math.cos(angle) * index * 2.4, height / 2, start.y + Math.sin(angle) * index * 2.4);
-        pillar.rotation.set(floatBetween(rng, -0.06, 0.06), floatBetween(rng, 0, Math.PI), floatBetween(rng, -0.06, 0.06));
-        place(pillar);
-        if (height > 3.5 && rng() < 0.6) {
-          const capital = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.35, 1.3), stone);
-          capital.position.set(pillar.position.x, height + 0.15, pillar.position.z);
-          place(capital);
-        }
+        const spot = findSpot(FOOTPRINT[kind]);
+        if (spot) parts.push(...placeProp(PROP_BUILDERS[kind](rng), spot.x, spot.z, rng() * Math.PI * 2));
       }
-    }
-    // Arches — two pillars and a lintel.
-    for (let index = 0; index < 6; index += 1) {
-      const spot = randomSpot();
-      const angle = floatBetween(rng, 0, Math.PI);
-      const arch = new THREE.Group();
-      const left = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4, 0.8), stone);
-      left.position.set(-1.6, 2, 0);
-      const right = left.clone();
-      right.position.x = 1.6;
-      const lintel = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.7, 0.9), stoneDark);
-      lintel.position.set(rng() < 0.5 ? 0 : 0.4, 4.3, 0);
-      lintel.rotation.z = rng() < 0.4 ? 0.12 : 0;
-      arch.add(left, right, lintel);
-      arch.position.set(spot.x, 0, spot.y);
-      arch.rotation.y = angle;
-      place(arch);
-    }
-    // Broken walls.
-    for (let index = 0; index < 10; index += 1) {
-      const spot = randomSpot();
-      const wall = new THREE.Group();
-      const segments = intBetween(rng, 2, 5);
-      for (let segment = 0; segment < segments; segment += 1) {
-        const height = floatBetween(rng, 0.6, 2.2);
-        const block = new THREE.Mesh(new THREE.BoxGeometry(1.4, height, 0.7), rng() < 0.6 ? stone : stoneDark);
-        block.position.set(segment * 1.4, height / 2, 0);
-        wall.add(block);
-      }
-      wall.position.set(spot.x, 0, spot.y);
-      wall.rotation.y = floatBetween(rng, 0, Math.PI);
-      place(wall);
-    }
-    // Rocks.
-    for (let index = 0; index < 70; index += 1) {
-      const spot = randomSpot();
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(floatBetween(rng, 0.25, 0.8), 0), stoneDark);
-      rock.position.set(spot.x, 0.1, spot.y);
-      rock.scale.y = floatBetween(rng, 0.5, 0.9);
-      rock.rotation.set(rng() * 3, rng() * 3, rng() * 3);
-      place(rock);
-    }
-    // Dead trees.
-    for (let index = 0; index < 18; index += 1) {
-      const spot = randomSpot();
-      const tree = new THREE.Group();
-      const height = floatBetween(rng, 2.5, 4.5);
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.25, height, 5), deadWood);
-      trunk.position.y = height / 2;
-      tree.add(trunk);
-      for (let branch = 0; branch < 3; branch += 1) {
-        const length = floatBetween(rng, 0.8, 1.6);
-        const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, length, 4), deadWood);
-        limb.position.set(0, height * floatBetween(rng, 0.55, 0.9), 0);
-        limb.rotation.set(0, branch * 2.1 + rng(), 0.9);
-        limb.translateY(length / 2);
-        tree.add(limb);
-      }
-      tree.position.set(spot.x, 0, spot.y);
-      place(tree);
-    }
-    return mergeStaticByMaterial(group);
+    };
+    // Landmarks first (they need the most room), then the filler.
+    scatter('stoneCircle', 2);
+    scatter('graveyard', 3);
+    scatter('colonnade', 7);
+    scatter('arch', 5);
+    scatter('wall', 9);
+    scatter('fallenColumn', 8);
+    scatter('deadTree', 18);
+    scatter('bush', 110);
+    scatter('rock', 70);
+    // Braziers: one just outside the spawn clearing so the warm light is on screen from the first second.
+    const firstBrazier = findSpot(FOOTPRINT.brazier, { x: center + 11, z: center - 6, within: 2 });
+    [firstBrazier, ...Array.from({ length: 6 }, () => findSpot(FOOTPRINT.brazier))].forEach((spot) => {
+      if (!spot) return;
+      parts.push(...placeProp(brazierBase(), spot.x, spot.z, 0));
+      braziers.push(new THREE.Vector3(spot.x, 0, spot.z));
+    });
+    const mesh = new THREE.Mesh(mergeParts(parts), withEnvironment(toonMaterial({ vertexColors: true, flatShading: true }), { clouds: true }));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return { mesh, braziers };
   }
 
   /** Instanced grass tufts: three crossed blades with normals pointing up, so they light like the ground and don't
@@ -258,7 +237,7 @@ export class Arena {
       return blade;
     });
     const geometry = mergeGeometries(blades)!;
-    const material = toonMaterial({ side: THREE.DoubleSide });
+    const material = withEnvironment(toonMaterial({ side: THREE.DoubleSide }), { wind: true, clouds: true });
     const count = 9000;
     const tufts = new THREE.InstancedMesh(geometry, material, count);
     const matrix = new THREE.Matrix4();
@@ -286,33 +265,6 @@ export class Arena {
     tufts.renderOrder = -1;
     return tufts;
   }
-}
-
-/** Bakes every mesh's world transform into one geometry per material, turning a few hundred static props into a
- *  handful of draw calls (each prop is drawn three times per frame: color, normals and shadow map). */
-function mergeStaticByMaterial(group: THREE.Group): THREE.Group {
-  group.updateMatrixWorld(true);
-  const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>();
-  group.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-    const source = child.geometry as THREE.BufferGeometry;
-    // Polyhedra (the rocks) are already non-indexed; toNonIndexed() would warn and they'd share one buffer.
-    const geometry = source.index ? source.toNonIndexed() : source.clone();
-    geometry.applyMatrix4(child.matrixWorld);
-    const material = child.material as THREE.Material;
-    const list = byMaterial.get(material) ?? [];
-    list.push(geometry);
-    byMaterial.set(material, list);
-  });
-  const merged = new THREE.Group();
-  byMaterial.forEach((geometries, material) => {
-    const mesh = new THREE.Mesh(mergeGeometries(geometries)!, material);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    merged.add(mesh);
-    geometries.forEach((geometry) => geometry.dispose());
-  });
-  return merged;
 }
 
 /** Smooth 2D value noise in [0, 1] from a seeded lattice. */
