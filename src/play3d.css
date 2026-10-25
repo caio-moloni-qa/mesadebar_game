@@ -165,3 +165,15 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .offscreen-arrow[hidden] { display: none; }
 .offscreen-arrow[data-kind="end"] { background: #9fb4ff; }
 .offscreen-arrow[data-kind="continue"] { background: #7dffa0; }
+
+/* Sandbox (F9) — Phaser SandboxDebugPanel: small scrolling list of leather buttons on the right, green indicator. */
+.sandbox-panel { position: absolute; top: calc(120 * var(--ui-unit)); right: calc(16 * var(--ui-unit)); z-index: 7; width: 210px;
+  max-height: min(60vh, 420px); display: grid; grid-template-rows: auto 1fr; padding: 6px; background: rgba(43, 28, 16, 0.92);
+  border: 2px solid #c9963f; font-family: MedievalSharp, Georgia, serif; }
+.sandbox-panel[hidden], .sandbox-indicator[hidden] { display: none; }
+.sandbox-panel h3 { margin: 0 0 6px; color: #ffe29a; font-size: 13px; font-weight: normal; }
+.sandbox-list { display: grid; gap: 4px; overflow-y: auto; padding-right: 2px; }
+.sandbox-list button { padding: 5px 8px; text-align: left; cursor: pointer; border: none; font: inherit; font-size: 12px; color: #ffffff; background: #7a4a20; }
+.sandbox-list button:hover, .sandbox-list button:focus-visible { background: #9c6530; outline: none; }
+.sandbox-indicator { position: absolute; right: 16px; bottom: calc(44 * var(--ui-unit)); z-index: 7; pointer-events: none; color: #8bff8b;
+  font-family: MedievalSharp, Georgia, serif; font-size: 16px; text-shadow: 2px 0 #0a1a0a, -2px 0 #0a1a0a, 0 2px #0a1a0a, 0 -2px #0a1a0a; }

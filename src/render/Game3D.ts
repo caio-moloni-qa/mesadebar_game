@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ENEMY_CONFIG } from '../config/balance';
+import { SANDBOX_SPAWN_CAPS } from '../config/balance';
 import { CHARACTERS } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
@@ -16,6 +16,7 @@ import { simToWorld } from './space';
 import { FloatingTexts } from './ui/FloatingTexts';
 import { RunScreens } from './ui/RunScreens';
 import { BossUi } from './ui/BossUi';
+import { SandboxPanel } from './ui/SandboxPanel';
 import { BossEffects } from './vfx/BossEffects';
 import { ChestRoll } from './ui/ChestRoll';
 import { Joystick, isTouchDevice } from './ui/Joystick';
@@ -64,6 +65,7 @@ export class Game3D {
   private readonly hud: Hud;
   private readonly screens: RunScreens;
   private readonly bossUi: BossUi;
+  private readonly sandbox: SandboxPanel;
   private readonly bossEffects = new BossEffects();
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
@@ -74,7 +76,8 @@ export class Game3D {
   private inMenu = false;
   private session!: GameSession;
   private playerView!: HeroView;
-  private readonly enemyView = new EnemyHordeView(ENEMY_CONFIG.maxActive);
+  /** Sized for the sandbox's highest spawn limit, so raising it never outgrows the instanced batches. */
+  private readonly enemyView = new EnemyHordeView(SANDBOX_SPAWN_CAPS[SANDBOX_SPAWN_CAPS.length - 1]);
   private readonly projectileView = new ProjectileView(400);
   private readonly pickupView = new PickupView(600);
   private readonly hazardView = new HazardView(80);
@@ -111,6 +114,11 @@ export class Game3D {
     this.floating = new FloatingTexts(container);
     this.hud = new Hud(container, Boolean(options.debug));
     this.bossUi = new BossUi(container, () => this.session.interact());
+    this.sandbox = new SandboxPanel(container, {
+      session: () => this.session,
+      setFogVisible: (visible) => { this.arena.mist.root.visible = visible; },
+      announce: (text) => this.floatAboveHero(text, '#8bff8b')
+    });
     this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
     this.chestRoll = new ChestRoll(container);
@@ -134,6 +142,7 @@ export class Game3D {
     this.menu.hide();
     this.hud.setVisible(true);
     this.bossUi.setVisible(true);
+    this.sandbox.setAllowed(true);
     this.joystick.setVisible(this.showJoystick);
     this.restart();
   }
@@ -144,6 +153,7 @@ export class Game3D {
     this.inMenu = true;
     this.hud.setVisible(false);
     this.bossUi.setVisible(false);
+    this.sandbox.setAllowed(false);
     this.joystick.setVisible(false);
     this.createSession({ skipStartingUpgrades: true, attract: true });
     this.menu.show();
@@ -171,6 +181,7 @@ export class Game3D {
       this.session.variantSpawnEnabled = false;
     }
     this.session.player.invincible = Boolean(this.options.invincible);
+    if (!attract) this.sandbox.applyTo(this.session, Boolean(this.options.invincible));
     const zone = ZONES.find((spec) => spec.kind === this.options.startZone);
     if (zone && !attract) {
       // The lake's blob centre is deep water; aim at its south shore instead.

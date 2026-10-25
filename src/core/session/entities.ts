@@ -44,6 +44,8 @@ export class PlayerState implements Body, UpgradeTarget {
   invulnerableUntil = 0;
   lastDamagedAt = -Infinity;
   invincible = false;
+  /** Sandbox "+500 Buffer de Dano": absorbs incoming damage before health does. */
+  damageBuffer = 0;
   // Upgrade-driven stats (see core/systems/UpgradeSystem).
   lifeStealPercent = 0;
   meleeRangeBonus = 0;
@@ -93,7 +95,9 @@ export class PlayerState implements Body, UpgradeTarget {
     const incoming = amount + this.auraDamageTakenBonus;
     this.auraDamageTakenBonus = 0;
     const dealt = Math.max(1, incoming - this.armor);
-    this.health = Math.max(0, this.health - dealt);
+    const absorbed = Math.min(this.damageBuffer, dealt);
+    this.damageBuffer -= absorbed;
+    this.health = Math.max(0, this.health - (dealt - absorbed));
     this.invulnerableUntil = now + PLAYER_CONFIG.invulnerabilityMs;
     this.lastDamagedAt = now;
     return dealt;

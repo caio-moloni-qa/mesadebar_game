@@ -1,5 +1,7 @@
 export const PLAYER_CONFIG = { maxHealth: 100, movementSpeed: 180, pickupRange: 100, invulnerabilityMs: 750 };
 export const ENEMY_CONFIG = { maxHealth: 40, movementSpeed: 75, contactDamage: 10, reward: 3, maxActive: 240 };
+/** Sandbox "Limite spawn" choices (F9 panel). The last is the ceiling the 3D horde renderer is sized for. */
+export const SANDBOX_SPAWN_CAPS = [ENEMY_CONFIG.maxActive, 500, 1000, 2000] as const;
 export const ENEMY_VARIANTS = {
   skeleton: { maxHealth: ENEMY_CONFIG.maxHealth, movementSpeed: ENEMY_CONFIG.movementSpeed, contactDamage: ENEMY_CONFIG.contactDamage, reward: ENEMY_CONFIG.reward },
   necromancerWraith: { maxHealth: 150, movementSpeed: 0, contactDamage: 0, reward: 8, currencyDrops: 3, soulCooldownMs: 2200 },

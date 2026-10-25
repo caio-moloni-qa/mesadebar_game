@@ -4,11 +4,14 @@ export class Pool<T> {
   private readonly free: T[] = [];
   private readonly inUse = new Set<T>();
 
-  constructor(private readonly create: () => T, readonly capacity: number) {}
+  /** Mutable so the sandbox can change the spawn limit mid-run (lowering it never evicts active objects). */
+  constructor(private readonly create: () => T, public capacity: number) {}
 
   /** A recycled or freshly created object, or null when every slot is already in use. */
   acquire(): T | null {
-    const item = this.free.pop() ?? (this.size < this.capacity ? this.create() : null);
+    // The cap counts objects in use, so lowering it also limits recycled ones.
+    if (this.inUse.size >= this.capacity) return null;
+    const item = this.free.pop() ?? this.create();
     if (item !== null) this.inUse.add(item);
     return item;
   }

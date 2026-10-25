@@ -414,6 +414,54 @@ export class GameSession implements WeaponHost {
     if (rot > 0) this.events.emit('player-status', { text: `HP -${Math.round(rot)}`, tone: 'rot' });
   }
 
+  // ── Sandbox (the F9 panel, Phaser: SandboxDebugPanel) ───────────────────────────────────────────────────────
+
+  addCurrency(amount: number): void {
+    this.currency += amount;
+  }
+
+  /** Kills every active enemy (bosses included) with full credit: XP, drops, wave progress. */
+  killAllEnemies(): void {
+    const alive: EnemyState[] = [];
+    this.enemies.forEachActive((enemy) => { if (enemy.alive) alive.push(enemy); });
+    alive.forEach((enemy) => {
+      enemy.health = 0;
+      this.defeatEnemy(enemy);
+    });
+  }
+
+  /** Moves the run clock (and so the difficulty stage and the next boss timer); never below 0. */
+  adjustElapsedMs(deltaMs: number): void {
+    this.elapsedMs = Math.max(0, this.elapsedMs + deltaMs);
+  }
+
+  setForcedDifficultyStage(stage: number | null): void {
+    this.difficulty.setForcedStage(stage);
+  }
+
+  setEnemySpawnCap(cap: number): void {
+    this.enemies.capacity = cap;
+  }
+
+  /** The same spot real "near the player" spawns use. */
+  spawnNearPlayer(variantId: EnemyVariantId, count: number): void {
+    for (let index = 0; index < count; index += 1) {
+      const point = this.scheduler.pointNearPlayer();
+      this.spawnEnemy(variantId, point.x, point.y);
+    }
+  }
+
+  /** One random upgrade from the equipped weapons' own pools (deduped), or from the basic attribute pool. */
+  grantSandboxUpgrade(kind: 'weapon' | 'attribute'): Upgrade | null {
+    const pool = kind === 'attribute'
+      ? this.upgradeSystem.basicUpgradePool()
+      : [...new Map(this.weapons.weapons.flatMap((weapon) => this.upgradeSystem.weaponUpgradePool(weapon.config, this.player)).map((upgrade) => [upgrade.id, upgrade])).values()];
+    if (pool.length === 0) return null;
+    const upgrade = pickOne(this.rng, pool);
+    this.applyUpgrade(upgrade);
+    return upgrade;
+  }
+
   // ── Boss waves, portals and cycles ─────────────────────────────────────────────────────────────────────────
 
   /** Cycle 1 is RUN_DURATION_MS; every continuation adds a minute. */
