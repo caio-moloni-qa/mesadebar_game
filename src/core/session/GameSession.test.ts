@@ -3,6 +3,7 @@ import { CharacterId, CHARACTERS } from '../../config/characters';
 import { ENEMY_CONFIG, ENEMY_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG, requiredExperience } from '../../config/balance';
 import { WEAPONS, WeaponConfig } from '../../config/weapons';
 import { WORLD_SIZE } from '../../config/world';
+import { ArenaMap } from '../world/ArenaMap';
 import { ENEMY_DYING_MS, SOUL_CONFIG } from './entities';
 import { GameSession, STEP_MS } from './GameSession';
 
@@ -15,7 +16,7 @@ function run(session: GameSession, ms: number): void {
 
 /** Real spawn schedule off and no starting-upgrade screen, so a test controls exactly what exists. */
 function quietSession(characterId: CharacterId, seed: number, startingWeaponId?: WeaponConfig['id']): GameSession {
-  const session = new GameSession({ characterId, seed, startingWeaponId, skipStartingUpgrades: true });
+  const session = new GameSession({ characterId, seed, startingWeaponId, skipStartingUpgrades: true, arena: ArenaMap.open(WORLD_SIZE) });
   session.skeletonSpawnEnabled = false;
   session.variantSpawnEnabled = false;
   return session;
@@ -286,7 +287,7 @@ describe('level-ups and choices', () => {
   });
 
   it('opens the starting-upgrade screen for the preferred weapon and resumes after all picks', () => {
-    const session = new GameSession({ characterId: 'barbarian', seed: 22 });
+    const session = new GameSession({ characterId: 'barbarian', seed: 22, arena: ArenaMap.open(WORLD_SIZE) });
     const choice = session.pendingChoice!;
     expect(choice.kind).toBe('starting');
     if (choice.kind !== 'starting') return;
@@ -324,7 +325,7 @@ describe('pickups, pooling and determinism', () => {
   });
 
   it('runs the real schedule and never exceeds ENEMY_CONFIG.maxActive', () => {
-    const session = new GameSession({ characterId: 'mage', seed: 25, stressEnemyCount: 1000, skipStartingUpgrades: true });
+    const session = new GameSession({ characterId: 'mage', seed: 25, stressEnemyCount: 1000, skipStartingUpgrades: true, arena: ArenaMap.open(WORLD_SIZE) });
     session.player.invincible = true;
     run(session, 2000);
     expect(session.enemies.activeCount).toBe(ENEMY_CONFIG.maxActive);
@@ -350,7 +351,7 @@ describe('pickups, pooling and determinism', () => {
 
   it('is deterministic for the same seed, inputs and choices', () => {
     const snapshot = (seed: number) => {
-      const session = new GameSession({ characterId: 'barbarian', seed });
+      const session = new GameSession({ characterId: 'barbarian', seed, arena: ArenaMap.open(WORLD_SIZE) });
       session.player.invincible = true;
       session.setMoveInput(1, 0.5);
       for (let step = 0; step < 1800; step += 1) {

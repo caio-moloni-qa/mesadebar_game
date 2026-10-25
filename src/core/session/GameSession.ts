@@ -1,7 +1,6 @@
 import { ENEMY_CONFIG, ENEMY_VARIANTS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
-import { WORLD_SIZE } from '../../config/world';
 import { EventBus } from '../EventBus';
 import { Pool } from '../Pool';
 import { SimClock } from '../SimClock';
@@ -12,6 +11,7 @@ import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponEvents, WeaponHost, WeaponSystem, WEAPON_TUNING } from '../systems/WeaponSystem';
+import { ArenaMap } from '../world/ArenaMap';
 import { BODY_RADIUS, ENEMY_DYING_MS, ENEMY_HIT_STUN_MS, EnemyState, PeelState, PickupKind, PickupState, PlayerState, ProjectileState, SOUL_CONFIG, SoulState, snapPrevious } from './entities';
 
 /** Fixed simulation step. The renderer accumulates frame time and calls step() this many ms at a time. */
@@ -61,6 +61,8 @@ export interface GameSessionOptions {
   stressEnemyCount?: number;
   /** Skip the "choose your starting weapon upgrades" screen (tests, quick sandbox runs). */
   skipStartingUpgrades?: boolean;
+  /** The arena to play in. Defaults to the authored map with this run's seed; tests pass ArenaMap.open(size). */
+  arena?: ArenaMap;
 }
 
 /** Engine-agnostic run simulation — the GameScene replacement described in THREEJS_3D_MIGRATION_TEMP.md. Covers
@@ -73,6 +75,7 @@ export class GameSession implements WeaponHost {
   readonly rng: Rng;
   readonly characterId: CharacterId;
   readonly player: PlayerState;
+  readonly arena: ArenaMap;
   readonly enemies = new Pool(() => new EnemyState(), ENEMY_CONFIG.maxActive);
   readonly projectiles = new Pool(() => new ProjectileState(), MAX_PROJECTILES);
   readonly pickups = new Pool(() => new PickupState(), MAX_PICKUPS);
@@ -102,14 +105,16 @@ export class GameSession implements WeaponHost {
   private moveX = 0;
   private moveY = 0;
   private readonly scratch: EnemyState[] = [];
+  private readonly probe = { x: 0, y: 0, radius: 0 };
 
   constructor(private readonly options: GameSessionOptions) {
     this.rng = createRng(options.seed);
     this.characterId = options.characterId;
     const character = CHARACTERS[options.characterId];
     this.player = new PlayerState(character);
-    this.player.x = WORLD_SIZE / 2;
-    this.player.y = WORLD_SIZE / 2;
+    this.arena = options.arena ?? ArenaMap.generate(options.seed);
+    this.player.x = this.arena.center.x;
+    this.player.y = this.arena.center.y;
     snapPrevious(this.player);
     this.upgradeSystem = new UpgradeSystem(this.rng);
     this.weapons = new WeaponSystem(this);
@@ -124,7 +129,7 @@ export class GameSession implements WeaponHost {
       hasActiveEncounter: () => false,
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
-    }, this.rng);
+    }, this.rng, this.arena.size);
     if (!options.skipStartingUpgrades && character.preferredWeaponId === startingWeapon.id && character.startingWeaponUpgradeChoices) {
       const total = character.startingWeaponUpgradeChoices;
       this.openChoice({ kind: 'starting', upgrades: shuffled(this.rng, this.upgradeSystem.weaponUpgradePool(startingWeapon, this.player)).slice(0, total), picksRemaining: total, picksTotal: total });
@@ -241,8 +246,8 @@ export class GameSession implements WeaponHost {
   private movePlayer(deltaMs: number, now: number): void {
     const distance = (this.player.effectiveMovementSpeed(now) * deltaMs) / 1000;
     const { radius } = this.player;
-    this.player.x = clamp(this.player.x + this.moveX * distance, radius, WORLD_SIZE - radius);
-    this.player.y = clamp(this.player.y + this.moveY * distance, radius, WORLD_SIZE - radius);
+    this.player.x = clamp(this.player.x + this.moveX * distance, radius, this.arena.size - radius);
+    this.player.y = clamp(this.player.y + this.moveY * distance, radius, this.arena.size - radius);
     if (this.moveX !== 0 || this.moveY !== 0) {
       this.player.facingX = this.moveX;
       this.player.facingY = this.moveY;
@@ -449,8 +454,8 @@ export class GameSession implements WeaponHost {
     if (!peel) return;
     const angle = floatBetween(this.rng, 0, Math.PI * 2);
     const distance = floatBetween(this.rng, PEEL.minRadius, PEEL.maxRadius);
-    peel.x = clamp(this.player.x + Math.cos(angle) * distance, 20, WORLD_SIZE - 20);
-    peel.y = clamp(this.player.y + Math.sin(angle) * distance, 20, WORLD_SIZE - 20);
+    peel.x = clamp(this.player.x + Math.cos(angle) * distance, 20, this.arena.size - 20);
+    peel.y = clamp(this.player.y + Math.sin(angle) * distance, 20, this.arena.size - 20);
     snapPrevious(peel);
     peel.expiresAt = this.clock.now + PEEL.lifetimeMs;
   }
@@ -522,6 +527,10 @@ export class GameSession implements WeaponHost {
 
   // ── WeaponHost queries ────────────────────────────────────────────────────────────────────────────────────
 
+  get worldSize(): number {
+    return this.arena.size;
+  }
+
   isOver(): boolean {
     return this.over;
   }
@@ -551,10 +560,16 @@ export class GameSession implements WeaponHost {
     });
   }
 
-  enemiesOverlapping(x: number, y: number, radius: number): EnemyState[] {
+  enemiesOverlapping(x: number, y: number, radius: number, out: EnemyState[] = []): EnemyState[] {
+    this.probe.x = x;
+    this.probe.y = y;
+    this.probe.radius = radius;
     this.scratch.length = 0;
-    const probe = { x, y, radius };
-    return this.enemyHash.queryRadius(probe, radius, this.scratch).filter((enemy) => enemy.alive && circlesOverlap(probe, enemy));
+    out.length = 0;
+    for (const enemy of this.enemyHash.queryRadius(this.probe, radius, this.scratch)) {
+      if (enemy.alive && circlesOverlap(this.probe, enemy)) out.push(enemy);
+    }
+    return out;
   }
 }
 

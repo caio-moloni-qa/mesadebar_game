@@ -1,6 +1,6 @@
 import { GameSession } from '../core/session/GameSession';
 
-export interface RenderStats { fps: number; drawCalls: number; triangles: number; pixelScale: number; }
+export interface RenderStats { fps: number; drawCalls: number; triangles: number; pixelScale: number; geometries: number; textures: number; }
 
 /** Minimal DOM HUD for the vertical slice (the full themed HUD is Etapa 4). Writes to the DOM only when a value
  *  actually changes, so it costs nothing on frames where nothing moved. */
@@ -51,7 +51,7 @@ export class Hud {
     this.set('time', `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
     this.set('kills', `☠ ${session.kills}`);
     this.set('weapons', session.weapons.weapons.map((weapon) => `${weapon.config.name} +${weapon.upgradeCount}`).join(' · '));
-    this.set('stats', `${stats.fps} fps · ${stats.drawCalls} draws · ${(stats.triangles / 1000).toFixed(0)}k tris · ${session.enemies.activeCount} inimigos · ${stats.pixelScale}×`);
+    this.set('stats', `${stats.fps} fps · ${stats.drawCalls} draws · ${(stats.triangles / 1000).toFixed(0)}k tris · ${session.enemies.activeCount} inimigos · ${stats.pixelScale}× · ${stats.geometries} geo · ${stats.textures} tex`);
     const banner = session.over ? 'DERROTA' : session.paused ? 'PAUSADO — ESC para continuar' : '';
     this.set('banner', banner);
     // Restart / menu buttons live inside the box, so they show on game over and on the pause screen.

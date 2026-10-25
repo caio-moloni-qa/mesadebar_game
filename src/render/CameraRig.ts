@@ -19,9 +19,13 @@ export class CameraRig {
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
   private readonly groundForward = new THREE.Vector3();
+  private readonly viewDir = new THREE.Vector3();
   private initialized = false;
+  /** Debug close-up (?zoom=3): fewer meters per texel, same pixel look — for reviewing models up close. */
+  private readonly metersPerTexel: number;
 
-  constructor() {
+  constructor(zoom = 1) {
+    this.metersPerTexel = METERS_PER_TEXEL / zoom;
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 200);
     this.setViewSize(MAX_INTERNAL_WIDTH, MAX_INTERNAL_HEIGHT);
     this.offset.set(
@@ -39,8 +43,8 @@ export class CameraRig {
 
   /** Sizes the frustum to the pipeline's internal resolution (plus its padding border) at a fixed meters-per-texel. */
   setViewSize(internalWidth: number, internalHeight: number): void {
-    const halfWidth = ((internalWidth + INTERNAL_PADDING * 2) * METERS_PER_TEXEL) / 2;
-    const halfHeight = ((internalHeight + INTERNAL_PADDING * 2) * METERS_PER_TEXEL) / 2;
+    const halfWidth = ((internalWidth + INTERNAL_PADDING * 2) * this.metersPerTexel) / 2;
+    const halfHeight = ((internalHeight + INTERNAL_PADDING * 2) * this.metersPerTexel) / 2;
     this.camera.left = -halfWidth;
     this.camera.right = halfWidth;
     this.camera.top = halfHeight;
@@ -59,9 +63,10 @@ export class CameraRig {
     // Snap the target's position along the camera's screen axes to whole texels.
     const alongRight = this.target.dot(this.right);
     const alongUp = this.target.dot(this.up);
-    const snappedRight = Math.round(alongRight / METERS_PER_TEXEL) * METERS_PER_TEXEL;
-    const snappedUp = Math.round(alongUp / METERS_PER_TEXEL) * METERS_PER_TEXEL;
-    this.subTexelOffset.set((alongRight - snappedRight) / METERS_PER_TEXEL, (alongUp - snappedUp) / METERS_PER_TEXEL);
+    const texel = this.metersPerTexel;
+    const snappedRight = Math.round(alongRight / texel) * texel;
+    const snappedUp = Math.round(alongUp / texel) * texel;
+    this.subTexelOffset.set((alongRight - snappedRight) / texel, (alongUp - snappedUp) / texel);
     this.camera.position.copy(this.target)
       .addScaledVector(this.right, snappedRight - alongRight)
       .addScaledVector(this.up, snappedUp - alongUp)
@@ -71,6 +76,11 @@ export class CameraRig {
 
   get focus(): THREE.Vector3 {
     return this.target;
+  }
+
+  /** Unit vector the camera looks along (towards the ground). */
+  get viewDirection(): THREE.Vector3 {
+    return this.viewDir.copy(this.offset).normalize().negate();
   }
 
   /** Converts screen-relative input (x right, y up; e.g. WASD) into a game-plane direction, so W always moves

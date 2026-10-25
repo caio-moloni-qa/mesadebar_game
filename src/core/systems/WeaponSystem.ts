@@ -1,7 +1,6 @@
 import { WEAPON_CONFIG } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
-import { WORLD_SIZE } from '../../config/world';
 import { EventBus } from '../EventBus';
 import { Pool } from '../Pool';
 import { SimClock } from '../SimClock';
@@ -67,6 +66,8 @@ export interface WeaponHost {
   readonly clock: SimClock;
   readonly rng: Rng;
   readonly characterId: CharacterId;
+  /** Side of the square play area — thrown swords fly to its edge. */
+  readonly worldSize: number;
   readonly projectiles: Pool<ProjectileState>;
   /** Only emits — any bus whose event map includes WeaponEvents (the session's) fits. */
   readonly events: Pick<EventBus<WeaponEvents>, 'emit'>;
@@ -76,8 +77,9 @@ export interface WeaponHost {
   nearestEnemy(from: Vec2, range: number, exclude?: (enemy: EnemyState) => boolean): EnemyState | null;
   /** Living enemies whose center is within `radius` (+ rangePadding) of `from`. */
   enemiesWithin(from: Vec2, radius: number): EnemyState[];
-  /** Living enemies overlapping a circle (broad phase + exact test) — projectile hits. */
-  enemiesOverlapping(x: number, y: number, radius: number): EnemyState[];
+  /** Living enemies overlapping a circle (broad phase + exact test) — projectile hits. Pass `out` to reuse an
+   *  array on hot paths; never share one `out` between nested calls. */
+  enemiesOverlapping(x: number, y: number, radius: number, out?: EnemyState[]): EnemyState[];
   damageEnemy(enemy: EnemyState, amount: number, weaponId: WeaponConfig['id'], critical?: boolean): void;
   /** Fabri's banana hit side effects (slow stack + chance to drop a peel). */
   onBananaHit(enemy: EnemyState): void;
@@ -90,6 +92,9 @@ export interface WeaponHost {
 export class WeaponSystem {
   readonly weapons: ActiveWeapon[] = [];
   private readonly consumedExecuteTokens = new Set<number>();
+  /** Reused by updateProjectiles' hit test (runs per projectile per step). Nested queries (staff explosion) use
+   *  their own arrays, so this one is never overwritten mid-iteration. */
+  private readonly hitCandidates: EnemyState[] = [];
 
   constructor(private readonly host: WeaponHost) {}
 
@@ -248,7 +253,7 @@ export class WeaponSystem {
       return;
     }
     if (!this.exclusiveUnlocked(sword) || this.host.clock.now < sword.thrownSwordReadyAt) return;
-    if (!this.host.nearestEnemy(this.host.player, WORLD_SIZE)) return;
+    if (!this.host.nearestEnemy(this.host.player, this.host.worldSize)) return;
     sword.thrownSwordVolleyActive = true;
     for (let index = 0; index < WEAPON_TUNING.thrownSwordDirections; index += 1) {
       this.launchThrownSword(sword, (Math.PI * 2 * index) / WEAPON_TUNING.thrownSwordDirections);
@@ -261,7 +266,7 @@ export class WeaponSystem {
     const { player, clock } = this.host;
     const direction = { x: Math.cos(angle), y: Math.sin(angle) };
     const start = { x: player.x + direction.x * WEAPON_TUNING.thrownSwordSpawnOffset, y: player.y + direction.y * WEAPON_TUNING.thrownSwordSpawnOffset };
-    const distance = distanceToWorldEdge(start, direction);
+    const distance = distanceToWorldEdge(start, direction, this.host.worldSize);
     const speed = WEAPON_TUNING.thrownSwordSpeed;
     resetProjectile(projectile, 'thrownSword', weapon.config.id, start.x, start.y, speed, distance);
     projectile.radius = BODY_RADIUS.thrownSword;
@@ -326,7 +331,7 @@ export class WeaponSystem {
       projectile.x += (projectile.velocityX * deltaMs) / 1000;
       projectile.y += (projectile.velocityY * deltaMs) / 1000;
       if (now >= projectile.expiresAt) { spent.push(projectile); return; }
-      for (const enemy of this.host.enemiesOverlapping(projectile.x, projectile.y, projectile.radius)) {
+      for (const enemy of this.host.enemiesOverlapping(projectile.x, projectile.y, projectile.radius, this.hitCandidates)) {
         if (!projectile.claimHit(enemy)) continue;
         if (this.resolveProjectileHit(projectile, enemy)) { spent.push(projectile); return; }
       }
@@ -457,11 +462,11 @@ export function projectileAngles(baseAngle: number, count: number): number[] {
   return angles;
 }
 
-function distanceToWorldEdge(start: Vec2, direction: Vec2): number {
+function distanceToWorldEdge(start: Vec2, direction: Vec2, worldSize: number): number {
   const candidates: number[] = [];
-  if (direction.x > 0) candidates.push((WORLD_SIZE - start.x) / direction.x);
+  if (direction.x > 0) candidates.push((worldSize - start.x) / direction.x);
   if (direction.x < 0) candidates.push(-start.x / direction.x);
-  if (direction.y > 0) candidates.push((WORLD_SIZE - start.y) / direction.y);
+  if (direction.y > 0) candidates.push((worldSize - start.y) / direction.y);
   if (direction.y < 0) candidates.push(-start.y / direction.y);
   const positive = candidates.filter((candidate) => candidate > 0);
   return positive.length > 0 ? Math.min(...positive) : 0;

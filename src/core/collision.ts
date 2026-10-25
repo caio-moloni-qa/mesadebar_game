@@ -43,3 +43,31 @@ export function resolveCircleAabb(circle: Circle, box: Aabb): Vec2 | null {
   ];
   return exits.reduce((best, exit) => (Math.abs(exit.x) + Math.abs(exit.y) < Math.abs(best.x) + Math.abs(best.y) ? exit : best));
 }
+
+/** Box rotated by `rotation` radians in the gameplay plane (walls, tents, the crypt). */
+export interface OrientedBox { x: number; y: number; halfWidth: number; halfHeight: number; rotation: number; }
+
+/** Minimal push that moves `circle` out of a rotated box, or null when they don't overlap: the circle is taken into
+ *  the box's local frame, resolved against the axis-aligned box there, and the push rotated back. */
+export function resolveCircleOrientedBox(circle: Circle, box: OrientedBox): Vec2 | null {
+  const cos = Math.cos(box.rotation);
+  const sin = Math.sin(box.rotation);
+  const dx = circle.x - box.x;
+  const dy = circle.y - box.y;
+  const local = { x: dx * cos + dy * sin, y: -dx * sin + dy * cos, radius: circle.radius };
+  const push = resolveCircleAabb(local, { minX: -box.halfWidth, minY: -box.halfHeight, maxX: box.halfWidth, maxY: box.halfHeight });
+  if (!push) return null;
+  return { x: push.x * cos - push.y * sin, y: push.x * sin + push.y * cos };
+}
+
+/** Push that moves `circle` out of the circle `obstacle` (for pillars, trees, rocks), or null when apart. */
+export function resolveCircleCircle(circle: Circle, obstacle: Circle): Vec2 | null {
+  const dx = circle.x - obstacle.x;
+  const dy = circle.y - obstacle.y;
+  const reach = circle.radius + obstacle.radius;
+  const distSq = dx * dx + dy * dy;
+  if (distSq >= reach * reach) return null;
+  if (distSq === 0) return { x: reach, y: 0 };
+  const dist = Math.sqrt(distSq);
+  return { x: (dx / dist) * (reach - dist), y: (dy / dist) * (reach - dist) };
+}

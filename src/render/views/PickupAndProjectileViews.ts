@@ -1,8 +1,10 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PeelState, PickupKind, PickupState, ProjectileKind, ProjectileState, SoulState } from '../../core/session/entities';
 import { Pool } from '../../core/Pool';
 import { PALETTE, toonMaterial } from '../materials';
+import { nonIndexed } from '../models/rig';
+import { WeaponModelId, weaponGeometry } from '../models/weapons';
 import { WORLD_SCALE } from '../space';
 
 /** Builds one InstancedMesh per kind and fills them from a pool each frame (count = instances used this frame). */
@@ -43,10 +45,14 @@ class InstancedBatch<K extends string> {
   }
 }
 
-const lerp = (body: { x: number; y: number; prevX: number; prevY: number }, alpha: number) => ({
-  x: (body.prevX + (body.x - body.prevX) * alpha) * WORLD_SCALE,
-  z: (body.prevY + (body.y - body.prevY) * alpha) * WORLD_SCALE
-});
+/** Interpolated world position, written into one shared scratch object — this runs for every projectile, pickup
+ *  and soul every frame, and a fresh object per call would be steady garbage for the collector. */
+const lerped = { x: 0, z: 0 };
+const lerp = (body: { x: number; y: number; prevX: number; prevY: number }, alpha: number) => {
+  lerped.x = (body.prevX + (body.x - body.prevX) * alpha) * WORLD_SCALE;
+  lerped.z = (body.prevY + (body.y - body.prevY) * alpha) * WORLD_SCALE;
+  return lerped;
+};
 
 /** Player projectiles: Cajado bolts (unlit glowing), boomerang / banana (spinning flat V / crescent), thrown swords. */
 export class ProjectileView {
@@ -55,17 +61,14 @@ export class ProjectileView {
   private readonly rotation = new THREE.Matrix4();
 
   constructor(capacity: number) {
-    const boomerang = mergeGeometries([
-      new THREE.BoxGeometry(0.7, 0.08, 0.16).translate(0.25, 0, 0).rotateY(0.6),
-      new THREE.BoxGeometry(0.7, 0.08, 0.16).translate(0.25, 0, 0).rotateY(-0.6)
-    ])!;
-    const banana = new THREE.TorusGeometry(0.32, 0.09, 4, 8, Math.PI * 0.9).rotateX(Math.PI / 2);
-    const sword = mergeGeometries([new THREE.BoxGeometry(1.1, 0.06, 0.14), new THREE.BoxGeometry(0.1, 0.08, 0.4).translate(-0.4, 0, 0)])!;
+    // Same models the hero holds, laid flat and centred so they spin around their middle in flight.
+    const flying = (id: WeaponModelId) => weaponGeometry(id).rotateX(-Math.PI / 2).center();
+    const weaponMaterial = toonMaterial({ vertexColors: true, flatShading: true });
     this.batch = new InstancedBatch<ProjectileKind>({
       bolt: { geometry: new THREE.IcosahedronGeometry(0.24, 0), material: new THREE.MeshBasicMaterial({ color: PALETTE.bolt }) },
-      boomerang: { geometry: boomerang, material: toonMaterial({ color: 0xb07a3c, emissive: 0x2a1600, flatShading: true }), castShadow: true },
-      banana: { geometry: banana, material: toonMaterial({ color: 0xf2d33b, emissive: 0x3a2e00, flatShading: true }), castShadow: true },
-      thrownSword: { geometry: sword, material: toonMaterial({ color: PALETTE.steel, emissive: 0x20262c, flatShading: true }), castShadow: true }
+      boomerang: { geometry: flying('boomerang'), material: weaponMaterial, castShadow: true },
+      banana: { geometry: flying('banana'), material: weaponMaterial, castShadow: true },
+      thrownSword: { geometry: flying('sword'), material: weaponMaterial, castShadow: true }
     }, capacity);
   }
 
@@ -101,11 +104,11 @@ export class PickupView {
     const chest = mergeGeometries([
       new THREE.BoxGeometry(0.7, 0.45, 0.5).translate(0, 0.22, 0),
       new THREE.CylinderGeometry(0.25, 0.25, 0.7, 6, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).translate(0, 0.45, 0)
-    ].map((geometry) => geometry.toNonIndexed()))!;
+    ].map(nonIndexed))!;
     const potion = mergeGeometries([
       new THREE.IcosahedronGeometry(0.22, 0).translate(0, 0.22, 0),
-      new THREE.CylinderGeometry(0.07, 0.09, 0.18, 5).translate(0, 0.5, 0).toNonIndexed()
-    ].map((geometry) => geometry.toNonIndexed()))!;
+      new THREE.CylinderGeometry(0.07, 0.09, 0.18, 5).translate(0, 0.5, 0)
+    ].map(nonIndexed))!;
     this.batch = new InstancedBatch<PickupKind>({
       gem: { geometry: new THREE.OctahedronGeometry(0.2, 0), material: toonMaterial({ color: PALETTE.gem, emissive: 0x1d6b4c, flatShading: true }), castShadow: true },
       chest: { geometry: chest, material: toonMaterial({ color: 0x8a5a2b, emissive: 0x3a2400, flatShading: true }), castShadow: true },
@@ -142,11 +145,11 @@ export class HazardView {
 
   constructor(capacity: number) {
     const skull = mergeGeometries([
-      new THREE.IcosahedronGeometry(0.3, 0).toNonIndexed(),
-      new THREE.BoxGeometry(0.3, 0.14, 0.2).translate(0, -0.22, 0.08).toNonIndexed()
+      nonIndexed(new THREE.IcosahedronGeometry(0.3, 0)),
+      nonIndexed(new THREE.BoxGeometry(0.3, 0.14, 0.2).translate(0, -0.22, 0.08))
     ])!;
     const peel = mergeGeometries([0, 1, 2].map((index) =>
-      new THREE.BoxGeometry(0.5, 0.05, 0.14).translate(0.22, 0.03, 0).rotateY((index * Math.PI * 2) / 3).toNonIndexed()
+      nonIndexed(new THREE.BoxGeometry(0.5, 0.05, 0.14).translate(0.22, 0.03, 0).rotateY((index * Math.PI * 2) / 3))
     ))!;
     this.batch = new InstancedBatch<'soul' | 'peel'>({
       soul: { geometry: skull, material: new THREE.MeshBasicMaterial({ color: 0x7dff9a }) },
@@ -174,7 +177,7 @@ export class HazardView {
   }
 }
 
-interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; maxLife: number; color: THREE.Color; size: number; }
+interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; maxLife: number; color: number; size: number; }
 
 /** Pixel-square particles (the style reference's chunky trails/sparks): tiny cubes that burst and fall. Purely
  *  visual — advanced with frame time only while the session is running, so they freeze with pause. */
@@ -182,6 +185,7 @@ export class ParticleView {
   readonly mesh: THREE.InstancedMesh;
   private readonly particles: Particle[] = [];
   private readonly matrix = new THREE.Matrix4();
+  private readonly color = new THREE.Color();
 
   constructor(private readonly capacity: number) {
     this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.11, 0.11, 0.11), new THREE.MeshBasicMaterial({ color: 0xffffff }), capacity);
@@ -197,7 +201,7 @@ export class ParticleView {
       this.particles.push({
         x: worldX, y: height, z: worldZ,
         vx: Math.cos(angle) * velocity, vy: 2 + Math.random() * 3, vz: Math.sin(angle) * velocity,
-        life, maxLife: life, color: new THREE.Color(color), size: 0.7 + Math.random() * 0.8
+        life, maxLife: life, color, size: 0.7 + Math.random() * 0.8
       });
     }
   }
@@ -216,7 +220,7 @@ export class ParticleView {
       const size = particle.size * (particle.life / particle.maxLife);
       this.matrix.makeScale(size, size, size).setPosition(particle.x, particle.y, particle.z);
       this.mesh.setMatrixAt(index, this.matrix);
-      this.mesh.setColorAt(index, particle.color);
+      this.mesh.setColorAt(index, this.color.setHex(particle.color));
     });
     this.mesh.count = this.particles.length;
     this.mesh.instanceMatrix.needsUpdate = true;

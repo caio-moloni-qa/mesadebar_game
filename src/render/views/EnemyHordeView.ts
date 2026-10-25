@@ -1,131 +1,151 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ENEMY_DYING_MS, EnemyState } from '../../core/session/entities';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
 import { Pool } from '../../core/Pool';
+import { BakedEnemyModel, createEnemyModels } from '../models/enemies';
 import { PALETTE, toonMaterial } from '../materials';
-import { groundSector } from '../vfx/CombatEffects';
 import { WORLD_SCALE, yawFromSimDirection } from '../space';
+import { groundSector } from '../vfx/CombatEffects';
 
 const HIT_FLASH_MS = 110;
-/** Per-variant tint multiplied over the bone/steel vertex colors (placeholder until real models). */
-const VARIANT_TINT: Record<EnemyVariantId, number> = {
-  skeleton: 0xffffff,
-  necromancerWraith: 0x9a6bd8,
-  apparitionWraith: 0x8fe6ff,
-  superSkeleton: 0xd8cfb8,
-  finalBoss: 0x7dff9a
-};
+/** Game-units/s at which the baked walk cycle plays at 1× (slow Super Esqueletos shuffle, Aparições glide). */
+const WALK_REFERENCE_SPEED = 120;
+const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith'];
+/** finalBoss has no model of its own yet; it borrows the armored skeleton's mesh. */
+const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', finalBoss: 'superSkeleton' };
 
-/** Every pooled enemy drawn by one InstancedMesh (+ one for blob shadows): one draw call per pass no matter how many
- *  are alive — the plan's first step for 240-enemy hordes, before morph-target walk cycles (Etapa 5). Walk is faked
- *  with a bob + sway in the instance matrix; hits flash by pushing the instance color past white; dying enemies
- *  sink and shrink over ENEMY_DYING_MS. */
+interface VariantBatch {
+  model: BakedEnemyModel;
+  mesh: THREE.InstancedMesh;
+  /** Proxy whose morphTargetInfluences are written per instance through InstancedMesh.setMorphAt. */
+  morphProxy: THREE.Mesh;
+  count: number;
+}
+
+/** All pooled enemies, one InstancedMesh per variant with its walk/float cycle baked into morph targets: each instance
+ *  blends two consecutive frames at its own phase (setMorphAt), so 240 animated enemies cost a handful of draw calls.
+ *  Hits flash through the instance colour, Fabri's banana slow tints it, dying enemies sink and tip over. */
 export class EnemyHordeView {
   readonly root = new THREE.Group();
   readonly blobShadows: THREE.InstancedMesh;
   /** Aura Podre under Super Esqueletos (and the boss later): dark grey/black disc, like the 2D build's. */
   readonly rottenAuras: THREE.InstancedMesh;
-  private readonly mesh: THREE.InstancedMesh;
-  private readonly bananaTint = new THREE.Color(0xf2d33b);
+  private readonly batches = new Map<EnemyVariantId, VariantBatch>();
+  private readonly phases = new WeakMap<EnemyState, number>();
+  private readonly yaws = new WeakMap<EnemyState, number>();
   private readonly matrix = new THREE.Matrix4();
   private readonly position = new THREE.Vector3();
   private readonly rotation = new THREE.Quaternion();
   private readonly scale = new THREE.Vector3();
   private readonly euler = new THREE.Euler();
   private readonly color = new THREE.Color();
-  private readonly yaws = new WeakMap<EnemyState, number>();
+  private readonly bananaTint = new THREE.Color(0xf2d33b);
 
   constructor(capacity: number) {
-    this.mesh = new THREE.InstancedMesh(skeletonGeometry(), toonMaterial({ vertexColors: true, flatShading: true }), capacity);
-    this.mesh.castShadow = false;
-    this.mesh.frustumCulled = false;
-    this.mesh.count = 0;
-    const blob = new THREE.CircleGeometry(0.5, 8).rotateX(-Math.PI / 2);
+    const models = createEnemyModels();
+    VARIANTS.forEach((variant) => {
+      const model = models[variant];
+      const material = toonMaterial({ vertexColors: true, flatShading: true });
+      if (variant === 'apparitionWraith') {
+        material.transparent = true;
+        material.opacity = 0.82;
+      }
+      const mesh = new THREE.InstancedMesh(model.geometry, material, capacity);
+      mesh.frustumCulled = false;
+      const morphProxy = new THREE.Mesh(model.geometry);
+      // setMorphAt sizes its morph texture from `count` on the first call, so initialise every slot at full
+      // capacity before the per-frame count shrinks to the live instances.
+      morphProxy.morphTargetInfluences!.fill(0);
+      morphProxy.morphTargetInfluences![0] = 1;
+      for (let index = 0; index < capacity; index += 1) mesh.setMorphAt(index, morphProxy);
+      mesh.count = 0;
+      this.batches.set(variant, { model, mesh, morphProxy, count: 0 });
+      this.root.add(mesh);
+    });
+    const blob = groundSector(Math.PI * 2, 0, 0.5, 8);
     this.blobShadows = new THREE.InstancedMesh(blob, new THREE.MeshBasicMaterial({ color: PALETTE.blobShadow, transparent: true, opacity: 0.45, depthWrite: false }), capacity);
     this.blobShadows.frustumCulled = false;
     this.blobShadows.count = 0;
     this.rottenAuras = new THREE.InstancedMesh(groundSector(Math.PI * 2, 0, 1, 24), new THREE.MeshBasicMaterial({ color: 0x1c1a1e, transparent: true, opacity: 0.4, depthWrite: false }), capacity);
     this.rottenAuras.frustumCulled = false;
     this.rottenAuras.count = 0;
-    this.root.add(this.mesh, this.blobShadows, this.rottenAuras);
+    this.root.add(this.blobShadows, this.rottenAuras);
   }
 
   update(enemies: Pool<EnemyState>, alpha: number, nowMs: number, deltaSeconds: number): void {
-    let index = 0;
+    this.batches.forEach((batch) => { batch.count = 0; });
+    let blobIndex = 0;
     let auraIndex = 0;
     enemies.forEachActive((enemy) => {
+      const batch = this.batches.get(MESH_FOR[enemy.variantId])!;
+      const index = batch.count;
+      batch.count += 1;
       const x = (enemy.prevX + (enemy.x - enemy.prevX) * alpha) * WORLD_SCALE;
       const z = (enemy.prevY + (enemy.y - enemy.prevY) * alpha) * WORLD_SCALE;
       const size = enemy.displaySize / 62;
-      const dyingProgress = enemy.phase === 'dying' ? 1 - Math.max(0, enemy.phaseEndsAt - nowMs) / ENEMY_DYING_MS : 0;
-      const time = nowMs / 1000 + (enemy.x * 0.013 + enemy.y * 0.007);
-      const hovering = enemy.variantId === 'necromancerWraith' || enemy.variantId === 'apparitionWraith';
-      const bob = hovering ? 0.35 + Math.sin(time * 2.4) * 0.12 : Math.abs(Math.sin(time * 9)) * 0.08;
+      const dying = enemy.phase === 'dying' ? 1 - Math.max(0, enemy.phaseEndsAt - nowMs) / ENEMY_DYING_MS : 0;
+      const slipping = nowMs < enemy.slipUntil;
+      const stunned = nowMs < enemy.hitStunUntil;
+
+      // Advance this enemy's own cycle phase: walkers by their real speed, hoverers at a steady float.
+      const { model } = batch;
+      const speedFactor = model.hovers ? 1 : enemy.effectiveMovementSpeed() / WALK_REFERENCE_SPEED;
+      const frozen = dying > 0 || slipping || stunned || (!model.hovers && enemy.isStatic);
+      let phase = this.phases.get(enemy) ?? Math.abs(enemy.x * 0.0137 + enemy.y * 0.0071) % 1;
+      if (!frozen) phase = (phase + (deltaSeconds * speedFactor) / model.cycleSeconds) % 1;
+      this.phases.set(enemy, phase);
+      this.writeMorph(batch, index, phase);
 
       const previousYaw = this.yaws.get(enemy) ?? yawFromSimDirection(enemy.facingX, enemy.facingY);
       const targetYaw = yawFromSimDirection(enemy.facingX, enemy.facingY);
-      const slipping = nowMs < enemy.slipUntil;
-      // Slipping on a banana peel: spin in place instead of turning towards the player.
       const yaw = slipping ? previousYaw + deltaSeconds * 14 : previousYaw + Math.atan2(Math.sin(targetYaw - previousYaw), Math.cos(targetYaw - previousYaw)) * Math.min(1, deltaSeconds * 10);
       this.yaws.set(enemy, yaw);
 
-      this.position.set(x, bob * size - dyingProgress * 1.2 * size, z);
-      this.euler.set(dyingProgress * 0.9, yaw, hovering ? 0 : Math.sin(time * 9) * 0.1);
+      this.position.set(x, -dying * 0.9 * size, z);
+      this.euler.set(-dying * 1.3, yaw, 0, 'YXZ');
       this.rotation.setFromEuler(this.euler);
-      const shrink = 1 - dyingProgress * 0.6;
-      this.scale.setScalar(size * shrink);
-      this.mesh.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));
+      this.scale.setScalar(size * (1 - dying * 0.3));
+      batch.mesh.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));
 
-      this.color.setHex(VARIANT_TINT[enemy.variantId]);
+      this.color.setRGB(1, 1, 1);
       if (enemy.slowStackPercent > 0) this.color.lerp(this.bananaTint, Math.min(0.8, enemy.slowStackPercent * 1.6));
       if (nowMs - enemy.lastHitAt < HIT_FLASH_MS) this.color.multiplyScalar(3.2);
-      this.mesh.setColorAt(index, this.color);
+      batch.mesh.setColorAt(index, this.color);
 
       this.position.set(x, 0.03, z);
       this.rotation.identity();
-      this.scale.setScalar(size * (1 - dyingProgress) * (hovering ? 0.8 : 1));
-      this.blobShadows.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));
+      this.scale.setScalar(size * (1 - dying) * (model.hovers ? 0.8 : 1));
+      this.blobShadows.setMatrixAt(blobIndex, this.matrix.compose(this.position, this.rotation, this.scale));
+      blobIndex += 1;
       if (enemy.hasRottenAura && enemy.alive) {
         this.position.set(x, 0.04, z);
         this.scale.setScalar(enemy.rottenAuraRadius * WORLD_SCALE * (1 + Math.sin(nowMs / 300) * 0.04));
         this.rottenAuras.setMatrixAt(auraIndex, this.matrix.compose(this.position, this.rotation, this.scale));
         auraIndex += 1;
       }
-      index += 1;
     });
-    this.mesh.count = index;
-    this.blobShadows.count = index;
+    this.batches.forEach(({ mesh, count }) => {
+      mesh.count = count;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      if (mesh.morphTexture) mesh.morphTexture.needsUpdate = true;
+    });
+    this.blobShadows.count = blobIndex;
+    this.blobShadows.instanceMatrix.needsUpdate = true;
     this.rottenAuras.count = auraIndex;
     this.rottenAuras.instanceMatrix.needsUpdate = true;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
-    this.blobShadows.instanceMatrix.needsUpdate = true;
   }
-}
 
-/** ~1.9 m skeleton with a sword, from boxes, vertex-colored so one material/draw call covers everything. */
-function skeletonGeometry(): THREE.BufferGeometry {
-  const parts: Array<{ size: [number, number, number]; at: [number, number, number]; color: number }> = [
-    { size: [0.16, 0.8, 0.16], at: [-0.15, 0.4, 0], color: PALETTE.bone },
-    { size: [0.16, 0.8, 0.16], at: [0.15, 0.4, 0], color: PALETTE.bone },
-    { size: [0.5, 0.18, 0.28], at: [0, 0.86, 0], color: PALETTE.boneDark },
-    { size: [0.44, 0.62, 0.26], at: [0, 1.22, 0], color: PALETTE.bone },
-    { size: [0.13, 0.62, 0.13], at: [-0.33, 1.18, 0.04], color: PALETTE.bone },
-    { size: [0.13, 0.62, 0.13], at: [0.33, 1.18, 0.1], color: PALETTE.bone },
-    { size: [0.46, 0.42, 0.42], at: [0, 1.78, 0.02], color: PALETTE.bone },
-    { size: [0.3, 0.1, 0.05], at: [0, 1.74, 0.24], color: 0x2a2030 },
-    { size: [0.08, 0.95, 0.04], at: [0.36, 1.2, 0.5], color: PALETTE.steel },
-    { size: [0.26, 0.06, 0.08], at: [0.36, 0.76, 0.5], color: PALETTE.wood }
-  ];
-  const geometries = parts.map(({ size, at, color }) => {
-    const box = new THREE.BoxGeometry(...size).toNonIndexed();
-    box.translate(...at);
-    const rgb = new THREE.Color(color);
-    const colors = new Float32Array(box.attributes.position.count * 3);
-    for (let i = 0; i < colors.length; i += 3) colors.set([rgb.r, rgb.g, rgb.b], i);
-    box.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    return box;
-  });
-  return mergeGeometries(geometries)!;
+  /** Blend the two baked frames around `phase` (0..1 over the cycle). */
+  private writeMorph(batch: VariantBatch, index: number, phase: number): void {
+    const influences = batch.morphProxy.morphTargetInfluences!;
+    const position = phase * batch.model.frames;
+    const frame = Math.floor(position) % batch.model.frames;
+    const next = (frame + 1) % batch.model.frames;
+    const blend = position - Math.floor(position);
+    influences.fill(0);
+    influences[frame] = 1 - blend;
+    influences[next] += blend;
+    batch.mesh.setMorphAt(index, batch.morphProxy);
+  }
 }
