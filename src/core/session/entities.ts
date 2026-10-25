@@ -90,8 +90,9 @@ export class PlayerState implements Body, UpgradeTarget {
   }
 
   /** Blocked during i-frames; the banked aura bonus is added then consumed; armor reduces each hit but never below 1. */
-  damage(amount: number, now: number): number {
-    if (this.invincible || now < this.invulnerableUntil) return 0;
+  /** `unavoidable` hits (the boss's shield explosion) ignore the i-frames — only `invincible` stops them. */
+  damage(amount: number, now: number, unavoidable = false): number {
+    if (this.invincible || (!unavoidable && now < this.invulnerableUntil)) return 0;
     const incoming = amount + this.auraDamageTakenBonus;
     this.auraDamageTakenBonus = 0;
     const dealt = Math.max(1, incoming - this.armor);

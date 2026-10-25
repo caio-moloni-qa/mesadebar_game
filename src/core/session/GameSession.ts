@@ -155,11 +155,12 @@ export class GameSession implements WeaponHost {
       rng: this.rng,
       arenaSize: this.arena.size,
       events: this.events,
-      now: () => this.clock.now,
       spawnEnemy: (variantId, x, y) => this.spawnEnemy(variantId, x, y),
-      hurtPlayer: (amount) => this.hurtPlayer(amount, this.clock.now),
+      hurtPlayer: (amount, unavoidable) => this.hurtPlayer(amount, this.clock.now, unavoidable),
       killPlayer: () => { if (!this.player.invincible) this.player.health = 0; },
-      clearEnemyField: (preserve) => this.clearEnemyField(preserve)
+      pushPlayer: (dx, dy) => this.pushPlayer(dx, dy),
+      clearEnemyField: (keep) => this.clearEnemyField(keep),
+      hasLineOfSight: (from, to) => this.arena.hasLineOfSight(from, to)
     });
     this.scheduler = new EnemySpawnScheduler({
       getPlayerPosition: () => this.player,
@@ -402,8 +403,8 @@ export class GameSession implements WeaponHost {
     }
   }
 
-  private hurtPlayer(amount: number, now: number): void {
-    const dealt = this.player.damage(amount, now);
+  private hurtPlayer(amount: number, now: number, unavoidable = false): void {
+    const dealt = this.player.damage(amount, now, unavoidable);
     if (dealt > 0) this.events.emit('player-damaged', { amount: dealt });
   }
 
@@ -462,6 +463,14 @@ export class GameSession implements WeaponHost {
     return upgrade;
   }
 
+  /** Shoves the hero (boss shockwave), sliding along walls and staying in the arena. */
+  private pushPlayer(dx: number, dy: number): void {
+    const { radius } = this.player;
+    this.player.x = clamp(this.player.x + dx, radius, this.arena.size - radius);
+    this.player.y = clamp(this.player.y + dy, radius, this.arena.size - radius);
+    this.arena.resolve(this.player);
+  }
+
   // ── Boss waves, portals and cycles ─────────────────────────────────────────────────────────────────────────
 
   /** Cycle 1 is RUN_DURATION_MS; every continuation adds a minute. */
@@ -495,7 +504,7 @@ export class GameSession implements WeaponHost {
 
   private onBossWaveCleared(): void {
     this.awaitingPortalChoice = true;
-    this.clearEnemyField(null);
+    this.clearEnemyField(() => false);
     const place = (offsetX: number) => this.arena.nearestWalkable(this.player.x + offsetX, this.player.y - PORTAL.rise, 30);
     this.portals = { end: place(-PORTAL.spread), continue: place(PORTAL.spread) };
     this.events.emit('boss-wave-cleared', { cycle: this.bossCycle });
@@ -519,12 +528,12 @@ export class GameSession implements WeaponHost {
     this.events.emit('run-ended', { victory });
   }
 
-  /** Every active enemy except `preserve` dies on the spot (no kill credit, no drops). Returns how many. */
-  private clearEnemyField(preserve: EnemyState | null): number {
+  /** Every active enemy `keep` rejects dies on the spot (no kill credit, no drops). Returns how many. */
+  private clearEnemyField(keep: (enemy: EnemyState) => boolean): number {
     let cleared = 0;
     const now = this.clock.now;
     this.enemies.forEachActive((enemy) => {
-      if (enemy === preserve || !enemy.alive) return;
+      if (keep(enemy) || !enemy.alive) return;
       enemy.phase = 'dying';
       enemy.phaseEndsAt = now + ENEMY_DYING_MS;
       cleared += 1;
@@ -537,7 +546,13 @@ export class GameSession implements WeaponHost {
   damageEnemy(enemy: EnemyState, amount: number, weaponId: WeaponConfig['id'], critical = false): void {
     if (!enemy.alive) return;
     const now = this.clock.now;
-    // A channelling boss's shield soaks hits first; only the overflow reaches its health.
+    // A roaring boss shrugs hits off and a staggered one takes extra; then a channelling boss's shield soaks hits
+    // first and only the overflow reaches its health.
+    amount *= this.bosses.damageTakenMultiplier(enemy);
+    if (amount <= 0) {
+      enemy.lastHitAt = now;
+      return;
+    }
     const overflow = this.bosses.absorbDamage(enemy, amount);
     if (overflow !== null) {
       enemy.lastHitAt = now;

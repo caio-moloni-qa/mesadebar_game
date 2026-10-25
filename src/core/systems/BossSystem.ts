@@ -1,38 +1,55 @@
 import { EventBus } from '../EventBus';
-import { Rng, floatBetween } from '../math';
+import { Rng, Vec2, floatBetween } from '../math';
 import { EnemyState, PlayerState } from '../session/entities';
 import { EnemyVariantId } from './EnemySpawnScheduler';
 
-// Port of the Phaser build's src/systems/BossSystem.ts (BOSS_REWORK_TEMP.md, every stage done) onto the sim clock:
-// every scene.time.delayedCall / tween became a timer inside the boss's own state, advanced by update(delta), so it
-// pauses with the session and is deterministic. The renderer draws straight from `bosses`, `meteors` and the events.
+// Port of the Phaser build's src/systems/BossSystem.ts (BOSS_REWORK_TEMP.md) onto the sim clock, plus the 3D rework
+// agreed after the port: fewer, deliberate summons; a visible enrage instead of the hidden clear-out health gain; the
+// shield explosion as heavy damage that cover blocks; a stagger as the reward for breaking the shield; telegraphed
+// undead risings; a phase-2 roar; a reverse sweep plus centre blast in phase 2; a lunge against kiting; and a
+// coordinator so several bosses never beam or channel together. Every timer lives in the boss's own state, advanced
+// by update(delta), so it pauses with the session and is deterministic. The renderer draws straight from `bosses`,
+// `meteors`, `risings` and the events.
 
+/** Live tuning: a plain mutable object so the sandbox panel can change any value mid-fight. */
 export const BOSS_TUNING = {
   messageMs: 2600,
-  summonIntervalMs: 5000,
+  /** Apparitions per summon, every summonIntervalMs (Phaser: 30 every 5 s, which flooded the 240-enemy cap). */
+  summonIntervalMs: 10000,
+  apparitionCount: 8,
   meleeCooldownMs: 7000,
   /** First melee comes a little sooner than a full cooldown. */
   meleeInitialElapsed: 1600,
   channelIntervalMs: 15000,
   channelDurationMs: 15000,
   shieldDeadlineMs: 20000,
-  cleanupMs: 30000,
   shieldMaxHealthScaling: 0.15,
+  /** Unbroken-shield explosion: this fraction of the player's max health (1 = lethal, the Phaser behaviour). Tall
+   *  obstacles between boss and player block it entirely. */
+  explosionRadius: 700,
+  explosionDamageRatio: 0.6,
+  /** Breaking the shield: the boss kneels this long, taking extra damage. */
+  staggerMs: 3000,
+  staggerDamageMultiplier: 1.5,
+  /** The main boss's countdown: when it runs out the field is cleared and the boss enrages. */
+  cleanupMs: 30000,
+  cleanupHealthPerEnemy: 5,
+  enrageSpeedMultiplier: 1.6,
+  /** Enraged: every ability timer runs this much faster. */
+  enrageTimerRate: 1.35,
   meleeTriggerRadius: 250,
   meleeDamage: 40,
-  explosionRadius: 700,
-  waveSpawnDistance: 980,
-  extraBossSpawnDistance: 520,
   meleeTelegraphMs: 2000,
   meleeSwingRadius: 170,
   meleeSwordHitRadius: 70,
   meleeSweepMs: 320,
+  /** Phase 2: the sweep comes back the other way, and a blast covers the blind spot at the boss's feet. */
+  meleeCenterRadius: 110,
+  meleeCenterDamage: 25,
   beamIntervalMs: 20000,
   beamLockOnMs: 3000,
   beamLockOnBlinkStartMs: 320,
   beamLockOnBlinkEndMs: 45,
-  beamDurationMs: 6000,
-  beamDurationPhase2Ms: 10000,
   beamWidth: 46,
   beamTravelSpeed: 2600,
   beamDamage: 20,
@@ -43,24 +60,43 @@ export const BOSS_TUNING = {
   beamLifetimeMs: 2100,
   undeadSquadSize: 15,
   undeadSquadSporadicChance: 0.25,
-  apparitionCount: 30,
+  /** Ground cracks before each skeleton of the squad climbs out. */
+  undeadRiseMs: 800,
   meteorIntervalMs: 500,
   meteorTelegraphMs: 1500,
   meteorTelegraphPhase2Ms: 1000,
   meteorRadius: 90,
   meteorDamage: 25,
   phaseTwoHealthRatio: 0.5,
+  /** Phase-2 roar: the boss stands invulnerable this long; at roarShockwaveAt the shockwave clears the summons and
+   *  shoves the player back. */
+  phaseTransitionMs: 1600,
+  roarShockwaveAt: 600,
+  roarShockwaveRadius: 320,
+  roarShockwaveDamage: 20,
+  roarShockwavePush: 260,
   dashTelegraphMs: 600,
   dashTravelMs: 400,
   dashCooldownMs: 4000,
   dashMaxPerChannel: 4,
   dashRadius: 130,
   dashDamage: 18,
-  /** The arena clear-out feeds the boss: +this max/current health per enemy removed. */
-  cleanupHealthPerEnemy: 20,
+  /** Lunge: when the player kites beyond lungeMinDistance, the boss crouches and leaps lungeDistance towards them. */
+  lungeMinDistance: 600,
+  lungeCooldownMs: 8000,
+  lungeTelegraphMs: 700,
+  lungeTravelMs: 500,
+  lungeDistance: 380,
+  lungeRadius: 130,
+  lungeDamage: 18,
+  waveSpawnDistance: 980,
+  extraBossSpawnDistance: 520,
   /** Keeps spawns off the arena's very edge. */
   edgeMargin: 260
-} as const;
+};
+export type BossTuning = typeof BOSS_TUNING;
+/** The shipped values, for the sandbox's reset button. */
+export const BOSS_TUNING_DEFAULTS: Readonly<BossTuning> = { ...BOSS_TUNING };
 
 export interface BeamState {
   angle: number;
@@ -75,7 +111,16 @@ export interface MeteorState {
   telegraphMs: number;
 }
 
-/** One boss encounter. Public so the renderer can draw the sword, beams, shield and dash straight from it. */
+/** A skeleton of the undead squad about to climb out of the ground. */
+export interface RisingState {
+  x: number;
+  y: number;
+  elapsedMs: number;
+}
+
+export type MeleePhase = 'telegraph' | 'sweep' | 'sweepBack';
+
+/** One boss encounter. Public so the renderer can draw and animate straight from it. */
 export interface BossState {
   enemy: EnemyState;
   /** First boss of a timer wave: owns the arena-clear countdown. */
@@ -84,10 +129,20 @@ export interface BossState {
   isWaveBoss: boolean;
   cleanupPending: boolean;
   cleanupElapsed: number;
+  enraged: boolean;
+  /** Set once at the phase-2 roar (abilities read this, not the live health ratio). */
+  phaseTwo: boolean;
+  /** Remaining phase-2 roar (invulnerable, standing still); 0 when not roaring. */
+  transitionMs: number;
+  /** Remaining stagger after the shield broke (kneeling, taking extra damage); 0 when not staggered. */
+  staggerMs: number;
   summonElapsed: number;
+  /** Counts up to the last summon's raised-arms pose (renderer). */
+  summonPoseMs: number;
   channelElapsed: number;
   meleeCooldownElapsed: number;
   beamElapsed: number;
+  lungeCooldownElapsed: number;
   channelActive: boolean;
   shieldActive: boolean;
   channelRuntimeElapsed: number;
@@ -95,8 +150,8 @@ export interface BossState {
   maxShield: number;
   meteorElapsed: number;
   shieldCountdownLastShown: number;
-  /** Telegraph sword: parked beside the boss for meleeTelegraphMs, then one 360° sweep. */
-  melee: { phase: 'telegraph' | 'sweep'; elapsedMs: number; startAngle: number; angle: number } | null;
+  /** Telegraph sword: parked beside the boss, then one orbit (and in phase 2 one back). */
+  melee: { phase: MeleePhase; elapsedMs: number; startAngle: number; angle: number } | null;
   beamState: 'idle' | 'lockon' | 'active';
   beamLockOnElapsed: number;
   beamLockOnBlinkAt: number;
@@ -106,8 +161,8 @@ export interface BossState {
   beams: BeamState[];
   beamsLaunched: number;
   beamCount: number;
-  beamDurationMs: number;
-  dash: { phase: 'idle' | 'telegraph' | 'dashing'; elapsedMs: number; fromX: number; fromY: number; targetX: number; targetY: number };
+  /** Shield dash (phase 2, while channelling) or lunge (any time the player kites far away). */
+  dash: { kind: 'shield' | 'lunge'; phase: 'idle' | 'telegraph' | 'dashing'; elapsedMs: number; fromX: number; fromY: number; targetX: number; targetY: number };
   dashCooldownElapsed: number;
   dashCountThisChannel: number;
 }
@@ -116,11 +171,15 @@ export interface BossEvents extends Record<string, unknown> {
   /** "O sobrevivente sente uma presença maligna no ar!" — the wave lands BOSS_TUNING.messageMs later. */
   'boss-warning': { bossCount: number };
   'boss-spawned': { enemy: EnemyState };
-  'boss-explosion': { x: number; y: number; radius: number; kind: 'shield' | 'dash' | 'meteor' };
+  /** `blocked`: the unbroken-shield explosion didn't reach the player (cover or distance didn't matter). */
+  'boss-explosion': { x: number; y: number; radius: number; kind: 'shield' | 'dash' | 'lunge' | 'meteor' | 'center'; blocked?: boolean };
   /** Last 10 s before an unbroken shield explodes: "10...", "9...", ... above the boss. */
   'boss-shield-countdown': { enemy: EnemyState; seconds: number };
-  /** The main boss's countdown ran out: every other enemy is gone and the boss absorbed them. */
-  'boss-arena-consumed': { cleared: number };
+  'boss-shield-broken': { enemy: EnemyState };
+  'boss-phase-two': { enemy: EnemyState };
+  'boss-shockwave': { x: number; y: number; radius: number };
+  /** The main boss's countdown ran out: the field is cleared and the boss enrages. */
+  'boss-enraged': { enemy: EnemyState; cleared: number; healthGained: number };
 }
 
 export interface BossHost {
@@ -128,19 +187,22 @@ export interface BossHost {
   readonly rng: Rng;
   readonly arenaSize: number;
   readonly events: Pick<EventBus<BossEvents>, 'emit'>;
-  now(): number;
   spawnEnemy(variantId: EnemyVariantId, x: number, y: number): EnemyState | null;
-  /** Damage through the player's normal path (i-frames, armor, the damage callout). */
-  hurtPlayer(amount: number): void;
-  /** The unbroken shield's explosion: instant death unless invincible. */
+  /** Damage through the player's normal path (i-frames, armor, the damage callout); `unavoidable` skips i-frames. */
+  hurtPlayer(amount: number, unavoidable?: boolean): void;
+  /** Lethal explosion setting (ratio ≥ 1): instant death unless invincible. */
   killPlayer(): void;
-  /** Removes every active enemy except `preserve`; returns how many. */
-  clearEnemyField(preserve: EnemyState): number;
+  /** Shoves the player by (dx, dy) game units, sliding along walls. */
+  pushPlayer(dx: number, dy: number): void;
+  /** Removes every active enemy `keep` rejects; returns how many. */
+  clearEnemyField(keep: (enemy: EnemyState) => boolean): number;
+  hasLineOfSight(from: Vec2, to: Vec2): boolean;
 }
 
 export class BossSystem {
   readonly bosses: BossState[] = [];
   readonly meteors: MeteorState[] = [];
+  readonly risings: RisingState[] = [];
   private triggered = false;
   private pendingWaveCount = 0;
   /** Counts down the warning banner before the wave spawns; null when no wave is pending. */
@@ -179,10 +241,18 @@ export class BossSystem {
     return this.bosses.find((boss) => boss.enemy === enemy);
   }
 
-  /** Stands still for the whole shield sequence, while beaming and while dashing (the dash moves it itself). */
+  /** Stands still through the shield sequence, beams, dashes/lunges, the stagger and the roar. */
   holdsStill(enemy: EnemyState): boolean {
     const boss = this.bossFor(enemy);
-    return !!boss && (boss.channelActive || boss.shieldActive || boss.beamState !== 'idle' || boss.dash.phase !== 'idle');
+    return !!boss && (boss.channelActive || boss.shieldActive || boss.beamState !== 'idle' || boss.dash.phase !== 'idle' || boss.staggerMs > 0 || boss.transitionMs > 0);
+  }
+
+  /** Damage multiplier for hits on `enemy`: 0 while roaring (invulnerable), extra while staggered, else 1. */
+  damageTakenMultiplier(enemy: EnemyState): number {
+    const boss = this.bossFor(enemy);
+    if (!boss) return 1;
+    if (boss.transitionMs > 0) return 0;
+    return boss.staggerMs > 0 ? BOSS_TUNING.staggerDamageMultiplier : 1;
   }
 
   /** Sandbox: an instant extra boss that gates nothing. */
@@ -199,15 +269,22 @@ export class BossSystem {
     }
     [...this.bosses].forEach((boss) => this.updateBoss(boss, delta));
     this.updateMeteors(delta);
+    this.updateRisings(delta);
   }
 
-  /** Damage into an active shield. null = not a shielded boss (apply normally); otherwise the overflow to apply. */
+  /** Damage into an active shield. null = not a shielded boss (apply normally); otherwise the overflow to apply.
+   *  Breaking the shield ends the channel and staggers the boss. */
   absorbDamage(enemy: EnemyState, amount: number): number | null {
     const boss = this.bossFor(enemy);
     if (!boss || !boss.shieldActive || boss.shield <= 0) return null;
     const overflow = Math.max(0, amount - boss.shield);
     boss.shield = Math.max(0, boss.shield - amount);
-    if (boss.shield <= 0) this.endChannel(boss);
+    if (boss.shield <= 0) {
+      this.endChannel(boss);
+      boss.staggerMs = BOSS_TUNING.staggerMs;
+      boss.melee = null;
+      this.host.events.emit('boss-shield-broken', { enemy });
+    }
     return overflow;
   }
 
@@ -220,12 +297,15 @@ export class BossSystem {
     boss.beamState = 'idle';
     boss.beams = [];
     boss.melee = null;
-    if (this.bosses.length === 0) this.meteors.length = 0;
+    if (this.bosses.length === 0) {
+      this.meteors.length = 0;
+      this.risings.length = 0;
+    }
     return boss.isWaveBoss;
   }
 
   isPhaseTwo(boss: BossState): boolean {
-    return boss.enemy.health <= boss.enemy.maxHealth * BOSS_TUNING.phaseTwoHealthRatio;
+    return boss.phaseTwo;
   }
 
   /** How far a beam's leading edge has travelled (it grows from the boss instead of appearing full length). */
@@ -233,7 +313,7 @@ export class BossSystem {
     return Math.min(this.host.arenaSize * 1.5, (beam.elapsedMs / 1000) * BOSS_TUNING.beamTravelSpeed);
   }
 
-  /** The telegraph sword's position: parked at its start angle, then orbiting the live boss during the sweep. */
+  /** The telegraph sword's position: parked at its start angle, then orbiting the live boss. */
   swordPosition(boss: BossState): { x: number; y: number; angle: number } | null {
     if (!boss.melee) return null;
     const angle = boss.melee.angle;
@@ -263,10 +343,16 @@ export class BossSystem {
       isWaveBoss,
       cleanupPending: isMain,
       cleanupElapsed: 0,
+      enraged: false,
+      phaseTwo: false,
+      transitionMs: 0,
+      staggerMs: 0,
       summonElapsed: 0,
+      summonPoseMs: Infinity,
       channelElapsed: 0,
       meleeCooldownElapsed: BOSS_TUNING.meleeInitialElapsed,
       beamElapsed: 0,
+      lungeCooldownElapsed: 0,
       channelActive: false,
       shieldActive: false,
       channelRuntimeElapsed: 0,
@@ -283,49 +369,37 @@ export class BossSystem {
       beams: [],
       beamsLaunched: 0,
       beamCount: 1,
-      beamDurationMs: BOSS_TUNING.beamDurationMs,
-      dash: { phase: 'idle', elapsedMs: 0, fromX: 0, fromY: 0, targetX: 0, targetY: 0 },
+      dash: { kind: 'lunge', phase: 'idle', elapsedMs: 0, fromX: 0, fromY: 0, targetX: 0, targetY: 0 },
       dashCooldownElapsed: 0,
       dashCountThisChannel: 0
     });
     this.host.events.emit('boss-spawned', { enemy });
   }
 
-  // ── Per-boss update (same priority order as the Phaser updateBoss) ──────────────────────────────────────────
+  // ── Per-boss update ─────────────────────────────────────────────────────────────────────────────────────────
 
   private updateBoss(boss: BossState, delta: number): void {
     if (!boss.enemy.alive) return;
-    if (boss.isMain && boss.cleanupPending) {
-      boss.cleanupElapsed += delta;
-      if (boss.cleanupElapsed >= BOSS_TUNING.cleanupMs) {
-        const cleared = this.host.clearEnemyField(boss.enemy);
-        boss.enemy.maxHealth += cleared * BOSS_TUNING.cleanupHealthPerEnemy;
-        boss.enemy.health += cleared * BOSS_TUNING.cleanupHealthPerEnemy;
-        boss.cleanupPending = false;
-        this.host.events.emit('boss-arena-consumed', { cleared });
-      }
-    }
-    // The sword, once summoned, plays out regardless of what the boss starts next.
+    boss.summonPoseMs += delta;
+    this.updateCleanup(boss, delta);
+    // A summoned sword and a dash in motion always play out.
     this.updateMelee(boss, delta);
     this.updateDash(boss, delta);
+    if (boss.transitionMs > 0) {
+      this.updateRoar(boss, delta);
+      return;
+    }
+    if (boss.staggerMs > 0) {
+      boss.staggerMs = Math.max(0, boss.staggerMs - delta);
+      return;
+    }
+    // Phase 2 begins with the roar — not in the middle of a shield sequence or a beam volley.
+    if (!boss.phaseTwo && boss.enemy.health <= boss.enemy.maxHealth * BOSS_TUNING.phaseTwoHealthRatio && !boss.shieldActive && boss.beamState === 'idle') {
+      this.startRoar(boss);
+      return;
+    }
     if (boss.channelActive) {
-      boss.meteorElapsed += delta;
-      if (boss.meteorElapsed >= BOSS_TUNING.meteorIntervalMs) {
-        boss.meteorElapsed = 0;
-        this.launchMeteor(boss);
-      }
-      boss.dashCooldownElapsed += delta;
-      if (this.isPhaseTwo(boss) && boss.dash.phase === 'idle' && boss.dashCountThisChannel < BOSS_TUNING.dashMaxPerChannel && boss.dashCooldownElapsed >= BOSS_TUNING.dashCooldownMs) {
-        boss.dashCooldownElapsed = 0;
-        boss.dashCountThisChannel += 1;
-        this.startDash(boss);
-      }
-      boss.channelRuntimeElapsed += delta;
-      this.updateShieldCountdown(boss);
-      if (boss.channelRuntimeElapsed >= BOSS_TUNING.channelDurationMs) {
-        boss.channelActive = false;
-        boss.enemy.rottenAuraSuppressed = false;
-      }
+      this.updateChannel(boss, delta);
       return;
     }
     if (boss.shieldActive) {
@@ -339,40 +413,101 @@ export class BossSystem {
       this.updateBeam(boss, delta);
       return;
     }
-    boss.summonElapsed += delta;
-    boss.channelElapsed += delta;
-    boss.beamElapsed += delta;
-    boss.meleeCooldownElapsed += delta;
+    if (boss.dash.phase !== 'idle') return;
+    const scaled = delta * (boss.enraged ? BOSS_TUNING.enrageTimerRate : 1);
+    boss.summonElapsed += scaled;
+    boss.channelElapsed += scaled;
+    boss.beamElapsed += scaled;
+    boss.meleeCooldownElapsed += scaled;
+    boss.lungeCooldownElapsed += scaled;
     if (boss.summonElapsed >= BOSS_TUNING.summonIntervalMs) {
       boss.summonElapsed = 0;
+      boss.summonPoseMs = 0;
       this.summonApparitions(boss);
-      if (this.isPhaseTwo(boss) || this.host.rng() < BOSS_TUNING.undeadSquadSporadicChance) this.summonUndeadSquad();
+      if (boss.phaseTwo || this.host.rng() < BOSS_TUNING.undeadSquadSporadicChance) this.summonUndeadSquad();
     }
-    if (boss.channelElapsed >= BOSS_TUNING.channelIntervalMs) { this.startChannel(boss); return; }
-    if (boss.beamElapsed >= BOSS_TUNING.beamIntervalMs) { this.startBeamLockOn(boss); return; }
+    // Big abilities take turns between bosses: one channelling or beaming at a time.
+    const othersBusy = this.bosses.some((other) => other !== boss && (other.shieldActive || other.beamState !== 'idle'));
+    if (!othersBusy && boss.channelElapsed >= BOSS_TUNING.channelIntervalMs) { this.startChannel(boss); return; }
+    if (!othersBusy && boss.beamElapsed >= BOSS_TUNING.beamIntervalMs) { this.startBeamLockOn(boss); return; }
+    if (this.tryLunge(boss)) return;
     this.tryMelee(boss);
+  }
+
+  /** The main boss's countdown: at zero the field empties and the boss enrages (faster, abilities sooner). */
+  private updateCleanup(boss: BossState, delta: number): void {
+    if (!boss.isMain || !boss.cleanupPending) return;
+    boss.cleanupElapsed += delta;
+    if (boss.cleanupElapsed < BOSS_TUNING.cleanupMs) return;
+    boss.cleanupPending = false;
+    const cleared = this.host.clearEnemyField((enemy) => !!this.bossFor(enemy));
+    const healthGained = cleared * BOSS_TUNING.cleanupHealthPerEnemy;
+    boss.enemy.maxHealth += healthGained;
+    boss.enemy.health += healthGained;
+    boss.enraged = true;
+    boss.enemy.movementSpeed *= BOSS_TUNING.enrageSpeedMultiplier;
+    this.host.events.emit('boss-enraged', { enemy: boss.enemy, cleared, healthGained });
   }
 
   private summonApparitions(boss: BossState): void {
     const { rng } = this.host;
-    for (let index = 0; index < BOSS_TUNING.apparitionCount; index += 1) {
-      const angle = (Math.PI * 2 * index) / BOSS_TUNING.apparitionCount + floatBetween(rng, -0.12, 0.12);
+    const count = Math.round(BOSS_TUNING.apparitionCount);
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + floatBetween(rng, -0.12, 0.12);
       const radius = floatBetween(rng, 175, 255);
       this.host.spawnEnemy('apparitionWraith', boss.enemy.x + Math.cos(angle) * radius, boss.enemy.y + Math.sin(angle) * radius);
     }
   }
 
-  /** "Solo dos Mortos Vivos": skeletons right around the player. */
+  /** "Solo dos Mortos Vivos": cracks open around the player; the skeletons climb out undeadRiseMs later. */
   private summonUndeadSquad(): void {
     const { player, rng } = this.host;
-    for (let index = 0; index < BOSS_TUNING.undeadSquadSize; index += 1) {
+    for (let index = 0; index < Math.round(BOSS_TUNING.undeadSquadSize); index += 1) {
       const angle = floatBetween(rng, 0, Math.PI * 2);
       const distance = floatBetween(rng, 90, 180);
-      this.host.spawnEnemy('skeleton', player.x + Math.cos(angle) * distance, player.y + Math.sin(angle) * distance);
+      this.risings.push({ x: player.x + Math.cos(angle) * distance, y: player.y + Math.sin(angle) * distance, elapsedMs: 0 });
     }
   }
 
-  // ── Melee: telegraph sword + 360° sweep ────────────────────────────────────────────────────────────────────
+  private updateRisings(delta: number): void {
+    for (let index = this.risings.length - 1; index >= 0; index -= 1) {
+      const rising = this.risings[index];
+      rising.elapsedMs += delta;
+      if (rising.elapsedMs < BOSS_TUNING.undeadRiseMs) continue;
+      this.risings.splice(index, 1);
+      this.host.spawnEnemy('skeleton', rising.x, rising.y);
+    }
+  }
+
+  // ── Phase-2 roar ────────────────────────────────────────────────────────────────────────────────────────────
+
+  private startRoar(boss: BossState): void {
+    boss.phaseTwo = true;
+    boss.transitionMs = BOSS_TUNING.phaseTransitionMs;
+    boss.melee = null;
+    this.host.events.emit('boss-phase-two', { enemy: boss.enemy });
+  }
+
+  private updateRoar(boss: BossState, delta: number): void {
+    const before = BOSS_TUNING.phaseTransitionMs - boss.transitionMs;
+    boss.transitionMs = Math.max(0, boss.transitionMs - delta);
+    const after = BOSS_TUNING.phaseTransitionMs - boss.transitionMs;
+    if (before >= BOSS_TUNING.roarShockwaveAt || after < BOSS_TUNING.roarShockwaveAt) return;
+    // The shockwave: summons are swept away and the player is shoved back (a breather before phase 2).
+    const { player } = this.host;
+    const { x, y } = boss.enemy;
+    this.host.clearEnemyField((enemy) => !!this.bossFor(enemy));
+    this.risings.length = 0;
+    this.host.events.emit('boss-shockwave', { x, y, radius: BOSS_TUNING.roarShockwaveRadius });
+    const distance = Math.hypot(player.x - x, player.y - y);
+    if (distance > BOSS_TUNING.roarShockwaveRadius) return;
+    const dirX = distance > 0 ? (player.x - x) / distance : 1;
+    const dirY = distance > 0 ? (player.y - y) / distance : 0;
+    this.host.pushPlayer(dirX * BOSS_TUNING.roarShockwavePush, dirY * BOSS_TUNING.roarShockwavePush);
+    this.host.hurtPlayer(BOSS_TUNING.roarShockwaveDamage);
+  }
+
+  // ── Melee: telegraph sword, 360° sweep (and back, with a centre blast, in phase 2) ─────────────────────────
 
   private tryMelee(boss: BossState): void {
     const { player } = this.host;
@@ -380,8 +515,7 @@ export class BossSystem {
     if (Math.hypot(boss.enemy.x - player.x, boss.enemy.y - player.y) > BOSS_TUNING.meleeTriggerRadius) return;
     boss.meleeCooldownElapsed = 0;
     // The sword appears beside the boss, perpendicular to the line towards the player.
-    const toPlayer = Math.atan2(player.y - boss.enemy.y, player.x - boss.enemy.x);
-    const startAngle = toPlayer + Math.PI / 2;
+    const startAngle = Math.atan2(player.y - boss.enemy.y, player.x - boss.enemy.x) + Math.PI / 2;
     boss.melee = { phase: 'telegraph', elapsedMs: 0, startAngle, angle: startAngle };
   }
 
@@ -393,14 +527,29 @@ export class BossSystem {
       if (melee.elapsedMs < BOSS_TUNING.meleeTelegraphMs) return;
       melee.phase = 'sweep';
       melee.elapsedMs = 0;
+      if (boss.phaseTwo) this.centerBlast(boss);
     }
     const progress = Math.min(1, melee.elapsedMs / BOSS_TUNING.meleeSweepMs);
-    melee.angle = melee.startAngle + Math.PI * 2 * progress;
+    const turn = Math.PI * 2 * progress;
+    melee.angle = melee.phase === 'sweep' ? melee.startAngle + turn : melee.startAngle + Math.PI * 2 - turn;
     // Contact-based: only the blade's current position hurts (the player's i-frames stop repeat hits).
     const sword = this.swordPosition(boss)!;
     const { player } = this.host;
     if (Math.hypot(sword.x - player.x, sword.y - player.y) <= BOSS_TUNING.meleeSwordHitRadius) this.host.hurtPlayer(BOSS_TUNING.meleeDamage);
-    if (progress >= 1) boss.melee = null;
+    if (progress < 1) return;
+    if (melee.phase === 'sweep' && boss.phaseTwo) {
+      melee.phase = 'sweepBack';
+      melee.elapsedMs = 0;
+      return;
+    }
+    boss.melee = null;
+  }
+
+  /** Phase 2: hugging the boss is no longer safe — a blast at its feet as the sweep starts. */
+  private centerBlast(boss: BossState): void {
+    const { player } = this.host;
+    this.host.events.emit('boss-explosion', { x: boss.enemy.x, y: boss.enemy.y, radius: BOSS_TUNING.meleeCenterRadius, kind: 'center' });
+    if (Math.hypot(boss.enemy.x - player.x, boss.enemy.y - player.y) <= BOSS_TUNING.meleeCenterRadius) this.host.hurtPlayer(BOSS_TUNING.meleeCenterDamage);
   }
 
   // ── Necro-Beam ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -440,11 +589,9 @@ export class BossSystem {
   }
 
   private activateBeam(boss: BossState): void {
-    const phaseTwo = this.isPhaseTwo(boss);
     boss.beamState = 'active';
     boss.beamActiveElapsed = 0;
-    boss.beamDurationMs = phaseTwo ? BOSS_TUNING.beamDurationPhase2Ms : BOSS_TUNING.beamDurationMs;
-    boss.beamCount = phaseTwo ? BOSS_TUNING.beamCountPhase2 : BOSS_TUNING.beamCountPhase1;
+    boss.beamCount = Math.round(boss.phaseTwo ? BOSS_TUNING.beamCountPhase2 : BOSS_TUNING.beamCountPhase1);
     boss.beams = [];
     boss.beamsLaunched = 0;
     this.launchBeam(boss);
@@ -482,14 +629,38 @@ export class BossSystem {
     boss.enemy.rottenAuraSuppressed = true;
   }
 
-  /** The deadline passed with the shield still up: it explodes, killing a player inside the radius. */
+  private updateChannel(boss: BossState, delta: number): void {
+    boss.meteorElapsed += delta;
+    if (boss.meteorElapsed >= BOSS_TUNING.meteorIntervalMs) {
+      boss.meteorElapsed = 0;
+      this.launchMeteor(boss);
+    }
+    boss.dashCooldownElapsed += delta;
+    if (boss.phaseTwo && boss.dash.phase === 'idle' && boss.dashCountThisChannel < BOSS_TUNING.dashMaxPerChannel && boss.dashCooldownElapsed >= BOSS_TUNING.dashCooldownMs) {
+      boss.dashCooldownElapsed = 0;
+      boss.dashCountThisChannel += 1;
+      this.startDash(boss, 'shield', this.host.player.x, this.host.player.y);
+    }
+    boss.channelRuntimeElapsed += delta;
+    this.updateShieldCountdown(boss);
+    if (boss.channelRuntimeElapsed >= BOSS_TUNING.channelDurationMs) {
+      boss.channelActive = false;
+      boss.enemy.rottenAuraSuppressed = false;
+    }
+  }
+
+  /** The deadline passed with the shield still up: it explodes. Heavy damage (or death at ratio ≥ 1) inside the
+   *  radius — unless a tall obstacle stands between the boss and the player. */
   private completeChannel(boss: BossState): void {
     if (boss.shield <= 0) { this.endChannel(boss); return; }
     const { player } = this.host;
-    this.host.events.emit('boss-explosion', { x: boss.enemy.x, y: boss.enemy.y, radius: BOSS_TUNING.explosionRadius, kind: 'shield' });
-    const caught = Math.hypot(boss.enemy.x - player.x, boss.enemy.y - player.y) <= BOSS_TUNING.explosionRadius;
+    const inRange = Math.hypot(boss.enemy.x - player.x, boss.enemy.y - player.y) <= BOSS_TUNING.explosionRadius;
+    const covered = inRange && !this.host.hasLineOfSight(boss.enemy, player);
+    this.host.events.emit('boss-explosion', { x: boss.enemy.x, y: boss.enemy.y, radius: BOSS_TUNING.explosionRadius, kind: 'shield', blocked: covered });
     this.endChannel(boss);
-    if (caught) this.host.killPlayer();
+    if (!inRange || covered) return;
+    if (BOSS_TUNING.explosionDamageRatio >= 1) this.host.killPlayer();
+    else this.host.hurtPlayer(player.maxHealth * BOSS_TUNING.explosionDamageRatio, true);
   }
 
   private endChannel(boss: BossState): void {
@@ -497,8 +668,8 @@ export class BossSystem {
     boss.shieldActive = false;
     boss.shield = 0;
     boss.enemy.rottenAuraSuppressed = false;
-    // No dashing without a shield: a pending telegraph is cancelled, a dash already in motion finishes.
-    if (boss.dash.phase === 'telegraph') boss.dash.phase = 'idle';
+    // No shield dash without a shield: a pending telegraph is cancelled, a dash already in motion finishes.
+    if (boss.dash.kind === 'shield' && boss.dash.phase === 'telegraph') boss.dash.phase = 'idle';
   }
 
   private updateShieldCountdown(boss: BossState): void {
@@ -512,7 +683,7 @@ export class BossSystem {
 
   private launchMeteor(boss: BossState): void {
     const { player } = this.host;
-    this.meteors.push({ x: player.x, y: player.y, elapsedMs: 0, telegraphMs: this.isPhaseTwo(boss) ? BOSS_TUNING.meteorTelegraphPhase2Ms : BOSS_TUNING.meteorTelegraphMs });
+    this.meteors.push({ x: player.x, y: player.y, elapsedMs: 0, telegraphMs: boss.phaseTwo ? BOSS_TUNING.meteorTelegraphPhase2Ms : BOSS_TUNING.meteorTelegraphMs });
   }
 
   private updateMeteors(delta: number): void {
@@ -527,31 +698,49 @@ export class BossSystem {
     }
   }
 
-  private startDash(boss: BossState): void {
+  /** Against kiting: a crouch, then a leap lungeDistance towards the player. */
+  private tryLunge(boss: BossState): boolean {
     const { player } = this.host;
-    boss.dash = { phase: 'telegraph', elapsedMs: 0, fromX: boss.enemy.x, fromY: boss.enemy.y, targetX: player.x, targetY: player.y };
+    const dx = player.x - boss.enemy.x;
+    const dy = player.y - boss.enemy.y;
+    const distance = Math.hypot(dx, dy);
+    if (boss.lungeCooldownElapsed < BOSS_TUNING.lungeCooldownMs || distance < BOSS_TUNING.lungeMinDistance) return false;
+    boss.lungeCooldownElapsed = 0;
+    const reach = Math.min(BOSS_TUNING.lungeDistance, distance);
+    this.startDash(boss, 'lunge', boss.enemy.x + (dx / distance) * reach, boss.enemy.y + (dy / distance) * reach);
+    return true;
+  }
+
+  private startDash(boss: BossState, kind: 'shield' | 'lunge', targetX: number, targetY: number): void {
+    const margin = BOSS_TUNING.edgeMargin / 2;
+    const size = this.host.arenaSize;
+    boss.dash = { kind, phase: 'telegraph', elapsedMs: 0, fromX: boss.enemy.x, fromY: boss.enemy.y, targetX: clamp(targetX, margin, size - margin), targetY: clamp(targetY, margin, size - margin) };
   }
 
   private updateDash(boss: BossState, delta: number): void {
     const dash = boss.dash;
     if (dash.phase === 'idle') return;
     dash.elapsedMs += delta;
+    const telegraphMs = dash.kind === 'lunge' ? BOSS_TUNING.lungeTelegraphMs : BOSS_TUNING.dashTelegraphMs;
+    const travelMs = dash.kind === 'lunge' ? BOSS_TUNING.lungeTravelMs : BOSS_TUNING.dashTravelMs;
     if (dash.phase === 'telegraph') {
-      if (dash.elapsedMs < BOSS_TUNING.dashTelegraphMs) return;
+      if (dash.elapsedMs < telegraphMs) return;
       dash.phase = 'dashing';
       dash.elapsedMs = 0;
       dash.fromX = boss.enemy.x;
       dash.fromY = boss.enemy.y;
     }
-    const t = Math.min(1, dash.elapsedMs / BOSS_TUNING.dashTravelMs);
+    const t = Math.min(1, dash.elapsedMs / travelMs);
     const eased = t * t * t; // Cubic.In, like the Phaser tween
     boss.enemy.x = dash.fromX + (dash.targetX - dash.fromX) * eased;
     boss.enemy.y = dash.fromY + (dash.targetY - dash.fromY) * eased;
     if (t < 1) return;
     dash.phase = 'idle';
-    this.host.events.emit('boss-explosion', { x: dash.targetX, y: dash.targetY, radius: BOSS_TUNING.dashRadius, kind: 'dash' });
+    const radius = dash.kind === 'lunge' ? BOSS_TUNING.lungeRadius : BOSS_TUNING.dashRadius;
+    const damage = dash.kind === 'lunge' ? BOSS_TUNING.lungeDamage : BOSS_TUNING.dashDamage;
+    this.host.events.emit('boss-explosion', { x: dash.targetX, y: dash.targetY, radius, kind: dash.kind === 'lunge' ? 'lunge' : 'dash' });
     const { player } = this.host;
-    if (Math.hypot(dash.targetX - player.x, dash.targetY - player.y) <= BOSS_TUNING.dashRadius) this.host.hurtPlayer(BOSS_TUNING.dashDamage);
+    if (Math.hypot(dash.targetX - player.x, dash.targetY - player.y) <= radius) this.host.hurtPlayer(damage);
   }
 }
 

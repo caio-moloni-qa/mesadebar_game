@@ -269,9 +269,8 @@ export class Game3D {
     events.on('boss-shield-countdown', ({ enemy, seconds }) => {
       this.floating.spawn(simToWorld(enemy.x, enemy.y, 7, this.scratch), `${seconds}...`, { color: '#ffcc33', size: 26 }, performance.now());
     });
-    events.on('boss-arena-consumed', () => {
-      const { player } = this.session;
-      this.effects.pulse(player.x, player.y, 900, 0x35c96b, 0.8, 0.6);
+    events.on('boss-enraged', ({ enemy }) => {
+      this.effects.pulse(enemy.x, enemy.y, 900, 0x35c96b, 0.8, 0.6);
     });
     events.on('boss-wave-cleared', () => {
       Object.values(this.session.portals ?? {}).forEach(({ x, y }) => this.effects.pulse(x, y, 70, 0xffffff, 0.5, 0.8));
