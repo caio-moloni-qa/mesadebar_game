@@ -12,24 +12,73 @@ const REST: Pose = { upperArmL: [0, 0, 10], upperArmR: [0, 0, -10] };
 const quaternion = new THREE.Quaternion();
 const euler = new THREE.Euler();
 
+/** Samples per second of the baked curves. Three's quaternion tracks only interpolate linearly, so a clip made of a
+ *  few keyed poses moves at constant speed and snaps direction at every key (robotic). The authored keys are
+ *  instead joined by a smooth curve and baked densely. */
+export const CLIP_SAMPLE_RATE = 30;
+
+/** Cubic Hermite through the keys with Catmull-Rom tangents (non-uniform spacing), so motion eases through every
+ *  pose. Looping clips take their end tangents from the wrapped neighbours (the seam stays smooth); one-shots
+ *  start and end at rest (zero tangent: ease in and out). Assumes a loop's last key repeats its first. */
+export function smoothCurve(times: number[], values: Vec3Tuple[], loop: boolean): (t: number) => Vec3Tuple {
+  const count = times.length;
+  const duration = times[count - 1] - times[0];
+  const tangent = (i: number): Vec3Tuple => {
+    if (count < 3) return [0, 0, 0];
+    let previous: number;
+    let next: number;
+    let previousTime: number;
+    let nextTime: number;
+    if (i === 0 || i === count - 1) {
+      if (!loop) return [0, 0, 0];
+      previous = count - 2; previousTime = times[count - 2] - duration;
+      next = 1; nextTime = times[1];
+      if (i === count - 1) { previousTime += duration; nextTime += duration; }
+    } else {
+      previous = i - 1; previousTime = times[i - 1];
+      next = i + 1; nextTime = times[i + 1];
+    }
+    const span = nextTime - previousTime;
+    return [0, 1, 2].map((k) => (values[next][k] - values[previous][k]) / span) as Vec3Tuple;
+  };
+  const tangents = times.map((_t, i) => tangent(i));
+  return (t: number) => {
+    let i = 0;
+    while (i < count - 2 && t > times[i + 1]) i += 1;
+    const span = times[i + 1] - times[i];
+    const u = span > 0 ? Math.min(1, Math.max(0, (t - times[i]) / span)) : 0;
+    const u2 = u * u;
+    const u3 = u2 * u;
+    const h00 = 2 * u3 - 3 * u2 + 1;
+    const h10 = u3 - 2 * u2 + u;
+    const h01 = -2 * u3 + 3 * u2;
+    const h11 = u3 - u2;
+    return [0, 1, 2].map((k) => h00 * values[i][k] + h10 * span * tangents[i][k] + h01 * values[i + 1][k] + h11 * span * tangents[i + 1][k]) as Vec3Tuple;
+  };
+}
+
 /** Builds a clip from keyed poses. Every bone mentioned in any key gets a track; keys that omit it use REST/0. */
-function poseClip(name: string, duration: number, keys: Key[], hipsRest: Vec3Tuple, { includeRest = true } = {}): THREE.AnimationClip {
+function poseClip(name: string, duration: number, keys: Key[], hipsRest: Vec3Tuple, { includeRest = true, loop = false } = {}): THREE.AnimationClip {
   const bones = new Set<string>();
   keys.forEach((key) => Object.keys(key.pose).forEach((bone) => bones.add(bone)));
   if (includeRest) Object.keys(REST).forEach((bone) => bones.add(bone));
-  const times = keys.map((key) => key.t);
+  const keyTimes = keys.map((key) => key.t);
+  const frames = Math.max(1, Math.round(duration * CLIP_SAMPLE_RATE));
+  const times = Array.from({ length: frames + 1 }, (_v, frame) => (frame / frames) * duration);
   const tracks: THREE.KeyframeTrack[] = [...bones].map((bone) => {
+    const curve = smoothCurve(keyTimes, keys.map((key) => key.pose[bone] ?? (includeRest ? REST[bone] : undefined) ?? [0, 0, 0]), loop);
     const values: number[] = [];
-    keys.forEach((key) => {
-      const [x, y, z] = key.pose[bone] ?? (includeRest ? REST[bone] : undefined) ?? [0, 0, 0];
+    times.forEach((t) => {
+      const [x, y, z] = curve(t);
       quaternion.setFromEuler(euler.set(THREE.MathUtils.degToRad(x), THREE.MathUtils.degToRad(y), THREE.MathUtils.degToRad(z)));
       values.push(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
     });
     return new THREE.QuaternionKeyframeTrack(`${bone}.quaternion`, times, values);
   });
   if (keys.some((key) => key.hips)) {
-    const values = keys.flatMap((key) => {
-      const [x, y, z] = key.hips ?? [0, 0, 0];
+    const curve = smoothCurve(keyTimes, keys.map((key) => key.hips ?? [0, 0, 0]), loop);
+    const values = times.flatMap((t) => {
+      const [x, y, z] = curve(t);
       return [hipsRest[0] + x, hipsRest[1] + y, hipsRest[2] + z];
     });
     tracks.push(new THREE.VectorKeyframeTrack('hips.position', times, values));
@@ -49,22 +98,28 @@ export type HeroClipName = 'idle' | 'run' | 'swing' | 'cast' | 'throw' | 'pulse'
 /** The full humanoid clip set. One set is shared by every mixer (threejs-animation: share clips, not copies). */
 export function humanoidClips(hipHeight: number): Record<HeroClipName, THREE.AnimationClip> {
   const hips: Vec3Tuple = [0, hipHeight, 0];
-  const runA: Pose = { thighL: [-40, 0, 0], shinL: [15, 0, 0], thighR: [35, 0, 0], shinR: [55, 0, 0], upperArmL: [35, 0, 10], upperArmR: [-35, 0, -10], foreArmL: [-30, 0, 0], foreArmR: [-30, 0, 0], chest: [10, 0, 0], tail: [20, 20, 0] };
-  const runB: Pose = { thighL: [35, 0, 0], shinL: [55, 0, 0], thighR: [-40, 0, 0], shinR: [15, 0, 0], upperArmL: [-35, 0, 10], upperArmR: [35, 0, -10], foreArmL: [-30, 0, 0], foreArmR: [-30, 0, 0], chest: [10, 0, 0], tail: [20, -20, 0] };
-  const runMid: Pose = { shinL: [30, 0, 0], shinR: [30, 0, 0], foreArmL: [-30, 0, 0], foreArmR: [-30, 0, 0], chest: [10, 0, 0], tail: [25, 0, 0] };
+  // Hips twist toward the forward leg and dip on the stance side; the chest counter-twists so the shoulders swing
+  // against the hips, and the head cancels most of it so the gaze stays steady. Passing poses lift the trailing shin.
+  const runA: Pose = { hips: [0, 10, 3], thighL: [-42, 0, 0], shinL: [12, 0, 0], thighR: [32, 0, 0], shinR: [58, 0, 0], upperArmL: [35, 0, 10], upperArmR: [-38, 0, -10], foreArmL: [-20, 0, 0], foreArmR: [-50, 0, 0], chest: [10, -16, -2], head: [-4, 6, 0], tail: [20, 20, 0] };
+  const runB: Pose = { hips: [0, -10, -3], thighL: [32, 0, 0], shinL: [58, 0, 0], thighR: [-42, 0, 0], shinR: [12, 0, 0], upperArmL: [-38, 0, 10], upperArmR: [35, 0, -10], foreArmL: [-50, 0, 0], foreArmR: [-20, 0, 0], chest: [10, 16, 2], head: [-4, -6, 0], tail: [20, -20, 0] };
+  const runMidAB: Pose = { thighL: [-5, 0, 0], shinL: [25, 0, 0], thighR: [0, 0, 0], shinR: [75, 0, 0], foreArmL: [-35, 0, 0], foreArmR: [-35, 0, 0], chest: [12, 0, 0], head: [-5, 0, 0], tail: [25, 0, 0] };
+  const runMidBA: Pose = { thighL: [0, 0, 0], shinL: [75, 0, 0], thighR: [-5, 0, 0], shinR: [25, 0, 0], foreArmL: [-35, 0, 0], foreArmR: [-35, 0, 0], chest: [12, 0, 0], head: [-5, 0, 0], tail: [25, 0, 0] };
   return {
-    idle: poseClip('idle', 1.6, [
-      { t: 0, pose: { chest: [0, 0, 0], tail: [10, 15, 0] }, hips: [0, 0, 0] },
-      { t: 0.8, pose: { chest: [3, 0, 0], upperArmL: [0, 0, 14], upperArmR: [0, 0, -14], tail: [10, -15, 0] }, hips: [0, -0.02, 0] },
-      { t: 1.6, pose: { chest: [0, 0, 0], tail: [10, 15, 0] }, hips: [0, 0, 0] }
-    ], hips),
+    // Breathing: chest rise, a slow weight shift, arms drifting, head settling a beat behind.
+    idle: poseClip('idle', 2.4, [
+      { t: 0, pose: { hips: [0, 0, 1], chest: [0, 0, -1], head: [0, 0, 0], tail: [10, 15, 0] }, hips: [0, 0, 0] },
+      { t: 0.6, pose: { hips: [0, 0, 0], chest: [3, 0, 0], head: [-2, 3, 0], upperArmL: [0, 0, 13], upperArmR: [0, 0, -12], foreArmL: [-6, 0, 0], foreArmR: [-6, 0, 0], tail: [12, 0, 0] }, hips: [0, -0.015, 0] },
+      { t: 1.2, pose: { hips: [0, 0, -1], chest: [0, 0, 1], head: [1, 0, 0], tail: [10, -15, 0] }, hips: [0, 0, 0] },
+      { t: 1.8, pose: { hips: [0, 0, 0], chest: [3, 0, 0], head: [-2, -3, 0], upperArmL: [0, 0, 12], upperArmR: [0, 0, -13], foreArmL: [-6, 0, 0], foreArmR: [-6, 0, 0], tail: [12, 0, 0] }, hips: [0, -0.015, 0] },
+      { t: 2.4, pose: { hips: [0, 0, 1], chest: [0, 0, -1], head: [0, 0, 0], tail: [10, 15, 0] }, hips: [0, 0, 0] }
+    ], hips, { loop: true }),
     run: poseClip('run', 0.6, [
-      { t: 0, pose: runA, hips: [0, -0.03, 0] },
-      { t: 0.15, pose: runMid, hips: [0, 0.04, 0] },
-      { t: 0.3, pose: runB, hips: [0, -0.03, 0] },
-      { t: 0.45, pose: runMid, hips: [0, 0.04, 0] },
-      { t: 0.6, pose: runA, hips: [0, -0.03, 0] }
-    ], hips),
+      { t: 0, pose: runA, hips: [0, -0.04, 0] },
+      { t: 0.15, pose: runMidAB, hips: [0, 0.04, 0] },
+      { t: 0.3, pose: runB, hips: [0, -0.04, 0] },
+      { t: 0.45, pose: runMidBA, hips: [0, 0.04, 0] },
+      { t: 0.6, pose: runA, hips: [0, -0.04, 0] }
+    ], hips, { loop: true }),
     // Horizontal cut: raise the weapon arm forward, then twist the chest through the swing.
     swing: additiveClip('swing', 0.36, [
       { t: 0, pose: { upperArmR: [0, 0, 0], chest: [0, 0, 0], foreArmR: [0, 0, 0] } },
@@ -112,5 +167,5 @@ export function wraithFloatClip(): THREE.AnimationClip {
     { t: 0, pose: { chest: [8, 0, 0], upperArmL: [-40, 0, 25], upperArmR: [-40, 0, -25], skirt: [6, 0, 0], head: [5, 0, 0] }, hips: [0, 0, 0] },
     { t: 0.6, pose: { chest: [14, 0, 0], upperArmL: [-65, 0, 35], upperArmR: [-65, 0, -35], skirt: [-6, 0, 0], head: [-5, 0, 0] }, hips: [0, 0.12, 0] },
     { t: 1.2, pose: { chest: [8, 0, 0], upperArmL: [-40, 0, 25], upperArmR: [-40, 0, -25], skirt: [6, 0, 0], head: [5, 0, 0] }, hips: [0, 0, 0] }
-  ], [0, 0.9, 0], { includeRest: false });
+  ], [0, 0.9, 0], { includeRest: false, loop: true });
 }

@@ -6,9 +6,9 @@ import { HeroClipName } from '../models/clips';
 import { HeroModel, createHeroModel } from '../models/heroes';
 import { simToWorld, yawFromSimDirection } from '../space';
 
-const TURN_SHARPNESS = 14;
+const TURN_SHARPNESS = 10;
 const DAMAGE_FLASH_MS = 160;
-const LOCOMOTION_FADE = 0.18;
+const LOCOMOTION_FADE = 0.25;
 /** Run cycle plays at 1× at this speed (game units/s) and scales with the hero's actual speed. */
 const RUN_REFERENCE_SPEED = 200;
 
@@ -43,7 +43,7 @@ export class HeroView {
   /** Fire a one-shot (restarting it if it's already playing — fast attack speeds retrigger it). */
   play(action: HeroAction): void {
     if (this.dead) return;
-    this.actions[action].reset().setEffectiveWeight(1).fadeIn(0.04).play();
+    this.actions[action].reset().setEffectiveWeight(1).fadeIn(0.06).play();
   }
 
   die(): void {
