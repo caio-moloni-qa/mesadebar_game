@@ -98,12 +98,14 @@ export type HeroClipName = 'idle' | 'run' | 'swing' | 'cast' | 'throw' | 'pulse'
 /** The full humanoid clip set. One set is shared by every mixer (threejs-animation: share clips, not copies). */
 export function humanoidClips(hipHeight: number): Record<HeroClipName, THREE.AnimationClip> {
   const hips: Vec3Tuple = [0, hipHeight, 0];
-  // Hips twist toward the forward leg and dip on the stance side; the chest counter-twists so the shoulders swing
-  // against the hips, and the head cancels most of it so the gaze stays steady. Passing poses lift the trailing shin.
-  const runA: Pose = { hips: [0, 10, 3], thighL: [-42, 0, 0], shinL: [12, 0, 0], thighR: [32, 0, 0], shinR: [58, 0, 0], upperArmL: [35, 0, 10], upperArmR: [-38, 0, -10], foreArmL: [-20, 0, 0], foreArmR: [-50, 0, 0], chest: [10, -16, -2], head: [-4, 6, 0], tail: [20, 20, 0] };
-  const runB: Pose = { hips: [0, -10, -3], thighL: [32, 0, 0], shinL: [58, 0, 0], thighR: [-42, 0, 0], shinR: [12, 0, 0], upperArmL: [-38, 0, 10], upperArmR: [35, 0, -10], foreArmL: [-50, 0, 0], foreArmR: [-20, 0, 0], chest: [10, 16, 2], head: [-4, -6, 0], tail: [20, -20, 0] };
-  const runMidAB: Pose = { thighL: [-5, 0, 0], shinL: [25, 0, 0], thighR: [0, 0, 0], shinR: [75, 0, 0], foreArmL: [-35, 0, 0], foreArmR: [-35, 0, 0], chest: [12, 0, 0], head: [-5, 0, 0], tail: [25, 0, 0] };
-  const runMidBA: Pose = { thighL: [0, 0, 0], shinL: [75, 0, 0], thighR: [-5, 0, 0], shinR: [25, 0, 0], foreArmL: [-35, 0, 0], foreArmR: [-35, 0, 0], chest: [12, 0, 0], head: [-5, 0, 0], tail: [25, 0, 0] };
+  // A human jog: a short stride (thigh ~28° forward, ~18° back) with the feet landing under the body — the thighs
+  // tuck in a few degrees, since the meshes stand with their feet apart. Hips twist and dip only slightly with the
+  // stride; the chest counter-twists so the shoulders swing against the hips, and the head keeps the gaze steady.
+  // Passing poses bend the trailing knee to clear the ground.
+  const runA: Pose = { hips: [0, 5, 2], thighL: [-28, 0, -4], shinL: [10, 0, 0], thighR: [18, 0, 4], shinR: [40, 0, 0], upperArmL: [30, 0, 10], upperArmR: [-32, 0, -10], foreArmL: [-20, 0, 0], foreArmR: [-45, 0, 0], chest: [8, -10, -1], head: [-3, 4, 0], tail: [20, 20, 0] };
+  const runB: Pose = { hips: [0, -5, -2], thighL: [18, 0, -4], shinL: [40, 0, 0], thighR: [-28, 0, 4], shinR: [10, 0, 0], upperArmL: [-32, 0, 10], upperArmR: [30, 0, -10], foreArmL: [-45, 0, 0], foreArmR: [-20, 0, 0], chest: [8, 10, 1], head: [-3, -4, 0], tail: [20, -20, 0] };
+  const runMidAB: Pose = { thighL: [-4, 0, -3], shinL: [15, 0, 0], thighR: [-8, 0, 3], shinR: [55, 0, 0], foreArmL: [-32, 0, 0], foreArmR: [-32, 0, 0], chest: [10, 0, 0], head: [-4, 0, 0], tail: [25, 0, 0] };
+  const runMidBA: Pose = { thighL: [-8, 0, -3], shinL: [55, 0, 0], thighR: [-4, 0, 3], shinR: [15, 0, 0], foreArmL: [-32, 0, 0], foreArmR: [-32, 0, 0], chest: [10, 0, 0], head: [-4, 0, 0], tail: [25, 0, 0] };
   return {
     // Breathing: chest rise, a slow weight shift, arms drifting, head settling a beat behind.
     idle: poseClip('idle', 2.4, [
@@ -114,11 +116,11 @@ export function humanoidClips(hipHeight: number): Record<HeroClipName, THREE.Ani
       { t: 2.4, pose: { hips: [0, 0, 1], chest: [0, 0, -1], head: [0, 0, 0], tail: [10, 15, 0] }, hips: [0, 0, 0] }
     ], hips, { loop: true }),
     run: poseClip('run', 0.6, [
-      { t: 0, pose: runA, hips: [0, -0.04, 0] },
-      { t: 0.15, pose: runMidAB, hips: [0, 0.04, 0] },
-      { t: 0.3, pose: runB, hips: [0, -0.04, 0] },
-      { t: 0.45, pose: runMidBA, hips: [0, 0.04, 0] },
-      { t: 0.6, pose: runA, hips: [0, -0.04, 0] }
+      { t: 0, pose: runA, hips: [0, -0.03, 0] },
+      { t: 0.15, pose: runMidAB, hips: [0, 0.025, 0] },
+      { t: 0.3, pose: runB, hips: [0, -0.03, 0] },
+      { t: 0.45, pose: runMidBA, hips: [0, 0.025, 0] },
+      { t: 0.6, pose: runA, hips: [0, -0.03, 0] }
     ], hips, { loop: true }),
     // Horizontal cut: raise the weapon arm forward, then twist the chest through the swing.
     swing: additiveClip('swing', 0.36, [
