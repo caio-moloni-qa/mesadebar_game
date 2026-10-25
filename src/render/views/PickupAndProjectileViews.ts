@@ -3,6 +3,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PeelState, PickupKind, PickupState, ProjectileKind, ProjectileState, SoulState } from '../../core/session/entities';
 import { Pool } from '../../core/Pool';
 import { PALETTE, toonMaterial } from '../materials';
+import { nonIndexed } from '../models/rig';
+import { WeaponModelId, weaponGeometry } from '../models/weapons';
 import { WORLD_SCALE } from '../space';
 
 /** Builds one InstancedMesh per kind and fills them from a pool each frame (count = instances used this frame). */
@@ -59,17 +61,14 @@ export class ProjectileView {
   private readonly rotation = new THREE.Matrix4();
 
   constructor(capacity: number) {
-    const boomerang = mergeGeometries([
-      new THREE.BoxGeometry(0.7, 0.08, 0.16).translate(0.25, 0, 0).rotateY(0.6),
-      new THREE.BoxGeometry(0.7, 0.08, 0.16).translate(0.25, 0, 0).rotateY(-0.6)
-    ])!;
-    const banana = new THREE.TorusGeometry(0.32, 0.09, 4, 8, Math.PI * 0.9).rotateX(Math.PI / 2);
-    const sword = mergeGeometries([new THREE.BoxGeometry(1.1, 0.06, 0.14), new THREE.BoxGeometry(0.1, 0.08, 0.4).translate(-0.4, 0, 0)])!;
+    // Same models the hero holds, laid flat and centred so they spin around their middle in flight.
+    const flying = (id: WeaponModelId) => weaponGeometry(id).rotateX(-Math.PI / 2).center();
+    const weaponMaterial = toonMaterial({ vertexColors: true, flatShading: true });
     this.batch = new InstancedBatch<ProjectileKind>({
       bolt: { geometry: new THREE.IcosahedronGeometry(0.24, 0), material: new THREE.MeshBasicMaterial({ color: PALETTE.bolt }) },
-      boomerang: { geometry: boomerang, material: toonMaterial({ color: 0xb07a3c, emissive: 0x2a1600, flatShading: true }), castShadow: true },
-      banana: { geometry: banana, material: toonMaterial({ color: 0xf2d33b, emissive: 0x3a2e00, flatShading: true }), castShadow: true },
-      thrownSword: { geometry: sword, material: toonMaterial({ color: PALETTE.steel, emissive: 0x20262c, flatShading: true }), castShadow: true }
+      boomerang: { geometry: flying('boomerang'), material: weaponMaterial, castShadow: true },
+      banana: { geometry: flying('banana'), material: weaponMaterial, castShadow: true },
+      thrownSword: { geometry: flying('sword'), material: weaponMaterial, castShadow: true }
     }, capacity);
   }
 
@@ -105,11 +104,11 @@ export class PickupView {
     const chest = mergeGeometries([
       new THREE.BoxGeometry(0.7, 0.45, 0.5).translate(0, 0.22, 0),
       new THREE.CylinderGeometry(0.25, 0.25, 0.7, 6, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).translate(0, 0.45, 0)
-    ].map((geometry) => geometry.toNonIndexed()))!;
+    ].map(nonIndexed))!;
     const potion = mergeGeometries([
       new THREE.IcosahedronGeometry(0.22, 0).translate(0, 0.22, 0),
-      new THREE.CylinderGeometry(0.07, 0.09, 0.18, 5).translate(0, 0.5, 0).toNonIndexed()
-    ].map((geometry) => geometry.toNonIndexed()))!;
+      new THREE.CylinderGeometry(0.07, 0.09, 0.18, 5).translate(0, 0.5, 0)
+    ].map(nonIndexed))!;
     this.batch = new InstancedBatch<PickupKind>({
       gem: { geometry: new THREE.OctahedronGeometry(0.2, 0), material: toonMaterial({ color: PALETTE.gem, emissive: 0x1d6b4c, flatShading: true }), castShadow: true },
       chest: { geometry: chest, material: toonMaterial({ color: 0x8a5a2b, emissive: 0x3a2400, flatShading: true }), castShadow: true },
@@ -146,11 +145,11 @@ export class HazardView {
 
   constructor(capacity: number) {
     const skull = mergeGeometries([
-      new THREE.IcosahedronGeometry(0.3, 0).toNonIndexed(),
-      new THREE.BoxGeometry(0.3, 0.14, 0.2).translate(0, -0.22, 0.08).toNonIndexed()
+      nonIndexed(new THREE.IcosahedronGeometry(0.3, 0)),
+      nonIndexed(new THREE.BoxGeometry(0.3, 0.14, 0.2).translate(0, -0.22, 0.08))
     ])!;
     const peel = mergeGeometries([0, 1, 2].map((index) =>
-      new THREE.BoxGeometry(0.5, 0.05, 0.14).translate(0.22, 0.03, 0).rotateY((index * Math.PI * 2) / 3).toNonIndexed()
+      nonIndexed(new THREE.BoxGeometry(0.5, 0.05, 0.14).translate(0.22, 0.03, 0).rotateY((index * Math.PI * 2) / 3))
     ))!;
     this.batch = new InstancedBatch<'soul' | 'peel'>({
       soul: { geometry: skull, material: new THREE.MeshBasicMaterial({ color: 0x7dff9a }) },

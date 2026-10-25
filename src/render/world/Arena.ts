@@ -295,7 +295,9 @@ function mergeStaticByMaterial(group: THREE.Group): THREE.Group {
   const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>();
   group.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
-    const geometry = (child.geometry as THREE.BufferGeometry).toNonIndexed();
+    const source = child.geometry as THREE.BufferGeometry;
+    // Polyhedra (the rocks) are already non-indexed; toNonIndexed() would warn and they'd share one buffer.
+    const geometry = source.index ? source.toNonIndexed() : source.clone();
     geometry.applyMatrix4(child.matrixWorld);
     const material = child.material as THREE.Material;
     const list = byMaterial.get(material) ?? [];

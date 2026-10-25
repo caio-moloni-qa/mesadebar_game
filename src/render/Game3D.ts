@@ -13,7 +13,7 @@ import { simToWorld } from './space';
 import { CombatEffects } from './vfx/CombatEffects';
 import { EnemyHordeView } from './views/EnemyHordeView';
 import { HazardView, ParticleView, PickupView, ProjectileView } from './views/PickupAndProjectileViews';
-import { PlayerView } from './views/PlayerView';
+import { HeroView } from './views/HeroView';
 import { Arena } from './world/Arena';
 
 /** Frame time is capped so a long stall (tab switch, breakpoint) can't make the sim run hundreds of catch-up steps. */
@@ -26,7 +26,10 @@ export interface Game3DOptions {
   seed?: number;
   stressEnemyCount?: number;
   invincible?: boolean;
-  /** Test keys: U random upgrade, I +5 upgrades on every weapon, O add another weapon, T toggle enemy separation. */
+  /** Debug close-up camera (1 = normal gameplay framing). */
+  zoom?: number;
+  /** Test keys: U random upgrade, I +5 upgrades on every weapon, O add another weapon, T toggle enemy separation,
+   *  V spawn one of each enemy variant around the hero. */
   debug?: boolean;
 }
 
@@ -34,7 +37,7 @@ export interface Game3DOptions {
 export class Game3D {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
-  private readonly cameraRig = new CameraRig();
+  private readonly cameraRig: CameraRig;
   private readonly pipeline: PixelPipeline;
   private readonly arena: Arena;
   private readonly hud: Hud;
@@ -43,7 +46,7 @@ export class Game3D {
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
   private inMenu = false;
   private session!: GameSession;
-  private playerView!: PlayerView;
+  private playerView!: HeroView;
   private readonly enemyView = new EnemyHordeView(ENEMY_CONFIG.maxActive);
   private readonly projectileView = new ProjectileView(400);
   private readonly pickupView = new PickupView(600);
@@ -57,6 +60,7 @@ export class Game3D {
   private readonly scratch = new THREE.Vector3();
 
   constructor(private readonly container: HTMLElement, private readonly options: Game3DOptions) {
+    this.cameraRig = new CameraRig(options.zoom);
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(1);
     this.renderer.shadowMap.enabled = true;
@@ -116,7 +120,7 @@ export class Game3D {
       this.session.variantSpawnEnabled = false;
     }
     this.session.player.invincible = Boolean(this.options.invincible);
-    this.playerView = new PlayerView(CHARACTERS[characterId], weaponId);
+    this.playerView = new HeroView(characterId, weaponId);
     this.scene.add(this.playerView.root);
     this.accumulator = 0;
     this.bindSessionEffects();
@@ -139,10 +143,18 @@ export class Game3D {
       const color = kind === 'gem' ? PALETTE.gem : kind === 'potion' ? 0xff6b6b : 0xffd868;
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, color, kind === 'gem' ? 3 : 14, 0.8, 1.8);
     });
-    events.on('melee-swing', ({ x, y, dirX, dirY, range, coneAngle, weaponId }) => this.effects.swing(x, y, dirX, dirY, range, coneAngle, weaponId));
+    events.on('melee-swing', ({ x, y, dirX, dirY, range, coneAngle, weaponId }) => {
+      this.effects.swing(x, y, dirX, dirY, range, coneAngle, weaponId);
+      // Whip chain links also emit swings, centred on the enemy they jump to — only the hero's own swing animates.
+      if (x === this.session.player.x && y === this.session.player.y) this.playerView.play('swing');
+    });
+    events.on('projectile-fired', ({ kind }) => this.playerView.play(kind === 'bolt' ? 'cast' : 'throw'));
+    events.on('player-damaged', () => this.playerView.play('hit'));
+    events.on('player-died', () => this.playerView.die());
     events.on('aura-pulse', ({ radius, multiStrike, buffUnlocked }) => {
       const { player } = this.session;
       this.effects.pulse(player.x, player.y, radius, multiStrike ? 0xfff2a0 : buffUnlocked ? 0xffc94d : 0xe8b04a, 0.35, multiStrike ? 0.8 : 0.5);
+      this.playerView.play('pulse');
     });
     events.on('whip-burst', ({ radius }) => this.effects.burst(this.session.player.x, this.session.player.y, radius, 0xff6a3d, 0.3, 0.3));
     events.on('staff-explosion', ({ x, y, radius, index }) => this.effects.pulse(x, y, radius * (1 + index * 0.06), 0x6ee7ff, 0.22 + index * 0.045, 0.35));
@@ -176,6 +188,14 @@ export class Game3D {
       if (next && session.addWeapon(next.id)) session.grantAffinity(next.type === 'cone' ? 'melee' : next.type === 'aura' ? 'aura' : 'ranged');
     }
     if (code === 'KeyT') session.enemySeparation = !session.enemySeparation;
+    if (code === 'KeyV') {
+      // One of each scheduled variant in a ring around the hero, for reviewing models/animations.
+      const variants = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith'] as const;
+      variants.forEach((variant, index) => {
+        const angle = (index / variants.length) * Math.PI * 2;
+        session.spawnEnemy(variant, session.player.x + Math.cos(angle) * 150, session.player.y + Math.sin(angle) * 150);
+      });
+    }
   }
 
   private readMoveInput(): void {
@@ -214,7 +234,8 @@ export class Game3D {
     const simNow = this.session.clock.now + (running ? this.accumulator : 0);
     const deltaSeconds = running ? frameMs / 1000 : 0;
 
-    this.playerView.update(this.session.player, alpha, simNow, frameMs / 1000);
+    // The hero keeps animating after death (the fall plays out) but freezes with pause / choice screens.
+    this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.enemyView.update(this.session.enemies, alpha, simNow, deltaSeconds);
     this.projectileView.update(this.session.projectiles, alpha, simNow);
     this.pickupView.update(this.session.pickups, alpha, simNow);
