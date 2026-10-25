@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PeelState, PickupKind, PickupState, ProjectileKind, ProjectileState, SoulState } from '../../core/session/entities';
 import { Pool } from '../../core/Pool';
 import { PALETTE, toonMaterial } from '../materials';
@@ -43,10 +43,14 @@ class InstancedBatch<K extends string> {
   }
 }
 
-const lerp = (body: { x: number; y: number; prevX: number; prevY: number }, alpha: number) => ({
-  x: (body.prevX + (body.x - body.prevX) * alpha) * WORLD_SCALE,
-  z: (body.prevY + (body.y - body.prevY) * alpha) * WORLD_SCALE
-});
+/** Interpolated world position, written into one shared scratch object — this runs for every projectile, pickup
+ *  and soul every frame, and a fresh object per call would be steady garbage for the collector. */
+const lerped = { x: 0, z: 0 };
+const lerp = (body: { x: number; y: number; prevX: number; prevY: number }, alpha: number) => {
+  lerped.x = (body.prevX + (body.x - body.prevX) * alpha) * WORLD_SCALE;
+  lerped.z = (body.prevY + (body.y - body.prevY) * alpha) * WORLD_SCALE;
+  return lerped;
+};
 
 /** Player projectiles: Cajado bolts (unlit glowing), boomerang / banana (spinning flat V / crescent), thrown swords. */
 export class ProjectileView {
@@ -174,7 +178,7 @@ export class HazardView {
   }
 }
 
-interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; maxLife: number; color: THREE.Color; size: number; }
+interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; maxLife: number; color: number; size: number; }
 
 /** Pixel-square particles (the style reference's chunky trails/sparks): tiny cubes that burst and fall. Purely
  *  visual — advanced with frame time only while the session is running, so they freeze with pause. */
@@ -182,6 +186,7 @@ export class ParticleView {
   readonly mesh: THREE.InstancedMesh;
   private readonly particles: Particle[] = [];
   private readonly matrix = new THREE.Matrix4();
+  private readonly color = new THREE.Color();
 
   constructor(private readonly capacity: number) {
     this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.11, 0.11, 0.11), new THREE.MeshBasicMaterial({ color: 0xffffff }), capacity);
@@ -197,7 +202,7 @@ export class ParticleView {
       this.particles.push({
         x: worldX, y: height, z: worldZ,
         vx: Math.cos(angle) * velocity, vy: 2 + Math.random() * 3, vz: Math.sin(angle) * velocity,
-        life, maxLife: life, color: new THREE.Color(color), size: 0.7 + Math.random() * 0.8
+        life, maxLife: life, color, size: 0.7 + Math.random() * 0.8
       });
     }
   }
@@ -216,7 +221,7 @@ export class ParticleView {
       const size = particle.size * (particle.life / particle.maxLife);
       this.matrix.makeScale(size, size, size).setPosition(particle.x, particle.y, particle.z);
       this.mesh.setMatrixAt(index, this.matrix);
-      this.mesh.setColorAt(index, particle.color);
+      this.mesh.setColorAt(index, this.color.setHex(particle.color));
     });
     this.mesh.count = this.particles.length;
     this.mesh.instanceMatrix.needsUpdate = true;

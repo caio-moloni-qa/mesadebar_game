@@ -102,7 +102,7 @@ export class Game3D {
   }
 
   private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
-    if (this.playerView) this.scene.remove(this.playerView.root);
+    this.playerView?.dispose();
     const { characterId, weaponId } = this.run;
     this.session = new GameSession({
       characterId,
@@ -237,7 +237,9 @@ export class Game3D {
       fps: this.fps.value,
       drawCalls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
-      pixelScale: this.pipeline.layout.pixelScale
+      pixelScale: this.pipeline.layout.pixelScale,
+      geometries: this.renderer.info.memory.geometries,
+      textures: this.renderer.info.memory.textures
     });
     this.choices.update(this.session);
   }

@@ -76,8 +76,9 @@ export interface WeaponHost {
   nearestEnemy(from: Vec2, range: number, exclude?: (enemy: EnemyState) => boolean): EnemyState | null;
   /** Living enemies whose center is within `radius` (+ rangePadding) of `from`. */
   enemiesWithin(from: Vec2, radius: number): EnemyState[];
-  /** Living enemies overlapping a circle (broad phase + exact test) — projectile hits. */
-  enemiesOverlapping(x: number, y: number, radius: number): EnemyState[];
+  /** Living enemies overlapping a circle (broad phase + exact test) — projectile hits. Pass `out` to reuse an
+   *  array on hot paths; never share one `out` between nested calls. */
+  enemiesOverlapping(x: number, y: number, radius: number, out?: EnemyState[]): EnemyState[];
   damageEnemy(enemy: EnemyState, amount: number, weaponId: WeaponConfig['id'], critical?: boolean): void;
   /** Fabri's banana hit side effects (slow stack + chance to drop a peel). */
   onBananaHit(enemy: EnemyState): void;
@@ -90,6 +91,9 @@ export interface WeaponHost {
 export class WeaponSystem {
   readonly weapons: ActiveWeapon[] = [];
   private readonly consumedExecuteTokens = new Set<number>();
+  /** Reused by updateProjectiles' hit test (runs per projectile per step). Nested queries (staff explosion) use
+   *  their own arrays, so this one is never overwritten mid-iteration. */
+  private readonly hitCandidates: EnemyState[] = [];
 
   constructor(private readonly host: WeaponHost) {}
 
@@ -326,7 +330,7 @@ export class WeaponSystem {
       projectile.x += (projectile.velocityX * deltaMs) / 1000;
       projectile.y += (projectile.velocityY * deltaMs) / 1000;
       if (now >= projectile.expiresAt) { spent.push(projectile); return; }
-      for (const enemy of this.host.enemiesOverlapping(projectile.x, projectile.y, projectile.radius)) {
+      for (const enemy of this.host.enemiesOverlapping(projectile.x, projectile.y, projectile.radius, this.hitCandidates)) {
         if (!projectile.claimHit(enemy)) continue;
         if (this.resolveProjectileHit(projectile, enemy)) { spent.push(projectile); return; }
       }

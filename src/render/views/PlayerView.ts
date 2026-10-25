@@ -80,6 +80,17 @@ export class PlayerView {
     this.materials.forEach((material) => material.emissive.setHex(emissive));
   }
 
+  /** Removing the group from the scene frees nothing on the GPU: geometries and materials must be disposed
+   *  explicitly, or every restart / trip to the menu leaks a full hero model. */
+  dispose(): void {
+    this.root.removeFromParent();
+    this.root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      child.geometry.dispose();
+      (Array.isArray(child.material) ? child.material : [child.material]).forEach((material: THREE.Material) => material.dispose());
+    });
+  }
+
   get worldPosition(): THREE.Vector3 {
     return this.position;
   }

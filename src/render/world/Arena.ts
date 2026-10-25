@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WORLD_SIZE } from '../../config/world';
 import { Rng, createRng, floatBetween, intBetween } from '../../core/math';
 import { PALETTE, toonMaterial } from '../materials';

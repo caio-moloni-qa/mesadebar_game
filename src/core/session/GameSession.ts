@@ -102,6 +102,7 @@ export class GameSession implements WeaponHost {
   private moveX = 0;
   private moveY = 0;
   private readonly scratch: EnemyState[] = [];
+  private readonly probe = { x: 0, y: 0, radius: 0 };
 
   constructor(private readonly options: GameSessionOptions) {
     this.rng = createRng(options.seed);
@@ -551,10 +552,16 @@ export class GameSession implements WeaponHost {
     });
   }
 
-  enemiesOverlapping(x: number, y: number, radius: number): EnemyState[] {
+  enemiesOverlapping(x: number, y: number, radius: number, out: EnemyState[] = []): EnemyState[] {
+    this.probe.x = x;
+    this.probe.y = y;
+    this.probe.radius = radius;
     this.scratch.length = 0;
-    const probe = { x, y, radius };
-    return this.enemyHash.queryRadius(probe, radius, this.scratch).filter((enemy) => enemy.alive && circlesOverlap(probe, enemy));
+    out.length = 0;
+    for (const enemy of this.enemyHash.queryRadius(this.probe, radius, this.scratch)) {
+      if (enemy.alive && circlesOverlap(this.probe, enemy)) out.push(enemy);
+    }
+    return out;
   }
 }
 

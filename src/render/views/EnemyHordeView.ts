@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ENEMY_DYING_MS, EnemyState } from '../../core/session/entities';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
 import { Pool } from '../../core/Pool';
