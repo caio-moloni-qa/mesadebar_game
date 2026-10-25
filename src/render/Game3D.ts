@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { ENEMY_CONFIG } from '../config/balance';
-import { CHARACTERS, CharacterId } from '../config/characters';
-import { WEAPONS, WeaponConfig } from '../config/weapons';
+import { CHARACTERS } from '../config/characters';
+import { WEAPONS } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { CameraRig } from './CameraRig';
 import { ChoiceOverlay } from './ChoiceOverlay';
 import { Hud } from './Hud';
 import { PALETTE } from './materials';
 import { PixelPipeline } from './PixelPipeline';
+import { RunChoice, StartMenu } from './StartMenu';
 import { simToWorld } from './space';
 import { CombatEffects } from './vfx/CombatEffects';
 import { EnemyHordeView } from './views/EnemyHordeView';
@@ -19,9 +20,10 @@ import { Arena } from './world/Arena';
 const MAX_FRAME_MS = 250;
 
 export interface Game3DOptions {
-  characterId: CharacterId;
-  startingWeaponId?: WeaponConfig['id'];
-  seed: number;
+  /** Skip the start menu and go straight into this run (test URLs: ?hero=…&weapon=…). */
+  initialRun?: RunChoice;
+  /** Fixed seed for every run (reproducible tests); otherwise each run rolls a new one. */
+  seed?: number;
   stressEnemyCount?: number;
   invincible?: boolean;
   /** Test keys: U random upgrade, I +5 upgrades on every weapon, O add another weapon, T toggle enemy separation. */
@@ -37,6 +39,9 @@ export class Game3D {
   private readonly arena: Arena;
   private readonly hud: Hud;
   private readonly choices: ChoiceOverlay;
+  private readonly menu: StartMenu;
+  private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
+  private inMenu = false;
   private session!: GameSession;
   private playerView!: PlayerView;
   private readonly enemyView = new EnemyHordeView(ENEMY_CONFIG.maxActive);
@@ -60,11 +65,13 @@ export class Game3D {
     container.appendChild(this.renderer.domElement);
     this.pipeline = new PixelPipeline(this.renderer);
     this.scene.background = new THREE.Color(PALETTE.background);
-    this.arena = new Arena(options.seed);
+    this.arena = new Arena(options.seed ?? randomSeed());
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
-    this.hud = new Hud(container, () => this.restart());
+    this.hud = new Hud(container, () => this.restart(), () => this.showMenu());
     this.choices = new ChoiceOverlay(container);
-    this.restart();
+    this.menu = new StartMenu(container, (choice) => this.startRun(choice));
+    if (options.initialRun) this.startRun(options.initialRun);
+    else this.showMenu();
     this.bindInput();
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -73,13 +80,43 @@ export class Game3D {
     this.renderer.setAnimationLoop((time) => this.frame(time));
   }
 
+  startRun(choice: RunChoice): void {
+    this.run = choice;
+    this.inMenu = false;
+    this.menu.hide();
+    this.hud.setVisible(true);
+    this.restart();
+  }
+
+  /** Back to character select. Behind the menu the arena stays on screen with the last hero standing idle in an
+   *  empty, spawn-free session. */
+  showMenu(): void {
+    this.inMenu = true;
+    this.hud.setVisible(false);
+    this.createSession({ skipStartingUpgrades: true, attract: true });
+    this.menu.show();
+  }
+
   private restart(): void {
+    this.createSession({ skipStartingUpgrades: false, attract: false });
+  }
+
+  private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
     if (this.playerView) this.scene.remove(this.playerView.root);
-    const character = CHARACTERS[this.options.characterId];
-    const startingWeaponId = this.options.startingWeaponId ?? character.preferredWeaponId ?? 'staff';
-    this.session = new GameSession({ characterId: this.options.characterId, startingWeaponId, seed: this.options.seed, stressEnemyCount: this.options.stressEnemyCount });
+    const { characterId, weaponId } = this.run;
+    this.session = new GameSession({
+      characterId,
+      startingWeaponId: weaponId,
+      seed: this.options.seed ?? randomSeed(),
+      stressEnemyCount: attract ? undefined : this.options.stressEnemyCount,
+      skipStartingUpgrades
+    });
+    if (attract) {
+      this.session.skeletonSpawnEnabled = false;
+      this.session.variantSpawnEnabled = false;
+    }
     this.session.player.invincible = Boolean(this.options.invincible);
-    this.playerView = new PlayerView(character, startingWeaponId);
+    this.playerView = new PlayerView(CHARACTERS[characterId], weaponId);
     this.scene.add(this.playerView.root);
     this.accumulator = 0;
     this.bindSessionEffects();
@@ -118,10 +155,12 @@ export class Game3D {
 
   private bindInput(): void {
     window.addEventListener('keydown', (event) => {
+      if (this.inMenu) return;
       this.keys.add(event.code);
       // ESC stays blocked while a choice screen is open, like the Phaser build.
       if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
+      if (event.code === 'KeyM' && (this.session.over || this.session.paused)) this.showMenu();
       if (this.options.debug) this.debugKey(event.code);
     });
     window.addEventListener('keyup', (event) => this.keys.delete(event.code));
@@ -140,6 +179,10 @@ export class Game3D {
   }
 
   private readMoveInput(): void {
+    if (this.inMenu) {
+      this.session.setMoveInput(0, 0);
+      return;
+    }
     const right = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
     const up = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
     const ground = this.cameraRig.screenToGround(right, up);
@@ -198,4 +241,8 @@ export class Game3D {
     });
     this.choices.update(this.session);
   }
+}
+
+function randomSeed(): number {
+  return Math.floor(Math.random() * 2 ** 31);
 }
