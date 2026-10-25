@@ -3,3 +3,7 @@ dist/
 .env
 .env.local
 *.log
+
+# Raw image-to-3D exports (tens of MB, re-downloadable from Tripo/Meshy); the processed GLB in src/assets/3d is what ships.
+art-source/3d/**/tripo/
+art-source/3d/**/meshy/
