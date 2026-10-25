@@ -4,7 +4,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createHeroModel } from './heroes';
 import { registerHeroMesh, unregisterHeroMesh } from './heroMeshes';
-import { FABRI_HIP_HEIGHT, FABRI_JOINTS, rigImportedMesh } from './importedRig';
+import { BARBARIAN_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, JointSpec, rigImportedMesh } from './importedRig';
+import barbarianGlb from '../../assets/3d/characters/barbarian.glb?inline';
 import fabriGlb from '../../assets/3d/characters/fabri.glb?inline';
 import { box, mergeParts, part } from './parts';
 
@@ -97,15 +98,19 @@ describe('imported hero model', () => {
     expect(model.clips.idle.tracks.find((track) => track.name === 'hips.position')!.values[1]).toBeCloseTo(0.82);
   });
 
-  it('rigs the shipped fabri.glb: hands follow the arms and feet the legs', async () => {
-    const file = await (await fetch(fabriGlb)).arrayBuffer();
+  // [file, joints, hand x, hand y]: a hand point and a foot point that must follow the limbs, the crown the head.
+  it.each([
+    ['fabri.glb', fabriGlb, FABRI_JOINTS, 0.48, 0.76],
+    ['barbarian.glb', barbarianGlb, BARBARIAN_JOINTS, 0.54, 0.84]
+  ] as [string, string, JointSpec[], number, number][])('rigs the shipped %s: hands follow the arms and feet the legs', async (_name, url, joints, handX, handY) => {
+    const file = await (await fetch(url)).arrayBuffer();
     const gltf = await new GLTFLoader().parseAsync(file, '');
     let geometry: THREE.BufferGeometry | undefined;
     gltf.scene.traverse((object) => { if (!geometry && object instanceof THREE.Mesh) geometry = object.geometry; });
-    const model = rigImportedMesh(geometry!, FABRI_JOINTS, new THREE.MeshBasicMaterial());
-    expect(['handL', 'foreArmL']).toContain(dominantBone(model.mesh, new THREE.Vector3(0.48, 0.76, 0)));
-    expect(['handR', 'foreArmR']).toContain(dominantBone(model.mesh, new THREE.Vector3(-0.48, 0.76, 0)));
-    expect(['footL', 'shinL']).toContain(dominantBone(model.mesh, new THREE.Vector3(0.3, 0.03, 0.1)));
+    const model = rigImportedMesh(geometry!, joints, new THREE.MeshBasicMaterial());
+    expect(['handL', 'foreArmL']).toContain(dominantBone(model.mesh, new THREE.Vector3(handX, handY, 0)));
+    expect(['handR', 'foreArmR']).toContain(dominantBone(model.mesh, new THREE.Vector3(-handX, handY, 0)));
+    expect(['footL', 'shinL']).toContain(dominantBone(model.mesh, new THREE.Vector3(0.28, 0.03, 0.1)));
     expect(dominantBone(model.mesh, new THREE.Vector3(0, 1.9, 0))).toBe('head');
   });
 });

@@ -5,6 +5,7 @@ import { CharacterId } from '../../config/characters';
 /** Imported hero meshes (art-source/3d → tools/asset-pipeline → src/assets/3d/characters). One static URL literal
  *  per asset so Vite rewrites it with the base path. Heroes without an entry keep the procedural model. */
 const HERO_MESH_URLS: Partial<Record<CharacterId, string>> = {
+  barbarian: new URL('../../assets/3d/characters/barbarian.glb', import.meta.url).href,
   fabri: new URL('../../assets/3d/characters/fabri.glb', import.meta.url).href
 };
 

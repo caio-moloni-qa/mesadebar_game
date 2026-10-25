@@ -103,7 +103,7 @@ export const FABRI_JOINTS: JointSpec[] = [
   { name: 'root', at: [0, 0, 0] },
   { name: 'hips', parent: 'root', at: [0, 0.78, 0], radius: 0.22, minY: 0.55 },
   { name: 'spine', parent: 'hips', at: [0, 0.98, 0], radius: 0.26, minY: 0.8 },
-  { name: 'chest', parent: 'spine', at: [0, 1.22, 0], radius: 0.24, minY: 1.0 },
+  { name: 'chest', parent: 'spine', at: [0, 1.22, 0], radius: 0.24, minY: 1.0, maxY: 1.56 },
   { name: 'head', parent: 'chest', at: [0, 1.48, 0], tip: [0, 1.9, 0], radius: 0.18, minY: 1.4 },
   { name: 'upperArmL', parent: 'chest', at: [0.24, 1.37, -0.02], radius: 0.07, side: 'L', minAbsX: 0.18, rest: [0, 0, 10] },
   { name: 'foreArmL', parent: 'upperArmL', at: [0.36, 1.12, -0.02], radius: 0.07, side: 'L', minAbsX: 0.2 },
@@ -123,3 +123,27 @@ export const FABRI_JOINTS: JointSpec[] = [
 
 /** Hip height the clip set is authored against (its hips.position track) for the imported Fabri. */
 export const FABRI_HIP_HEIGHT = 0.78;
+
+/** The Barbarian's Tripo mesh (src/assets/3d/characters/barbarian.glb, art-source/3d/barbarian/): a broad A-pose
+ *  figure with a fur mantle over the shoulders, so the chest capsule is wider and the arms start further out. */
+export const BARBARIAN_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.85, 0], radius: 0.24, minY: 0.6 },
+  { name: 'spine', parent: 'hips', at: [0, 1.05, 0], radius: 0.26, minY: 0.85 },
+  { name: 'chest', parent: 'spine', at: [0, 1.3, 0], radius: 0.3, minY: 1.1, maxY: 1.72 },
+  { name: 'head', parent: 'chest', at: [0, 1.65, 0], tip: [0, 1.95, 0], radius: 0.16, minY: 1.6 },
+  { name: 'upperArmL', parent: 'chest', at: [0.33, 1.45, -0.02], radius: 0.09, side: 'L', minAbsX: 0.26, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.47, 1.18, 0], radius: 0.08, side: 'L', minAbsX: 0.3 },
+  { name: 'handL', parent: 'foreArmL', at: [0.53, 0.92, 0.06], tip: [0.55, 0.79, 0.07], radius: 0.07, side: 'L', minAbsX: 0.4 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.33, 1.45, -0.02], radius: 0.09, side: 'R', minAbsX: 0.26, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.47, 1.18, 0], radius: 0.08, side: 'R', minAbsX: 0.3 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.53, 0.92, 0.06], tip: [-0.55, 0.79, 0.07], radius: 0.07, side: 'R', minAbsX: 0.4 },
+  { name: 'thighL', parent: 'hips', at: [0.14, 0.8, -0.02], radius: 0.12, side: 'L', maxY: 0.95 },
+  { name: 'shinL', parent: 'thighL', at: [0.19, 0.45, -0.03], radius: 0.1, side: 'L', maxY: 0.65 },
+  { name: 'footL', parent: 'shinL', at: [0.23, 0.15, -0.03], tip: [0.27, 0.03, 0.16], radius: 0.08, side: 'L', maxY: 0.3 },
+  { name: 'thighR', parent: 'hips', at: [-0.14, 0.8, -0.02], radius: 0.12, side: 'R', maxY: 0.95 },
+  { name: 'shinR', parent: 'thighR', at: [-0.19, 0.45, -0.03], radius: 0.1, side: 'R', maxY: 0.65 },
+  { name: 'footR', parent: 'shinR', at: [-0.23, 0.15, -0.03], tip: [-0.27, 0.03, 0.16], radius: 0.08, side: 'R', maxY: 0.3 }
+];
+
+export const BARBARIAN_HIP_HEIGHT = 0.85;
