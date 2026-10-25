@@ -10,8 +10,13 @@ export class Hud {
   private readonly healthFill: HTMLDivElement;
   private readonly xpFill: HTMLDivElement;
   private readonly last = new Map<string, string>();
+  private readonly bannerBox: HTMLDivElement;
 
-  constructor(container: HTMLElement, onRestart: () => void) {
+  setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
+  }
+
+  constructor(container: HTMLElement, onRestart: () => void, onMenu: () => void) {
     this.root = document.createElement('div');
     this.root.className = 'hud';
     this.root.innerHTML = `
@@ -23,14 +28,16 @@ export class Hud {
       </div>
       <div class="hud-top-right"><span data-field="time"></span><span data-field="kills"></span></div>
       <div class="hud-stats" data-field="stats"></div>
-      <div class="hud-banner" data-field="banner" hidden></div>
+      <div class="hud-banner" hidden><p data-field="banner"></p><div class="hud-banner-actions"><button type="button" data-action="restart">Recomeçar (R)</button><button type="button" data-action="menu">Menu (M)</button></div></div>
     `;
     container.appendChild(this.root);
     const field = (name: string) => this.root.querySelector<HTMLElement>(`[data-field="${name}"]`)!;
     this.fields = { health: field('health'), level: field('level'), time: field('time'), kills: field('kills'), currency: field('currency'), weapons: field('weapons'), stats: field('stats'), banner: field('banner') };
     this.healthFill = this.root.querySelector<HTMLDivElement>('.hud-health .hud-fill')!;
     this.xpFill = this.root.querySelector<HTMLDivElement>('.hud-xp .hud-fill')!;
-    this.fields.banner.addEventListener('click', onRestart);
+    this.bannerBox = this.root.querySelector<HTMLDivElement>('.hud-banner')!;
+    this.root.querySelector('[data-action="restart"]')!.addEventListener('click', onRestart);
+    this.root.querySelector('[data-action="menu"]')!.addEventListener('click', onMenu);
   }
 
   update(session: GameSession, stats: RenderStats): void {
@@ -45,9 +52,10 @@ export class Hud {
     this.set('kills', `☠ ${session.kills}`);
     this.set('weapons', session.weapons.weapons.map((weapon) => `${weapon.config.name} +${weapon.upgradeCount}`).join(' · '));
     this.set('stats', `${stats.fps} fps · ${stats.drawCalls} draws · ${(stats.triangles / 1000).toFixed(0)}k tris · ${session.enemies.activeCount} inimigos · ${stats.pixelScale}×`);
-    const banner = session.over ? 'DERROTA — clique ou R para recomeçar' : session.paused ? 'PAUSADO — ESC para continuar' : '';
+    const banner = session.over ? 'DERROTA' : session.paused ? 'PAUSADO — ESC para continuar' : '';
     this.set('banner', banner);
-    this.fields.banner.hidden = banner === '';
+    // Restart / menu buttons live inside the box, so they show on game over and on the pause screen.
+    this.bannerBox.hidden = banner === '';
   }
 
   private set(name: keyof Hud['fields'], text: string): void {

@@ -31,3 +31,39 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .choice-card.rare { border-color: #b98cff; }
 .choice-card.weapon { background: #6b5214; border-color: #ffd868; }
 .hud-weapons { font-size: 14px; opacity: 0.9; }
+
+.start-menu { position: absolute; inset: 0; z-index: 10; overflow-y: auto; padding: 24px 16px;
+  background: radial-gradient(ellipse at center, rgba(13, 7, 4, 0.55), rgba(13, 7, 4, 0.9)); }
+.start-menu[hidden] { display: none; }
+.start-step { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+.start-step h1 { margin: 0; color: #ffe29a; font-size: clamp(28px, 5vw, 48px); font-weight: normal; text-align: center; }
+.start-subtitle { margin: 0; text-align: center; font-size: 18px; opacity: 0.85; }
+.hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.hero-card { display: grid; grid-template-rows: auto 1fr; padding: 0; overflow: hidden; cursor: pointer; text-align: left;
+  font: inherit; color: #f7f1dc; background: #2b1c10; border: 2px solid var(--accent); }
+.hero-card:hover, .hero-card:focus-visible { outline: 3px solid #ffe29a; outline-offset: -3px; }
+.hero-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: 50% 12%; display: block; background: var(--accent); }
+.hero-info { padding: 12px 14px 14px; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 55%, #2b1c10), #2b1c10 70%); }
+.hero-info h2 { margin: 0 0 4px; color: #ffe29a; font-size: 24px; font-weight: normal; }
+.hero-info p { margin: 0 0 6px; font-size: 14px; line-height: 1.35; }
+.hero-stats { opacity: 0.85; font-size: 13px !important; }
+.hero-info ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.35; }
+.weapon-step { max-width: 720px; }
+.weapon-header { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.weapon-header img { width: 96px; height: 96px; object-fit: cover; object-position: 50% 10%; border: 2px solid var(--accent); }
+.weapon-header h1 { text-align: left; }
+.weapon-header .start-subtitle { text-align: left; }
+.weapon-list { display: grid; gap: 10px; }
+.weapon-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer;
+  font: inherit; color: #f7f1dc; text-align: left; background: #3f2a17; border: 2px solid #6b5a3e; }
+.weapon-row:hover, .weapon-row:focus-visible { background: #5a3d22; border-color: #c9963f; outline: none; }
+.weapon-row.preferred { border-color: #ffe08a; background: color-mix(in srgb, var(--accent) 45%, #3f2a17); }
+.weapon-row img { width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated; }
+.weapon-row strong { display: block; color: #ffe29a; font-size: 18px; font-weight: normal; }
+.weapon-row span { font-size: 13px; line-height: 1.35; opacity: 0.9; }
+.weapon-row em { grid-column: 2; font-style: normal; font-size: 13px; color: #ffe08a; }
+.start-back { justify-self: center; padding: 8px 18px; cursor: pointer; font: inherit; color: #f7f1dc; background: #7a4a20; border: none; }
+.start-back:hover { background: #9c6530; }
+.hud[hidden] { display: none; }
+.hud-banner button { margin: 12px 6px 0; padding: 8px 18px; cursor: pointer; font: inherit; font-size: 18px; color: #f7f1dc; background: #7a4a20; border: none; }
+.hud-banner button:hover { background: #9c6530; }
