@@ -4,6 +4,7 @@ import { ENEMY_DYING_MS, EnemyState } from '../../core/session/entities';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
 import { Pool } from '../../core/Pool';
 import { PALETTE, toonMaterial } from '../materials';
+import { groundSector } from '../vfx/CombatEffects';
 import { WORLD_SCALE, yawFromSimDirection } from '../space';
 
 const HIT_FLASH_MS = 110;
@@ -23,7 +24,10 @@ const VARIANT_TINT: Record<EnemyVariantId, number> = {
 export class EnemyHordeView {
   readonly root = new THREE.Group();
   readonly blobShadows: THREE.InstancedMesh;
+  /** Aura Podre under Super Esqueletos (and the boss later): dark grey/black disc, like the 2D build's. */
+  readonly rottenAuras: THREE.InstancedMesh;
   private readonly mesh: THREE.InstancedMesh;
+  private readonly bananaTint = new THREE.Color(0xf2d33b);
   private readonly matrix = new THREE.Matrix4();
   private readonly position = new THREE.Vector3();
   private readonly rotation = new THREE.Quaternion();
@@ -41,11 +45,15 @@ export class EnemyHordeView {
     this.blobShadows = new THREE.InstancedMesh(blob, new THREE.MeshBasicMaterial({ color: PALETTE.blobShadow, transparent: true, opacity: 0.45, depthWrite: false }), capacity);
     this.blobShadows.frustumCulled = false;
     this.blobShadows.count = 0;
-    this.root.add(this.mesh, this.blobShadows);
+    this.rottenAuras = new THREE.InstancedMesh(groundSector(Math.PI * 2, 0, 1, 24), new THREE.MeshBasicMaterial({ color: 0x1c1a1e, transparent: true, opacity: 0.4, depthWrite: false }), capacity);
+    this.rottenAuras.frustumCulled = false;
+    this.rottenAuras.count = 0;
+    this.root.add(this.mesh, this.blobShadows, this.rottenAuras);
   }
 
   update(enemies: Pool<EnemyState>, alpha: number, nowMs: number, deltaSeconds: number): void {
     let index = 0;
+    let auraIndex = 0;
     enemies.forEachActive((enemy) => {
       const x = (enemy.prevX + (enemy.x - enemy.prevX) * alpha) * WORLD_SCALE;
       const z = (enemy.prevY + (enemy.y - enemy.prevY) * alpha) * WORLD_SCALE;
@@ -57,7 +65,9 @@ export class EnemyHordeView {
 
       const previousYaw = this.yaws.get(enemy) ?? yawFromSimDirection(enemy.facingX, enemy.facingY);
       const targetYaw = yawFromSimDirection(enemy.facingX, enemy.facingY);
-      const yaw = previousYaw + Math.atan2(Math.sin(targetYaw - previousYaw), Math.cos(targetYaw - previousYaw)) * Math.min(1, deltaSeconds * 10);
+      const slipping = nowMs < enemy.slipUntil;
+      // Slipping on a banana peel: spin in place instead of turning towards the player.
+      const yaw = slipping ? previousYaw + deltaSeconds * 14 : previousYaw + Math.atan2(Math.sin(targetYaw - previousYaw), Math.cos(targetYaw - previousYaw)) * Math.min(1, deltaSeconds * 10);
       this.yaws.set(enemy, yaw);
 
       this.position.set(x, bob * size - dyingProgress * 1.2 * size, z);
@@ -68,6 +78,7 @@ export class EnemyHordeView {
       this.mesh.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));
 
       this.color.setHex(VARIANT_TINT[enemy.variantId]);
+      if (enemy.slowStackPercent > 0) this.color.lerp(this.bananaTint, Math.min(0.8, enemy.slowStackPercent * 1.6));
       if (nowMs - enemy.lastHitAt < HIT_FLASH_MS) this.color.multiplyScalar(3.2);
       this.mesh.setColorAt(index, this.color);
 
@@ -75,10 +86,18 @@ export class EnemyHordeView {
       this.rotation.identity();
       this.scale.setScalar(size * (1 - dyingProgress) * (hovering ? 0.8 : 1));
       this.blobShadows.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));
+      if (enemy.hasRottenAura && enemy.alive) {
+        this.position.set(x, 0.04, z);
+        this.scale.setScalar(enemy.rottenAuraRadius * WORLD_SCALE * (1 + Math.sin(nowMs / 300) * 0.04));
+        this.rottenAuras.setMatrixAt(auraIndex, this.matrix.compose(this.position, this.rotation, this.scale));
+        auraIndex += 1;
+      }
       index += 1;
     });
     this.mesh.count = index;
     this.blobShadows.count = index;
+    this.rottenAuras.count = auraIndex;
+    this.rottenAuras.instanceMatrix.needsUpdate = true;
     this.mesh.instanceMatrix.needsUpdate = true;
     if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
     this.blobShadows.instanceMatrix.needsUpdate = true;

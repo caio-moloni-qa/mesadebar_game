@@ -6,7 +6,7 @@ export interface RenderStats { fps: number; drawCalls: number; triangles: number
  *  actually changes, so it costs nothing on frames where nothing moved. */
 export class Hud {
   private readonly root: HTMLDivElement;
-  private readonly fields: Record<'health' | 'level' | 'time' | 'kills' | 'currency' | 'stats' | 'banner', HTMLElement>;
+  private readonly fields: Record<'health' | 'level' | 'time' | 'kills' | 'currency' | 'weapons' | 'stats' | 'banner', HTMLElement>;
   private readonly healthFill: HTMLDivElement;
   private readonly xpFill: HTMLDivElement;
   private readonly last = new Map<string, string>();
@@ -19,6 +19,7 @@ export class Hud {
         <div class="hud-bar hud-health"><div class="hud-fill"></div><span data-field="health"></span></div>
         <div class="hud-bar hud-xp"><div class="hud-fill"></div></div>
         <div class="hud-line"><span data-field="level"></span> · <span data-field="currency"></span></div>
+        <div class="hud-weapons" data-field="weapons"></div>
       </div>
       <div class="hud-top-right"><span data-field="time"></span><span data-field="kills"></span></div>
       <div class="hud-stats" data-field="stats"></div>
@@ -26,7 +27,7 @@ export class Hud {
     `;
     container.appendChild(this.root);
     const field = (name: string) => this.root.querySelector<HTMLElement>(`[data-field="${name}"]`)!;
-    this.fields = { health: field('health'), level: field('level'), time: field('time'), kills: field('kills'), currency: field('currency'), stats: field('stats'), banner: field('banner') };
+    this.fields = { health: field('health'), level: field('level'), time: field('time'), kills: field('kills'), currency: field('currency'), weapons: field('weapons'), stats: field('stats'), banner: field('banner') };
     this.healthFill = this.root.querySelector<HTMLDivElement>('.hud-health .hud-fill')!;
     this.xpFill = this.root.querySelector<HTMLDivElement>('.hud-xp .hud-fill')!;
     this.fields.banner.addEventListener('click', onRestart);
@@ -42,6 +43,7 @@ export class Hud {
     this.set('currency', `◆ ${session.currency}`);
     this.set('time', `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
     this.set('kills', `☠ ${session.kills}`);
+    this.set('weapons', session.weapons.weapons.map((weapon) => `${weapon.config.name} +${weapon.upgradeCount}`).join(' · '));
     this.set('stats', `${stats.fps} fps · ${stats.drawCalls} draws · ${(stats.triangles / 1000).toFixed(0)}k tris · ${session.enemies.activeCount} inimigos · ${stats.pixelScale}×`);
     const banner = session.over ? 'DERROTA — clique ou R para recomeçar' : session.paused ? 'PAUSADO — ESC para continuar' : '';
     this.set('banner', banner);
