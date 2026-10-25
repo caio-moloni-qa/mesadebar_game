@@ -56,6 +56,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
   display: grid; align-content: center; justify-items: center; gap: calc(22 * var(--ui-unit)); }
 .run-pause h2 { margin: 0 0 calc(18 * var(--ui-unit)); color: #3a2510; font-size: calc(44 * var(--ui-unit)); font-weight: normal; }
 .run-end { background: rgba(13, 7, 4, 0.88); gap: calc(18 * var(--ui-unit)); }
+.run-end h2.victory { color: #ffe07a; }
 .run-end h2 { margin: 0; color: #ef7780; font-size: calc(52 * var(--ui-unit)); font-weight: normal; }
 .run-end-stats { margin: calc(24 * var(--ui-unit)) 0 calc(60 * var(--ui-unit)); white-space: pre-line; text-align: center; color: #f1f1f4;
   font-size: calc(24 * var(--ui-unit)); line-height: 1.6; }
@@ -135,3 +136,32 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .joystick-knob { width: calc(74 * var(--ui-unit)); height: calc(74 * var(--ui-unit)); border-radius: 50%; box-sizing: border-box; pointer-events: none;
   background: rgba(90, 61, 34, 0.82); border: calc(3 * var(--ui-unit)) solid rgba(224, 180, 92, 0.8); }
 @media (pointer: coarse) { :root { --touch-scale: 1.4; } .joystick { transform-origin: bottom left; transform: scale(var(--touch-scale)); } }
+
+/* Boss fight (Phaser: BossSystem warning text, countdown, arrows; GameScene portal prompt). */
+.boss-ui { position: absolute; inset: 0; pointer-events: none; z-index: 2; font-family: MedievalSharp, Georgia, serif; }
+.boss-ui[hidden] { display: none; }
+.boss-banner { position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%); width: min(90vw, calc(900 * var(--ui-unit)));
+  text-align: center; color: #d8ffd0; font-size: calc(34 * var(--ui-unit)); animation: boss-banner 840ms ease-in-out infinite alternate;
+  text-shadow: 0 0 calc(3 * var(--ui-unit)) #101510, calc(3 * var(--ui-unit)) 0 #101510, calc(-3 * var(--ui-unit)) 0 #101510, 0 calc(3 * var(--ui-unit)) #101510, 0 calc(-3 * var(--ui-unit)) #101510; }
+.boss-banner[hidden] { display: none; }
+@keyframes boss-banner { from { opacity: 1; } to { opacity: 0.45; } }
+.boss-bars { position: absolute; top: calc(70 * var(--ui-unit)); left: 50%; transform: translateX(-50%); display: grid; gap: calc(10 * var(--ui-unit));
+  width: calc(460 * var(--ui-unit)); }
+.boss-bar { display: grid; gap: calc(4 * var(--ui-unit)); }
+.boss-countdown { margin: 0 0 calc(4 * var(--ui-unit)); text-align: center; color: #ffffff; font-size: calc(24 * var(--ui-unit));
+  text-shadow: 0 0 calc(3 * var(--ui-unit)) #101510, calc(2 * var(--ui-unit)) calc(2 * var(--ui-unit)) #101510; }
+.boss-health, .boss-shield { position: relative; height: calc(16 * var(--ui-unit)); background: rgba(6, 16, 9, 0.85); border: calc(2 * var(--ui-unit)) solid #c9963f; }
+.boss-health > div { height: 100%; background: linear-gradient(#e0545f, #a8242f); }
+.boss-health span { position: absolute; inset: 0; display: grid; place-items: center; color: #f7f1dc; font-size: calc(12 * var(--ui-unit)); text-shadow: 0 1px 0 #14101c; }
+.boss-shield { height: calc(8 * var(--ui-unit)); border-color: #6bd86b; }
+.boss-shield > div { height: 100%; background: #65ff5a; }
+.portal-prompt { position: absolute; top: 0; left: 0; max-width: min(92vw, calc(760 * var(--ui-unit))); padding: calc(6 * var(--ui-unit)) calc(12 * var(--ui-unit));
+  pointer-events: auto; cursor: pointer; border: none; background: rgba(16, 16, 21, 0.6); color: #ffe29a; font: inherit; font-size: calc(16 * var(--ui-unit));
+  text-align: center; text-shadow: 0 1px 0 #101015; }
+.portal-prompt[hidden] { display: none; }
+.offscreen-arrow { position: absolute; top: 0; left: 0; width: calc(44 * var(--ui-unit)); height: calc(28 * var(--ui-unit));
+  background: #ffffff; clip-path: polygon(100% 50%, 30% 0, 40% 35%, 0 35%, 0 65%, 40% 65%, 30% 100%);
+  filter: drop-shadow(0 0 calc(2 * var(--ui-unit)) #111); }
+.offscreen-arrow[hidden] { display: none; }
+.offscreen-arrow[data-kind="end"] { background: #9fb4ff; }
+.offscreen-arrow[data-kind="continue"] { background: #7dffa0; }

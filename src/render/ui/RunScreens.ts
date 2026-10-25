@@ -7,10 +7,10 @@ export interface RunScreenActions {
   menu: () => void;
 }
 
-type Screen = 'none' | 'pause' | 'defeat';
+type Screen = 'none' | 'pause' | 'defeat' | 'victory';
 
 /** Pause and end-of-run modals (Phaser: GameScene.showPauseScreen / finish). Pause: parchment scroll with dark ink,
- *  CONTINUAR / VOLTAR AO MENU. End: dimmed screen, DERROTA, the run's numbers, REINICIAR / VOLTAR AO MENU. Keyboard
+ *  CONTINUAR / VOLTAR AO MENU. End: dimmed screen, DERROTA or VITÓRIA!, the run's numbers, REINICIAR / VOLTAR AO MENU. Keyboard
  *  shortcuts stay in Game3D (ESC/P, R, M); the buttons are for mouse and touch. */
 export class RunScreens {
   private readonly pause: HTMLDivElement;
@@ -32,7 +32,7 @@ export class RunScreens {
     this.end.className = 'run-screen run-end';
     this.end.hidden = true;
     this.end.innerHTML = `
-      <h2>DERROTA</h2>
+      <h2></h2>
       <p class="run-end-stats"></p>
       <button type="button" class="ui-button" data-action="restart">REINICIAR</button>
       <button type="button" class="ui-button" data-action="menu">VOLTAR AO MENU</button>`;
@@ -46,12 +46,15 @@ export class RunScreens {
 
   /** Shows whichever screen the session's state calls for; cheap to call every frame. */
   update(session: GameSession, inMenu: boolean): void {
-    const screen: Screen = inMenu ? 'none' : session.over ? 'defeat' : session.paused ? 'pause' : 'none';
+    const screen: Screen = inMenu ? 'none' : session.over ? (session.victory ? 'victory' : 'defeat') : session.paused ? 'pause' : 'none';
     if (screen === this.shown) return;
     this.shown = screen;
     this.pause.hidden = screen !== 'pause';
-    this.end.hidden = screen !== 'defeat';
-    if (screen === 'defeat') {
+    this.end.hidden = screen !== 'defeat' && screen !== 'victory';
+    if (screen === 'defeat' || screen === 'victory') {
+      const title = this.end.querySelector('h2')!;
+      title.textContent = screen === 'victory' ? 'VITÓRIA!' : 'DERROTA';
+      title.classList.toggle('victory', screen === 'victory');
       this.endStats.textContent = `Tempo sobrevivido: ${Math.floor(session.elapsedMs / 1000)}s\nNível alcançado: ${session.level}\nEliminações: ${session.kills}`;
       this.end.querySelector<HTMLButtonElement>('[data-action="restart"]')!.focus();
     }
