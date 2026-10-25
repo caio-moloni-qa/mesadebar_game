@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WEAPONS, WeaponConfig } from '../../config/weapons';
-import { humanoidClips } from './clips';
+import { CLIP_SAMPLE_RATE, humanoidClips, smoothCurve } from './clips';
 import { createEnemyModels } from './enemies';
 import { createHeroModel } from './heroes';
 import { box, part } from './parts';
@@ -47,6 +47,31 @@ describe('humanoid clips', () => {
   it('makes one-shot actions additive and keeps locomotion/death normal', () => {
     (['swing', 'cast', 'throw', 'pulse', 'hit'] as const).forEach((name) => expect(clips[name].blendMode).toBe(THREE.AdditiveAnimationBlendMode));
     (['idle', 'run', 'death'] as const).forEach((name) => expect(clips[name].blendMode).toBe(THREE.NormalAnimationBlendMode));
+  });
+});
+
+describe('smoothCurve', () => {
+  const times = [0, 0.2, 0.5, 0.6];
+  const values: [number, number, number][] = [[0, 0, 0], [10, -5, 2], [-20, 4, 0], [0, 0, 0]];
+  const slope = (curve: (t: number) => number[], t: number) => (curve(t + 1e-4)[0] - curve(t - 1e-4)[0]) / 2e-4;
+
+  it('passes through every key', () => {
+    const curve = smoothCurve(times, values, false);
+    times.forEach((t, i) => curve(t).forEach((v, k) => expect(v).toBeCloseTo(values[i][k], 6)));
+  });
+
+  it('eases a one-shot in and out, and keeps a loop seam smooth', () => {
+    const once = smoothCurve(times, values, false);
+    expect(Math.abs(slope(once, 1e-4))).toBeLessThan(5);
+    expect(Math.abs(slope(once, 0.6 - 1e-4))).toBeLessThan(5);
+    const loop = smoothCurve(times, values, true);
+    expect(Math.abs(slope(loop, 1e-4) - slope(loop, 0.6 - 1e-4))).toBeLessThan(2);
+    expect(Math.abs(slope(loop, 1e-4))).toBeGreaterThan(50);
+  });
+
+  it('bakes clips densely enough that linear quaternion steps read as curves', () => {
+    const run = humanoidClips(0.82).run;
+    run.tracks.forEach((track) => expect(track.times.length).toBe(Math.round(run.duration * CLIP_SAMPLE_RATE) + 1));
   });
 });
 
