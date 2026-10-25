@@ -82,7 +82,10 @@ export class HeroView {
     if (next === this.locomotion || this.dead) return;
     const from = this.actions[this.locomotion];
     const to = this.actions[next];
-    to.setEffectiveWeight(1);
+    // A finished fade-out leaves an action with enabled = false, and a disabled action contributes weight 0 no
+    // matter what setEffectiveWeight says — so after the first idle→run→idle the next run never came back and the
+    // legs froze. reset() re-enables it (and restarts the cycle) before fading it back in.
+    to.reset().setEffectiveWeight(1).play();
     from.crossFadeTo(to, LOCOMOTION_FADE, false);
     this.locomotion = next;
   }
