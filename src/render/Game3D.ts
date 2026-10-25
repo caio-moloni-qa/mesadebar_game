@@ -173,7 +173,7 @@ export class Game3D {
     }
     this.playerView = new HeroView(characterId, weaponId);
     this.heldKey = weaponId;
-    this.scene.add(this.playerView.root);
+    this.scene.add(this.playerView.root, this.playerView.effects);
     this.accumulator = 0;
     this.bindSessionEffects();
   }
@@ -371,7 +371,7 @@ export class Game3D {
 
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
-    this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset, [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions], [this.playerView.root]);
+    this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset, [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions, this.playerView.effects], [this.playerView.root]);
 
     this.fps.frames += 1;
     if (now - this.fps.since >= 500) {
