@@ -40,6 +40,17 @@ export function envelopeLayout(width: number, height: number): PipelineLayout {
   };
 }
 
+/** Where a point in the camera's clip space (NDC, -1..1) lands on the canvas, in device pixels from the top-left —
+ *  the inverse of the composite's texel lookup (padding, sub-texel shift, whole-number upscale). DOM overlays
+ *  (floating combat text) use it to sit exactly on the pixelated image. */
+export function ndcToCanvas(ndcX: number, ndcY: number, layout: PipelineLayout, canvasHeight: number, subTexelOffset: { x: number; y: number }): { x: number; y: number } {
+  const texelX = (ndcX * 0.5 + 0.5) * (layout.internalWidth + INTERNAL_PADDING * 2);
+  const texelY = (ndcY * 0.5 + 0.5) * (layout.internalHeight + INTERNAL_PADDING * 2);
+  const x = (texelX - INTERNAL_PADDING - subTexelOffset.x) * layout.pixelScale + layout.originX;
+  const fromBottom = (texelY - INTERNAL_PADDING - subTexelOffset.y) * layout.pixelScale + layout.originY;
+  return { x, y: canvasHeight - fromBottom };
+}
+
 const compositeVertex = /* glsl */ `
   void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
 `;

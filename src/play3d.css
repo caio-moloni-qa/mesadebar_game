@@ -2,7 +2,7 @@
 
 html, body, #app { width: 100%; height: 100%; margin: 0; }
 body { overflow: hidden; background: #0d0b14; color: #f7f1dc; font-family: MedievalSharp, Georgia, serif; }
-#app { position: relative; }
+#app { position: relative; --ui-unit: min(calc(100vw / 1280), calc(100vh / 720)); }
 canvas { display: block; width: 100%; height: 100%; touch-action: none; image-rendering: pixelated; }
 
 .hud { position: absolute; inset: 0; pointer-events: none; text-shadow: 0 2px 0 #14101c, 0 0 4px #14101c; }
@@ -67,3 +67,9 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; image-re
 .hud[hidden] { display: none; }
 .hud-banner button { margin: 12px 6px 0; padding: 8px 18px; cursor: pointer; font: inherit; font-size: 18px; color: #f7f1dc; background: #7a4a20; border: none; }
 .hud-banner button:hover { background: #9c6530; }
+
+/* Floating combat text: MedievalSharp with the Phaser build's dark-brown 4 px stroke (8-way shadow). */
+.floating-texts { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.floating-texts span { position: absolute; top: 0; left: 0; white-space: nowrap; will-change: transform, opacity;
+  font-family: MedievalSharp, Georgia, serif; line-height: 1;
+  text-shadow: 2px 0 #321b00, -2px 0 #321b00, 0 2px #321b00, 0 -2px #321b00, 2px 2px #321b00, -2px 2px #321b00, 2px -2px #321b00, -2px -2px #321b00; }

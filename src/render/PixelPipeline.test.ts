@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INTERNAL_HEIGHT, MAX_INTERNAL_WIDTH, envelopeLayout } from './PixelPipeline';
+import { MAX_INTERNAL_HEIGHT, MAX_INTERNAL_WIDTH, envelopeLayout, ndcToCanvas } from './PixelPipeline';
 
 describe('envelopeLayout', () => {
   it.each([
@@ -26,5 +26,25 @@ describe('envelopeLayout', () => {
 
   it('fills a browser-chrome-sized 1080p window at 3× instead of letterboxing at 2×', () => {
     expect(envelopeLayout(1904, 985)).toMatchObject({ pixelScale: 3, internalWidth: 635, internalHeight: 329 });
+  });
+});
+
+describe('ndcToCanvas', () => {
+  it('maps the camera centre to the canvas centre and the image edges to the canvas edges', () => {
+    const layout = envelopeLayout(1920, 1080);
+    const none = { x: 0, y: 0 };
+    const centre = ndcToCanvas(0, 0, layout, 1080, none);
+    expect(centre.x).toBeCloseTo(960);
+    expect(centre.y).toBeCloseTo(540);
+    // The padded frustum's inner edge (padding texels in from the side) is the canvas's left edge.
+    const width = layout.internalWidth + 4;
+    expect(ndcToCanvas((2 / width) * 2 - 1, 0, layout, 1080, none).x).toBeCloseTo(0);
+  });
+
+  it('moves with the sub-texel offset like the composite does (one texel = pixelScale device pixels)', () => {
+    const layout = envelopeLayout(1920, 1080);
+    const shifted = ndcToCanvas(0, 0, layout, 1080, { x: 0.5, y: 0.5 });
+    expect(shifted.x).toBeCloseTo(960 - 0.5 * layout.pixelScale);
+    expect(shifted.y).toBeCloseTo(540 + 0.5 * layout.pixelScale);
   });
 });
