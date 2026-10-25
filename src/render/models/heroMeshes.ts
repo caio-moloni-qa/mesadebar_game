@@ -6,7 +6,9 @@ import { CharacterId } from '../../config/characters';
  *  per asset so Vite rewrites it with the base path. Heroes without an entry keep the procedural model. */
 const HERO_MESH_URLS: Partial<Record<CharacterId, string>> = {
   barbarian: new URL('../../assets/3d/characters/barbarian.glb', import.meta.url).href,
-  fabri: new URL('../../assets/3d/characters/fabri.glb', import.meta.url).href
+  fabri: new URL('../../assets/3d/characters/fabri.glb', import.meta.url).href,
+  mage: new URL('../../assets/3d/characters/mage.glb', import.meta.url).href,
+  reliquia: new URL('../../assets/3d/characters/reliquia.glb', import.meta.url).href
 };
 
 const loaded = new Map<CharacterId, THREE.BufferGeometry>();
