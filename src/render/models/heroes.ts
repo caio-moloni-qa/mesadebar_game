@@ -7,7 +7,7 @@ import { heroMesh } from './heroMeshes';
 import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, JointSpec, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, rigImportedMesh } from './importedRig';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { RigPart, RiggedModel, buildRiggedModel, clipForBones, humanoidBones } from './rig';
-import { heldWeapon } from './weapons';
+import { WeaponModelId, heldWeapon } from './weapons';
 
 const HIP_HEIGHT = 0.82;
 const ARM = 0.3;
@@ -142,6 +142,8 @@ export interface HeroModel extends RiggedModel {
   /** Clips filtered to bones this rig actually has (no binding warnings for, e.g., the tail on non-Fabri). */
   clips: Record<HeroClipName, THREE.AnimationClip>;
   material: THREE.Material;
+  /** Weapon meshes by slot: [0] right hand, [1] left hand (the amulet is worn on the chest either way). */
+  held: THREE.Object3D[];
 }
 
 /** The hero model: the imported mesh auto-rigged to the humanoid skeleton when one is loaded (heroMeshes.ts),
@@ -163,16 +165,28 @@ export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig
     model = buildRiggedModel(boneSpecs, PART_BUILDERS[characterId](character.accentColor), material);
   }
 
-  // The Relíquia Divina hangs on the chest; every other weapon goes in the right hand.
-  const weapon = heldWeapon(weaponId, material);
-  if (weaponId === 'amulet') {
-    weapon.position.set(0, 0.12, 0.18);
-    model.bones.chest.add(weapon);
-  } else {
-    model.bones.handR.add(weapon);
-  }
-
   const clips = Object.fromEntries(Object.entries(clipSet).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<HeroClipName, THREE.AnimationClip>;
 
-  return { ...model, clips, material };
+  const hero: HeroModel = { ...model, clips, material, held: [] };
+  attachWeapons(hero, [weaponId]);
+  return hero;
+}
+
+/** Puts the run's weapons on the model, replacing whatever was attached: the first in the right hand, the second in
+ *  the left. The Relíquia Divina hangs on the chest whichever slot it's in. */
+export function attachWeapons(model: HeroModel, ids: WeaponModelId[]): void {
+  model.held.forEach((weapon) => {
+    weapon.removeFromParent();
+    if (weapon instanceof THREE.Mesh) weapon.geometry.dispose();
+  });
+  model.held = ids.slice(0, 2).map((id, slot) => {
+    const weapon = heldWeapon(id, model.material);
+    if (id === 'amulet') {
+      weapon.position.set(slot === 0 ? 0 : 0.1, 0.12, 0.18);
+      model.bones.chest.add(weapon);
+    } else {
+      model.bones[slot === 0 ? 'handR' : 'handL'].add(weapon);
+    }
+    return weapon;
+  });
 }

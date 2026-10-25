@@ -93,10 +93,34 @@ function additiveClip(name: string, duration: number, keys: Key[], hipsRest: Vec
   return THREE.AnimationUtils.makeClipAdditive(clip);
 }
 
-export type HeroClipName = 'idle' | 'run' | 'swing' | 'cast' | 'throw' | 'pulse' | 'hit' | 'death';
+/** Attacks authored for the right hand; each also exists as a left-hand mirror (`swingL`, ...) for the second weapon. */
+export type HandAttack = 'swing' | 'lash' | 'cast' | 'throw' | 'pulse';
+export const HAND_ATTACKS: HandAttack[] = ['swing', 'lash', 'cast', 'throw', 'pulse'];
+export type HeroClipName = 'idle' | 'run' | HandAttack | `${HandAttack}L` | 'hit' | 'death';
 
 /** The full humanoid clip set. One set is shared by every mixer (threejs-animation: share clips, not copies). */
 export function humanoidClips(hipHeight: number): Record<HeroClipName, THREE.AnimationClip> {
+  const clips = rightHandedClips(hipHeight);
+  const mirrored = Object.fromEntries(HAND_ATTACKS.map((name) => [`${name}L`, mirrorClip(clips[name], `${name}L`)]));
+  return { ...clips, ...mirrored } as Record<HeroClipName, THREE.AnimationClip>;
+}
+
+/** Left/right mirror of a clip: L and R bones swap tracks, and every rotation is reflected across the body's
+ *  centre plane (x → -x), i.e. the quaternion's y and z flip sign — valid for additive (delta) clips too. */
+export function mirrorClip(clip: THREE.AnimationClip, name: string): THREE.AnimationClip {
+  const swapSide = (bone: string) => bone.replace(/(L|R)$/, (side) => (side === 'L' ? 'R' : 'L'));
+  const tracks = clip.tracks.map((track) => {
+    const [bone, property] = track.name.split('.');
+    const values = Float32Array.from(track.values);
+    if (property === 'quaternion') for (let i = 0; i < values.length; i += 4) { values[i + 1] *= -1; values[i + 2] *= -1; }
+    if (property === 'position') for (let i = 0; i < values.length; i += 3) values[i] *= -1;
+    const TrackType = track.constructor as new (name: string, times: ArrayLike<number>, values: ArrayLike<number>) => THREE.KeyframeTrack;
+    return new TrackType(`${swapSide(bone)}.${property}`, track.times, values);
+  });
+  return new THREE.AnimationClip(name, clip.duration, tracks, clip.blendMode);
+}
+
+function rightHandedClips(hipHeight: number): Record<'idle' | 'run' | HandAttack | 'hit' | 'death', THREE.AnimationClip> {
   const hips: Vec3Tuple = [0, hipHeight, 0];
   // A human jog: a short stride (thigh ~28° forward, ~18° back) with the feet landing under the body — the thighs
   // tuck in a few degrees, since the meshes stand with their feet apart. Hips twist and dip only slightly with the
@@ -129,19 +153,33 @@ export function humanoidClips(hipHeight: number): Record<HeroClipName, THREE.Ani
       { t: 0.2, pose: { upperArmR: [-85, 0, 0], chest: [0, -55, 0], foreArmR: [-10, 0, 0] } },
       { t: 0.36, pose: { upperArmR: [0, 0, 0], chest: [0, 0, 0], foreArmR: [0, 0, 0] } }
     ], hips),
-    // Point the staff at the target.
-    cast: additiveClip('cast', 0.32, [
-      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0] } },
-      { t: 0.08, pose: { upperArmR: [-95, 0, 0], foreArmR: [0, 0, 0], chest: [-5, 0, 0] } },
-      { t: 0.18, pose: { upperArmR: [-90, 0, 0], foreArmR: [0, 0, 0], chest: [-5, 0, 0] } },
-      { t: 0.32, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0] } }
+    // Whip: an overhead crack — the arm winds up high behind the head, then snaps forward and down with the wrist
+    // flicking through, the chest leaning into it.
+    lash: additiveClip('lash', 0.42, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } },
+      { t: 0.11, pose: { upperArmR: [-155, 0, 12], foreArmR: [-70, 0, 0], handR: [-20, 0, 0], chest: [-10, -15, 0] } },
+      { t: 0.19, pose: { upperArmR: [-55, 0, 6], foreArmR: [-5, 0, 0], handR: [35, 0, 0], chest: [14, 10, 0] } },
+      { t: 0.26, pose: { upperArmR: [-40, 0, 4], foreArmR: [0, 0, 0], handR: [10, 0, 0], chest: [10, 8, 0] } },
+      { t: 0.42, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } }
     ], hips),
-    // Wind up behind the head, release forward.
-    throw: additiveClip('throw', 0.4, [
-      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0] } },
-      { t: 0.12, pose: { upperArmR: [-160, 0, 0], foreArmR: [-50, 0, 0], chest: [-8, 25, 0] } },
-      { t: 0.22, pose: { upperArmR: [-60, 0, 0], foreArmR: [0, 0, 0], chest: [12, -25, 0] } },
-      { t: 0.4, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0] } }
+    // Staff: raise the arm and turn the wrist over so the staff lies forward with its crystal on the target (the
+    // staff stands upright in the hand, so lifting the arm alone would swing the crystal behind the hero), then a
+    // short thrust as the bolt leaves.
+    cast: additiveClip('cast', 0.42, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } },
+      { t: 0.08, pose: { upperArmR: [-72, 0, 10], foreArmR: [-20, 0, 0], handR: [148, 0, 0], chest: [-4, 0, 0] } },
+      { t: 0.13, pose: { upperArmR: [-84, 0, 10], foreArmR: [-2, 0, 0], handR: [152, 0, 0], chest: [6, 0, 0] } },
+      { t: 0.26, pose: { upperArmR: [-80, 0, 10], foreArmR: [-6, 0, 0], handR: [150, 0, 0], chest: [3, 0, 0] } },
+      { t: 0.42, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } }
+    ], hips),
+    // Boomerang: a sidearm throw — the arm swings out level and back with the chest wound up, then whips forward
+    // across the body and follows through.
+    throw: additiveClip('throw', 0.48, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } },
+      { t: 0.12, pose: { upperArmR: [0, -45, -78], foreArmR: [-35, 0, 0], handR: [0, 0, 0], chest: [0, -30, 0] } },
+      { t: 0.2, pose: { upperArmR: [0, 65, -75], foreArmR: [-10, 0, 0], handR: [0, 25, 0], chest: [0, 25, 0] } },
+      { t: 0.3, pose: { upperArmR: [0, 95, -55], foreArmR: [-15, 0, 0], handR: [0, 10, 0], chest: [0, 30, 0] } },
+      { t: 0.48, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } }
     ], hips),
     // Relíquia Divina tick: the right hand comes up and grips the relic on the chest, the body leans into it and the
     // head dips, then lets go — channelling rather than flailing (it fires every aura tick, so it stays small).

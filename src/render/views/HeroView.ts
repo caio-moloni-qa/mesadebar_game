@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { PlayerState } from '../../core/session/entities';
-import { HeroClipName } from '../models/clips';
-import { HeroModel, createHeroModel } from '../models/heroes';
+import { HAND_ATTACKS, HandAttack, HeroClipName } from '../models/clips';
+import { HeroModel, attachWeapons, createHeroModel } from '../models/heroes';
+import { WeaponModelId } from '../models/weapons';
 import { simToWorld, yawFromSimDirection } from '../space';
 
 const TURN_SHARPNESS = 10;
@@ -12,7 +13,15 @@ const LOCOMOTION_FADE = 0.25;
 /** Run cycle plays at 1× at this speed (game units/s) and scales with the hero's actual speed. */
 const RUN_REFERENCE_SPEED = 200;
 
-export type HeroAction = Extract<HeroClipName, 'swing' | 'cast' | 'throw' | 'pulse' | 'hit'>;
+export type HeroAction = HandAttack | 'hit';
+/** Weapon slot → hand: the first weapon is right-handed, the second left-handed. */
+export type Hand = 'R' | 'L';
+
+/** How long the upper body keeps facing an attack's target, and how far the spine may twist from the legs before
+ *  the whole body turns with it. */
+const AIM_HOLD_SECONDS = 0.45;
+const MAX_TWIST = THREE.MathUtils.degToRad(70);
+const TWIST_SHARPNESS = 18;
 
 /** The animated hero: procedural rigged model + AnimationMixer. Idle/run crossfade from movement; attacks and hit
  *  reactions are additive one-shots layered on top, so they never interrupt the legs. */
@@ -25,13 +34,16 @@ export class HeroView {
   private dead = false;
   private yaw = 0;
   private readonly position = new THREE.Vector3();
+  private aimYaw = 0;
+  private aimSeconds = 0;
+  private twist = 0;
 
   constructor(characterId: CharacterId, weaponId: WeaponConfig['id']) {
     this.model = createHeroModel(characterId, weaponId);
     this.root.add(this.model.root);
     this.mixer = new THREE.AnimationMixer(this.model.root);
     this.actions = Object.fromEntries(Object.entries(this.model.clips).map(([name, clip]) => [name, this.mixer.clipAction(clip)])) as Record<HeroClipName, THREE.AnimationAction>;
-    (['swing', 'cast', 'throw', 'pulse', 'hit'] as const).forEach((name) => {
+    ([...HAND_ATTACKS, ...HAND_ATTACKS.map((name) => `${name}L` as const), 'hit'] as const).forEach((name) => {
       this.actions[name].setLoop(THREE.LoopOnce, 1);
     });
     this.actions.death.setLoop(THREE.LoopOnce, 1);
@@ -40,10 +52,29 @@ export class HeroView {
     this.actions.run.play().setEffectiveWeight(0);
   }
 
+  /** Face an attack's direction (sim coordinates) for a moment: the spine twists toward it while the legs keep
+   *  running, and the whole body turns only for the part beyond MAX_TWIST. */
+  aim(dirX: number, dirY: number): void {
+    if (this.dead || (dirX === 0 && dirY === 0)) return;
+    this.aimYaw = yawFromSimDirection(dirX, dirY);
+    this.aimSeconds = AIM_HOLD_SECONDS;
+  }
+
+  /** Re-equips the hands (a second weapon arrived, or the boomerang turned into the banana). */
+  setWeapons(ids: WeaponModelId[]): void {
+    attachWeapons(this.model, ids);
+  }
+
+  setWeaponVisible(slot: number, visible: boolean): void {
+    const weapon = this.model.held[slot];
+    if (weapon) weapon.visible = visible;
+  }
+
   /** Fire a one-shot (restarting it if it's already playing — fast attack speeds retrigger it). */
-  play(action: HeroAction): void {
+  play(action: HeroAction, hand: Hand = 'R'): void {
     if (this.dead) return;
-    this.actions[action].reset().setEffectiveWeight(1).fadeIn(0.06).play();
+    const name: HeroClipName = action === 'hit' || hand === 'R' ? action : `${action}L`;
+    this.actions[name].reset().setEffectiveWeight(1).fadeIn(0.06).play();
   }
 
   die(): void {
@@ -65,13 +96,23 @@ export class HeroView {
     this.setLocomotion(moving ? 'run' : 'idle');
     if (moving && deltaSeconds > 0) this.actions.run.timeScale = Math.max(0.6, (stepDistance * 60) / RUN_REFERENCE_SPEED);
 
+    const aiming = !this.dead && this.aimSeconds > 0;
     if (!this.dead) {
-      const targetYaw = yawFromSimDirection(player.facingX, player.facingY);
-      this.yaw += Math.atan2(Math.sin(targetYaw - this.yaw), Math.cos(targetYaw - this.yaw)) * (1 - Math.exp(-TURN_SHARPNESS * deltaSeconds));
+      let targetYaw = yawFromSimDirection(player.facingX, player.facingY);
+      if (aiming) {
+        const beyond = wrapAngle(this.aimYaw - targetYaw);
+        if (Math.abs(beyond) > MAX_TWIST) targetYaw = this.aimYaw - Math.sign(beyond) * MAX_TWIST;
+      }
+      this.yaw += wrapAngle(targetYaw - this.yaw) * (1 - Math.exp(-TURN_SHARPNESS * deltaSeconds));
       this.root.rotation.y = this.yaw;
     }
+    this.aimSeconds = Math.max(0, this.aimSeconds - deltaSeconds);
 
     this.mixer.update(deltaSeconds);
+    // The clips never key the spine, so the twist is written straight onto it after the mixer.
+    const twistTarget = aiming ? THREE.MathUtils.clamp(wrapAngle(this.aimYaw - this.yaw), -MAX_TWIST, MAX_TWIST) : 0;
+    this.twist += (twistTarget - this.twist) * (1 - Math.exp(-TWIST_SHARPNESS * deltaSeconds));
+    if (this.model.bones.spine) this.model.bones.spine.rotation.y = this.twist;
 
     const flashing = nowMs - player.lastDamagedAt < DAMAGE_FLASH_MS;
     const emissive = flashing ? 0xaa1f1f : player.isSlowed(nowMs) ? 0x1f3f8a : 0x000000;
@@ -105,4 +146,8 @@ export class HeroView {
     });
     this.model.material.dispose();
   }
+}
+
+function wrapAngle(angle: number): number {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
 }

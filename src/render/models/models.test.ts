@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WEAPONS, WeaponConfig } from '../../config/weapons';
-import { CLIP_SAMPLE_RATE, humanoidClips, smoothCurve } from './clips';
+import { CLIP_SAMPLE_RATE, humanoidClips, mirrorClip, smoothCurve } from './clips';
 import { createEnemyModels } from './enemies';
-import { createHeroModel } from './heroes';
+import { attachWeapons, createHeroModel } from './heroes';
 import { box, part } from './parts';
 import { buildRiggedModel, humanoidBones } from './rig';
 import { weaponGeometry } from './weapons';
@@ -40,12 +40,12 @@ describe('humanoid clips', () => {
   const clips = humanoidClips(0.82);
 
   it('has every clip the hero view plays, with valid tracks', () => {
-    expect(Object.keys(clips).sort()).toEqual(['cast', 'death', 'hit', 'idle', 'pulse', 'run', 'swing', 'throw']);
+    expect(Object.keys(clips).sort()).toEqual(['cast', 'castL', 'death', 'hit', 'idle', 'lash', 'lashL', 'pulse', 'pulseL', 'run', 'swing', 'swingL', 'throw', 'throwL']);
     Object.values(clips).forEach((clip) => expect(clip.validate()).toBe(true));
   });
 
   it('makes one-shot actions additive and keeps locomotion/death normal', () => {
-    (['swing', 'cast', 'throw', 'pulse', 'hit'] as const).forEach((name) => expect(clips[name].blendMode).toBe(THREE.AdditiveAnimationBlendMode));
+    (['swing', 'swingL', 'lash', 'lashL', 'cast', 'castL', 'throw', 'throwL', 'pulse', 'pulseL', 'hit'] as const).forEach((name) => expect(clips[name].blendMode).toBe(THREE.AdditiveAnimationBlendMode));
     (['idle', 'run', 'death'] as const).forEach((name) => expect(clips[name].blendMode).toBe(THREE.NormalAnimationBlendMode));
   });
 });
@@ -93,6 +93,33 @@ describe('hero models', () => {
       const holder = weaponId === 'amulet' ? model.bones.chest : model.bones.handR;
       expect(holder.children.some((child) => child instanceof THREE.Mesh)).toBe(true);
     });
+  });
+});
+
+describe('two weapons', () => {
+  it('mirrors an attack onto the left hand: L/R tracks swap and rotations reflect', () => {
+    const clips = humanoidClips(0.82);
+    const right = clips.throw.tracks.find((track) => track.name === 'upperArmR.quaternion')!;
+    const left = clips.throwL.tracks.find((track) => track.name === 'upperArmL.quaternion')!;
+    expect(clips.throwL.tracks.some((track) => track.name.startsWith('upperArmR'))).toBe(false);
+    for (let i = 0; i < right.values.length; i += 4) {
+      expect(left.values[i]).toBeCloseTo(right.values[i]);
+      expect(left.values[i + 1]).toBeCloseTo(-right.values[i + 1]);
+      expect(left.values[i + 2]).toBeCloseTo(-right.values[i + 2]);
+      expect(left.values[i + 3]).toBeCloseTo(right.values[i + 3]);
+    }
+    expect(mirrorClip(clips.throwL, 'back').tracks.find((track) => track.name === 'upperArmR.quaternion')!.values).toEqual(right.values);
+  });
+
+  it('holds the first weapon in the right hand, the second in the left, and wears the amulet on the chest', () => {
+    const model = createHeroModel('fabri', 'boomerang');
+    attachWeapons(model, ['boomerang', 'staff']);
+    expect(model.held).toHaveLength(2);
+    expect(model.held[0].parent).toBe(model.bones.handR);
+    expect(model.held[1].parent).toBe(model.bones.handL);
+    attachWeapons(model, ['sword', 'amulet']);
+    expect(model.bones.handL.children.filter((child) => child instanceof THREE.Mesh)).toHaveLength(0);
+    expect(model.held[1].parent).toBe(model.bones.chest);
   });
 });
 

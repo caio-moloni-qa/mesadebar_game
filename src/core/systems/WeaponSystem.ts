@@ -57,7 +57,7 @@ export interface WeaponEvents extends Record<string, unknown> {
   'aura-pulse': { radius: number; multiStrike: boolean; buffUnlocked: boolean };
   'whip-burst': { radius: number };
   'staff-explosion': { x: number; y: number; radius: number; index: number };
-  'projectile-fired': { x: number; y: number; kind: ProjectileKind };
+  'projectile-fired': { x: number; y: number; dirX: number; dirY: number; kind: ProjectileKind; weaponId: WeaponConfig['id'] };
   /** A projectile hit a tall obstacle (wall, tree, pillar...) - bolts vanish, boomerangs/thrown swords turn back. */
   'projectile-blocked': { x: number; y: number; kind: ProjectileKind };
 }
@@ -326,7 +326,7 @@ export class WeaponSystem {
     projectile.executeToken = executeToken;
     projectile.criticalChance = kind !== 'bolt' && this.exclusiveUnlocked(weapon) ? 0.15 + weapon.upgradeCount * 0.025 : 0;
     projectile.aimAt(angle);
-    this.host.events.emit('projectile-fired', { x: projectile.x, y: projectile.y, kind });
+    this.host.events.emit('projectile-fired', { x: projectile.x, y: projectile.y, dirX: Math.cos(angle), dirY: Math.sin(angle), kind, weaponId: weapon.config.id });
     return true;
   }
 
