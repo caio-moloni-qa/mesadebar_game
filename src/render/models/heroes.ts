@@ -132,7 +132,7 @@ const CLIPS = humanoidClips(HIP_HEIGHT);
 /** Heroes with an imported mesh: its joints, the hip height its clips use, rigid extras the mesh lacks, and the
  *  in-game scale (the rig is measured on the mesh at its processed height; scaling the model keeps them in sync). */
 const IMPORTED: Partial<Record<CharacterId, { joints: JointSpec[]; clips: Record<HeroClipName, THREE.AnimationClip>; extras: (accent: number) => RigPart[]; scale: number }>> = {
-  fabri: { joints: FABRI_JOINTS, clips: humanoidClips(FABRI_HIP_HEIGHT), extras: (accent) => fabriTail(accent), scale: 0.8 }
+  fabri: { joints: FABRI_JOINTS, clips: humanoidClips(FABRI_HIP_HEIGHT), extras: (accent) => fabriTail(accent), scale: 1 }
 };
 
 export interface HeroModel extends RiggedModel {
