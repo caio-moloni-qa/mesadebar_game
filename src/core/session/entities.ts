@@ -224,6 +224,8 @@ export class EnemyState implements Body {
   /** Super Esqueleto (and the boss later): shows a health bar, isn't a "common" enemy for the staff execute. */
   isMiniBoss = false;
   hasRottenAura = false;
+  /** The boss's aura goes quiet while it channels its shield. */
+  rottenAuraSuppressed = false;
   /** Display size in game units (the old sprite displaySize) — the renderer scales the model from this. */
   displaySize = 62;
   hitStunUntil = 0;
@@ -252,6 +254,7 @@ export class EnemyState implements Body {
     this.isStatic = variantId === 'necromancerWraith';
     this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'finalBoss';
     this.hasRottenAura = variantId === 'superSkeleton' || variantId === 'finalBoss';
+    this.rottenAuraSuppressed = false;
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
     this.radius = variantId === 'finalBoss' ? 58 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;

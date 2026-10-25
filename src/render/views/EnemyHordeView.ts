@@ -117,7 +117,7 @@ export class EnemyHordeView {
       this.scale.setScalar(size * (1 - dying) * (model.hovers ? 0.8 : 1));
       this.blobShadows.setMatrixAt(blobIndex, this.matrix.compose(this.position, this.rotation, this.scale));
       blobIndex += 1;
-      if (enemy.hasRottenAura && enemy.alive) {
+      if (enemy.hasRottenAura && !enemy.rottenAuraSuppressed && enemy.alive) {
         this.position.set(x, 0.04, z);
         this.scale.setScalar(enemy.rottenAuraRadius * WORLD_SCALE * (1 + Math.sin(nowMs / 300) * 0.04));
         this.rottenAuras.setMatrixAt(auraIndex, this.matrix.compose(this.position, this.rotation, this.scale));
