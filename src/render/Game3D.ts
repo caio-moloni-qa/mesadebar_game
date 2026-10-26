@@ -28,7 +28,7 @@ import { TavernDialog } from './ui/TavernDialog';
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
-import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, metaBonuses, rosterFor } from '../core/progress/Progress';
+import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses } from '../core/progress/Progress';
 import { HeroKitViews } from './views/HeroKitViews';
 import { PowerViews } from './views/PowerViews';
 import { PowerBanner } from './ui/PowerBanner';
@@ -247,6 +247,10 @@ export class Game3D {
         this.progress = bought;
         SaveStore.save(this.progress);
       },
+      buyConsumable: (id) => {
+        const bought = buyConsumable(this.progress, id);
+        if (bought) this.saveProgress(bought);
+      },
       exportSave: () => SaveStore.export(this.progress),
       importSave: () => {
         void SaveStore.import().then((save) => {
@@ -415,13 +419,15 @@ export class Game3D {
       stressEnemyCount: attract ? undefined : this.options.stressEnemyCount,
       skipStartingUpgrades,
       arena: this.arenaMap,
-      // Sergio's permanent upgrades and the regulars' mission progress carry into every real run.
-      meta: attract || hub ? undefined : metaBonuses(this.progress),
+      // Sergio's permanent upgrades (and what's in the pack) and the regulars' mission progress carry into every real run.
+      meta: attract || hub ? undefined : runBonuses(this.progress),
       questTiers: attract ? undefined : this.progress.regularMissions,
       regularsAway: rosterFor(this.progress).filter((hero): hero is QuestNpcId => CURRENT_AREA.regulars.includes(hero)),
       hub,
       tier: attract || hub ? 1 : this.tier
     });
+    // The pack is spent on the run it came into.
+    if (!attract && !hub && this.progress.pack.length > 0) this.saveProgress({ pack: [] });
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
     this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);

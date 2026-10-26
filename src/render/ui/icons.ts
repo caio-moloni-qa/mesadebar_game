@@ -134,3 +134,23 @@ export function markerFace(kind: MarkerKind): string {
   if (kind === 'merchant') return HUD_ART.tavern;
   return MARKER_FACES[kind];
 }
+
+/** Sergio's store between runs: art for each permanent upgrade and each consumable. */
+const STORE_ICONS: Record<string, string> = {
+  vitalidade: HUD_ART.hpIcon,
+  forca: UPGRADE_ART.damage,
+  agilidade: UPGRADE_ART.speed,
+  ima: HUD_ART.gem,
+  bolsa: WEAPON_ICONS.coins,
+  escolha: UPGRADE_ART.arcaneBlessing,
+  segundaChance: new URL('../../assets/upgrades/merchant/merchant-divine-blessing-icon.png', import.meta.url).href,
+  elixir: new URL('../../assets/upgrades/merchant/merchant-vitality-elixir-icon.png', import.meta.url).href,
+  pedra: new URL('../../assets/upgrades/merchant/merchant-sharp-blade-icon.png', import.meta.url).href,
+  botas: new URL('../../assets/upgrades/merchant/merchant-swift-boots-icon.png', import.meta.url).href,
+  saco: WEAPON_ICONS.coins,
+  tomo: new URL('../../assets/upgrades/merchant/merchant-affinity-tome-icon.png', import.meta.url).href,
+  fenix: new URL('../../assets/upgrades/merchant/merchant-heal-potion-icon.png', import.meta.url).href
+};
+export function storeIcon(id: string): string {
+  return STORE_ICONS[id] ?? UPGRADE_ART.damage;
+}

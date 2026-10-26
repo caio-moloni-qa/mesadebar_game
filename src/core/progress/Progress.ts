@@ -156,9 +156,11 @@ export interface MetaBonuses {
   startingCoins: number;
   extraStartingPicks: number;
   revives: number;
+  /** Fraction added to the experience every kill gives. */
+  experience: number;
 }
 
-export const NO_META_BONUSES: MetaBonuses = { maxHealth: 0, damage: 0, speed: 0, pickupRange: 0, startingCoins: 0, extraStartingPicks: 0, revives: 0 };
+export const NO_META_BONUSES: MetaBonuses = { maxHealth: 0, damage: 0, speed: 0, pickupRange: 0, startingCoins: 0, extraStartingPicks: 0, revives: 0, experience: 0 };
 
 export function metaBonuses(save: SaveData): MetaBonuses {
   const level = (id: MetaUpgradeId) => save.upgrades[id] ?? 0;
@@ -169,7 +171,8 @@ export function metaBonuses(save: SaveData): MetaBonuses {
     pickupRange: 0.1 * level('ima'),
     startingCoins: 50 * level('bolsa'),
     extraStartingPicks: level('escolha'),
-    revives: level('segundaChance')
+    revives: level('segundaChance'),
+    experience: 0
   };
 }
 
@@ -185,6 +188,46 @@ export function buyUpgrade(save: SaveData, id: MetaUpgradeId): SaveData | null {
   const price = nextPrice(save, id);
   if (price === null || save.fichas < price) return null;
   return { ...save, fichas: save.fichas - price, upgrades: { ...save.upgrades, [id]: (save.upgrades[id] ?? 0) + 1 } };
+}
+
+// ── Sergio's consumables: bought between runs, spent on the next one ────────────────────────────────────────────
+
+export type ConsumableId = 'elixir' | 'pedra' | 'botas' | 'saco' | 'tomo' | 'fenix';
+
+export interface ConsumableSpec {
+  id: ConsumableId;
+  name: string;
+  effect: string;
+  price: number;
+}
+
+export const CONSUMABLES: ConsumableSpec[] = [
+  { id: 'elixir', name: 'Elixir de Vida', effect: '+40 de vida máxima', price: 60 },
+  { id: 'pedra', name: 'Pedra de Amolar', effect: '+15% de dano', price: 80 },
+  { id: 'botas', name: 'Botas Ligeiras', effect: '+10% de velocidade', price: 50 },
+  { id: 'saco', name: 'Saco de Moedas', effect: 'Começa com +80 moedas', price: 50 },
+  { id: 'tomo', name: 'Tomo do Sábio', effect: '+25% de experiência', price: 90 },
+  { id: 'fenix', name: 'Pena de Fênix', effect: 'Renasce uma vez com 50% de vida', price: 150 }
+];
+
+/** One of each in the pack at a time. */
+export function buyConsumable(save: SaveData, id: ConsumableId): SaveData | null {
+  const spec = CONSUMABLES.find((consumable) => consumable.id === id)!;
+  if (save.pack.includes(id) || save.fichas < spec.price) return null;
+  return { ...save, fichas: save.fichas - spec.price, pack: [...save.pack, id] };
+}
+
+/** The permanent bonuses plus what's in the pack (spent by the run that starts with it). */
+export function runBonuses(save: SaveData): MetaBonuses {
+  const bonuses = { ...metaBonuses(save) };
+  const has = (id: ConsumableId) => save.pack.includes(id);
+  if (has('elixir')) bonuses.maxHealth += 40;
+  if (has('pedra')) bonuses.damage += 0.15;
+  if (has('botas')) bonuses.speed += 0.1;
+  if (has('saco')) bonuses.startingCoins += 80;
+  if (has('tomo')) bonuses.experience += 0.25;
+  if (has('fenix')) bonuses.revives += 1;
+  return bonuses;
 }
 
 // ── Mastery ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -346,6 +389,8 @@ export interface SaveData {
   /** Fichas earned over all time (the results screen's running total). */
   fichasEarned: number;
   upgrades: Partial<Record<MetaUpgradeId, number>>;
+  /** Consumables bought for the next run. */
+  pack: ConsumableId[];
   /** Mastery XP per hero. */
   mastery: Partial<Record<HeroId, number>>;
   /** The skin chosen per hero. */
@@ -380,6 +425,7 @@ export function emptySave(): SaveData {
     fichas: 0,
     fichasEarned: 0,
     upgrades: {},
+    pack: [],
     mastery: {},
     skins: {},
     regularMissions: {},
@@ -413,6 +459,7 @@ export function parseSave(text: string | null | undefined): SaveData {
     fichas: Math.floor(number(raw.fichas)),
     fichasEarned: Math.floor(number(raw.fichasEarned)),
     upgrades: numbersOnly<MetaUpgradeId>(raw.upgrades),
+    pack: Array.isArray(raw.pack) ? raw.pack.filter((id): id is ConsumableId => CONSUMABLES.some((consumable) => consumable.id === id)).filter((id, index, all) => all.indexOf(id) === index) : [],
     mastery: numbersOnly<HeroId>(raw.mastery),
     skins: isRecord(raw.skins) ? Object.fromEntries(Object.entries(raw.skins).filter(([, v]) => typeof v === 'string')) as Partial<Record<HeroId, SkinId>> : {},
     regularMissions: numbersOnly<QuestNpcId>(raw.regularMissions),

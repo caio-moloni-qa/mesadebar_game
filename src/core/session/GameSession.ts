@@ -166,6 +166,8 @@ export class GameSession implements WeaponHost {
   readonly stats = { guardians: 0, bosses: 0, missions: 0, killsByVariant: {} as Record<string, number>, guardiansByKind: {} as Record<string, number> };
   /** Segunda chance revives still to use this run. */
   revivesLeft = 0;
+  /** The Tomo do Sábio: more experience per kill. */
+  private experienceMultiplier = 1;
   readonly tier: DifficultyTier;
   private miniBossSlotsThisPhase = 0;
   private miniBossRotation = 0;
@@ -338,6 +340,7 @@ export class GameSession implements WeaponHost {
     player.pickupRange *= 1 + meta.pickupRange;
     this.currency += meta.startingCoins;
     this.revivesLeft = meta.revives;
+    this.experienceMultiplier = 1 + meta.experience;
   }
 
   /** What this run counts, for the results screen and the save. */
@@ -1091,7 +1094,7 @@ export class GameSession implements WeaponHost {
       }
       return;
     }
-    this.experience += enemy.reward;
+    this.experience += enemy.reward * this.experienceMultiplier;
     for (let index = 0; index < enemy.currencyDrops; index += 1) {
       const point = index === 0 ? enemy : randomPointAround(this.rng, enemy, 12, 28);
       this.dropPickup('gem', point.x, point.y, enemy.reward);

@@ -1,7 +1,7 @@
-import { DIFFICULTY_TIERS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
+import { CONSUMABLES, ConsumableId, DIFFICULTY_TIERS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
 import { CURRENT_AREA } from '../../config/areas';
 import { heroName } from '../progress/heroNames';
-import { npcPortrait } from './icons';
+import { npcPortrait, storeIcon } from './icons';
 
 export interface SergioShopActions {
   save(): SaveData;
@@ -9,25 +9,35 @@ export interface SergioShopActions {
   canPlaySergio(): boolean;
   playSergio(): void;
   buy(id: MetaUpgradeId): void;
+  buyConsumable(id: ConsumableId): void;
   exportSave(): void;
   importSave(): void;
   close(): void;
 }
 
-const WELCOME = 'Bem-vindo à minha taverna! Aqui você descansa entre as partidas. Cada partida rende Fichas: gaste comigo em melhorias que valem para sempre. Escolha um herói ali junto à parede e saia pelo portal quando estiver pronto.';
+const WELCOME = 'Bem-vindo à minha taverna! Cada partida rende Fichas. Aqui no balcão você gasta: melhorias que valem para sempre, ou provisões para a próxima saída.';
 const GREETING = 'De volta, viajante? Fichas na mesa, e eu deixo você mais forte para a próxima.';
 
-/** Sergio's counter between runs: his permanent upgrades (level pips, the next price, buy), the Fichas you hold,
+type ShopTab = 'atributos' | 'consumiveis';
+
+const TABS: Array<{ id: ShopTab; label: string; hint: string }> = [
+  { id: 'atributos', label: 'Atributos', hint: 'Melhorias permanentes, para todos os heróis.' },
+  { id: 'consumiveis', label: 'Consumíveis', hint: 'Valem só para a próxima partida: saem da mochila quando ela começa. Um de cada.' }
+];
+
+/** Sergio's store between runs, opened at his counter: a full screen with two shelves, the permanent attributes
+ *  (level pips, the next price) and the consumables for the next run (one of each in the pack), the Fichas you hold,
  *  and the save's export/import. The first visit opens with his welcome. */
 export class SergioShop {
   private readonly root: HTMLDivElement;
   private welcome = false;
+  private tab: ShopTab = 'atributos';
 
   constructor(container: HTMLElement, private readonly actions: SergioShopActions) {
     this.root = document.createElement('div');
-    this.root.className = 'tavern-dialog sergio-shop';
+    this.root.className = 'sergio-store';
     this.root.setAttribute('role', 'dialog');
-    this.root.setAttribute('aria-label', 'Melhorias do Sergio');
+    this.root.setAttribute('aria-label', 'Loja do Sergio');
     this.root.hidden = true;
     container.appendChild(this.root);
   }
@@ -40,7 +50,7 @@ export class SergioShop {
     this.welcome = welcome;
     this.root.hidden = false;
     this.render();
-    this.root.querySelector<HTMLButtonElement>('.shop-buy:not(:disabled), .shop-close')?.focus({ preventScroll: true });
+    this.root.querySelector<HTMLButtonElement>('.store-buy:not(:disabled), .store-close')?.focus({ preventScroll: true });
   }
 
   hide(): void {
@@ -50,71 +60,93 @@ export class SergioShop {
   render(): void {
     if (this.root.hidden) return;
     const save = this.actions.save();
+    const focused = document.activeElement instanceof HTMLElement && this.root.contains(document.activeElement) ? document.activeElement.dataset.focus : undefined;
     this.root.replaceChildren();
-    const portrait = document.createElement('div');
-    portrait.className = 'dialog-portrait';
-    const image = document.createElement('img');
-    image.alt = '';
-    image.src = npcPortrait('sergio') ?? '';
-    portrait.append(image);
-    const body = document.createElement('div');
-    body.className = 'dialog-body';
+    const panel = document.createElement('div');
+    panel.className = 'store-panel';
+
+    const header = document.createElement('header');
+    header.className = 'store-header';
+    const portrait = document.createElement('img');
+    portrait.className = 'store-portrait';
+    portrait.alt = '';
+    portrait.src = npcPortrait('sergio') ?? '';
+    const speech = document.createElement('div');
     const name = document.createElement('p');
     name.className = 'dialog-name';
     name.innerHTML = 'Sergio <span>Taberneiro e mercador</span>';
     const said = document.createElement('p');
     said.className = 'dialog-text';
     said.textContent = `“${this.welcome ? WELCOME : GREETING}”`;
+    speech.append(name, said);
     const balance = document.createElement('p');
-    balance.className = 'shop-balance';
-    balance.innerHTML = `Você tem <b>${save.fichas}</b> Fichas`;
-    const list = document.createElement('ul');
-    list.className = 'shop-list';
-    META_UPGRADES.forEach((spec) => {
-      const level = save.upgrades[spec.id] ?? 0;
-      const price = nextPrice(save, spec.id);
-      const row = document.createElement('li');
-      const info = document.createElement('div');
-      info.className = 'shop-info';
-      const title = document.createElement('strong');
-      title.textContent = spec.name;
-      const effect = document.createElement('span');
-      effect.textContent = spec.perLevel;
-      const pips = document.createElement('span');
-      pips.className = 'shop-pips';
-      pips.setAttribute('aria-label', `Nível ${level} de ${spec.maxLevel}`);
-      for (let index = 0; index < spec.maxLevel; index += 1) {
-        const pip = document.createElement('i');
-        if (index < level) pip.className = 'on';
-        pips.append(pip);
-      }
-      info.append(title, effect, pips);
-      const buy = document.createElement('button');
-      buy.type = 'button';
-      buy.className = 'ui-button shop-buy';
-      if (price === null) {
-        buy.textContent = 'Máximo';
-        buy.disabled = true;
-      } else {
-        buy.textContent = `${price} Fichas`;
-        buy.disabled = save.fichas < price;
-        buy.title = buy.disabled ? 'Fichas insuficientes' : `Comprar o nível ${level + 1}`;
-        buy.addEventListener('click', () => {
-          this.welcome = false;
-          this.actions.buy(spec.id);
-          this.render();
-        });
-      }
-      row.append(info, buy);
-      list.append(row);
+    balance.className = 'store-balance';
+    balance.innerHTML = `<small>Suas Fichas</small><b>${save.fichas}</b>`;
+    header.append(portrait, speech, balance);
+
+    const tabs = document.createElement('div');
+    tabs.className = 'store-tabs';
+    tabs.setAttribute('role', 'tablist');
+    TABS.forEach((spec) => {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(spec.id === this.tab));
+      tab.dataset.focus = `tab-${spec.id}`;
+      tab.textContent = spec.id === 'consumiveis' && save.pack.length > 0 ? `${spec.label} · ${save.pack.length} na mochila` : spec.label;
+      tab.addEventListener('click', () => {
+        this.tab = spec.id;
+        this.render();
+      });
+      tabs.append(tab);
     });
+    const hint = document.createElement('p');
+    hint.className = 'store-hint';
+    hint.textContent = TABS.find((spec) => spec.id === this.tab)!.hint;
+
+    const grid = document.createElement('ul');
+    grid.className = 'store-grid';
+    grid.setAttribute('role', 'tabpanel');
+    if (this.tab === 'atributos') {
+      META_UPGRADES.forEach((spec) => {
+        const level = save.upgrades[spec.id] ?? 0;
+        const price = nextPrice(save, spec.id);
+        const pips = document.createElement('span');
+        pips.className = 'shop-pips';
+        pips.setAttribute('aria-label', `Nível ${level} de ${spec.maxLevel}`);
+        for (let index = 0; index < spec.maxLevel; index += 1) {
+          const pip = document.createElement('i');
+          if (index < level) pip.className = 'on';
+          pips.append(pip);
+        }
+        grid.append(this.card(spec.id, spec.name, spec.perLevel, pips, price === null ? null : { price, affordable: save.fichas >= price, label: `Comprar o nível ${level + 1}` }, () => this.actions.buy(spec.id), price === null ? 'Máximo' : ''));
+      });
+    } else {
+      CONSUMABLES.forEach((spec) => {
+        const packed = save.pack.includes(spec.id);
+        const tag = document.createElement('span');
+        tag.className = `store-tag${packed ? ' packed' : ''}`;
+        tag.textContent = packed ? 'Na mochila' : 'Próxima partida';
+        grid.append(this.card(spec.id, spec.name, spec.effect, tag, packed ? null : { price: spec.price, affordable: save.fichas >= spec.price, label: 'Pôr na mochila' }, () => this.actions.buyConsumable(spec.id), packed ? 'Comprado' : ''));
+      });
+    }
+
     const footer = document.createElement('div');
-    footer.className = 'dialog-actions';
+    footer.className = 'dialog-actions store-footer';
     const close = document.createElement('button');
     close.type = 'button';
-    close.className = 'ui-button primary shop-close';
+    close.className = 'ui-button primary store-close';
     close.textContent = 'Até mais (Esc)';
     close.addEventListener('click', () => this.actions.close());
+    footer.append(close);
+    if (this.actions.canPlaySergio()) {
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'ui-button';
+      play.textContent = 'Jogar com o Sergio';
+      play.addEventListener('click', () => this.actions.playSergio());
+      footer.append(play);
+    }
     const exportButton = document.createElement('button');
     exportButton.type = 'button';
     exportButton.className = 'link-button';
@@ -125,18 +157,47 @@ export class SergioShop {
     importButton.className = 'link-button';
     importButton.textContent = 'Importar progresso';
     importButton.addEventListener('click', () => this.actions.importSave());
-    footer.append(close);
-    if (this.actions.canPlaySergio()) {
-      const play = document.createElement('button');
-      play.type = 'button';
-      play.className = 'ui-button';
-      play.textContent = 'Jogar com o Sergio';
-      play.addEventListener('click', () => this.actions.playSergio());
-      footer.append(play);
-    }
     footer.append(exportButton, importButton);
-    body.append(name, said, balance, list, footer);
-    this.root.append(portrait, body);
+
+    panel.append(header, tabs, hint, grid, footer);
+    this.root.append(panel);
+    if (focused) this.root.querySelector<HTMLElement>(`[data-focus="${focused}"]`)?.focus({ preventScroll: true });
+  }
+
+  /** One item on the shelf: art, name, what it does, its status line, and the buy button (or why there's none). */
+  private card(id: string, title: string, effect: string, status: HTMLElement, offer: { price: number; affordable: boolean; label: string } | null, buy: () => void, done: string): HTMLLIElement {
+    const card = document.createElement('li');
+    card.className = 'store-card';
+    if (!offer) card.classList.add('owned');
+    const icon = document.createElement('img');
+    icon.className = 'store-icon';
+    icon.alt = '';
+    icon.src = storeIcon(id);
+    const name = document.createElement('strong');
+    name.textContent = title;
+    const text = document.createElement('span');
+    text.className = 'store-effect';
+    text.textContent = effect;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ui-button store-buy';
+    button.dataset.focus = `buy-${id}`;
+    if (!offer) {
+      button.textContent = done;
+      button.disabled = true;
+    } else {
+      button.innerHTML = `<b>${offer.price}</b> Fichas`;
+      button.disabled = !offer.affordable;
+      button.title = offer.affordable ? offer.label : 'Fichas insuficientes';
+      button.setAttribute('aria-label', `${offer.label}: ${title}, ${offer.price} Fichas`);
+      button.addEventListener('click', () => {
+        this.welcome = false;
+        buy();
+        this.render();
+      });
+    }
+    card.append(icon, name, text, status, button);
+    return card;
   }
 }
 
@@ -159,7 +220,7 @@ export class TavernHeader {
     const key = `${save.fichas}|${heroName}|${area.joined}`;
     if (key === this.shown) return;
     this.shown = key;
-    this.root.innerHTML = `<p class="eyebrow">A TAVERNA · ${CURRENT_AREA.name.toUpperCase()}</p><p class="tavern-fichas"><b>${save.fichas}</b> Fichas · último herói: <b></b></p><p class="tavern-area">Heróis da região conquistados: <b>${area.joined}/${area.total}</b></p><p class="tavern-hints">Fale com o Sergio para melhorias · ajude os frequentadores · escolha o herói ao sair pelo portal</p>`;
+    this.root.innerHTML = `<p class="eyebrow">A TAVERNA · ${CURRENT_AREA.name.toUpperCase()}</p><p class="tavern-fichas"><b>${save.fichas}</b> Fichas · último herói: <b></b></p><p class="tavern-area">Heróis da região conquistados: <b>${area.joined}/${area.total}</b></p><p class="tavern-hints">Fale com o Sergio para a loja · ajude os frequentadores · escolha o herói ao sair pelo portal</p>`;
     this.root.querySelectorAll('b')[1].textContent = heroName;
   }
 }
