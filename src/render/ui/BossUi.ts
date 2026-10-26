@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { BOSS_TUNING } from '../../core/systems/BossSystem';
+import { MINI_BOSSES } from '../../core/systems/MiniBossSystem';
 import { GameSession, PortalKind } from '../../core/session/GameSession';
 import { simToWorld } from '../space';
 import { Projector } from './FloatingTexts';
 
 const MAX_BARS = 3;
-const MAX_ARROWS = 5;
+const MAX_ARROWS = 6;
+const FINAL_WARNING = 'O sobrevivente sente uma presença maligna no ar!';
 /** Arrows sit this far in from the screen edge (CSS px at 720 px tall, like the Phaser 48). */
 const ARROW_MARGIN = 48;
 
@@ -48,8 +50,16 @@ export class BossUi {
   }
 
   update(session: GameSession, project: Projector): void {
-    const { bosses } = session;
-    this.toggle('banner', this.banner, bosses.warningActive);
+    const { bosses, miniBosses } = session;
+    // The Necromancer's warning, or a zone guardian's ("O Coveiro desperta no cemitério!").
+    const pending = miniBosses.pending ? MINI_BOSSES[miniBosses.pending.kind] : null;
+    const banner = bosses.warningActive ? FINAL_WARNING : pending ? `${pending.name} desperta ${pending.where}!` : '';
+    if (this.last.get('bannerText') !== banner) {
+      this.last.set('bannerText', banner);
+      if (banner) this.banner.textContent = banner;
+      this.banner.classList.toggle('mini', !bosses.warningActive && !!pending);
+    }
+    this.toggle('banner', this.banner, banner !== '');
     this.updateBars(session);
     this.updatePrompt(session, project);
     this.updateArrows(session, project);
@@ -57,13 +67,22 @@ export class BossUi {
 
   private updateBars(session: GameSession): void {
     const shown = session.bosses.bosses.slice(0, MAX_BARS);
-    const key = shown.map((boss) => {
+    const guardians = session.miniBosses.bosses.slice(0, Math.max(0, MAX_BARS - shown.length));
+    const guardianKey = guardians.map((boss) => `${boss.kind}:${Math.ceil(boss.enemy.health)}/${Math.ceil(boss.enemy.maxHealth)}`).join(';');
+    const key = guardianKey + '#' + shown.map((boss) => {
       const countdown = boss.isMain && boss.cleanupPending ? Math.ceil(Math.max(0, BOSS_TUNING.cleanupMs - boss.cleanupElapsed) / 1000) : -1;
       return `${Math.ceil(boss.enemy.health)}/${boss.enemy.maxHealth}|${boss.shieldActive ? Math.ceil(boss.shield) : -1}/${Math.ceil(boss.maxShield)}|${countdown}`;
     }).join(';');
     if (this.last.get('bars') === key) return;
     this.last.set('bars', key);
-    this.bars.replaceChildren(...shown.map((boss) => {
+    const guardianBars = guardians.map((boss) => {
+      const bar = document.createElement('div');
+      bar.className = 'boss-bar mini';
+      const health = Math.max(0, boss.enemy.health / boss.enemy.maxHealth) * 100;
+      bar.innerHTML = `<p class="boss-name">${MINI_BOSSES[boss.kind].name}</p><div class="boss-health"><div style="width:${health}%"></div><span>${Math.ceil(Math.max(0, boss.enemy.health))} / ${Math.ceil(boss.enemy.maxHealth)}</span></div>`;
+      return bar;
+    });
+    this.bars.replaceChildren(...guardianBars, ...shown.map((boss) => {
       const bar = document.createElement('div');
       bar.className = 'boss-bar';
       const health = Math.max(0, boss.enemy.health / boss.enemy.maxHealth) * 100;
@@ -102,6 +121,9 @@ export class BossUi {
   /** Arrow at the screen edge towards every boss (white) and portal (its colour) that's off screen. */
   private updateArrows(session: GameSession, project: Projector): void {
     const targets: Array<{ x: number; y: number; kind: string }> = session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' }));
+    session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: 'miniboss' }));
+    // While a guardian is announced, point at its zone.
+    if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor, kind: 'miniboss' });
     if (session.portals) targets.push({ ...session.portals.end, kind: 'end' }, { ...session.portals.continue, kind: 'continue' });
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;

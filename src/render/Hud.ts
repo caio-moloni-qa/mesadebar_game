@@ -1,5 +1,6 @@
 import { GameSession } from '../core/session/GameSession';
-import { HUD_ART, LIFE_STEAL_ICON, upgradeIcon, weaponIcon } from './ui/icons';
+import { COMPANIONS } from '../core/systems/CompanionSystem';
+import { HUD_ART, LIFE_STEAL_ICON, companionIcon, upgradeIcon, weaponIcon } from './ui/icons';
 
 export interface RenderStats { fps: number; drawCalls: number; triangles: number; pixelScale: number; geometries: number; textures: number; }
 
@@ -70,15 +71,16 @@ export class Hud {
   private updateBuild(session: GameSession): void {
     const weapons = session.weapons.weapons.map((weapon) => ({ icon: weaponIcon(session.weapons.isBananaTransformActive(weapon) ? 'banana' : weapon.config.id), count: 1, title: weapon.config.name }));
     const upgrades = [...session.selectedUpgradeCounts.entries()].map(([id, count]) => ({ icon: upgradeIcon(id), count, title: id }));
-    const items = [...weapons, ...upgrades];
-    const key = items.map((item) => `${item.icon}×${item.count}`).join('|');
+    const companions = session.companions.companions.map((companion) => ({ icon: companionIcon(companion.kind), count: 0, title: `${COMPANIONS[companion.kind].name} — nível ${companion.level}`, level: companion.level, down: companion.downUntil > 0 }));
+    const items: Array<{ icon: string; count: number; title: string; level?: number; down?: boolean }> = [...weapons, ...upgrades, ...companions];
+    const key = items.map((item) => `${item.icon}×${item.count}:${item.level ?? ''}${item.down ? 'd' : ''}`).join('|');
     if (this.last.get('build') === key) return;
     this.last.set('build', key);
-    this.build.replaceChildren(...items.map(({ icon, count, title }) => {
+    this.build.replaceChildren(...items.map(({ icon, count, title, level, down }) => {
       const slot = document.createElement('div');
-      slot.className = 'hud-build-slot';
+      slot.className = `hud-build-slot${level ? ' companion' : ''}${down ? ' down' : ''}`;
       slot.title = title;
-      slot.innerHTML = `<img src="${icon}" alt="">${count > 1 ? `<span>×${count}</span>` : ''}`;
+      slot.innerHTML = `<img src="${icon}" alt="">${count > 1 ? `<span>×${count}</span>` : ''}${level ? `<span>Nv${level}</span>` : ''}`;
       return slot;
     }));
   }

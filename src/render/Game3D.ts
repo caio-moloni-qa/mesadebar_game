@@ -20,6 +20,10 @@ import { BossUi } from './ui/BossUi';
 import { SandboxPanel } from './ui/SandboxPanel';
 import { BossEffects } from './vfx/BossEffects';
 import { BossViews } from './views/BossView';
+import { CompanionViews, MiniBossViews } from './views/ZoneActorViews';
+import { MiniBossEffects } from './vfx/MiniBossEffects';
+import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
+import { COMPANIONS } from '../core/systems/CompanionSystem';
 import { ChestRoll } from './ui/ChestRoll';
 import { Joystick, isTouchDevice } from './ui/Joystick';
 import { CombatEffects } from './vfx/CombatEffects';
@@ -70,6 +74,9 @@ export class Game3D {
   private readonly sandbox: SandboxPanel;
   private readonly bossViews = new BossViews();
   private readonly bossEffects: BossEffects;
+  private readonly miniBossViews = new MiniBossViews();
+  private readonly companionViews = new CompanionViews();
+  private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
   private readonly showJoystick: boolean;
@@ -116,6 +123,8 @@ export class Game3D {
     if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
     this.bossEffects = new BossEffects(this.particles, this.bossViews);
     this.scene.add(this.bossEffects.root, this.bossViews.root);
+    this.miniBossEffects = new MiniBossEffects(this.particles, this.miniBossViews);
+    this.scene.add(this.miniBossEffects.root, this.miniBossViews.root, this.companionViews.root);
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
     this.floating = new FloatingTexts(container);
     this.hud = new Hud(container, Boolean(options.debug), () => {
@@ -176,6 +185,9 @@ export class Game3D {
   private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
     this.playerView?.dispose();
     this.bossViews.clear();
+    this.miniBossViews.clear();
+    this.companionViews.clear();
+    this.miniBossEffects.clear();
     this.floating.clear();
     this.chestRoll.stop();
     const { characterId, weaponId } = this.run;
@@ -316,6 +328,36 @@ export class Game3D {
         this.particles.emit(point.x + Math.cos(angle) * reach, 0.3, point.z + Math.sin(angle) * reach, 0x6dff9a, 2, { spread: 3, rise: 3, gravity: 8, life: 0.6, size: 1.3 });
       }
       this.cameraRig.shake(0.6, 0.6);
+    });
+    events.on('miniboss-impact', ({ attack, x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.burst(x, y, radius, 0xff7a3a, 0.35, 0.35);
+      this.effects.pulse(x, y, radius, 0xffc890, 0.35, 0.9);
+      this.particles.emit(point.x, 0.3, point.z, 0x6b5a46, attack === 'shockwave' ? 30 : 16, { spread: attack === 'shockwave' ? 8 : 5, rise: 4, gravity: 14, life: 0.6, size: 1.3, jitter: 0.5 });
+      this.cameraRig.shake(attack === 'shockwave' || attack === 'charge' ? 0.35 : 0.2, 0.3);
+    });
+    events.on('miniboss-stunned', ({ enemy }) => {
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 6, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 28, rise: 40, durationMs: 1100 }, performance.now());
+    });
+    events.on('miniboss-defeated', ({ kind, x, y }) => {
+      const point = at(x, y);
+      this.particles.emit(point.x, 2, point.z, kind === 'gravedigger' ? 0x6dff9a : 0x9a8f7c, 50, { spread: 6, rise: 5, gravity: 12, life: 0.9, size: 1.4, jitter: 2 });
+      this.floating.spawn(simToWorld(x, y, 7, this.scratch), `${MINI_BOSSES[kind].name} caiu!`, { color: '#ffe29a', size: 28, rise: 40, durationMs: 1600 }, performance.now());
+      this.cameraRig.shake(0.25, 0.5);
+    });
+    events.on('companion-joined', ({ kind, level }) => {
+      this.floatAboveHero(level > 1 ? `${COMPANIONS[kind].name} — nível ${level}!` : `${COMPANIONS[kind].name} se junta a você!`, '#8bffd0');
+    });
+    events.on('companion-attack', ({ kind, x, y, radius }) => {
+      if (kind === 'stoneGolem') {
+        this.effects.pulse(x, y, radius, 0xffd36a, 0.3, 0.7);
+        const point = at(x, y);
+        this.particles.emit(point.x, 0.2, point.z, 0x8f8574, 8, { spread: 3, rise: 3, gravity: 12, life: 0.45, size: 1.1 });
+      }
+    });
+    events.on('companion-down', ({ x, y }) => {
+      const point = at(x, y);
+      this.particles.emit(point.x, 1, point.z, 0x9a8f7c, 30, { spread: 4, rise: 3, gravity: 14, life: 0.8, size: 1.5, jitter: 1 });
     });
     events.on('boss-enraged', ({ enemy, healthGained }) => {
       this.effects.pulse(enemy.x, enemy.y, 900, 0xff5a3a, 0.8, 0.6);
@@ -463,11 +505,14 @@ export class Game3D {
 
     this.bossViews.update(this.session.bosses.bosses, this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.bossEffects.update(this.session, alpha, this.session.frozen ? 0 : frameMs / 1000);
+    this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.companionViews.update(this.session.companions.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
+    this.miniBossEffects.update(this.session.miniBosses, this.session.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions, this.bossEffects.root, this.playerView.effects],
-      [this.playerView.root, this.bossViews.root]);
+      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root]);
 
     this.fps.frames += 1;
     if (now - this.fps.since >= 500) {

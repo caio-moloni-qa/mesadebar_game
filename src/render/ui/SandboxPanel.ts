@@ -178,6 +178,10 @@ export class SandboxPanel {
       spawn('+1 Super Esqueleto', 'superSkeleton', 1),
       { label: () => '+1 Boss Extra', run: () => run().bosses.spawnExtraBoss() },
       { label: () => 'Boss da onda agora', run: () => run().triggerBossWave() },
+      { label: () => 'Mini-boss: O Coveiro', run: () => { run().spawnMiniBoss('gravedigger'); } },
+      { label: () => 'Mini-boss: Guardião do Templo', run: () => { run().spawnMiniBoss('templeGuardian'); } },
+      { label: () => '+ Arqueiro Esqueleto', run: () => { run().addCompanion('skeletonArcher'); } },
+      { label: () => '+ Golem de Pedra', run: () => { run().addCompanion('stoneGolem'); } },
       {
         label: () => `Limite spawn: ${SANDBOX_SPAWN_CAPS[s.capIndex]}`,
         run: () => {

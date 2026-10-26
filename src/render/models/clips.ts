@@ -312,3 +312,69 @@ export function bossClips(hipHeight: number): Record<BossClipName, THREE.Animati
     ], hips)
   };
 }
+
+export type ActorClipName = 'idle' | 'walk' | 'death' | 'raise' | 'slamWindup' | 'slamHit' | 'dig' | 'emerge' | 'chargeWindup' | 'charge' | 'stagger' | 'shockWindup' | 'shockSlam' | 'shoot';
+
+/** Clips for the zone mini-bosses and companions. The heavy walk, idle, collapse, raised-arms summon, crouch, leap and
+ *  kneel come from the boss set (tracks for bones a rig lacks are filtered by clipForBones); the rest are new: a
+ *  shovel (or two-handed) wind-up and slam, digging down, bursting out of the ground, a two-fist overhead slam, and a
+ *  bow draw-and-release. */
+export function actorClips(hipHeight: number): Record<ActorClipName, THREE.AnimationClip> {
+  const boss = bossClips(hipHeight);
+  const hips: Vec3Tuple = [0, hipHeight, 0];
+  const loop = { loop: true };
+  const overhead: Pose = { upperArmR: [-170, 0, -10], upperArmL: [-165, 0, 10], foreArmR: [-30, 0, 0], foreArmL: [-30, 0, 0], chest: [-14, 0, 0], head: [-10, 0, 0], thighL: [-12, 0, 0], thighR: [-12, 0, 0], shinL: [20, 0, 0], shinR: [20, 0, 0] };
+  const slammed: Pose = { upperArmR: [-40, 0, -5], upperArmL: [-40, 0, 5], foreArmR: [-10, 0, 0], foreArmL: [-10, 0, 0], chest: [38, 0, 0], head: [22, 0, 0], thighL: [-32, 0, 0], thighR: [-32, 0, 0], shinL: [55, 0, 0], shinR: [55, 0, 0] };
+  const digA: Pose = { chest: [42, 0, 0], head: [25, 0, 0], upperArmR: [-70, 0, -10], upperArmL: [-50, 0, 10], foreArmR: [-30, 0, 0], foreArmL: [-40, 0, 0], thighL: [-45, 0, 0], thighR: [-45, 0, 0], shinL: [80, 0, 0], shinR: [80, 0, 0] };
+  const digB: Pose = { ...digA, upperArmR: [-25, 0, -10], upperArmL: [-15, 0, 10], chest: [48, 0, 0] };
+  const fists: Pose = { upperArmR: [-175, 0, -15], upperArmL: [-175, 0, 15], foreArmR: [-15, 0, 0], foreArmL: [-15, 0, 0], chest: [-16, 0, 0], head: [-12, 0, 0] };
+  const pounded: Pose = { upperArmR: [-60, 0, -10], upperArmL: [-60, 0, 10], foreArmR: [-10, 0, 0], foreArmL: [-10, 0, 0], chest: [46, 0, 0], head: [24, 0, 0], thighL: [-45, 0, 0], thighR: [-45, 0, 0], shinL: [70, 0, 0], shinR: [70, 0, 0] };
+  const drawn: Pose = { upperArmL: [-90, 0, 0], foreArmL: [0, 0, 0], upperArmR: [-88, 0, -28], foreArmR: [-115, 0, 0], chest: [0, -32, 0], head: [0, 28, 0] };
+  return {
+    idle: boss.idle,
+    walk: boss.walk,
+    death: boss.death,
+    raise: boss.summon,
+    chargeWindup: boss.crouch,
+    charge: boss.leap,
+    stagger: boss.kneel,
+    slamWindup: poseClip('slamWindup', 0.8, [
+      { t: 0, pose: overhead, hips: [0, -0.05, 0] },
+      { t: 0.4, pose: { ...overhead, chest: [-18, 0, 0] }, hips: [0, -0.07, 0] },
+      { t: 0.8, pose: overhead, hips: [0, -0.05, 0] }
+    ], hips, loop),
+    slamHit: poseClip('slamHit', 0.45, [
+      { t: 0, pose: overhead, hips: [0, -0.05, 0] },
+      { t: 0.1, pose: slammed, hips: [0, -0.2, 0] },
+      { t: 0.45, pose: slammed, hips: [0, -0.2, 0] }
+    ], hips),
+    dig: poseClip('dig', 0.5, [
+      { t: 0, pose: digA, hips: [0, -0.28, 0] },
+      { t: 0.25, pose: digB, hips: [0, -0.32, 0] },
+      { t: 0.5, pose: digA, hips: [0, -0.28, 0] }
+    ], hips, loop),
+    // Bursts up out of the ground, arms flung wide.
+    emerge: poseClip('emerge', 0.55, [
+      { t: 0, pose: digA, hips: [0, -0.5, 0] },
+      { t: 0.18, pose: { upperArmL: [-20, 0, 120], upperArmR: [-20, 0, -120], chest: [-20, 0, 0], head: [-18, 0, 0] }, hips: [0, 0.1, 0] },
+      { t: 0.55, pose: {}, hips: [0, 0, 0] }
+    ], hips),
+    shockWindup: poseClip('shockWindup', 0.8, [
+      { t: 0, pose: fists, hips: [0, 0.04, 0] },
+      { t: 0.4, pose: { ...fists, chest: [-20, 0, 0] }, hips: [0, 0.08, 0] },
+      { t: 0.8, pose: fists, hips: [0, 0.04, 0] }
+    ], hips, loop),
+    shockSlam: poseClip('shockSlam', 0.5, [
+      { t: 0, pose: fists, hips: [0, 0.04, 0] },
+      { t: 0.12, pose: pounded, hips: [0, -0.28, 0] },
+      { t: 0.5, pose: pounded, hips: [0, -0.26, 0] }
+    ], hips),
+    // Bow in the left hand: draw to the cheek, loose, recover.
+    shoot: poseClip('shoot', 0.5, [
+      { t: 0, pose: { ...drawn, foreArmR: [-60, 0, 0] } },
+      { t: 0.18, pose: drawn },
+      { t: 0.26, pose: { ...drawn, upperArmR: [-80, 0, -50], foreArmR: [-40, 0, 0] } },
+      { t: 0.5, pose: {} }
+    ], hips)
+  };
+}

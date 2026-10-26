@@ -337,3 +337,11 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Zone guardians: an amber banner and named bars; companions in the HUD tray. */
+.boss-banner.mini { color: #ffc890; }
+.boss-bar.mini .boss-health > div { background: linear-gradient(#ff9a5a, #c4521f); }
+.boss-name { margin: 0 0 2px; text-align: center; color: #ffc890; font-size: calc(14 * var(--ui-unit)); }
+.offscreen-arrow[data-kind="miniboss"] { background: #ff9a5a; }
+.hud-build-slot.companion { border-color: rgba(139, 255, 208, 0.85); }
+.hud-build-slot.down { opacity: 0.4; filter: grayscale(1); }
