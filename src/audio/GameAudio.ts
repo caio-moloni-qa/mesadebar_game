@@ -311,6 +311,11 @@ export class GameAudio {
       on('quest-completed', () => this.play('upgrade', undefined, .9, true)),
       on('quest-claimed', () => this.play('victory', undefined, .5, true)),
       on('barrel-collected', () => this.play('pickup', undefined, .8)),
+      on('power-unlocked', () => this.play('victory', undefined, .55, true)),
+      on('power-arc', ({ points }) => this.play('bolt', points[0], .3)),
+      on('power-blast', ({ kind, x, y }) => this.play(kind === 'hawk' || kind === 'peel-slip' || kind === 'crack' ? 'impact' : kind === 'roots' ? 'dash' : kind === 'warcry' ? 'roar' : 'explosion', { x, y }, kind === 'meteor' || kind === 'eclipse' || kind === 'sanctuary' ? .9 : kind === 'warcry' ? .7 : .45)),
+      on('power-cast', ({ kind }) => { if (kind === 'fury') this.play('roar'); else if (kind === 'foresight') this.play('shield-break', undefined, .6); else if (kind !== 'fury-end' && kind !== 'foresight-ready') this.play('dash', undefined, .5, true); }),
+      on('power-item', ({ kind, x, y }) => this.play(kind === 'potion' ? 'pickup' : 'impact', { x, y }, .35)),
       on('run-ended', ({ victory }) => this.sting(victory ? 'victory' : 'defeat', true))
     );
   }

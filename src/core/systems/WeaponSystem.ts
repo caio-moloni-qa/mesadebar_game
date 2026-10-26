@@ -46,8 +46,30 @@ export const WEAPON_TUNING = {
   crystalSpin: 2.6,
   /** Lyra's Olho de Falcão: extra crit chance on targets this far away. */
   falconEyeDistance: 300,
-  falconEyeCrit: 0.25
+  falconEyeCrit: 0.25,
+  /** Fabri's Macaco Furioso: the circling boomerangs' reach and turn rate, and how often each can hit an enemy again. */
+  orbitRadius: 95,
+  orbitSpin: 7,
+  orbitRehitMs: 350,
+  /** Sergio's Combo do Mercador: the gap between the three throws. */
+  packComboGapMs: 120
 } as const;
+
+/** The heroes' power tiers, as far as the weapons go (core/systems/PowerTierSystem fills this in). */
+export interface WeaponPowers {
+  /** More headings for this volley, on top of the usual fan (Lyra's leque, Fabri's second boomerang). */
+  extraAngles(weapon: ActiveWeapon, baseAngle: number): number[];
+  /** Throw these, one after another, instead of one pick (Sergio's combo); null = the usual throw. */
+  packSequence(weapon: ActiveWeapon): ProjectileKind[] | null;
+  /** This hammer blow's shockwave: how much bigger. */
+  quakeScale(weapon: ActiveWeapon): number;
+  /** What the shockwave caught (cracks, the anvil's knock-down). */
+  afterQuake(x: number, y: number, radius: number, caught: EnemyState[]): void;
+  /** A projectile just left: extra pierces, ricochets, a golden coin... */
+  dressProjectile(weapon: ActiveWeapon, projectile: ProjectileState): void;
+  /** A projectile hit (the spark that jumps, the golden coin's burst). */
+  onProjectileHit(projectile: ProjectileState, enemy: EnemyState, amount: number): void;
+}
 
 /** One weapon in the loadout. `upgradeCount` is shared progress: every upgrade picked bumps every owned weapon. */
 export interface ActiveWeapon {
@@ -117,6 +139,7 @@ export interface WeaponHost {
   healPlayer(amount: number): void;
   /** Fabri's banana hit side effects (slow stack + chance to drop a peel). */
   onBananaHit(enemy: EnemyState): void;
+  readonly powers?: WeaponPowers;
 }
 
 /** All player weapons, ported from GameScene's attack code: Cajado (projectiles + execute/explosion exclusive),
@@ -196,9 +219,25 @@ export class WeaponSystem {
     }
     const baseAngle = Math.atan2(enemy.y - player.y, enemy.x - player.x);
     const executeToken = this.staffExecuteTokenForAttack(weapon);
+    const angles = [...projectileAngles(baseAngle, 1 + player.projectileExtraCount), ...(this.host.powers?.extraAngles(weapon, baseAngle) ?? [])];
+    const sequence = weapon.config.id === 'pack' ? this.host.powers?.packSequence(weapon) ?? null : null;
+    if (sequence) {
+      // One after another, each aimed at whoever is nearest by then.
+      weapon.lastAttackAt = now;
+      sequence.forEach((kind, index) => {
+        const throwAll = () => {
+          const target = this.host.nearestVisibleEnemy(player, this.attackRange(weapon));
+          const heading = target ? Math.atan2(target.y - player.y, target.x - player.x) : baseAngle;
+          angles.forEach((angle) => this.launchProjectile(weapon, angle - baseAngle + heading, kind, 0));
+        };
+        if (index === 0) throwAll();
+        else this.host.clock.delayedCall(index * WEAPON_TUNING.packComboGapMs, () => { if (!this.host.isOver()) throwAll(); });
+      });
+      return;
+    }
     let launched = false;
-    projectileAngles(baseAngle, 1 + player.projectileExtraCount).forEach((angle) => {
-      launched = this.launchProjectile(weapon, angle, this.projectileKind(weapon), executeToken) || launched;
+    angles.forEach((angle) => {
+      launched = this.launchProjectile(weapon, angle, this.projectileKind(weapon), executeToken) !== null || launched;
     });
     if (launched) weapon.lastAttackAt = now;
   }
@@ -228,9 +267,12 @@ export class WeaponSystem {
     const T = WEAPON_TUNING;
     const x = player.x + direction.x * range * T.hammerQuakeReach;
     const y = player.y + direction.y * range * T.hammerQuakeReach;
+    const radius = T.hammerQuakeRadius * (this.host.powers?.quakeScale(weapon) ?? 1);
     const damage = weapon.config.baseDamage * player.damageMultiplier * T.hammerQuakeDamage;
-    this.host.enemiesWithin({ x, y }, T.hammerQuakeRadius).filter((enemy) => !hits.includes(enemy)).forEach((enemy) => this.host.damageEnemy(enemy, damage, weapon.config.id));
-    this.host.events.emit('hammer-quake', { x, y, radius: T.hammerQuakeRadius });
+    const caught = this.host.enemiesWithin({ x, y }, radius);
+    caught.filter((enemy) => !hits.includes(enemy)).forEach((enemy) => this.host.damageEnemy(enemy, damage, weapon.config.id));
+    this.host.events.emit('hammer-quake', { x, y, radius });
+    this.host.powers?.afterQuake(x, y, radius, caught.filter((enemy) => enemy.alive));
   }
 
   // ── Bola de Cristal ────────────────────────────────────────────────────────────────────────────────────────
@@ -394,9 +436,9 @@ export class WeaponSystem {
     return 0;
   }
 
-  private launchProjectile(weapon: ActiveWeapon, angle: number, kind: ProjectileKind, executeToken: number): boolean {
+  private launchProjectile(weapon: ActiveWeapon, angle: number, kind: ProjectileKind, executeToken: number): ProjectileState | null {
     const projectile = this.host.projectiles.acquire();
-    if (!projectile) return false;
+    if (!projectile) return null;
     const { player, clock } = this.host;
     const speed = weapon.config.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed;
     resetProjectile(projectile, kind, weapon.config.id, player.x, player.y, speed, weapon.config.range);
@@ -410,8 +452,44 @@ export class WeaponSystem {
     projectile.innateRicochets = weapon.config.ricochets ?? 0;
     projectile.executeToken = executeToken;
     projectile.criticalChance = isReturningKind(kind) && this.exclusiveUnlocked(weapon) ? 0.15 + weapon.upgradeCount * 0.025 : 0;
+    this.host.powers?.dressProjectile(weapon, projectile);
     projectile.aimAt(angle);
     this.host.events.emit('projectile-fired', { x: projectile.x, y: projectile.y, dirX: Math.cos(angle), dirY: Math.sin(angle), kind, weaponId: weapon.config.id });
+    return projectile;
+  }
+
+  /** Fabri's Macaco Furioso: `count` boomerangs (bananas once transformed) circle the hero for `ms`, cutting through
+   *  whatever they touch. */
+  launchOrbiting(weapon: ActiveWeapon, count: number, ms: number): void {
+    const kind = this.projectileKind(weapon);
+    for (let index = 0; index < count; index += 1) {
+      const projectile = this.launchProjectile(weapon, 0, kind, 0);
+      if (!projectile) return;
+      projectile.orbitUntil = this.host.clock.now + ms;
+      projectile.orbitAngle = (index / count) * Math.PI * 2;
+      projectile.orbitHitsResetAt = 0;
+      projectile.expiresAt = projectile.orbitUntil;
+    }
+  }
+
+  private updateOrbiting(projectile: ProjectileState, deltaMs: number, now: number): boolean {
+    const { player } = this.host;
+    const T = WEAPON_TUNING;
+    if (now >= projectile.orbitUntil) return false;
+    projectile.orbitAngle += (T.orbitSpin * deltaMs) / 1000;
+    projectile.x = player.x + Math.cos(projectile.orbitAngle) * T.orbitRadius;
+    projectile.y = player.y + Math.sin(projectile.orbitAngle) * T.orbitRadius;
+    projectile.spin += 0.35 * (deltaMs / (1000 / 60));
+    if (now >= projectile.orbitHitsResetAt) {
+      projectile.outboundHits.clear();
+      projectile.orbitHitsResetAt = now + T.orbitRehitMs;
+    }
+    for (const enemy of this.host.enemiesOverlapping(projectile.x, projectile.y, projectile.radius, this.hitCandidates)) {
+      if (!projectile.claimHit(enemy)) continue;
+      const { amount, critical } = this.projectileDamage(projectile, enemy);
+      this.host.damageEnemy(enemy, amount, projectile.weaponId, critical);
+      if (projectile.kind === 'banana') this.host.onBananaHit(enemy);
+    }
     return true;
   }
 
@@ -419,6 +497,10 @@ export class WeaponSystem {
     const now = this.host.clock.now;
     const spent: ProjectileState[] = [];
     this.host.projectiles.forEachActive((projectile) => {
+      if (projectile.orbitUntil > 0) {
+        if (!this.updateOrbiting(projectile, deltaMs, now)) spent.push(projectile);
+        return;
+      }
       if (isReturningKind(projectile.kind)) {
         if (!this.steerReturning(projectile)) { spent.push(projectile); return; }
         projectile.spin += (projectile.returning ? -1 : 1) * (projectile.kind === 'thrownSword' ? 0.28 : 0.2) * (deltaMs / (1000 / 60));
@@ -468,6 +550,7 @@ export class WeaponSystem {
     const { amount, critical } = this.projectileDamage(projectile, enemy);
     this.host.damageEnemy(enemy, amount, projectile.weaponId, critical);
     if (projectile.kind === 'banana') this.host.onBananaHit(enemy);
+    this.host.powers?.onProjectileHit(projectile, enemy, amount);
     this.packEffect(projectile, enemy);
     this.triggerStaffExplosion(projectile, enemy);
     if (this.tryRicochet(projectile, enemy)) return false;
@@ -621,6 +704,9 @@ function resetProjectile(projectile: ProjectileState, kind: ProjectileKind, weap
   projectile.sizeMultiplier = 1;
   projectile.cyclesRemaining = 0;
   projectile.spin = 0;
+  projectile.golden = false;
+  projectile.orbitUntil = 0;
+  projectile.orbitAngle = 0;
   projectile.outboundHits.clear();
   projectile.returnHits.clear();
 }

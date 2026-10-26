@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, PLAYER_CONFIG, ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
@@ -13,6 +13,7 @@ import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS }
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
 import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
 import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
+import { FLEE_SPEED_MULTIPLIER, PULL_SPEED, PowerTierEvents, PowerTierSystem } from '../systems/PowerTierSystem';
 import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
@@ -64,7 +65,7 @@ export type PendingChoice =
   /** The merchant's Tomo de Afinidade: unlock one weapon family's upgrade pool. */
   | { kind: 'affinity'; families: WeaponFamily[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents, PowerTierEvents {
   /** A mission's upgrade reward: what was granted. */
   'quest-gifts': { names: string[] };
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
@@ -151,6 +152,8 @@ export class GameSession implements WeaponHost {
   readonly merchant: MerchantSystem;
   readonly quests: QuestSystem;
   readonly abilities: HeroAbilitySystem;
+  /** The hero's in-run power tiers (levels 5/10/15). */
+  readonly powers: PowerTierSystem;
   /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
   private jackpotPending = false;
   /** Sergio's Loja Portátil can open again at this sim time. */
@@ -257,6 +260,30 @@ export class GameSession implements WeaponHost {
       healPlayer: (amount) => this.healPlayer(amount),
       addFreeItem: () => { this.merchant.freeItems += 1; }
     });
+    this.powers = new PowerTierSystem({
+      player: this.player,
+      clock: this.clock,
+      rng: this.rng,
+      characterId: this.characterId,
+      arena: this.arena,
+      events: this.events,
+      level: () => this.level,
+      signatureWeapon: () => this.weapons.weapons.find((weapon) => weapon.config.id === character.preferredWeaponId) ?? null,
+      enemiesWithin: (from, radius) => this.enemiesWithin(from, radius),
+      nearestEnemy: (from, range, exclude) => this.nearestEnemy(from, range, exclude),
+      damageEnemy: (enemy, amount, weaponId) => this.damageEnemy(enemy, amount, weaponId),
+      stunEnemy: (enemy, ms) => this.stunEnemy(enemy, ms),
+      defeatEnemy: (enemy) => this.defeatEnemy(enemy),
+      healPlayer: (amount) => this.healPlayer(amount),
+      dropPickup: (kind, x, y, value, magnet) => this.dropPickup(kind, x, y, value, magnet),
+      dropPeel: (x, y) => this.dropPeel(x, y),
+      orbitBoomerangs: (weapon, count, ms) => this.weapons.launchOrbiting(weapon, count, ms),
+      shieldCap: () => { const shield = CHARACTERS[this.characterId].hitShield; return shield ? this.player.maxHealth * shield.maxHealthFraction : 0; },
+      auraRadius: (weapon) => this.weapons.auraRadius(weapon),
+      orbs: (weapon) => this.weapons.crystalOrbs(weapon)
+    });
+    this.events.on('aura-pulse', () => this.powers.onAuraPulse());
+    this.events.on('arrow-rain', ({ x, y, radius }) => this.powers.onArrowRain(x, y, radius));
     this.merchant = new MerchantSystem({
       player: this.player,
       rng: this.rng,
@@ -596,10 +623,13 @@ export class GameSession implements WeaponHost {
     this.weapons.update(deltaMs);
     this.companions.update(deltaMs);
     this.abilities.update(deltaMs);
+    this.powers.update(deltaMs);
     this.updateSouls(deltaMs, now);
     this.updatePeels(now);
     this.updatePickups(deltaMs);
     if (!this.player.alive && !this.over) {
+      // Fúria Imortal: the Bárbaro won't go down (once a stage).
+      if (this.powers.cheatDeath()) return;
       if (this.revivesLeft > 0) {
         // Segunda chance: half health and a moment of grace.
         this.revivesLeft -= 1;
@@ -663,17 +693,27 @@ export class GameSession implements WeaponHost {
         if (now >= enemy.phaseEndsAt) finished.push(enemy);
         return;
       }
-      if (!enemy.isStatic && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy)) {
+      const held = now < enemy.heldUntil || now < enemy.liftedUntil;
+      if (now < enemy.pullUntil && !enemy.isStatic) {
+        // Zora's Eclipse drags it in, stunned or not.
+        this.chase(enemy, { x: enemy.pullX, y: enemy.pullY }, deltaMs, PULL_SPEED);
+      } else if (!enemy.isStatic && !held && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy)) {
         // The golem companion pulls nearby enemies off the hero (bosses ignore it).
         const taunt = enemy.isCommon ? this.companions.tauntTarget(enemy) : null;
-        if (taunt) this.chase(enemy, taunt, deltaMs);
-        else this.pursuePlayer(enemy, deltaMs);
+        if (now < enemy.fleeUntil) this.flee(enemy, deltaMs, now);
+        else if (taunt) this.chase(enemy, taunt, deltaMs);
+        else this.pursuePlayer(enemy, deltaMs, now);
       }
       if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss' && !this.miniBosses.controls(enemy)) this.separate(enemy);
       // Every walker - floating wraiths included - slides along walls and stays out of the lake.
       // Mini-bosses resolve their own collisions (a lake spirit in the water, a Coveiro tunnelling under walls).
       if (!enemy.isStatic && !this.miniBosses.controls(enemy)) this.arena.resolve(enemy);
-      if (enemy.contactDamage > 0 && circlesOverlap(enemy, this.player)) this.hurtPlayer(enemy.contactDamage, now);
+      // Lifted off the ground (the Mago's hurricane), it can't reach the hero.
+      if (enemy.contactDamage > 0 && now >= enemy.liftedUntil && circlesOverlap(enemy, this.player)) {
+        const shielded = this.player.damageBuffer > 0;
+        const dealt = this.hurtPlayer(enemy.contactDamage, now);
+        if (dealt > 0) this.powers.onContactHit(enemy, dealt, shielded);
+      }
       if (enemy.variantId === 'necromancerWraith' && now >= enemy.nextSoulAt) {
         enemy.nextSoulAt = now + ENEMY_VARIANTS.necromancerWraith.soulCooldownMs;
         this.fireSoul(enemy, now);
@@ -699,13 +739,13 @@ export class GameSession implements WeaponHost {
     }
   }
 
-  /** Straight at a nearby target (a taunting companion). */
-  private chase(enemy: EnemyState, target: Vec2, deltaMs: number): void {
+  /** Straight at a nearby target (a taunting companion, the eclipse's pull at `speed`). */
+  private chase(enemy: EnemyState, target: Vec2, deltaMs: number, speed = enemy.effectiveMovementSpeed(this.clock.now)): void {
     const dx = target.x - enemy.x;
     const dy = target.y - enemy.y;
     const length = Math.hypot(dx, dy);
     if (length === 0) return;
-    const step = Math.min(length, (enemy.effectiveMovementSpeed() * deltaMs) / 1000);
+    const step = Math.min(length, (speed * deltaMs) / 1000);
     enemy.facingX = dx / length;
     enemy.facingY = dy / length;
     enemy.x += enemy.facingX * step;
@@ -714,13 +754,25 @@ export class GameSession implements WeaponHost {
 
   /** Follow the flow field downhill (routes around walls, through doorways), or walk straight at the hero on an
    *  open map / once close enough that the field has nothing better to say. */
-  private pursuePlayer(enemy: EnemyState, deltaMs: number): void {
+  /** Running from the hero (the Bárbaro's war cry). */
+  private flee(enemy: EnemyState, deltaMs: number, now: number): void {
+    const dx = enemy.x - this.player.x;
+    const dy = enemy.y - this.player.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const step = (enemy.effectiveMovementSpeed(now) * FLEE_SPEED_MULTIPLIER * deltaMs) / 1000;
+    enemy.facingX = dx / length;
+    enemy.facingY = dy / length;
+    enemy.x += enemy.facingX * step;
+    enemy.y += enemy.facingY * step;
+  }
+
+  private pursuePlayer(enemy: EnemyState, deltaMs: number, now: number): void {
     const dx = this.player.x - enemy.x;
     const dy = this.player.y - enemy.y;
     const length = Math.hypot(dx, dy);
     if (length === 0) return;
     const route = this.flowField?.direction(enemy.x, enemy.y) ?? null;
-    const step = Math.min(length, (enemy.effectiveMovementSpeed() * deltaMs) / 1000);
+    const step = Math.min(length, (enemy.effectiveMovementSpeed(now) * deltaMs) / 1000);
     enemy.facingX = route ? route.x : dx / length;
     enemy.facingY = route ? route.y : dy / length;
     enemy.x += enemy.facingX * step;
@@ -748,9 +800,16 @@ export class GameSession implements WeaponHost {
     }
   }
 
-  private hurtPlayer(amount: number, now: number, unavoidable = false): void {
-    const dealt = this.player.damage(amount, now, unavoidable);
+  private hurtPlayer(amount: number, now: number, unavoidable = false): number {
+    const { player } = this;
+    // Zora's Visão do Futuro: a hit that would land is foreseen, and the moment of grace after it still follows.
+    if (!player.invincible && (unavoidable || now >= player.invulnerableUntil) && this.powers.foresee()) {
+      player.invulnerableUntil = now + PLAYER_CONFIG.invulnerabilityMs;
+      return 0;
+    }
+    const dealt = player.damage(amount, now, unavoidable);
     if (dealt > 0) this.events.emit('player-damaged', { amount: dealt });
+    return dealt;
   }
 
   private updatePlayerStatus(deltaMs: number, now: number): void {
@@ -936,6 +995,7 @@ export class GameSession implements WeaponHost {
     this.phaseBossTriggered = false;
     this.difficulty.setCycleMultiplier(this.bossCycle);
     this.bosses.rearm();
+    this.powers.newStage();
   }
 
   private finish(victory: boolean): void {
@@ -967,8 +1027,9 @@ export class GameSession implements WeaponHost {
     // A roaring boss shrugs hits off and a staggered one takes extra; then a channelling boss's shield soaks hits
     // first and only the overflow reaches its health.
     amount *= this.bosses.damageTakenMultiplier(enemy) * this.miniBosses.damageTakenMultiplier(enemy);
-    // Zora's Destino Selado: a marked enemy takes double.
+    // Zora's Destino Selado: a marked enemy takes double; the Bárbaro's Fúria hits twice as hard.
     if (this.abilities.isMarked(enemy)) amount *= 2;
+    if (weaponId) amount *= this.powers.damageDealtMultiplier();
     if (amount <= 0) {
       enemy.lastHitAt = now;
       return;
@@ -987,7 +1048,11 @@ export class GameSession implements WeaponHost {
     enemy.hitStunUntil = now + ENEMY_HIT_STUN_MS;
     enemy.lastHitAt = now;
     this.events.emit('enemy-hit', { enemy, amount, critical, weaponId });
-    if (enemy.health <= 0) this.defeatEnemy(enemy);
+    this.powers.onHit(enemy, amount, weaponId);
+    if (enemy.health <= 0 && enemy.alive) {
+      this.defeatEnemy(enemy);
+      this.powers.onKill(enemy, weaponId);
+    }
   }
 
   healPlayer(amount: number): void {
@@ -995,6 +1060,7 @@ export class GameSession implements WeaponHost {
     if (Math.round(prevented) > 0) this.events.emit('player-status', { text: `CURA -${Math.round(prevented)}`, tone: 'heal-cut' });
   }
 
+  /** Dead: counted, credited and dropping its loot (bosses and guardians have their own ends). */
   private defeatEnemy(enemy: EnemyState): void {
     enemy.phase = 'dying';
     enemy.phaseEndsAt = this.clock.now + ENEMY_DYING_MS;
@@ -1036,11 +1102,12 @@ export class GameSession implements WeaponHost {
     this.processExperience();
   }
 
-  private dropPickup(kind: PickupKind, x: number, y: number, value: number): void {
+  private dropPickup(kind: PickupKind, x: number, y: number, value: number, magnet = false): void {
     const pickup = this.pickups.acquire();
     if (!pickup) return;
     pickup.kind = kind;
     pickup.value = value;
+    pickup.magnet = magnet;
     pickup.radius = kind === 'gem' ? BODY_RADIUS.gem : kind === 'chest' ? BODY_RADIUS.chest : BODY_RADIUS.potion;
     // Never inside a wall or the lake (a burst of gems from a kill next to a wall would otherwise be unreachable).
     const spot = this.arena.nearestWalkable(x, y, pickup.radius);
@@ -1056,7 +1123,7 @@ export class GameSession implements WeaponHost {
       const dx = this.player.x - pickup.x;
       const dy = this.player.y - pickup.y;
       const distSq = dx * dx + dy * dy;
-      if (distSq <= rangeSq && distSq > 0) {
+      if ((distSq <= rangeSq || pickup.magnet) && distSq > 0) {
         const length = Math.sqrt(distSq);
         const step = Math.min(length, (PICKUP_ATTRACT_SPEED * deltaMs) / 1000);
         pickup.x += (dx / length) * step;
@@ -1132,11 +1199,16 @@ export class GameSession implements WeaponHost {
     enemy.slowStackPercent = Math.min(WEAPON_TUNING.bananaSlowCap, enemy.slowStackPercent + transform.slowPercentPerHit);
     if (enemy.alive && this.rng() < transform.slipChancePerHit) this.slipEnemy(enemy, this.clock.now);
     if (this.rng() >= PEEL.spawnChance) return;
-    const peel = this.peels.acquire();
-    if (!peel) return;
     const angle = floatBetween(this.rng, 0, Math.PI * 2);
     const distance = floatBetween(this.rng, PEEL.minRadius, PEEL.maxRadius);
-    const spot = this.arena.nearestWalkable(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, peel.radius);
+    this.dropPeel(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance);
+  }
+
+  /** A banana peel on the ground near (x, y). */
+  private dropPeel(x: number, y: number): void {
+    const peel = this.peels.acquire();
+    if (!peel) return;
+    const spot = this.arena.nearestWalkable(x, y, peel.radius);
     peel.x = spot.x;
     peel.y = spot.y;
     snapPrevious(peel);
@@ -1162,6 +1234,7 @@ export class GameSession implements WeaponHost {
       const victim = this.enemiesOverlapping(peel.x, peel.y, peel.radius)[0];
       if (!victim) return;
       this.slipEnemy(victim, now);
+      this.powers.onPeelSlip(victim);
       spent.push(peel);
     });
     spent.forEach((peel) => this.peels.release(peel));
