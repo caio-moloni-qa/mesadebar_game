@@ -242,6 +242,8 @@ export class MerchantRoom {
     this.characters.add(this.sergio.root);
     this.regulars.forEach((regular, index) => {
       const spot = MERCHANT_ROOM.npcs[index];
+      // Regulars who joined your roster have left the bar.
+      regular.root.visible = !system.away.has(index);
       regular.root.position.copy(at(spot.x, spot.y).add(center));
       regular.root.rotation.y = -Math.PI / 2;
       this.characters.add(regular.root);
@@ -279,8 +281,8 @@ export class MerchantRoom {
     this.flames.forEach((flame, index) => flame.scale.set(1, 0.85 + 0.25 * Math.abs(Math.sin(this.time * (7 + index * 2) + index)), 1));
     this.quests.quests.forEach((quest, index) => {
       const marker = this.markers[index];
-      marker.visible = quest.status !== 'done';
-      if (quest.status === 'done') return;
+      marker.visible = quest.status !== 'done' && !system.away.has(index);
+      if (quest.status === 'done' || !marker.visible) return;
       const texture = this.markerTextures[quest.status];
       if (marker.material.map !== texture) {
         marker.material.map = texture;

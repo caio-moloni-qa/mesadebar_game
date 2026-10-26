@@ -519,3 +519,4 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 @media (max-width: 900px) { .character-step .hero-roster { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .character-step .hero-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .hero-confirm:disabled, .preview-attack:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(1); }
+.tavern-area { margin: 2px 0 0; color: var(--muted); font-size: 13px; } .tavern-area b { color: var(--gold); }

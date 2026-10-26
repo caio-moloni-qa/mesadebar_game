@@ -33,6 +33,8 @@ import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub
 import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
 import { GuardianIntro } from './GuardianIntro';
+import { CURRENT_AREA } from '../config/areas';
+import { QuestNpcId } from '../core/systems/QuestSystem';
 import { Tip, TipDialog } from './ui/TipDialog';
 import { FIRST_RUN_TIP, GUARDIAN_TIP, welcomeTip } from './ui/tips';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
@@ -387,6 +389,7 @@ export class Game3D {
       // Sergio's permanent upgrades and the regulars' mission progress carry into every real run.
       meta: attract || hub ? undefined : metaBonuses(this.progress),
       questTiers: attract ? undefined : this.progress.regularMissions,
+      regularsAway: rosterFor(this.progress).filter((hero): hero is QuestNpcId => CURRENT_AREA.regulars.includes(hero)),
       hub,
       tier: attract || hub ? 1 : this.tier
     });

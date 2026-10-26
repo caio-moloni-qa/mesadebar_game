@@ -1,3 +1,4 @@
+import { AreaConfig } from '../../config/areas';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { QuestNpcId } from '../systems/QuestSystem';
 
@@ -311,6 +312,12 @@ export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
     ];
   }
   return [];
+}
+
+/** How far an area is: its regulars won over (each one only joins from that area's tavern). */
+export function areaCompletion(save: SaveData, area: AreaConfig): { joined: number; total: number } {
+  const roster = rosterFor(save);
+  return { joined: area.regulars.filter((hero) => roster.includes(hero)).length, total: area.regulars.length };
 }
 
 // ── The save ────────────────────────────────────────────────────────────────────────────────────────────────────

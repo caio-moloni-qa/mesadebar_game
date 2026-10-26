@@ -11,7 +11,7 @@ import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffle
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
-import { QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
+import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
 import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
 import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
@@ -107,6 +107,8 @@ export interface GameSessionOptions {
   meta?: MetaBonuses;
   /** Missions already done with each regular in earlier runs: they pick up at the next one. */
   questTiers?: Partial<Record<QuestNpcId, number>>;
+  /** Regulars already in the roster: they're no longer at the tavern. */
+  regularsAway?: QuestNpcId[];
   /** The tavern between runs: the hero starts in the room, nothing spawns, no run clock. */
   hub?: boolean;
   /** Difficulty tier (1 = normal): enemy health and contact damage scale up. */
@@ -264,6 +266,7 @@ export class GameSession implements WeaponHost {
       priceMultiplier: () => (this.characterId === 'grimbo' ? HERO_ABILITY_TUNING.grimboPrices : 1),
       encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
     });
+    QUEST_NPCS.forEach((npc, index) => { if (options.regularsAway?.includes(npc.id)) this.merchant.away.add(index); });
     this.companions = new CompanionSystem({
       player: this.player,
       arena: this.arena,

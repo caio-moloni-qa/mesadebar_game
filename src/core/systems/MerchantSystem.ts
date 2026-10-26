@@ -127,6 +127,9 @@ export class MerchantSystem {
   /** Where the hero stood when stepping into the portal. */
   private returnTo: Vec2 = { x: 0, y: 0 };
 
+  /** Regulars (QUEST_NPCS index) who joined your roster: they've left the bar — no table to talk at, nothing in the way. */
+  readonly away = new Set<number>();
+
   constructor(private readonly host: MerchantHost) {
     this.room = { x: host.arena.size * 2.5, y: host.arena.size / 2 };
   }
@@ -161,6 +164,7 @@ export class MerchantSystem {
     let npc = -1;
     bestDistance = Number.POSITIVE_INFINITY;
     MERCHANT_ROOM.npcs.forEach((spot, index) => {
+      if (this.away.has(index)) return;
       const distance = Math.hypot(player.x - (this.room.x + spot.x), player.y - (this.room.y + spot.y));
       if (distance <= MERCHANT_ROOM.talkReach && distance < bestDistance) { npc = index; bestDistance = distance; }
     });
@@ -252,7 +256,7 @@ export class MerchantSystem {
     // Tables and the regulars standing by them.
     const circles = [
       ...MERCHANT_ROOM.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
-      ...MERCHANT_ROOM.npcs.map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
+      ...MERCHANT_ROOM.npcs.filter((_, index) => !this.away.has(index)).map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
       { ...MERCHANT_ROOM.records, radius: 16 }
     ];
     circles.forEach((circle) => {

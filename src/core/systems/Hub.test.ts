@@ -50,3 +50,15 @@ describe('the tavern between runs', () => {
     expect(run.quests.quests[0].tier).toBe(1);
   });
 });
+
+describe('regulars who joined the roster', () => {
+  it('have left the bar: no one to talk to, nothing in the way', () => {
+    const run = new GameSession({ characterId: 'barbarian', seed: 1, skipStartingUpgrades: true, arena: ArenaMap.generate(11), hub: true, regularsAway: ['brom'] });
+    expect(run.merchant.away.has(0)).toBe(true);
+    const spot = MERCHANT_ROOM.npcs[0];
+    standAt(run, spot);
+    expect(run.merchant.roomSpot).not.toEqual({ kind: 'npc', index: 0 });
+    // Standing on the spot is allowed (nobody pushes the hero away).
+    expect(Math.hypot(run.player.x - (run.merchant.room.x + spot.x), run.player.y - (run.merchant.room.y + spot.y))).toBeLessThan(1);
+  });
+});
