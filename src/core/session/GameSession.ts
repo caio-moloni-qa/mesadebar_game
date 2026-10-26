@@ -41,8 +41,6 @@ const SEPARATION_STRENGTH = 0.25;
 const FLOW_FIELD_REFRESH_MS = 250;
 /** Boss-wave portals (Phaser: GameScene.onBossWaveCleared): spawn this far apart above the hero, used within reach. */
 const PORTAL = { spread: 110, rise: 160, reach: 70 } as const;
-/** Zone mini-bosses: one slot every this long into each phase; two per cycle, three from cycle 3. */
-const MINI_BOSS_SLOT_MS = 60_000;
 /** Each guardian slain this cycle: the Necromancer comes in with this much less health (and one beam fewer). */
 export const GUARDIAN_WEAKENING = 0.05;
 
@@ -685,7 +683,9 @@ export class GameSession implements WeaponHost {
    *  — never while the Necromancer's wave is coming or up, nor over another live guardian (that slot is skipped). */
   private scheduleMiniBosses(): void {
     const slots = this.bossCycle >= 3 ? 3 : 2;
-    const due = Math.min(slots, Math.floor((this.elapsedMs - this.phaseStartedAtMs) / MINI_BOSS_SLOT_MS));
+    // Spread evenly over the phase (a 5-minute first phase: 1:40 and 3:20).
+    const slotMs = this.phaseDurationMs() / (slots + 1);
+    const due = Math.min(slots, Math.floor((this.elapsedMs - this.phaseStartedAtMs) / slotMs));
     if (due <= this.miniBossSlotsThisPhase) return;
     this.miniBossSlotsThisPhase = due;
     if (this.bosses.hasActiveEncounter() || this.miniBosses.active) return;

@@ -32,11 +32,13 @@ function withMiniBoss(kind: MiniBossKind, at?: { x: number; y: number }) {
 }
 
 describe('zone mini-bosses', () => {
-  it('a slot opens a minute into the phase: the guardian is announced, then appears in its zone', () => {
+  it('the first slot opens a third into the phase: the guardian is announced, then appears in its zone', () => {
     const run = session();
     const events: string[] = [];
     run.events.on('miniboss-warning', ({ kind }) => events.push(kind));
-    run.adjustElapsedMs(60_000 - 100);
+    run.adjustElapsedMs(run.phaseDurationMs() / 3 - 300);
+    advance(run, 200);
+    expect(events).toEqual([]);
     advance(run, 200);
     expect(events).toEqual(['gravedigger']);
     advance(run, MINI_BOSS_TUNING.warningMs);
