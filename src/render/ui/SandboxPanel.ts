@@ -164,6 +164,7 @@ export class SandboxPanel {
       toggle('Spawn variantes', 'variants', (value) => { run().variantSpawnEnabled = value; }),
       toggle('Mercador', 'merchant', (value) => { run().merchant.enabled = value; }),
       { label: () => 'Abrir portal do mercador', run: () => run().openMerchantPortal() },
+      { label: () => 'Concluir missões ativas', run: () => run().quests.completeActive() },
       toggle('Invencível', 'invincible', (value) => { run().player.invincible = value; }),
       { label: () => '+500 Buffer de Dano', run: () => { run().player.damageBuffer += 500; } },
       {

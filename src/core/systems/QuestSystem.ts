@@ -184,6 +184,14 @@ export class QuestSystem {
     return reward;
   }
 
+  /** Sandbox: finish every mission under way. */
+  completeActive(): void {
+    this.barrels = [];
+    this.quests.forEach((quest) => {
+      if (quest.status === 'active') this.addProgress(quest, goalAmount(this.spec(quest).goal));
+    });
+  }
+
   /** Out on the arena only (the session doesn't step it inside the tavern). */
   update(delta: number): void {
     this.quests.forEach((quest) => {

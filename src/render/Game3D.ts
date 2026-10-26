@@ -22,6 +22,9 @@ import { BossEffects } from './vfx/BossEffects';
 import { BossViews } from './views/BossView';
 import { CompanionViews, MiniBossViews } from './views/ZoneActorViews';
 import { MerchantRoom } from './world/MerchantRoom';
+import { QuestBarrels } from './world/QuestBarrels';
+import { TavernDialog } from './ui/TavernDialog';
+import { rewardText } from './ui/questText';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
@@ -83,6 +86,8 @@ export class Game3D {
   private readonly joystick: Joystick;
   private readonly showJoystick: boolean;
   private readonly choices: ChoiceOverlay;
+  private readonly tavernDialog: TavernDialog;
+  private readonly questBarrels = new QuestBarrels();
   private readonly menu: StartMenu;
   private readonly audio: GameAudio;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
@@ -140,6 +145,8 @@ export class Game3D {
     });
     this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
+    this.tavernDialog = new TavernDialog(container);
+    this.scene.add(this.questBarrels.root);
     this.chestRoll = new ChestRoll(container);
     this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
     this.showJoystick = Boolean(options.touch) || isTouchDevice();
@@ -203,7 +210,7 @@ export class Game3D {
       arena: this.arenaMap
     });
     this.audio.bind(this.session);
-    this.merchantRoom = new MerchantRoom(this.session.merchant);
+    this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
     this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
@@ -403,6 +410,21 @@ export class Game3D {
     };
     events.on('merchant-entered', () => portalCut(0xb48cff));
     events.on('merchant-left', () => portalCut(0xffc65a));
+    events.on('quest-accepted', ({ title }) => this.floatAboveHero(`Missão aceita: ${title}`, '#ffd25a'));
+    events.on('quest-completed', ({ title }) => {
+      this.floatAboveHero(`${title} concluída! Volte à taverna`, '#8dffa8');
+      this.effects.pulse(this.session.player.x, this.session.player.y, 70, 0x8dffa8, 0.5, 0.6);
+    });
+    events.on('quest-claimed', ({ reward }) => {
+      this.floatAboveHero(`Recompensa: ${rewardText(reward)}`, '#ffd25a');
+      this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffd25a, 16, 1.8, 1.4);
+    });
+    events.on('quest-gifts', ({ names }) => names.forEach((name, index) => window.setTimeout(() => this.floatAboveHero(`Presente: ${name}!`, '#ffe29a'), 500 + index * 450)));
+    events.on('barrel-collected', ({ x, y }) => {
+      const point = at(x, y);
+      this.particles.burst(point.x, point.z, 0xffd25a, 14, 1.6, 1.2);
+      this.floatAboveHero('Barril recuperado!', '#ffd25a');
+    });
     events.on('merchant-purchase', ({ cost }) => {
       this.floatAboveHero(`-${cost} moedas`, '#ffd25a');
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffd25a, 12, 1.6, 1.4);
@@ -455,7 +477,9 @@ export class Game3D {
       if (this.inMenu) return;
       this.keys.add(event.code);
       // ESC stays blocked while a choice screen is open, like the Phaser build.
-      if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
+      // ESC first closes a conversation in the tavern.
+      if (event.code === 'Escape' && this.session.dialogue !== null) this.session.closeDialogue();
+      else if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
       if (event.code === 'KeyE') this.session.interact();
       if (event.code === 'KeyM' && (this.session.over || this.session.paused)) this.showMenu();
@@ -547,6 +571,7 @@ export class Game3D {
     this.companionViews.update(this.session.companions.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossEffects.update(this.session.miniBosses, this.session.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
+    this.questBarrels.update(this.session.quests, this.session.frozen ? 0 : frameMs / 1000);
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
@@ -570,6 +595,7 @@ export class Game3D {
       textures: this.renderer.info.memory.textures
     });
     this.choices.update(this.session);
+    this.tavernDialog.update(this.session);
   }
 }
 
