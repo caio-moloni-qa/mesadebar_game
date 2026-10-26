@@ -1,6 +1,7 @@
 import { QuestNpcId } from '../../core/systems/QuestSystem';
 import { WeaponConfig } from '../../config/weapons';
 import { CompanionKind } from '../../core/systems/MiniBossSystem';
+import { MerchantItemId } from '../../core/systems/MerchantSystem';
 
 // One static URL literal per file so Vite rewrites each with the base path.
 // Upgrade art is the 3D UI's regenerated faceted set; other art is shared with Phaser.
@@ -153,4 +154,19 @@ const STORE_ICONS: Record<string, string> = {
 };
 export function storeIcon(id: string): string {
   return STORE_ICONS[id] ?? UPGRADE_ART.damage;
+}
+
+/** The merchant's item art (the Phaser shop's icons), one static URL per file for Vite. */
+const ITEM_ICONS: Record<MerchantItemId, string> = {
+  'divine-blessing': new URL('../../assets/upgrades/merchant/merchant-divine-blessing-icon.png', import.meta.url).href,
+  'arcane-curse': new URL('../../assets/upgrades/merchant/merchant-arcane-curse-icon.png', import.meta.url).href,
+  heal: new URL('../../assets/upgrades/merchant/merchant-heal-potion-icon.png', import.meta.url).href,
+  damage: new URL('../../assets/upgrades/merchant/merchant-sharp-blade-icon.png', import.meta.url).href,
+  speed: new URL('../../assets/upgrades/merchant/merchant-swift-boots-icon.png', import.meta.url).href,
+  'affinity-tome': new URL('../../assets/upgrades/merchant/merchant-affinity-tome-icon.png', import.meta.url).href,
+  'max-health': new URL('../../assets/upgrades/merchant/merchant-vitality-elixir-icon.png', import.meta.url).href
+};
+
+export function merchantItemIcon(id: MerchantItemId): string {
+  return ITEM_ICONS[id];
 }

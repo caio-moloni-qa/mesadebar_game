@@ -93,6 +93,8 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'hub-exit': Record<string, never>;
   'hub-records': Record<string, never>;
   'hub-sergio': Record<string, never>;
+  /** During a run's visit: Sergio's store (the run's items) opens. */
+  'merchant-shop': Record<string, never>;
   /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
   'boss-wave-cleared': { cycle: number };
   'run-ended': { victory: boolean };
@@ -455,10 +457,11 @@ export class GameSession implements WeaponHost {
     this.closeChoice();
   }
 
-  /** Buys pedestal `index` in the merchant's room and applies it (Phaser MerchantSystem item effects). */
-  private buyFromMerchant(index: number): void {
+  /** Buys this visit's offer `index` from Sergio's store and applies it (Phaser MerchantSystem item effects). The
+   *  Tomo de Afinidade opens its family choice. Returns false if it couldn't be bought. */
+  buyMerchantItem(index: number): boolean {
     const offer = this.merchant.buy(index, this.currency);
-    if (!offer) return;
+    if (!offer) return false;
     this.currency -= offer.cost;
     const { player } = this;
     switch (offer.id) {
@@ -473,6 +476,7 @@ export class GameSession implements WeaponHost {
         break;
       case 'affinity-tome': this.openChoice({ kind: 'affinity', families: this.merchant.availableFamilies() }); break;
     }
+    return true;
   }
 
   /** The dialogue's main button: accept the mission on offer or claim a finished one's reward; otherwise just closes. */
@@ -935,7 +939,7 @@ export class GameSession implements WeaponHost {
         return;
       }
       if (spot?.kind === 'exit') this.merchant.leave();
-      if (spot?.kind === 'slot') this.buyFromMerchant(spot.index);
+      if (spot?.kind === 'sergio') this.events.emit('merchant-shop', {});
       if (spot?.kind === 'npc') this.dialogue = spot.index;
       return;
     }

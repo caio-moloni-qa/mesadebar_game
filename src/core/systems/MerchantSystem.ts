@@ -6,8 +6,8 @@ import { ArenaMap } from '../world/ArenaMap';
 
 // The merchant (port of the Phaser MerchantSystem): every so often a portal opens somewhere on the arena for a short
 // while; stepping through it leaves the horde behind — the arena freezes — for the tavern, a pocket realm outside the
-// map. Sergio tends the bar and sells his four items along the counter (walk up to one to buy it); the regulars at
-// the tables hand out missions (QuestSystem). The exit portal takes you back to where you entered. Same offers,
+// map. Sergio tends the bar and sells his four items (talk to him: his store opens); the regulars at the tables hand
+// out missions (QuestSystem). The exit portal takes you back to where you entered. Same offers,
 // prices and run-wide price inflation as the Phaser build.
 
 export const MERCHANT_TUNING = {
@@ -35,14 +35,12 @@ export const MERCHANT_ROOM = {
   arrival: { x: 0, y: -185 },
   merchant: { x: -255, y: 0 },
   counter: { x: -195, y: 10, halfWidth: 28, halfHeight: 200 },
-  /** Where you stand to buy each item (its icon floats over the counter beside it). */
-  slots: [0, 1, 2, 3].map((index) => ({ x: -140, y: -120 + index * 80 })),
   /** The regulars (QUEST_NPCS order) and their tables. */
   npcs: [{ x: 120, y: -130 }, { x: 255, y: -40 }, { x: 120, y: 160 }, { x: 255, y: 230 }],
   tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
   tableRadius: 34,
   npcRadius: 18,
-  /** Between runs: the heroes waiting along the north wall (roster order), and where you talk to Sergio. */
+  /** Where you talk to Sergio (his store: the run's items during a visit, his upgrades between runs). */
   sergioSpot: { x: -140, y: 0 },
   sergioReach: 110,
   /** Between runs: the lectern with the record book, by the fireplace. */
@@ -101,9 +99,9 @@ export interface MerchantHost {
   priceMultiplier(): number;
 }
 
-/** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing —
- *  and between runs, a waiting hero or Sergio himself. */
-export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | { kind: 'sergio' } | { kind: 'records' } | null;
+/** What the hero is at in the tavern: the exit portal, Sergio, one of the regulars, or nothing — and between runs,
+ *  the record book. */
+export type RoomSpot = { kind: 'exit' } | { kind: 'npc'; index: number } | { kind: 'sergio' } | { kind: 'records' } | null;
 
 export class MerchantSystem {
   enabled = true;
@@ -147,22 +145,11 @@ export class MerchantSystem {
     const { player } = this.host;
     const near = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y)) <= MERCHANT_TUNING.reach;
     if (near(MERCHANT_ROOM.exit)) return { kind: 'exit' };
-    if (this.hub) {
-      const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
-      if (distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
-      if (distance(MERCHANT_ROOM.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
-    }
-    // Pedestals stand closer together than the reach: the nearest unsold one is the one you mean.
-    let best = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    MERCHANT_ROOM.slots.forEach((slot, index) => {
-      if (this.offers[index]?.purchased || !near(slot)) return;
-      const distance = Math.hypot(player.x - (this.room.x + slot.x), player.y - (this.room.y + slot.y));
-      if (distance < bestDistance) { best = index; bestDistance = distance; }
-    });
-    if (best >= 0) return { kind: 'slot', index: best };
+    const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
+    if (distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+    if (this.hub && distance(MERCHANT_ROOM.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
     let npc = -1;
-    bestDistance = Number.POSITIVE_INFINITY;
+    let bestDistance = Number.POSITIVE_INFINITY;
     MERCHANT_ROOM.npcs.forEach((spot, index) => {
       if (this.away.has(index)) return;
       const distance = Math.hypot(player.x - (this.room.x + spot.x), player.y - (this.room.y + spot.y));
