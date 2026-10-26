@@ -79,8 +79,16 @@ const NPC_FACES: Record<QuestNpcId, string> = {
   zora: svg('<circle cx="32" cy="58" r="10" fill="#9fe8ff" opacity=".7"/><circle cx="32" cy="32" r="14" fill="#c8946a"/><path d="M16 30 Q32 6 48 30 Q40 22 32 22 Q24 22 16 30 Z" fill="#d4a83a"/><path d="M44 26 Q54 40 50 50" stroke="#d4a83a" stroke-width="5" fill="none"/><circle cx="18" cy="40" r="4" fill="none" stroke="#ffd25a" stroke-width="2"/><circle cx="46" cy="40" r="4" fill="none" stroke="#ffd25a" stroke-width="2"/><rect x="25" y="30" width="5" height="3" fill="#2a1a2a"/><rect x="34" y="30" width="5" height="3" fill="#2a1a2a"/><rect x="29" y="39" width="6" height="2" fill="#8a2a4a"/>')
 };
 
+/** Generated portrait art (src/assets/characters/npcs/<name>-portrait.png) where it exists; the SVG faces above
+ *  stand in for any that don't yet. */
+const NPC_PORTRAITS = import.meta.glob<string>('../../assets/characters/npcs/*-portrait.png', { query: '?url', import: 'default', eager: true });
+
+export function npcPortrait(name: QuestNpcId | 'sergio'): string | undefined {
+  return NPC_PORTRAITS[`../../assets/characters/npcs/${name}-portrait.png`];
+}
+
 export function npcFace(id: QuestNpcId): string {
-  return NPC_FACES[id];
+  return npcPortrait(id) ?? NPC_FACES[id];
 }
 
 export function companionIcon(kind: CompanionKind): string {
@@ -118,5 +126,6 @@ const MARKER_FACES: Record<MarkerKind, string> = {
 };
 
 export function markerFace(kind: MarkerKind): string {
+  if (kind === 'merchant') return npcPortrait('sergio') ?? MARKER_FACES.merchant;
   return MARKER_FACES[kind];
 }
