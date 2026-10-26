@@ -26,6 +26,7 @@ const CHUNKS = 4;
 export class Arena {
   readonly root = new THREE.Group();
   readonly sun: THREE.DirectionalLight;
+  private hiddenScenery: THREE.Object3D[] = [];
   readonly mist: EdgeMist;
   private readonly ambient: Ambient;
   private readonly grass: Grass;
@@ -80,6 +81,19 @@ export class Arena {
   }
 
   /** Keeps the shadow frustum centered on what the camera sees, snapped to whole shadow texels to avoid shimmer. */
+  /** Hides the land (its lights stay on) while the hero is in the merchant's pocket realm; showing it again restores
+   *  exactly what was visible before (the sandbox may have turned the mist off). */
+  setSceneryVisible(visible: boolean): void {
+    if (visible) {
+      this.hiddenScenery.forEach((child) => { child.visible = true; });
+      this.hiddenScenery = [];
+      return;
+    }
+    if (this.hiddenScenery.length > 0) return;
+    this.hiddenScenery = this.root.children.filter((child) => child.visible && !(child instanceof THREE.Light) && child !== this.sun.target);
+    this.hiddenScenery.forEach((child) => { child.visible = false; });
+  }
+
   followFocus(focus: THREE.Vector3): void {
     const texel = (SHADOW_HALF_EXTENT * 2) / this.sun.shadow.mapSize.x;
     const x = Math.round(focus.x / texel) * texel;

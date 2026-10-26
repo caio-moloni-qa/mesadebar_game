@@ -10,6 +10,7 @@ interface SandboxSettings {
   fog: boolean;
   skeletons: boolean;
   variants: boolean;
+  merchant: boolean;
   invincible: boolean;
   difficultyStage: number | null;
   capIndex: number;
@@ -49,7 +50,7 @@ function loadBossTuning(): void {
     // Blocked storage: keep the shipped values.
   }
 }
-const DEFAULTS: SandboxSettings = { enabled: false, fog: true, skeletons: true, variants: true, invincible: false, difficultyStage: null, capIndex: 0 };
+const DEFAULTS: SandboxSettings = { enabled: false, fog: true, skeletons: true, variants: true, merchant: true, invincible: false, difficultyStage: null, capIndex: 0 };
 
 function loadSettings(): SandboxSettings {
   try {
@@ -74,7 +75,7 @@ interface Control {
 
 /** The F9 sandbox panel (Phaser: SandboxDebugPanel + SandboxState): run-time toggles, spawn/kill shortcuts, clock and
  *  difficulty overrides, and the "SANDBOX ATIVO (F9)" indicator. Settings stick across runs; applyTo() puts them on
- *  each new session. Same controls as the Phaser panel (minus the merchant toggle, until the merchant exists in 3D),
+ *  each new session. Same controls as the Phaser panel,
  *  plus "Boss agora" and "Próxima arma". */
 export class SandboxPanel {
   private readonly root: HTMLDivElement;
@@ -133,6 +134,7 @@ export class SandboxPanel {
     const on = this.settings.enabled;
     session.skeletonSpawnEnabled = !on || this.settings.skeletons;
     session.variantSpawnEnabled = !on || this.settings.variants;
+    session.merchant.enabled = !on || this.settings.merchant !== false;
     session.player.invincible = forceInvincible || (on && this.settings.invincible);
     session.setForcedDifficultyStage(on ? this.settings.difficultyStage : null);
     session.setEnemySpawnCap(SANDBOX_SPAWN_CAPS[on ? this.settings.capIndex : 0]);
@@ -142,7 +144,7 @@ export class SandboxPanel {
   private buildControls(): Control[] {
     const s = this.settings;
     const run = () => this.host.session();
-    const toggle = (label: string, key: 'fog' | 'skeletons' | 'variants' | 'invincible', apply: (value: boolean) => void): Control => ({
+    const toggle = (label: string, key: 'fog' | 'skeletons' | 'variants' | 'merchant' | 'invincible', apply: (value: boolean) => void): Control => ({
       label: () => `${label}: ${s[key] ? 'Ligado' : 'Desligado'}`,
       run: () => { s[key] = !s[key]; apply(s[key]); this.save(); }
     });
@@ -160,6 +162,8 @@ export class SandboxPanel {
       toggle('Névoa', 'fog', (value) => this.host.setFogVisible(value)),
       toggle('Spawn esqueletos', 'skeletons', (value) => { run().skeletonSpawnEnabled = value; }),
       toggle('Spawn variantes', 'variants', (value) => { run().variantSpawnEnabled = value; }),
+      toggle('Mercador', 'merchant', (value) => { run().merchant.enabled = value; }),
+      { label: () => 'Abrir portal do mercador', run: () => run().openMerchantPortal() },
       toggle('Invencível', 'invincible', (value) => { run().player.invincible = value; }),
       { label: () => '+500 Buffer de Dano', run: () => { run().player.damageBuffer += 500; } },
       {

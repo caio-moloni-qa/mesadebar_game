@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BOSS_TUNING } from '../../core/systems/BossSystem';
+import { MERCHANT_ROOM, MERCHANT_TUNING } from '../../core/systems/MerchantSystem';
 import { MINI_BOSSES } from '../../core/systems/MiniBossSystem';
 import { GameSession, PortalKind } from '../../core/session/GameSession';
 import { WORLD_SCALE, simToWorld } from '../space';
@@ -9,6 +10,7 @@ import { Projector } from './FloatingTexts';
 const MAX_BARS = 3;
 const MAX_ARROWS = 6;
 const FINAL_WARNING = 'O sobrevivente sente uma presença maligna no ar!';
+const MERCHANT_NEWS = 'Um portal misterioso surgiu na arena!';
 /** Markers stay this far in from the screen edges (CSS px at 720 px tall), clear of the HUD: the vitals and timer
  *  along the top, the build tray and XP rail along the bottom. */
 const MARKER_MARGIN = { side: 70, top: 140, bottom: 120 };
@@ -57,11 +59,15 @@ export class BossUi {
     const { bosses, miniBosses } = session;
     // The Necromancer's warning, or a zone guardian's ("O Coveiro desperta no cemitério!").
     const pending = miniBosses.pending ? MINI_BOSSES[miniBosses.pending.kind] : null;
-    const banner = bosses.warningActive ? FINAL_WARNING : pending ? `${pending.name} desperta ${pending.where}!` : '';
+    // A freshly opened merchant portal gets a few seconds of banner too.
+    const portal = session.merchant.portal;
+    const portalNews = !!portal && !session.merchant.inside && portal.remainingMs > MERCHANT_TUNING.portalOpenMs - 3500;
+    const banner = bosses.warningActive ? FINAL_WARNING : pending ? `${pending.name} desperta ${pending.where}!` : portalNews ? MERCHANT_NEWS : '';
     if (this.last.get('bannerText') !== banner) {
       this.last.set('bannerText', banner);
       if (banner) this.banner.textContent = banner;
       this.banner.classList.toggle('mini', !bosses.warningActive && !!pending);
+      this.banner.classList.toggle('merchant', banner === MERCHANT_NEWS);
     }
     this.toggle('banner', this.banner, banner !== '');
     this.updateBars(session);
@@ -101,6 +107,20 @@ export class BossUi {
   }
 
   private updatePrompt(session: GameSession, project: Projector): void {
+    const merchant = this.merchantPrompt(session);
+    if (merchant) {
+      const shown = project(simToWorld(merchant.x, merchant.y, 3.2, this.world), this.screen);
+      this.toggle('prompt', this.prompt, shown);
+      if (!shown) return;
+      if (this.last.get('promptText') !== merchant.text) {
+        this.last.set('promptText', merchant.text);
+        this.prompt.textContent = merchant.text;
+      }
+      this.prompt.classList.toggle('poor', merchant.poor);
+      this.prompt.style.transform = `translate(${this.screen.x}px, ${this.screen.y}px) translate(-50%, -100%)`;
+      return;
+    }
+    this.prompt.classList.remove('poor');
     const kind = session.portalInReach;
     const portal = kind ? session.portals?.[kind] : undefined;
     if (!kind || !portal || !project(simToWorld(portal.x, portal.y, 3.6, this.world), this.screen)) {
@@ -116,6 +136,25 @@ export class BossUi {
     this.prompt.style.transform = `translate(${this.screen.x}px, ${this.screen.y}px) translate(-50%, -100%)`;
   }
 
+  /** The merchant's prompts: his arena portal, a pedestal's price, or the way back. */
+  private merchantPrompt(session: GameSession): { x: number; y: number; text: string; poor: boolean } | null {
+    const { merchant } = session;
+    if (merchant.portalInReach && merchant.portal) return { ...merchant.portal, text: 'Pressione E para entrar no portal', poor: false };
+    const spot = merchant.roomSpot;
+    if (!spot) return null;
+    if (spot.kind === 'exit') return { x: merchant.room.x + MERCHANT_ROOM.exit.x, y: merchant.room.y + MERCHANT_ROOM.exit.y, text: 'Pressione E para voltar à arena', poor: false };
+    const offer = merchant.offers[spot.index];
+    const slot = MERCHANT_ROOM.slots[spot.index];
+    const poor = session.currency < offer.cost;
+    return {
+      x: merchant.room.x + slot.x,
+      y: merchant.room.y + slot.y,
+      text: `${offer.name} — ${offer.cost} moedas ${poor ? '(moedas insuficientes)' : '(E para comprar)'}
+${offer.description}`,
+      poor
+    };
+  }
+
   private promptText(session: GameSession, kind: PortalKind): string {
     if (kind === 'end') return 'Pressione E para encerrar a run';
     const next = session.bossCycle + 1;
@@ -125,11 +164,13 @@ export class BossUi {
   /** A marker at the screen edge for every boss, guardian (or the zone of one being announced) and portal that's
    *  off screen: their face in a ring, an arrow on the rim pointing the way, and how far it is. */
   private updateArrows(session: GameSession, project: Projector): void {
-    const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' as const, tier: 'boss' }));
+    // Nothing out there to point at from the merchant's room.
+    const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = session.merchant.inside ? [] : session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' as const, tier: 'boss' }));
     session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.kind, tier: 'miniboss' }));
     // While a guardian is announced, point at its zone.
     if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor, kind: session.miniBosses.pending.kind, tier: 'miniboss' });
     if (session.portals) targets.push({ ...session.portals.end, kind: 'end', tier: 'end' }, { ...session.portals.continue, kind: 'continue', tier: 'continue' });
+    if (session.merchant.portal && !session.merchant.inside) targets.push({ x: session.merchant.portal.x, y: session.merchant.portal.y, kind: 'merchant', tier: 'merchant' });
     const { player } = session;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;

@@ -175,6 +175,10 @@ export class GameAudio {
       on('miniboss-defeated', ({ x, y }) => this.play('explosion', { x, y }, .8)),
       on('companion-joined', () => this.play('upgrade', undefined, .8, true)),
       on('companion-attack', ({ kind, x, y }) => this.play(kind === 'skeletonArcher' ? 'bolt' : 'impact', { x, y }, .35)),
+      on('merchant-portal-opened', () => this.play('warning', undefined, .5)),
+      on('merchant-entered', () => this.play('dash', undefined, .7, true)),
+      on('merchant-left', () => this.play('dash', undefined, .7, true)),
+      on('merchant-purchase', () => this.play('upgrade', undefined, .8, true)),
       on('run-ended', ({ victory }) => this.play(victory ? 'victory' : 'defeat', undefined, .8, true))
     );
   }

@@ -21,6 +21,7 @@ import { SandboxPanel } from './ui/SandboxPanel';
 import { BossEffects } from './vfx/BossEffects';
 import { BossViews } from './views/BossView';
 import { CompanionViews, MiniBossViews } from './views/ZoneActorViews';
+import { MerchantRoom } from './world/MerchantRoom';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
@@ -76,6 +77,7 @@ export class Game3D {
   private readonly bossEffects: BossEffects;
   private readonly miniBossViews = new MiniBossViews();
   private readonly companionViews = new CompanionViews();
+  private merchantRoom?: MerchantRoom;
   private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
@@ -188,6 +190,7 @@ export class Game3D {
     this.miniBossViews.clear();
     this.companionViews.clear();
     this.miniBossEffects.clear();
+    if (this.merchantRoom) this.scene.remove(this.merchantRoom.root, this.merchantRoom.characters);
     this.floating.clear();
     this.chestRoll.stop();
     const { characterId, weaponId } = this.run;
@@ -200,6 +203,8 @@ export class Game3D {
       arena: this.arenaMap
     });
     this.audio.bind(this.session);
+    this.merchantRoom = new MerchantRoom(this.session.merchant);
+    this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
       this.session.variantSpawnEnabled = false;
@@ -388,6 +393,20 @@ export class Game3D {
     events.on('boss-wave-cleared', () => {
       Object.values(this.session.portals ?? {}).forEach(({ x, y }) => this.effects.pulse(x, y, 70, 0xffffff, 0.5, 0.8));
     });
+    events.on('merchant-portal-opened', ({ x, y }) => {
+      const point = at(x, y);
+      this.particles.burst(point.x, point.z, 0xffc65a, 18, 2.2, 1.2);
+    });
+    const portalCut = (color: number) => {
+      this.cameraRig.cut();
+      this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, color, 16, 1.8, 1);
+    };
+    events.on('merchant-entered', () => portalCut(0xb48cff));
+    events.on('merchant-left', () => portalCut(0xffc65a));
+    events.on('merchant-purchase', ({ cost }) => {
+      this.floatAboveHero(`-${cost} moedas`, '#ffd25a');
+      this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffd25a, 12, 1.6, 1.4);
+    });
     events.on('chest-opened', ({ upgrade, rolled }) => {
       this.effects.pulse(this.session.player.x, this.session.player.y, 60, 0xffd868, 0.5, 0.7);
       this.chestRoll.play(this.session, upgrade, rolled, () => this.floatAboveHero(`Baú: ${upgrade.name}!`, '#ffe29a'));
@@ -518,6 +537,7 @@ export class Game3D {
     this.particles.update(deltaSeconds);
     this.effects.update(deltaSeconds);
     this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
+    this.arena.setSceneryVisible(!this.session.merchant.inside);
     this.arena.followFocus(this.cameraRig.focus);
     this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
@@ -526,11 +546,12 @@ export class Game3D {
     this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.companionViews.update(this.session.companions.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossEffects.update(this.session.miniBosses, this.session.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
+    this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
       [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
-      [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root]);
+      [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;
     if (now - this.fps.since >= 500) {
