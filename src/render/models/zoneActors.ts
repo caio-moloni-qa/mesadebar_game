@@ -3,6 +3,8 @@ import { toonMaterial } from '../materials';
 import { ActorClipName, actorClips } from './clips';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { BoneSpec, RigPart, RiggedModel, buildRiggedModel, clipForBones, humanoidBones } from './rig';
+import { GRAVEDIGGER_HIP_HEIGHT, GRAVEDIGGER_JOINTS, ImportedBossId, LAKE_SPIRIT_HIP_HEIGHT, LAKE_SPIRIT_JOINTS, TEMPLE_GUARDIAN_HIP_HEIGHT, TEMPLE_GUARDIAN_JOINTS, bossMesh } from './importedBosses';
+import { JointSpec, rigImportedMesh } from './importedRig';
 
 /** A rigged zone actor (mini-boss or companion) with its clips; `height` is its model height at scale 1 (m). */
 export interface ActorModel extends RiggedModel {
@@ -11,11 +13,37 @@ export interface ActorModel extends RiggedModel {
   height: number;
 }
 
+/** The imported Tripo mesh for `id` auto-rigged at `joints` (procedural `extras` such as props ride on bones), or
+ *  null when it isn't loaded — the caller then builds its procedural model. */
+function imported(id: ImportedBossId, joints: JointSpec[], hipHeight: number, height: number, extras: RigPart[] = [], recolor?: (geometry: THREE.BufferGeometry) => void): ActorModel | null {
+  const geometry = bossMesh(id);
+  if (!geometry) return null;
+  recolor?.(geometry);
+  const material = toonMaterial({ vertexColors: true, flatShading: true });
+  const model = rigImportedMesh(geometry, joints, material);
+  extras.forEach(({ bone, geometry: extra }) => model.bones[bone].add(new THREE.Mesh(extra, material)));
+  const clips = Object.fromEntries(Object.entries(actorClips(hipHeight)).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<ActorClipName, THREE.AnimationClip>;
+  return { ...model, clips, material, height };
+}
+
 function finish(bones: BoneSpec[], parts: RigPart[], hipHeight: number, height: number): ActorModel {
   const material = toonMaterial({ vertexColors: true, flatShading: true });
   const model = buildRiggedModel(bones, parts, material);
   const clips = Object.fromEntries(Object.entries(actorClips(hipHeight)).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<ActorClipName, THREE.AnimationClip>;
   return { ...model, clips, material, height };
+}
+
+/** Turns the glowing cyan rune faces of an imported mesh to `color`. */
+function repaintRunes(geometry: THREE.BufferGeometry, color: number): void {
+  const colors = geometry.attributes.color;
+  const target = new THREE.Color(color);
+  for (let index = 0; index < colors.count; index += 1) {
+    const r = colors.getX(index);
+    const g = colors.getY(index);
+    const b = colors.getZ(index);
+    if (b > 0.35 && g > 0.3 && r < 0.25 && b > r * 3) colors.setXYZ(index, target.r, target.g, target.b);
+  }
+  colors.needsUpdate = true;
 }
 
 const BONE = 0xe2d8bd;
@@ -35,6 +63,17 @@ export function createGravediggerModel(): ActorModel {
   const iron = 0x6f6a62;
   const wood = 0x6b4a2e;
   const glow = 0x6dff9a;
+  // The shovel (a long haft through the right hand, a broad iron blade at the bottom) and the lantern in the left.
+  const props: RigPart[] = [
+    { bone: 'handR', geometry: part(cylinder(0.03, 0.03, 1.5, 5), wood, [0, -0.15, 0.06]) },
+    { bone: 'handR', geometry: part(box(0.26, 0.32, 0.04), iron, [0, -0.98, 0.06]) },
+    { bone: 'handR', geometry: part(box(0.16, 0.05, 0.05), wood, [0, 0.6, 0.06]) }, // D-grip
+    { bone: 'handL', geometry: part(box(0.04, 0.12, 0.04), iron, [0, -0.09, 0]) },
+    { bone: 'handL', geometry: part(box(0.16, 0.2, 0.16), iron, [0, -0.25, 0]) },
+    { bone: 'handL', geometry: part(box(0.12, 0.15, 0.12), glow, [0, -0.25, 0]) }
+  ];
+  const tripo = imported('gravedigger', GRAVEDIGGER_JOINTS, GRAVEDIGGER_HIP_HEIGHT, 2.0, props);
+  if (tripo) return tripo;
   const bones: BoneSpec[] = [...humanoidBones({ hipHeight: hip, shoulderWidth: 0.3, armLength: arm, legLength: leg }), { name: 'jaw', parent: 'head', offset: [0, 0.12, 0.04] }];
   const limb = (s: 'L' | 'R'): RigPart[] => [
     { bone: `upperArm${s}`, geometry: part(box(0.08, arm, 0.08), BONE, [0, -arm / 2, 0]) },
@@ -63,14 +102,7 @@ export function createGravediggerModel(): ActorModel {
     { bone: 'head', geometry: part(box(0.03, 0.03, 0.02), glow, [-0.06, 0.24, 0.215]) },
     { bone: 'head', geometry: part(cone(0.27, 0.62, 7), cloak, [0, 0.36, -0.08], [-0.45, 0, 0]) },
     { bone: 'jaw', geometry: part(box(0.2, 0.06, 0.14), BONE_DARK, [0, -0.02, 0.05]) },
-    // The shovel: a long haft through the right hand, a broad iron blade at the bottom.
-    { bone: 'handR', geometry: part(cylinder(0.03, 0.03, 1.5, 5), wood, [0, -0.15, 0.06]) },
-    { bone: 'handR', geometry: part(box(0.26, 0.32, 0.04), iron, [0, -0.98, 0.06]) },
-    { bone: 'handR', geometry: part(box(0.16, 0.05, 0.05), wood, [0, 0.6, 0.06]) }, // D-grip
-    // The lantern in the left hand.
-    { bone: 'handL', geometry: part(box(0.04, 0.12, 0.04), iron, [0, -0.09, 0]) },
-    { bone: 'handL', geometry: part(box(0.16, 0.2, 0.16), iron, [0, -0.25, 0]) },
-    { bone: 'handL', geometry: part(box(0.12, 0.15, 0.12), glow, [0, -0.25, 0]) }
+    ...props
   ];
   return finish(bones, parts, hip, 2.0);
 }
@@ -80,6 +112,9 @@ export function createGravediggerModel(): ActorModel {
 /** A carved temple statue come to life: blocky stone, moss in the cracks, a gold crest and huge fists, with runes
  *  glowing `runes` (cold cyan on the guardian, warm gold on the companion). */
 export function createStoneGolemModel(runes = 0x7fe3ff): ActorModel {
+  // The imported guardian's runes are cyan; the companion's are repainted in its own colour.
+  const tripo = imported('templeGuardian', TEMPLE_GUARDIAN_JOINTS, TEMPLE_GUARDIAN_HIP_HEIGHT, 2.3, [], runes === 0x7fe3ff ? undefined : (geometry) => repaintRunes(geometry, runes));
+  if (tripo) return tripo;
   const hip = 0.9;
   const arm = 0.38;
   const leg = 0.4;
@@ -167,6 +202,8 @@ export function createSkeletonArcherModel(): ActorModel {
 /** A water creature: a body of light-blue water rising from a swirling column with a foam hem, a ridge of water
  *  spikes down its back, glowing white eyes. No legs — it rises out of the water and glides. */
 export function createLakeSpiritModel(): ActorModel {
+  const tripo = imported('lakeSpirit', LAKE_SPIRIT_JOINTS, LAKE_SPIRIT_HIP_HEIGHT, 2.4);
+  if (tripo) return tripo;
   const hip = 0.95;
   const arm = 0.4;
   const light = 0x8fdcff;

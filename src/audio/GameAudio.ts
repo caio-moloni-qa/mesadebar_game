@@ -179,6 +179,10 @@ export class GameAudio {
       on('merchant-entered', () => this.play('dash', undefined, .7, true)),
       on('merchant-left', () => this.play('dash', undefined, .7, true)),
       on('merchant-purchase', () => this.play('upgrade', undefined, .8, true)),
+      on('quest-accepted', () => this.play('pickup', undefined, .7, true)),
+      on('quest-completed', () => this.play('upgrade', undefined, .9, true)),
+      on('quest-claimed', () => this.play('victory', undefined, .5, true)),
+      on('barrel-collected', () => this.play('pickup', undefined, .8)),
       on('run-ended', ({ victory }) => this.play(victory ? 'victory' : 'defeat', undefined, .8, true))
     );
   }

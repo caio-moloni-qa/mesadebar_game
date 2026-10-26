@@ -11,6 +11,7 @@ import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffle
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
+import { QuestEvents, QuestReward, QuestSystem } from '../systems/QuestSystem';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -41,8 +42,6 @@ const SEPARATION_STRENGTH = 0.25;
 const FLOW_FIELD_REFRESH_MS = 250;
 /** Boss-wave portals (Phaser: GameScene.onBossWaveCleared): spawn this far apart above the hero, used within reach. */
 const PORTAL = { spread: 110, rise: 160, reach: 70 } as const;
-/** Zone mini-bosses: one slot every this long into each phase; two per cycle, three from cycle 3. */
-const MINI_BOSS_SLOT_MS = 60_000;
 /** Each guardian slain this cycle: the Necromancer comes in with this much less health (and one beam fewer). */
 export const GUARDIAN_WEAKENING = 0.05;
 
@@ -59,8 +58,10 @@ export type PendingChoice =
   /** The merchant's Tomo de Afinidade: unlock one weapon family's upgrade pool. */
   | { kind: 'affinity'; families: WeaponFamily[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents {
-  'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean };
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents {
+  /** A mission's upgrade reward: what was granted. */
+  'quest-gifts': { names: string[] };
+  'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
   'enemy-defeated': { x: number; y: number; variantId: EnemyVariantId; divineRelic: boolean };
   'player-damaged': { amount: number };
   /** Floating callouts above the hero (CURA -N, LENTO +20%, HP -3). */
@@ -125,6 +126,9 @@ export class GameSession implements WeaponHost {
   readonly miniBosses: MiniBossSystem;
   readonly companions: CompanionSystem;
   readonly merchant: MerchantSystem;
+  readonly quests: QuestSystem;
+  /** The tavern regular you're talking to (QUEST_NPCS index), or null. */
+  dialogue: number | null = null;
   /** Zone guardians slain this cycle (each weakens the Necromancer). */
   guardiansDefeated = 0;
   private miniBossSlotsThisPhase = 0;
@@ -197,12 +201,14 @@ export class GameSession implements WeaponHost {
       setLakeLevel: (level) => this.setLakeLevel(level),
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
     });
+    this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events });
     this.merchant = new MerchantSystem({
       player: this.player,
       rng: this.rng,
       arena: this.arena,
       events: this.events,
       affinities: () => this.affinities,
+      weaponCount: () => this.weapons.weapons.length,
       encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
     });
     this.companions = new CompanionSystem({
@@ -307,7 +313,49 @@ export class GameSession implements WeaponHost {
     }
   }
 
+  /** The dialogue's main button: accept the mission on offer or claim a finished one's reward; otherwise just closes. */
+  answerDialogue(): void {
+    const index = this.dialogue;
+    if (index === null) return;
+    const quest = this.quests.quests[index];
+    if (quest.status === 'offer') this.quests.accept(index);
+    else if (quest.status === 'ready') {
+      const reward = this.quests.claim(index);
+      if (reward) this.grantQuestReward(reward);
+    }
+    this.dialogue = null;
+  }
+
+  closeDialogue(): void {
+    this.dialogue = null;
+  }
+
+  private grantQuestReward(reward: QuestReward): void {
+    const { player } = this;
+    switch (reward.type) {
+      case 'currency': this.currency += reward.amount; break;
+      case 'max-health':
+        player.maxHealth += reward.amount;
+        this.healPlayer(reward.amount);
+        break;
+      case 'damage': player.damageMultiplier += reward.percent / 100; break;
+      case 'upgrades': {
+        const names: string[] = [];
+        for (let index = 0; index < reward.count; index += 1) {
+          const rolled = this.upgradeSystem.choices(this.weapons.primary.config, this.player, 5, this.secondaryWithAffinity());
+          if (rolled.length === 0) break;
+          const upgrade = pickOne(this.rng, rolled);
+          this.applyUpgrade(upgrade);
+          names.push(upgrade.name);
+        }
+        if (names.length > 0) this.events.emit('quest-gifts', { names });
+        break;
+      }
+    }
+  }
+
   private walkInMerchantRoom(deltaMs: number): void {
+    if (this.dialogue !== null) return;
     const distance = (this.player.effectiveMovementSpeed(this.clock.now) * deltaMs) / 1000;
     this.player.x += this.moveX * distance;
     this.player.y += this.moveY * distance;
@@ -407,6 +455,7 @@ export class GameSession implements WeaponHost {
     this.bosses.update(deltaMs);
     this.miniBosses.update(deltaMs);
     this.merchant.update(deltaMs);
+    this.quests.update(deltaMs);
     this.topUpStressEnemies();
     this.rebuildEnemyHash();
     this.updateEnemies(deltaMs, now);
@@ -642,13 +691,19 @@ export class GameSession implements WeaponHost {
     return null;
   }
 
-  /** The interact key (E): the merchant's portal, a pedestal or his exit; otherwise the end/continue portal in reach. */
+  /** The interact key (E): the merchant's portal; in the tavern an item, a regular (talk, or answer them) or the exit;
+   *  otherwise the end/continue portal in reach. */
   interact(): void {
     if (this.over || this.clock.paused) return;
     if (this.merchant.inside) {
+      if (this.dialogue !== null) {
+        this.answerDialogue();
+        return;
+      }
       const spot = this.merchant.roomSpot;
       if (spot?.kind === 'exit') this.merchant.leave();
       if (spot?.kind === 'slot') this.buyFromMerchant(spot.index);
+      if (spot?.kind === 'npc') this.dialogue = spot.index;
       return;
     }
     if (this.merchant.portalInReach) {
@@ -684,7 +739,9 @@ export class GameSession implements WeaponHost {
    *  — never while the Necromancer's wave is coming or up, nor over another live guardian (that slot is skipped). */
   private scheduleMiniBosses(): void {
     const slots = this.bossCycle >= 3 ? 3 : 2;
-    const due = Math.min(slots, Math.floor((this.elapsedMs - this.phaseStartedAtMs) / MINI_BOSS_SLOT_MS));
+    // Spread evenly over the phase (a 5-minute first phase: 1:40 and 3:20).
+    const slotMs = this.phaseDurationMs() / (slots + 1);
+    const due = Math.min(slots, Math.floor((this.elapsedMs - this.phaseStartedAtMs) / slotMs));
     if (due <= this.miniBossSlotsThisPhase) return;
     this.miniBossSlotsThisPhase = due;
     if (this.bosses.hasActiveEncounter() || this.miniBosses.active) return;
@@ -760,7 +817,7 @@ export class GameSession implements WeaponHost {
     enemy.health -= amount;
     enemy.hitStunUntil = now + ENEMY_HIT_STUN_MS;
     enemy.lastHitAt = now;
-    this.events.emit('enemy-hit', { enemy, amount, critical });
+    this.events.emit('enemy-hit', { enemy, amount, critical, weaponId });
     if (enemy.health <= 0) this.defeatEnemy(enemy);
   }
 

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SHEETS, sheetFrameTexture, showFrame } from '../vfx/SheetEffects';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PeelState, PickupKind, PickupState, ProjectileKind, ProjectileState, SoulState } from '../../core/session/entities';
 import { Pool } from '../../core/Pool';
@@ -23,6 +24,10 @@ class InstancedBatch<K extends string> {
       this.meshes.set(kind, mesh);
       this.root.add(mesh);
     });
+  }
+
+  mesh(kind: K): THREE.InstancedMesh {
+    return this.meshes.get(kind)!;
   }
 
   begin(): void {
@@ -54,18 +59,28 @@ const lerp = (body: { x: number; y: number; prevX: number; prevY: number }, alph
   return lerped;
 };
 
-/** Player projectiles: Cajado bolts (unlit glowing), boomerang / banana (spinning flat V / crescent), thrown swords. */
+/** Player projectiles: Cajado bolts (the crackling orb sheet, facing the camera and turned along their flight),
+ *  boomerang / banana (spinning flat V / crescent), thrown swords. */
 export class ProjectileView {
   readonly batch: InstancedBatch<ProjectileKind>;
   private readonly matrix = new THREE.Matrix4();
   private readonly rotation = new THREE.Matrix4();
+  private readonly boltTexture = sheetFrameTexture(SHEETS.staffBolt);
+  private readonly facing = new THREE.Quaternion();
+  private readonly spinZ = new THREE.Quaternion();
+  private readonly inverseCamera = new THREE.Quaternion();
+  private readonly heading = new THREE.Vector3();
+  private readonly position = new THREE.Vector3();
+  private readonly scale = new THREE.Vector3();
+  private readonly zAxis = new THREE.Vector3(0, 0, 1);
 
   constructor(capacity: number) {
     // Same models the hero holds, laid flat and centred so they spin around their middle in flight.
     const flying = (id: WeaponModelId) => weaponGeometry(id).rotateX(-Math.PI / 2).center();
     const weaponMaterial = toonMaterial({ vertexColors: true, flatShading: true });
     this.batch = new InstancedBatch<ProjectileKind>({
-      bolt: { geometry: new THREE.IcosahedronGeometry(0.24, 0), material: new THREE.MeshBasicMaterial({ color: PALETTE.bolt }) },
+      // The orb sits at 65% of its cell's width: shift the quad so the orb is the instance's origin.
+      bolt: { geometry: new THREE.PlaneGeometry(1.6, 1.6).translate(-0.24, 0, 0), material: new THREE.MeshBasicMaterial({ map: this.boltTexture, transparent: true, depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.02 }) },
       boomerang: { geometry: flying('boomerang'), material: weaponMaterial, castShadow: true },
       banana: { geometry: flying('banana'), material: weaponMaterial, castShadow: true },
       thrownSword: { geometry: flying('sword'), material: weaponMaterial, castShadow: true }
@@ -76,13 +91,24 @@ export class ProjectileView {
     return this.batch.root;
   }
 
-  update(projectiles: Pool<ProjectileState>, alpha: number, nowMs: number): void {
+  /** The bolt quads, drawn like the other transparent effects (kept out of the outline pass). */
+  get boltMesh(): THREE.InstancedMesh {
+    return this.batch.mesh('bolt');
+  }
+
+  update(projectiles: Pool<ProjectileState>, alpha: number, nowMs: number, camera: THREE.Camera): void {
     this.batch.begin();
+    showFrame(this.boltTexture, SHEETS.staffBolt, Math.floor(nowMs / 70) % SHEETS.staffBolt.frames);
+    this.inverseCamera.copy(camera.quaternion).invert();
     projectiles.forEachActive((projectile) => {
       const { x, z } = lerp(projectile, alpha);
       if (projectile.kind === 'bolt') {
-        const size = projectile.sizeMultiplier * (1 + Math.sin(nowMs / 40 + x) * 0.15);
-        this.matrix.makeScale(size, size, size).setPosition(x, 1.1, z);
+        // Face the camera, then turn in screen space so the tail trails behind the flight direction.
+        this.heading.set(projectile.velocityX, 0, projectile.velocityY).applyQuaternion(this.inverseCamera);
+        this.spinZ.setFromAxisAngle(this.zAxis, Math.atan2(this.heading.y, this.heading.x));
+        this.facing.copy(camera.quaternion).multiply(this.spinZ);
+        const size = projectile.sizeMultiplier;
+        this.matrix.compose(this.position.set(x, 1.1, z), this.facing, this.scale.set(size, size, size));
       } else {
         const size = projectile.sizeMultiplier;
         this.rotation.makeRotationY(projectile.spin);

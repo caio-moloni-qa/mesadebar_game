@@ -1,13 +1,14 @@
-import { WEAPONS, WeaponFamily, weaponFamily } from '../../config/weapons';
+import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponFamily, weaponFamily } from '../../config/weapons';
 import { EventBus } from '../EventBus';
 import { Rng, Vec2, floatBetween, pickOne } from '../math';
 import { PlayerState } from '../session/entities';
 import { ArenaMap } from '../world/ArenaMap';
 
 // The merchant (port of the Phaser MerchantSystem): every so often a portal opens somewhere on the arena for a short
-// while; stepping through it leaves the horde behind — the arena freezes — for the merchant's room, a pocket realm
-// outside the map. Walk to an item's pedestal to buy it, then take the exit portal back to where you entered. Same
-// four offers, prices and run-wide price inflation as the Phaser build.
+// while; stepping through it leaves the horde behind — the arena freezes — for the tavern, a pocket realm outside the
+// map. Sergio tends the bar and sells his four items along the counter (walk up to one to buy it); the regulars at
+// the tables hand out missions (QuestSystem). The exit portal takes you back to where you entered. Same offers,
+// prices and run-wide price inflation as the Phaser build.
 
 export const MERCHANT_TUNING = {
   /** Time between portals (counted only while none is open, you're not inside, and no boss is coming or up). */
@@ -24,17 +25,25 @@ export const MERCHANT_TUNING = {
   randomBuffCost: 100
 };
 
-/** The merchant's room (Phaser MERCHANT_ROOM_SIZE and layout): far outside the arena so nothing in it can reach. */
+/** The tavern: far outside the arena so nothing in it can reach. */
 export const MERCHANT_ROOM = {
   /** Square side, game units. */
-  size: 480,
-  /** Offsets from the room's centre: the exit portal at the top, the merchant behind his counter on the left,
-   *  four pedestals down the right. */
-  exit: { x: 0, y: -190 },
-  arrival: { x: 0, y: -130 },
-  merchant: { x: -140, y: -20 },
-  counter: { x: -40, y: 0, halfWidth: 38, halfHeight: 150 },
-  slots: [0, 1, 2, 3].map((index) => ({ x: 150, y: -120 + index * 80 }))
+  size: 640,
+  /** Offsets from the room's centre: the exit portal in the north wall, the bar down the west side with Sergio
+   *  behind it, the regulars' tables to the east. */
+  exit: { x: 0, y: -280 },
+  arrival: { x: 0, y: -185 },
+  merchant: { x: -255, y: 0 },
+  counter: { x: -195, y: 10, halfWidth: 28, halfHeight: 200 },
+  /** Where you stand to buy each item (its icon floats over the counter beside it). */
+  slots: [0, 1, 2, 3].map((index) => ({ x: -140, y: -120 + index * 80 })),
+  /** The regulars (QUEST_NPCS order) and their tables. */
+  npcs: [{ x: 120, y: -130 }, { x: 255, y: -40 }, { x: 120, y: 160 }, { x: 255, y: 230 }],
+  tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
+  tableRadius: 34,
+  npcRadius: 18,
+  /** Talk from this close (tables sit between you and them). */
+  talkReach: 110
 };
 
 export type MerchantItemId = 'divine-blessing' | 'arcane-curse' | 'heal' | 'damage' | 'speed' | 'affinity-tome' | 'max-health';
@@ -58,7 +67,8 @@ const RANDOM_BUFFS: ItemSpec[] = [
   { id: 'speed', name: 'Botas Ligeiras', description: '+15 de velocidade de movimento.', cost: 0 }
 ];
 const AFFINITY_TOME: ItemSpec = { id: 'affinity-tome', name: 'Tomo de Afinidade', description: 'Escolha uma família de arma para desbloquear afinidade com ela.', cost: 150 };
-/** Takes the tome's slot once it's been bought (it's once per run) or every family is already unlocked. */
+/** Takes the tome's slot once it's been bought (it's once per run), every family is already unlocked, or the hero
+ *  already carries the most weapons a run allows. */
 const VITALITY_ELIXIR: ItemSpec = { id: 'max-health', name: 'Elixir de Vitalidade', description: '+20 de vida máxima e cura 50% da vida máxima.', cost: 25 };
 
 export interface MerchantEvents extends Record<string, unknown> {
@@ -76,12 +86,14 @@ export interface MerchantHost {
   readonly events: Pick<EventBus<MerchantEvents>, 'emit'>;
   /** Families already unlocked (the tome only offers the others). */
   affinities(): ReadonlySet<WeaponFamily>;
+  /** Weapons the hero carries (the tome is only for a hero who can still pick up a second one). */
+  weaponCount(): number;
   /** True while the Necromancer is coming or up (no portal then). */
   encounterActive(): boolean;
 }
 
-/** What the room is near: the exit portal, an item pedestal (its index), or nothing. */
-export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | null;
+/** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing. */
+export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | null;
 
 export class MerchantSystem {
   enabled = true;
@@ -124,7 +136,14 @@ export class MerchantSystem {
       const distance = Math.hypot(player.x - (this.room.x + slot.x), player.y - (this.room.y + slot.y));
       if (distance < bestDistance) { best = index; bestDistance = distance; }
     });
-    return best >= 0 ? { kind: 'slot', index: best } : null;
+    if (best >= 0) return { kind: 'slot', index: best };
+    let npc = -1;
+    bestDistance = Number.POSITIVE_INFINITY;
+    MERCHANT_ROOM.npcs.forEach((spot, index) => {
+      const distance = Math.hypot(player.x - (this.room.x + spot.x), player.y - (this.room.y + spot.y));
+      if (distance <= MERCHANT_ROOM.talkReach && distance < bestDistance) { npc = index; bestDistance = distance; }
+    });
+    return npc >= 0 ? { kind: 'npc', index: npc } : null;
   }
 
   /** Families the tome can still unlock. */
@@ -186,9 +205,26 @@ export class MerchantSystem {
     const dy = body.y - (this.room.y + counter.y);
     const overlapX = counter.halfWidth + body.radius - Math.abs(dx);
     const overlapY = counter.halfHeight + body.radius - Math.abs(dy);
-    if (overlapX <= 0 || overlapY <= 0) return;
-    if (overlapX < overlapY) body.x += Math.sign(dx || 1) * overlapX;
-    else body.y += Math.sign(dy || 1) * overlapY;
+    if (overlapX > 0 && overlapY > 0) {
+      if (overlapX < overlapY) body.x += Math.sign(dx || 1) * overlapX;
+      else body.y += Math.sign(dy || 1) * overlapY;
+    }
+    // Tables and the regulars standing by them.
+    const circles = [
+      ...MERCHANT_ROOM.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
+      ...MERCHANT_ROOM.npcs.map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius }))
+    ];
+    circles.forEach((circle) => {
+      const cx = this.room.x + circle.x;
+      const cy = this.room.y + circle.y;
+      const distance = Math.hypot(body.x - cx, body.y - cy);
+      const minimum = circle.radius + body.radius;
+      if (distance >= minimum) return;
+      const nx = distance > 0 ? (body.x - cx) / distance : 1;
+      const ny = distance > 0 ? (body.y - cy) / distance : 0;
+      body.x = cx + nx * minimum;
+      body.y = cy + ny * minimum;
+    });
   }
 
   /** Buys offer `index` if affordable; returns it (the caller applies it — the tome opens a choice). */
@@ -217,7 +253,8 @@ export class MerchantSystem {
   private buildOffers(): MerchantOffer[] {
     const multiplier = MERCHANT_TUNING.priceInflation ** this.itemsPurchased;
     const randomBuff = { ...pickOne(this.host.rng, RANDOM_BUFFS), cost: MERCHANT_TUNING.randomBuffCost };
-    const fourth = !this.tomeBought && this.availableFamilies().length > 0 ? AFFINITY_TOME : VITALITY_ELIXIR;
+    const tome = !this.tomeBought && this.host.weaponCount() < MAX_ACTIVE_WEAPONS && this.availableFamilies().length > 0;
+    const fourth = tome ? AFFINITY_TOME : VITALITY_ELIXIR;
     return [DIVINE_BLESSING, ARCANE_CURSE, randomBuff, fourth].map((spec) => ({ ...spec, cost: Math.round(spec.cost * multiplier), purchased: false }));
   }
 

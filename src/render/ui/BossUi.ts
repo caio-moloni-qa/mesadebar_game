@@ -4,13 +4,13 @@ import { MERCHANT_ROOM, MERCHANT_TUNING } from '../../core/systems/MerchantSyste
 import { MINI_BOSSES } from '../../core/systems/MiniBossSystem';
 import { GameSession, PortalKind } from '../../core/session/GameSession';
 import { WORLD_SCALE, simToWorld } from '../space';
-import { MarkerKind, markerFace } from './icons';
+import { MarkerKind, markerFace, npcPortrait } from './icons';
 import { Projector } from './FloatingTexts';
 
 const MAX_BARS = 3;
-const MAX_ARROWS = 6;
+const MAX_ARROWS = 12;
 const FINAL_WARNING = 'O sobrevivente sente uma presença maligna no ar!';
-const MERCHANT_NEWS = 'Um portal misterioso surgiu na arena!';
+const MERCHANT_NEWS = 'Um portal para a taverna surgiu na arena!';
 /** Markers stay this far in from the screen edges (CSS px at 720 px tall), clear of the HUD: the vitals and timer
  *  along the top, the build tray and XP rail along the bottom. */
 const MARKER_MARGIN = { side: 70, top: 140, bottom: 120 };
@@ -66,6 +66,15 @@ export class BossUi {
     if (this.last.get('bannerText') !== banner) {
       this.last.set('bannerText', banner);
       if (banner) this.banner.textContent = banner;
+      // Sergio himself announces his tavern.
+      const sergio = npcPortrait('sergio');
+      if (banner === MERCHANT_NEWS && sergio) {
+        const face = document.createElement('img');
+        face.className = 'banner-portrait';
+        face.src = sergio;
+        face.alt = '';
+        this.banner.prepend(face);
+      }
       this.banner.classList.toggle('mini', !bosses.warningActive && !!pending);
       this.banner.classList.toggle('merchant', banner === MERCHANT_NEWS);
     }
@@ -143,6 +152,11 @@ export class BossUi {
     const spot = merchant.roomSpot;
     if (!spot) return null;
     if (spot.kind === 'exit') return { x: merchant.room.x + MERCHANT_ROOM.exit.x, y: merchant.room.y + MERCHANT_ROOM.exit.y, text: 'Pressione E para voltar à arena', poor: false };
+    if (spot.kind === 'npc') {
+      if (session.dialogue !== null) return null;
+      const npc = MERCHANT_ROOM.npcs[spot.index];
+      return { x: merchant.room.x + npc.x, y: merchant.room.y + npc.y, text: `Pressione E para falar com ${session.quests.quests[spot.index].npc.name}`, poor: false };
+    }
     const offer = merchant.offers[spot.index];
     const slot = MERCHANT_ROOM.slots[spot.index];
     const poor = session.currency < offer.cost;
@@ -171,6 +185,7 @@ ${offer.description}`,
     if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor, kind: session.miniBosses.pending.kind, tier: 'miniboss' });
     if (session.portals) targets.push({ ...session.portals.end, kind: 'end', tier: 'end' }, { ...session.portals.continue, kind: 'continue', tier: 'continue' });
     if (session.merchant.portal && !session.merchant.inside) targets.push({ x: session.merchant.portal.x, y: session.merchant.portal.y, kind: 'merchant', tier: 'merchant' });
+    if (!session.merchant.inside) session.quests.barrels.forEach((barrel) => targets.push({ ...barrel, kind: 'barrel', tier: 'quest' }));
     const { player } = session;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;

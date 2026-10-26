@@ -109,6 +109,14 @@ describe('merchant', () => {
     expect(run.merchant.offers[3].id).toBe('max-health');
   });
 
+  it('the Tomo de Afinidade is not offered to a hero who already carries two weapons', () => {
+    const run = session();
+    run.addWeapon(run.weapons.weapons[0].config.id === 'whip' ? 'sword' : 'whip');
+    expect(run.weapons.weapons).toHaveLength(2);
+    enter(run);
+    expect(run.merchant.offers[3].id).toBe('max-health');
+  });
+
   it('the room’s walls and counter hold the hero in', () => {
     const run = session();
     enter(run);

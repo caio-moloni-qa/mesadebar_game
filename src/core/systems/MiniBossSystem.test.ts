@@ -32,11 +32,13 @@ function withMiniBoss(kind: MiniBossKind, at?: { x: number; y: number }) {
 }
 
 describe('zone mini-bosses', () => {
-  it('a slot opens a minute into the phase: the guardian is announced, then appears in its zone', () => {
+  it('the first slot opens a third into the phase: the guardian is announced, then appears in its zone', () => {
     const run = session();
     const events: string[] = [];
     run.events.on('miniboss-warning', ({ kind }) => events.push(kind));
-    run.adjustElapsedMs(60_000 - 100);
+    run.adjustElapsedMs(run.phaseDurationMs() / 3 - 300);
+    advance(run, 200);
+    expect(events).toEqual([]);
     advance(run, 200);
     expect(events).toEqual(['gravedigger']);
     advance(run, MINI_BOSS_TUNING.warningMs);
@@ -103,6 +105,16 @@ describe('zone mini-bosses', () => {
     advance(run, 2000);
     expect(boss.leashing).toBe(true);
     expect(boss.enemy.health).toBeGreaterThan(boss.enemy.maxHealth * 0.5);
+  });
+
+  it('regenerates at most 20% of its max health per retreat', () => {
+    const { run, boss } = withMiniBoss('gravedigger');
+    boss.enemy.health = boss.enemy.maxHealth * 0.3;
+    run.player.x = run.player.prevX = 1760;
+    run.player.y = run.player.prevY = 1760;
+    advance(run, 20000);
+    expect(boss.leashing).toBe(true);
+    expect(boss.enemy.health).toBeCloseTo(boss.enemy.maxHealth * 0.5);
   });
 
   it('a fallen guardian offers its zone’s companion; a second kill offers to strengthen it', () => {

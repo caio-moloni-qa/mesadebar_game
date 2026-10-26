@@ -1,6 +1,7 @@
 import { GameSession } from '../core/session/GameSession';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
 import { HUD_ART, LIFE_STEAL_ICON, companionIcon, upgradeIcon, weaponIcon } from './ui/icons';
+import { progressText } from './ui/questText';
 
 export interface RenderStats { fps: number; drawCalls: number; triangles: number; pixelScale: number; geometries: number; textures: number; }
 
@@ -13,6 +14,7 @@ export class Hud {
   private readonly xpFill: HTMLDivElement;
   private readonly build: HTMLDivElement;
   private readonly rotten: HTMLDivElement;
+  private readonly questList: HTMLUListElement;
   private readonly last = new Map<string, string>();
 
   /** `showStats` shows the renderer counters (fps, draws, tris); they're always written, so tools can read them. */
@@ -27,6 +29,7 @@ export class Hud {
           <div class="hud-health-bar"><div class="hud-fill"></div><span data-field="health"></span></div>
         </div>
         <div class="hud-rotten" hidden><img src="${LIFE_STEAL_ICON}" alt=""><span>Aura podre · cura reduzida</span></div>
+        <ul class="hud-quests" hidden></ul>
       </div>
       <div class="hud-timer"><span class="eyebrow">SOBREVIVA</span><strong data-field="time"></strong></div>
       <div class="hud-top-right"><div class="hud-counters"><span data-field="kills"></span><span class="hud-currency"><img src="${HUD_ART.gem}" alt="Cristais"><span data-field="currency"></span></span></div><button type="button" class="hud-pause" aria-label="Pausar jogo" title="Pausar (Esc)">Ⅱ</button></div>
@@ -41,6 +44,7 @@ export class Hud {
     this.xpFill = this.root.querySelector<HTMLDivElement>('.hud-xp .hud-fill')!;
     this.build = this.root.querySelector<HTMLDivElement>('.hud-build')!;
     this.rotten = this.root.querySelector<HTMLDivElement>('.hud-rotten')!;
+    this.questList = this.root.querySelector<HTMLUListElement>('.hud-quests')!;
     this.root.querySelector('.hud-pause')!.addEventListener('click', () => onPause?.());
   }
 
@@ -65,6 +69,26 @@ export class Hud {
       this.rotten.hidden = !rotten;
     }
     this.updateBuild(session);
+    this.updateQuests(session);
+  }
+
+  /** The tavern missions under way ("Barris Perdidos 1/3"), and the finished ones waiting at the tavern. */
+  private updateQuests(session: GameSession): void {
+    const { quests } = session;
+    const items = quests.tracked.map((quest) => ({
+      ready: quest.status === 'ready',
+      text: `${quests.spec(quest).title} — ${quest.status === 'ready' ? 'volte à taverna' : progressText(quests, quest)}`
+    }));
+    const key = items.map((item) => item.text).join('|');
+    if (this.last.get('quests') === key) return;
+    this.last.set('quests', key);
+    this.questList.hidden = items.length === 0;
+    this.questList.replaceChildren(...items.map(({ ready, text }) => {
+      const row = document.createElement('li');
+      row.classList.toggle('ready', ready);
+      row.textContent = text;
+      return row;
+    }));
   }
 
   /** Weapons first (the banana icon once Fabri's boomerang transforms), then each picked upgrade with a ×N counter. */

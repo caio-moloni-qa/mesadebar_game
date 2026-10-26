@@ -37,9 +37,11 @@ export const MINI_BOSS_ROTATION: MiniBossKind[] = ['gravedigger', 'lakeSpirit', 
 
 export const MINI_BOSS_TUNING = {
   warningMs: 2200,
-  /** Leashing: walk home this much faster, regenerating this fraction of max health per second. */
+  /** Leashing: walk home this much faster, regenerating this fraction of max health per second, up to
+   *  leashRegenCap of max health per retreat. */
   leashSpeedMultiplier: 1.6,
   leashRegenPerSecond: 0.03,
+  leashRegenCap: 0.2,
   // ── O Coveiro ──
   raiseIntervalMs: 9000,
   raiseCount: 4,
@@ -142,6 +144,8 @@ export interface MiniBossState {
   enemy: EnemyState;
   anchor: Vec2;
   leashing: boolean;
+  /** Health regenerated during the current retreat (capped at leashRegenCap of max). */
+  leashHealed: number;
   /** Facing angle (sim, radians). The Guardião turns slowly; the Coveiro snaps. */
   facing: number;
   attack: MiniBossAttack | null;
@@ -291,6 +295,7 @@ export class MiniBossSystem {
       enemy,
       anchor: spot,
       leashing: false,
+      leashHealed: 0,
       facing: Math.atan2(player.y - spot.y, player.x - spot.x),
       attack: null,
       // A little grace before the first of each attack.
@@ -306,11 +311,17 @@ export class MiniBossSystem {
     const { player } = this.host;
     const leash = MINI_BOSSES[boss.kind].leashRadius;
     const playerFromHome = Math.hypot(player.x - boss.anchor.x, player.y - boss.anchor.y);
-    if (!boss.leashing && playerFromHome > leash) boss.leashing = true;
+    if (!boss.leashing && playerFromHome > leash) {
+      boss.leashing = true;
+      boss.leashHealed = 0;
+    }
     if (boss.leashing && playerFromHome <= leash * 0.85) boss.leashing = false;
     if (!boss.leashing) return false;
     const { enemy } = boss;
-    enemy.health = Math.min(enemy.maxHealth, enemy.health + enemy.maxHealth * MINI_BOSS_TUNING.leashRegenPerSecond * (delta / 1000));
+    const allowance = enemy.maxHealth * MINI_BOSS_TUNING.leashRegenCap - boss.leashHealed;
+    const healed = Math.max(0, Math.min(enemy.maxHealth - enemy.health, allowance, enemy.maxHealth * MINI_BOSS_TUNING.leashRegenPerSecond * (delta / 1000)));
+    enemy.health += healed;
+    boss.leashHealed += healed;
     this.walkTowards(boss, boss.anchor.x, boss.anchor.y, enemy.movementSpeed * MINI_BOSS_TUNING.leashSpeedMultiplier, delta, true);
     return true;
   }
