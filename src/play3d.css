@@ -564,5 +564,11 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .store-buy:disabled { opacity: .5; cursor: default; }
 .store-footer { flex-wrap: wrap; }
 @media (max-width: 620px) { .store-header { grid-template-columns: auto 1fr; } .store-balance { grid-column: 1 / -1; justify-items: start; } .store-portrait { width: 64px; height: 64px; } .store-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
-/* The stage keeps its own height: a long details column (the powers list) mustn't stretch it into an empty box. */
-.hero-showcase .hero-stage { align-self: start; }
+/* The stage matches the details column's height, and its 3D viewport grows into it (the preview frames the hero by
+   height), so a long column (the powers list) neither leaves an empty box under the controls nor a gap under the
+   stage. The fixed heights above become the minimum. */
+.hero-showcase .hero-viewport { height: auto; min-height: 340px; }
+@media (min-width: 851px) and (max-height: 800px) { .hero-showcase .hero-viewport { min-height: 285px; } }
+@media (max-width: 850px) { .hero-showcase .hero-viewport { min-height: 310px; } }
+@media (max-width: 520px) { .hero-showcase .hero-viewport { min-height: 290px; } }
+@media (max-height: 580px) and (min-width: 650px) { .hero-showcase .hero-viewport { min-height: 230px; } }
