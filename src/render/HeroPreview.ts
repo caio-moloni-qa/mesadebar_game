@@ -7,7 +7,7 @@ import { HeroModel, attachWeapons, createHeroModel } from './models/heroes';
 
 /** A locked hero: one flat dark shape (shared, never disposed with a model). */
 const SILHOUETTE = new THREE.MeshBasicMaterial({ color: 0x0b0a12 });
-const ATTACKS: Record<WeaponConfig['id'], HeroClipName> = { staff: 'cast', sword: 'swing', whip: 'lash', boomerang: 'throw', amulet: 'pulse', hammer: 'swing', bow: 'cast', coins: 'throw', crystal: 'pulse', pack: 'throw' };
+const ATTACKS: Record<WeaponConfig['id'], HeroClipName> = { staff: 'cast', sword: 'swing', whip: 'lash', boomerang: 'throw', amulet: 'pulse', hammer: 'slam', bow: 'shoot', coins: 'toss', crystal: 'pulse', pack: 'hurl' };
 
 /** One lazily-created preview renderer and one active hero, reused by every menu screen.
  * Uses the game's real imported meshes, rigs, clips and weapons. Driven by Game3D's existing frame loop.

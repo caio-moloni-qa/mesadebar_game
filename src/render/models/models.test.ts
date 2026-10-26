@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WEAPONS, WeaponConfig } from '../../config/weapons';
-import { CLIP_SAMPLE_RATE, humanoidClips, mirrorClip, smoothCurve } from './clips';
+import { CLIP_SAMPLE_RATE, HAND_ATTACKS, humanoidClips, mirrorClip, smoothCurve } from './clips';
 import { createEnemyModels } from './enemies';
 import { attachWeapons, createHeroModel } from './heroes';
 import { createBossModel } from './boss';
@@ -42,12 +42,12 @@ describe('humanoid clips', () => {
   const clips = humanoidClips(0.82);
 
   it('has every clip the hero view plays, with valid tracks', () => {
-    expect(Object.keys(clips).sort()).toEqual(['cast', 'castL', 'death', 'hit', 'idle', 'lash', 'lashL', 'pulse', 'pulseL', 'run', 'swing', 'swingL', 'throw', 'throwL']);
+    expect(Object.keys(clips).sort()).toEqual(['idle', 'run', 'hit', 'death', ...HAND_ATTACKS.flatMap((name) => [name, `${name}L`])].sort());
     Object.values(clips).forEach((clip) => expect(clip.validate()).toBe(true));
   });
 
   it('makes one-shot actions additive and keeps locomotion/death normal', () => {
-    (['swing', 'swingL', 'lash', 'lashL', 'cast', 'castL', 'throw', 'throwL', 'pulse', 'pulseL', 'hit'] as const).forEach((name) => expect(clips[name].blendMode).toBe(THREE.AdditiveAnimationBlendMode));
+    [...HAND_ATTACKS.flatMap((name) => [name, `${name}L` as const]), 'hit' as const].forEach((name) => expect(clips[name].blendMode).toBe(THREE.AdditiveAnimationBlendMode));
     (['idle', 'run', 'death'] as const).forEach((name) => expect(clips[name].blendMode).toBe(THREE.NormalAnimationBlendMode));
   });
 });

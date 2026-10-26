@@ -5,7 +5,8 @@ import { CHARACTERS, CharacterId } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { ArenaMap } from '../core/world/ArenaMap';
-import { snapPrevious } from '../core/session/entities';
+import { ProjectileKind, snapPrevious } from '../core/session/entities';
+import { HandAttack } from './models/clips';
 import { ZONES, ZoneKind } from '../config/arenaLayout';
 import { CameraRig } from './CameraRig';
 import { ChoiceOverlay } from './ChoiceOverlay';
@@ -73,6 +74,9 @@ export interface Game3DOptions {
 }
 
 /** Floating callout colours per player-status tone (Phaser: Player.spawnFloatingStatusText call sites). */
+/** The hero's attack for each projectile: the bolt is cast, an arrow drawn and loosed, a coin flipped, whatever comes
+ *  out of Sergio's pack lobbed overarm; boomerangs and the thrown sword go sidearm. */
+const PROJECTILE_ATTACKS: Record<ProjectileKind, HandAttack> = { bolt: 'cast', arrow: 'shoot', coin: 'toss', pan: 'hurl', bottle: 'hurl', potion: 'hurl', boomerang: 'throw', banana: 'throw', thrownSword: 'throw' };
 const STATUS_COLORS: Record<'heal-cut' | 'slow' | 'rot' | 'heal', string> = { 'heal-cut': '#ffb347', slow: '#8bbcff', rot: '#b98bff', heal: '#8effa0' };
 
 /** The Three.js run: owns the WebGL renderer, the fixed-step loop and the views over one GameSession. */
@@ -477,12 +481,12 @@ export class Game3D {
       // Whip chain links also emit swings, centred on the enemy they jump to — only the hero's own swing animates.
       if (x === this.session.player.x && y === this.session.player.y) {
         this.playerView.aim(dirX, dirY);
-        this.playerView.play(weaponId === 'whip' ? 'lash' : 'swing', this.handOf(weaponId));
+        this.playerView.play(weaponId === 'whip' ? 'lash' : weaponId === 'hammer' ? 'slam' : 'swing', this.handOf(weaponId));
       }
     });
     events.on('projectile-fired', ({ kind, dirX, dirY, weaponId }) => {
       this.playerView.aim(dirX, dirY);
-      this.playerView.play(kind === 'bolt' ? 'cast' : 'throw', this.handOf(weaponId));
+      this.playerView.play(PROJECTILE_ATTACKS[kind], this.handOf(weaponId));
     });
     events.on('player-damaged', ({ amount }) => {
       this.playerView.play('hit');
