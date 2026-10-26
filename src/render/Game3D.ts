@@ -27,7 +27,7 @@ import { TavernDialog } from './ui/TavernDialog';
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
-import { SaveData, applyRun, buyUpgrade, heroesToWelcome, metaBonuses, rosterFor } from '../core/progress/Progress';
+import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, metaBonuses, rosterFor } from '../core/progress/Progress';
 import { HeroKitViews } from './views/HeroKitViews';
 import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
 import { heroName } from './progress/heroNames';
@@ -181,6 +181,24 @@ export class Game3D {
       unlockAllHeroes: () => {
         this.allHeroesUnlocked = true;
         this.floatAboveHero('Sandbox: todos os heróis liberados', '#8bff8b');
+      },
+      addFichas: (amount) => {
+        this.saveProgress({ fichas: this.progress.fichas + amount });
+        this.floatAboveHero(`Sandbox: +${amount} Fichas`, '#8bff8b');
+      },
+      addMasteryLevel: () => {
+        const hero = this.run.characterId;
+        const level = masteryLevel(this.progress.mastery[hero] ?? 0);
+        if (level >= MAX_MASTERY) return this.floatAboveHero('Sandbox: maestria já no máximo', '#8bff8b');
+        this.saveProgress({ mastery: { ...this.progress.mastery, [hero]: MASTERY_THRESHOLDS[level] } });
+        this.floatAboveHero(`Sandbox: maestria nível ${level + 1}`, '#8bff8b');
+      },
+      resetProgress: () => {
+        if (!window.confirm('Apagar todo o progresso salvo (Fichas, maestria, missões, heróis liberados, dicas vistas)?')) return;
+        this.allHeroesUnlocked = false;
+        this.progress = emptySave();
+        SaveStore.save(this.progress);
+        this.showMenu();
       }
     });
     this.screens = new RunScreens(container, {
@@ -312,7 +330,7 @@ export class Game3D {
     this.hud.setVisible(false);
     this.bossUi.setVisible(true);
     this.companionBars.setVisible(false);
-    this.sandbox.setAllowed(false);
+    this.sandbox.setAllowed(true);
     this.joystick.setVisible(this.showJoystick);
     this.createSession({ skipStartingUpgrades: true, attract: false, hub: true });
     this.cameraRig.cut();
