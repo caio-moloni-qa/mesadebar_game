@@ -1,4 +1,4 @@
-import { AreaConfig } from '../../config/areas';
+import { AREAS, AreaConfig } from '../../config/areas';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { QuestNpcId } from '../systems/QuestSystem';
 
@@ -262,7 +262,8 @@ export const REGULAR_UNLOCKS: Record<QuestNpcId, { hero: CharacterId; level: num
   zora: { hero: 'mage', level: 5 }
 };
 
-/** Sergio joins with all four regulars and this many mastery levels summed over every hero. */
+/** An area's finale hero (Greenfield's: Sergio) joins with all its regulars and this many mastery levels summed over
+ *  every hero. */
 export const SERGIO_TOTAL_MASTERY = 30;
 
 export function totalMastery(save: SaveData): number {
@@ -281,7 +282,9 @@ export function rosterFor(save: SaveData): HeroId[] {
     const rule = REGULAR_UNLOCKS[npc];
     if ((save.regularMissions[npc] ?? 0) >= MISSIONS_PER_REGULAR && masteryLevel(save.mastery[rule.hero] ?? 0) >= rule.level) roster.push(npc);
   });
-  if ((Object.keys(REGULAR_UNLOCKS) as QuestNpcId[]).every((npc) => roster.includes(npc)) && totalMastery(save) >= SERGIO_TOTAL_MASTERY) roster.push('sergio');
+  AREAS.forEach((area) => {
+    if (area.regulars.every((hero) => roster.includes(hero)) && totalMastery(save) >= SERGIO_TOTAL_MASTERY) roster.push(area.finale);
+  });
   return roster;
 }
 
@@ -303,21 +306,22 @@ export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
       { label: `Maestria nível ${rule.level} com ${CHARACTERS[rule.hero].name}`, current: Math.min(rule.level, masteryLevel(save.mastery[rule.hero] ?? 0)), needed: rule.level }
     ];
   }
-  if (hero === 'sergio') {
+  const finaleOf = AREAS.find((area) => area.finale === hero);
+  if (finaleOf) {
     const roster = rosterFor(save);
-    const regulars = Object.keys(REGULAR_UNLOCKS) as QuestNpcId[];
     return [
-      { label: 'Liberar os quatro frequentadores da taverna', current: regulars.filter((npc) => roster.includes(npc)).length, needed: regulars.length },
+      { label: `Conquistar todos os frequentadores de ${finaleOf.name}`, current: finaleOf.regulars.filter((regular) => roster.includes(regular)).length, needed: finaleOf.regulars.length },
       { label: `Somar ${SERGIO_TOTAL_MASTERY} níveis de maestria entre todos os heróis`, current: Math.min(SERGIO_TOTAL_MASTERY, totalMastery(save)), needed: SERGIO_TOTAL_MASTERY }
     ];
   }
   return [];
 }
 
-/** How far an area is: its regulars won over (each one only joins from that area's tavern). */
+/** How far an area is: its heroes won over — the regulars (each only joins from that area's tavern), then its finale. */
 export function areaCompletion(save: SaveData, area: AreaConfig): { joined: number; total: number } {
   const roster = rosterFor(save);
-  return { joined: area.regulars.filter((hero) => roster.includes(hero)).length, total: area.regulars.length };
+  const heroes = [...area.regulars, area.finale];
+  return { joined: heroes.filter((hero) => roster.includes(hero)).length, total: heroes.length };
 }
 
 // ── The save ────────────────────────────────────────────────────────────────────────────────────────────────────

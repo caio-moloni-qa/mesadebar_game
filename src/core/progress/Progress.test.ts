@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { CURRENT_AREA } from '../../config/areas';
 import {
   DIFFICULTY_TIERS, MASTERY_THRESHOLDS, MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, RunSummary, SERGIO_TOTAL_MASTERY, applyRun, buyUpgrade, emptySave,
-  heroesToWelcome, masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockSteps, unlockedSkins
+  areaCompletion, heroesToWelcome, masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockSteps, unlockedSkins
 } from './Progress';
 
 function run(overrides: Partial<RunSummary> = {}): RunSummary {
@@ -124,5 +125,13 @@ describe('unlocking the tavern heroes', () => {
     const steps = unlockSteps(emptySave(), 'sergio');
     expect(steps.map((step) => step.needed)).toEqual([4, SERGIO_TOTAL_MASTERY]);
     expect(steps[1].current).toBe(0);
+  });
+});
+
+describe('Greenfield', () => {
+  it('ends with Sergio: its four regulars, then him', () => {
+    const save = emptySave();
+    expect(areaCompletion(save, CURRENT_AREA)).toEqual({ joined: 0, total: 5 });
+    expect(unlockSteps(save, CURRENT_AREA.finale)[0].label).toContain('Greenfield');
   });
 });

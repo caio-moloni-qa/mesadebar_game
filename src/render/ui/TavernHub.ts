@@ -159,7 +159,7 @@ export class TavernHeader {
     const key = `${save.fichas}|${heroName}|${area.joined}`;
     if (key === this.shown) return;
     this.shown = key;
-    this.root.innerHTML = `<p class="eyebrow">A TAVERNA · ${CURRENT_AREA.name.toUpperCase()}</p><p class="tavern-fichas"><b>${save.fichas}</b> Fichas · último herói: <b></b></p><p class="tavern-area">Frequentadores conquistados: <b>${area.joined}/${area.total}</b></p><p class="tavern-hints">Fale com o Sergio para melhorias · ajude os frequentadores · escolha o herói ao sair pelo portal</p>`;
+    this.root.innerHTML = `<p class="eyebrow">A TAVERNA · ${CURRENT_AREA.name.toUpperCase()}</p><p class="tavern-fichas"><b>${save.fichas}</b> Fichas · último herói: <b></b></p><p class="tavern-area">Heróis da região conquistados: <b>${area.joined}/${area.total}</b></p><p class="tavern-hints">Fale com o Sergio para melhorias · ajude os frequentadores · escolha o herói ao sair pelo portal</p>`;
     this.root.querySelectorAll('b')[1].textContent = heroName;
   }
 }
