@@ -248,7 +248,7 @@ export class MiniBossEffects {
         pieces.wall.rotation.set(0, -angle, 0);
         // Tall where it breaks, shrinking as it runs out.
         const fade = 1 - front / T.waveRange;
-        pieces.wall.scale.set(T.waveThickness * WORLD_SCALE, 1.2 + 1.6 * fade, width);
+        pieces.wall.scale.set(T.waveThickness * WORLD_SCALE, 0.8 + 1.0 * fade, width);
         (pieces.wall.material as THREE.MeshBasicMaterial).opacity = 0.35 + 0.4 * fade;
         if (running) {
           for (let index = 0; index < 6; index += 1) {
