@@ -9,6 +9,7 @@ export class Hud {
   private readonly root: HTMLDivElement;
   private readonly fields: Record<'health' | 'level' | 'time' | 'kills' | 'currency' | 'stats', HTMLElement>;
   private readonly healthFill: HTMLDivElement;
+  private readonly shieldFill: HTMLDivElement;
   private readonly xpFill: HTMLDivElement;
   private readonly build: HTMLDivElement;
   private readonly rotten: HTMLDivElement;
@@ -23,7 +24,7 @@ export class Hud {
         <div class="hud-hero-name">VITALIDADE <span data-field="level"></span></div>
         <div class="hud-health">
           <img class="hud-health-icon" src="${HUD_ART.hpIcon}" alt="">
-          <div class="hud-health-bar"><div class="hud-fill"></div><span data-field="health"></span></div>
+          <div class="hud-health-bar"><div class="hud-fill"></div><div class="hud-shield-fill"></div><span data-field="health"></span></div>
         </div>
         <div class="hud-rotten" hidden><img src="${LIFE_STEAL_ICON}" alt=""><span>Aura podre · cura reduzida</span></div>
       </div>
@@ -37,6 +38,7 @@ export class Hud {
     const field = (name: string) => this.root.querySelector<HTMLElement>(`[data-field="${name}"]`)!;
     this.fields = { health: field('health'), level: field('level'), time: field('time'), kills: field('kills'), currency: field('currency'), stats: field('stats') };
     this.healthFill = this.root.querySelector<HTMLDivElement>('.hud-health-bar .hud-fill')!;
+    this.shieldFill = this.root.querySelector<HTMLDivElement>('.hud-shield-fill')!;
     this.xpFill = this.root.querySelector<HTMLDivElement>('.hud-xp .hud-fill')!;
     this.build = this.root.querySelector<HTMLDivElement>('.hud-build')!;
     this.rotten = this.root.querySelector<HTMLDivElement>('.hud-rotten')!;
@@ -50,8 +52,11 @@ export class Hud {
   update(session: GameSession, stats: RenderStats): void {
     const { player } = session;
     const seconds = Math.floor(session.elapsedMs / 1000);
-    this.set('health', `${Math.ceil(player.health)} / ${player.maxHealth}`);
+    // Shield (Relíquia's hit shield, the sandbox buffer) rides over the bar from the left and adds "+N" to the count.
+    const shield = Math.floor(player.damageBuffer);
+    this.set('health', `${Math.ceil(player.health)} / ${player.maxHealth}${shield > 0 ? ` +${shield}` : ''}`);
     this.setWidth('healthPct', this.healthFill, player.health / player.maxHealth);
+    this.setWidth('shieldPct', this.shieldFill, Math.min(1, player.damageBuffer / player.maxHealth));
     this.setWidth('xpPct', this.xpFill, session.experience / session.experienceNeeded);
     this.set('level', `NV. ${session.level}`);
     this.set('currency', `${session.currency}`);

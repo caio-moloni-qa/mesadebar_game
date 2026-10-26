@@ -4,7 +4,7 @@ import { ENEMY_CONFIG, ENEMY_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG, requir
 import { WEAPONS, WeaponConfig } from '../../config/weapons';
 import { WORLD_SIZE } from '../../config/world';
 import { ArenaMap } from '../world/ArenaMap';
-import { ENEMY_DYING_MS, SOUL_CONFIG } from './entities';
+import { ENEMY_DYING_MS, ENEMY_SLIP_MS, SOUL_CONFIG } from './entities';
 import { GameSession, STEP_MS } from './GameSession';
 
 const CENTER = WORLD_SIZE / 2;
@@ -173,6 +173,17 @@ describe('Bumerangue', () => {
     expect(target.slowStackPercent).toBeGreaterThan(0);
   });
 
+  it('banana hits sometimes knock the enemy down for a second', () => {
+    const session = quietSession('fabri', 12);
+    setUpgradeCount(session, CHARACTERS.fabri.boomerangBananaTransform!.upgradeThreshold);
+    const target = dummy(session, CENTER + 150, CENTER);
+    const slips: number[] = [];
+    session.events.on('enemy-slipped', (event) => { if (event.enemy === target) slips.push(target.slipUntil - session.clock.now); });
+    run(session, 30_000);
+    expect(slips.length).toBeGreaterThan(0);
+    slips.forEach((duration) => expect(duration).toBe(ENEMY_SLIP_MS));
+  });
+
   it('the transform needs ranged affinity, not just upgrades', () => {
     const session = quietSession('fabri', 13, 'boomerang');
     session.affinities.clear();
@@ -196,12 +207,30 @@ describe('Relíquia Divina', () => {
     expect(outside.health).toBe(outside.maxHealth);
   });
 
+  it('every landed hit banks 1 shield, up to max health', () => {
+    const session = quietSession('reliquia', 14);
+    for (let index = 0; index < 5; index += 1) dummy(session, CENTER + 40 + index * 6, CENTER);
+    run(session, 3000);
+    expect(session.player.damageBuffer).toBeGreaterThanOrEqual(10);
+    run(session, 90_000);
+    expect(session.player.damageBuffer).toBe(session.player.maxHealth);
+  });
+
   it('banks a capped bonus onto the next hit the player takes', () => {
     const session = quietSession('reliquia', 15);
     dummy(session, CENTER + 50, CENTER);
     run(session, 60_000);
     expect(session.player.auraDamageTakenBonus).toBeGreaterThan(0);
     expect(session.player.auraDamageTakenBonus).toBeLessThanOrEqual(15);
+  });
+});
+
+describe('Mago', () => {
+  it('heals 3 HP every second', () => {
+    const session = quietSession('mage', 19);
+    session.player.health = 100;
+    run(session, 2100);
+    expect(session.player.health).toBe(106);
   });
 });
 

@@ -208,6 +208,8 @@ export class PlayerState implements Body, UpgradeTarget {
 export const ENEMY_DYING_MS = 350;
 /** entities/Enemy: every hit freezes the enemy's movement for 200ms. */
 export const ENEMY_HIT_STUN_MS = 200;
+/** A slipped enemy (banana hit or peel) lies on the ground this long. */
+export const ENEMY_SLIP_MS = 1000;
 
 export type EnemyPhase = 'active' | 'dying';
 
