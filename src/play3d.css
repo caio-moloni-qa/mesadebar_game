@@ -531,7 +531,7 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 @media (max-width: 520px) { .power-fanfare-card h2 { font-size: 26px; } .power-fanfare-rays { width: 600px; height: 600px; margin: -300px 0 0 -300px; } }
 .hero-powers { display: grid; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
 .hero-powers li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: baseline; font-size: 12px; line-height: 1.4; color: var(--muted); }
-.hero-powers b { grid-row: span 2; min-width: 42px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--gold); font: 600 11px/1.5 var(--sans); text-align: center; }
+.hero-powers b { grid-row: span 2; min-width: 50px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--gold); font: 600 11px/1.5 var(--sans); text-align: center; }
 .hero-powers strong { color: var(--cream); font-weight: 600; }
 
 /* Sergio's store between runs (SergioShop): a full screen with two shelves. */
@@ -564,3 +564,5 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .store-buy:disabled { opacity: .5; cursor: default; }
 .store-footer { flex-wrap: wrap; }
 @media (max-width: 620px) { .store-header { grid-template-columns: auto 1fr; } .store-balance { grid-column: 1 / -1; justify-items: start; } .store-portrait { width: 64px; height: 64px; } .store-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+/* The stage keeps its own height: a long details column (the powers list) mustn't stretch it into an empty box. */
+.hero-showcase .hero-stage { align-self: start; }
