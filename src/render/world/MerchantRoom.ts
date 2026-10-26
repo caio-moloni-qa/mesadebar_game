@@ -3,7 +3,7 @@ import { MERCHANT_ROOM, MERCHANT_TUNING, MerchantItemId, MerchantSystem } from '
 import { QuestStatus, QuestSystem } from '../../core/systems/QuestSystem';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { SkinId } from '../../core/progress/Progress';
-import { createHeroModel } from '../models/heroes';
+import { createHeroModel, importedHeroRig } from '../models/heroes';
 import { toonMaterial } from '../materials';
 import { humanoidClips } from '../models/clips';
 import { ball, cone, cylinder, mergeParts, part } from '../models/parts';
@@ -58,10 +58,16 @@ function rigged(parts: PartSpec[], scale: number, phase: number): Character {
   return { root: model.root, mixer };
 }
 
-/** A tavern figure (with what they hold), idling. */
+/** A tavern figure idling: their imported mesh when it's loaded, otherwise the procedural one (with what they hold). */
 function figure(id: RegularFigureId): Character {
   const look = REGULAR_FIGURE_LOOK[id];
-  return rigged(REGULAR_FIGURES[id](true), look.scale, look.phase);
+  const imported = importedHeroRig(id, toonMaterial({ vertexColors: true, flatShading: true }));
+  if (!imported) return rigged(REGULAR_FIGURES[id](true), look.scale, look.phase);
+  const mixer = new THREE.AnimationMixer(imported.model.root);
+  const idle = mixer.clipAction(imported.clips.idle);
+  idle.time = look.phase * idle.getClip().duration;
+  idle.play();
+  return { root: imported.model.root, mixer };
 }
 
 const sergioModel = () => figure('sergio');

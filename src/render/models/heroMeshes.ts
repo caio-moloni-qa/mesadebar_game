@@ -8,7 +8,12 @@ const HERO_MESH_URLS: Partial<Record<CharacterId, string>> = {
   barbarian: new URL('../../assets/3d/characters/barbarian.glb', import.meta.url).href,
   fabri: new URL('../../assets/3d/characters/fabri.glb', import.meta.url).href,
   mage: new URL('../../assets/3d/characters/mage.glb', import.meta.url).href,
-  reliquia: new URL('../../assets/3d/characters/reliquia.glb', import.meta.url).href
+  reliquia: new URL('../../assets/3d/characters/reliquia.glb', import.meta.url).href,
+  brom: new URL('../../assets/3d/characters/brom.glb', import.meta.url).href,
+  lyra: new URL('../../assets/3d/characters/lyra.glb', import.meta.url).href,
+  grimbo: new URL('../../assets/3d/characters/grimbo.glb', import.meta.url).href,
+  zora: new URL('../../assets/3d/characters/zora.glb', import.meta.url).href,
+  sergio: new URL('../../assets/3d/characters/sergio.glb', import.meta.url).href
 };
 
 const loaded = new Map<CharacterId, THREE.BufferGeometry>();

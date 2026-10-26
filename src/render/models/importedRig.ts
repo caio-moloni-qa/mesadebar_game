@@ -196,3 +196,124 @@ export const RELIQUIA_JOINTS: JointSpec[] = [
 ];
 
 export const RELIQUIA_HIP_HEIGHT = 0.85;
+
+/** Brom's Tripo mesh (src/assets/3d/characters/brom.glb, art-source/3d/brom/): a 1.45 m dwarf in a long coat with a
+ *  braided beard down to the belt. Short legs in a wide stance; the beard below the chin stays with the chest. */
+export const BROM_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.55, 0], radius: 0.26, minY: 0.3 },
+  { name: 'spine', parent: 'hips', at: [0, 0.7, 0], radius: 0.28, minY: 0.55 },
+  { name: 'chest', parent: 'spine', at: [0, 0.88, 0], radius: 0.3, minY: 0.72, maxY: 1.15 },
+  { name: 'head', parent: 'chest', at: [0, 1.08, 0], tip: [0, 1.45, 0], radius: 0.18, minY: 1.02 },
+  { name: 'upperArmL', parent: 'chest', at: [0.34, 0.97, 0], radius: 0.09, side: 'L', minAbsX: 0.28, maxY: 1.05, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.42, 0.75, 0.02], radius: 0.08, side: 'L', minAbsX: 0.33 },
+  { name: 'handL', parent: 'foreArmL', at: [0.45, 0.62, 0.03], tip: [0.46, 0.48, 0.03], radius: 0.06, side: 'L', minAbsX: 0.38 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.34, 0.97, 0], radius: 0.09, side: 'R', minAbsX: 0.28, maxY: 1.05, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.42, 0.75, 0.02], radius: 0.08, side: 'R', minAbsX: 0.33 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.45, 0.62, 0.03], tip: [-0.46, 0.48, 0.03], radius: 0.06, side: 'R', minAbsX: 0.38 },
+  { name: 'thighL', parent: 'hips', at: [0.13, 0.5, 0], radius: 0.12, side: 'L', maxY: 0.62 },
+  { name: 'shinL', parent: 'thighL', at: [0.2, 0.27, 0], radius: 0.1, side: 'L', maxY: 0.4 },
+  { name: 'footL', parent: 'shinL', at: [0.25, 0.09, 0], tip: [0.27, 0.02, 0.17], radius: 0.08, side: 'L', maxY: 0.18 },
+  { name: 'thighR', parent: 'hips', at: [-0.13, 0.5, 0], radius: 0.12, side: 'R', maxY: 0.62 },
+  { name: 'shinR', parent: 'thighR', at: [-0.2, 0.27, 0], radius: 0.1, side: 'R', maxY: 0.4 },
+  { name: 'footR', parent: 'shinR', at: [-0.25, 0.09, 0], tip: [-0.27, 0.02, 0.17], radius: 0.08, side: 'R', maxY: 0.18 }
+];
+
+export const BROM_HIP_HEIGHT = 0.55;
+
+/** Lyra's Tripo mesh (src/assets/3d/characters/lyra.glb, art-source/3d/lyra/): a tall elf archer with a cloak to the
+ *  shins and a quiver over the shoulder. The cloak's back panel stays with the hips, like the Mage's coat. */
+export const LYRA_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.92, 0], radius: 0.28, minY: 0.45 },
+  { name: 'spine', parent: 'hips', at: [0, 1.1, 0], radius: 0.24, minY: 0.9 },
+  { name: 'chest', parent: 'spine', at: [0, 1.3, 0], radius: 0.24, minY: 1.08, maxY: 1.6 },
+  { name: 'head', parent: 'chest', at: [0, 1.56, 0], tip: [0, 1.9, 0], radius: 0.17, minY: 1.5 },
+  { name: 'upperArmL', parent: 'chest', at: [0.22, 1.45, 0], radius: 0.07, side: 'L', minAbsX: 0.2, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.34, 1.15, 0], radius: 0.07, side: 'L', minAbsX: 0.26 },
+  { name: 'handL', parent: 'foreArmL', at: [0.4, 0.98, 0.02], tip: [0.42, 0.85, 0.02], radius: 0.06, side: 'L', minAbsX: 0.33 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.22, 1.45, 0], radius: 0.07, side: 'R', minAbsX: 0.2, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.34, 1.15, 0], radius: 0.07, side: 'R', minAbsX: 0.26 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.4, 0.98, 0.02], tip: [-0.42, 0.85, 0.02], radius: 0.06, side: 'R', minAbsX: 0.33 },
+  { name: 'thighL', parent: 'hips', at: [0.1, 0.86, 0], radius: 0.1, side: 'L', maxY: 0.98 },
+  { name: 'shinL', parent: 'thighL', at: [0.12, 0.48, -0.02], radius: 0.08, side: 'L', maxY: 0.62 },
+  { name: 'footL', parent: 'shinL', at: [0.13, 0.12, -0.02], tip: [0.15, 0.03, 0.16], radius: 0.07, side: 'L', maxY: 0.26 },
+  { name: 'thighR', parent: 'hips', at: [-0.1, 0.86, 0], radius: 0.1, side: 'R', maxY: 0.98 },
+  { name: 'shinR', parent: 'thighR', at: [-0.12, 0.48, -0.02], radius: 0.08, side: 'R', maxY: 0.62 },
+  { name: 'footR', parent: 'shinR', at: [-0.13, 0.12, -0.02], tip: [-0.15, 0.03, 0.16], radius: 0.07, side: 'R', maxY: 0.26 }
+];
+
+export const LYRA_HIP_HEIGHT = 0.92;
+
+/** Grimbo's Tripo mesh (src/assets/3d/characters/grimbo.glb, art-source/3d/grimbo/): a 1.25 m goblin with a top hat
+ *  and long ears. The arms stop below the ears (maxY) so the ear tips stay with the head. */
+export const GRIMBO_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.45, 0], radius: 0.18, minY: 0.3 },
+  { name: 'spine', parent: 'hips', at: [0, 0.55, 0], radius: 0.18, minY: 0.42 },
+  { name: 'chest', parent: 'spine', at: [0, 0.68, 0], radius: 0.18, minY: 0.55, maxY: 0.88 },
+  { name: 'head', parent: 'chest', at: [0, 0.86, 0.02], tip: [0, 1.25, 0], radius: 0.2, minY: 0.82 },
+  { name: 'upperArmL', parent: 'chest', at: [0.2, 0.8, 0], radius: 0.07, side: 'L', minAbsX: 0.17, maxY: 0.86, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.27, 0.62, 0], radius: 0.06, side: 'L', minAbsX: 0.21 },
+  { name: 'handL', parent: 'foreArmL', at: [0.32, 0.45, 0.01], tip: [0.34, 0.36, 0.01], radius: 0.05, side: 'L', minAbsX: 0.26 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.2, 0.8, 0], radius: 0.07, side: 'R', minAbsX: 0.17, maxY: 0.86, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.27, 0.62, 0], radius: 0.06, side: 'R', minAbsX: 0.21 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.32, 0.45, 0.01], tip: [-0.34, 0.36, 0.01], radius: 0.05, side: 'R', minAbsX: 0.26 },
+  { name: 'thighL', parent: 'hips', at: [0.1, 0.42, 0], radius: 0.09, side: 'L', maxY: 0.5 },
+  { name: 'shinL', parent: 'thighL', at: [0.15, 0.24, 0], radius: 0.07, side: 'L', maxY: 0.32 },
+  { name: 'footL', parent: 'shinL', at: [0.19, 0.07, 0], tip: [0.21, 0.01, 0.15], radius: 0.06, side: 'L', maxY: 0.13 },
+  { name: 'thighR', parent: 'hips', at: [-0.1, 0.42, 0], radius: 0.09, side: 'R', maxY: 0.5 },
+  { name: 'shinR', parent: 'thighR', at: [-0.15, 0.24, 0], radius: 0.07, side: 'R', maxY: 0.32 },
+  { name: 'footR', parent: 'shinR', at: [-0.19, 0.07, 0], tip: [-0.21, 0.01, 0.15], radius: 0.06, side: 'R', maxY: 0.13 }
+];
+
+export const GRIMBO_HIP_HEIGHT = 0.45;
+
+/** Zora's Tripo mesh (src/assets/3d/characters/zora.glb, art-source/3d/zora/): a long dress to the ankles and a
+ *  headscarf down the back. The hem follows the shins (it swings with the stride); the scarf stays with the chest. */
+export const ZORA_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.9, 0.05], radius: 0.3, minY: 0.3 },
+  { name: 'spine', parent: 'hips', at: [0, 1.08, 0.05], radius: 0.24, minY: 0.88 },
+  { name: 'chest', parent: 'spine', at: [0, 1.28, 0.05], radius: 0.24, minY: 1.0, maxY: 1.55 },
+  { name: 'head', parent: 'chest', at: [0, 1.5, 0.05], tip: [0, 1.8, 0.05], radius: 0.16, minY: 1.45 },
+  { name: 'upperArmL', parent: 'chest', at: [0.24, 1.38, 0.08], radius: 0.08, side: 'L', minAbsX: 0.2, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.38, 1.15, 0.1], radius: 0.08, side: 'L', minAbsX: 0.28 },
+  { name: 'handL', parent: 'foreArmL', at: [0.42, 0.95, 0.15], tip: [0.45, 0.8, 0.18], radius: 0.06, side: 'L', minAbsX: 0.36 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.24, 1.38, 0.08], radius: 0.08, side: 'R', minAbsX: 0.2, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.38, 1.15, 0.1], radius: 0.08, side: 'R', minAbsX: 0.28 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.42, 0.95, 0.15], tip: [-0.45, 0.8, 0.18], radius: 0.06, side: 'R', minAbsX: 0.36 },
+  { name: 'thighL', parent: 'hips', at: [0.1, 0.85, 0.05], radius: 0.1, side: 'L', maxY: 0.95 },
+  { name: 'shinL', parent: 'thighL', at: [0.15, 0.48, 0.05], radius: 0.09, side: 'L', maxY: 0.6 },
+  { name: 'footL', parent: 'shinL', at: [0.18, 0.1, 0.05], tip: [0.2, 0.02, 0.2], radius: 0.07, side: 'L', maxY: 0.2 },
+  { name: 'thighR', parent: 'hips', at: [-0.1, 0.85, 0.05], radius: 0.1, side: 'R', maxY: 0.95 },
+  { name: 'shinR', parent: 'thighR', at: [-0.15, 0.48, 0.05], radius: 0.09, side: 'R', maxY: 0.6 },
+  { name: 'footR', parent: 'shinR', at: [-0.18, 0.1, 0.05], tip: [-0.2, 0.02, 0.2], radius: 0.07, side: 'R', maxY: 0.2 }
+];
+
+export const ZORA_HIP_HEIGHT = 0.9;
+
+/** Sergio's Tripo mesh (src/assets/3d/characters/sergio.glb, art-source/3d/sergio/): robed, with a big pack on his
+ *  back, so the body sits forward of the mesh centre (z ≈ 0.15) and the pack, far behind the arms, stays with the
+ *  chest. Wide sleeves and a wide stance. */
+export const SERGIO_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.85, 0.12], radius: 0.3, minY: 0.45 },
+  { name: 'spine', parent: 'hips', at: [0, 1.05, 0.15], radius: 0.3, minY: 0.82 },
+  { name: 'chest', parent: 'spine', at: [0, 1.28, 0.15], radius: 0.32, minY: 1.05, maxY: 1.75 },
+  { name: 'head', parent: 'chest', at: [0, 1.5, 0.17], tip: [0, 1.9, 0.17], radius: 0.2, minY: 1.45 },
+  { name: 'upperArmL', parent: 'chest', at: [0.33, 1.42, 0.15], radius: 0.1, side: 'L', minAbsX: 0.3, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.5, 1.12, 0.18], radius: 0.1, side: 'L', minAbsX: 0.38 },
+  { name: 'handL', parent: 'foreArmL', at: [0.57, 0.95, 0.2], tip: [0.6, 0.78, 0.2], radius: 0.07, side: 'L', minAbsX: 0.46 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.33, 1.42, 0.15], radius: 0.1, side: 'R', minAbsX: 0.3, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.5, 1.12, 0.18], radius: 0.1, side: 'R', minAbsX: 0.38 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.57, 0.95, 0.2], tip: [-0.6, 0.78, 0.2], radius: 0.07, side: 'R', minAbsX: 0.46 },
+  { name: 'thighL', parent: 'hips', at: [0.14, 0.8, 0.12], radius: 0.12, side: 'L', maxY: 0.95 },
+  { name: 'shinL', parent: 'thighL', at: [0.2, 0.45, 0.12], radius: 0.1, side: 'L', maxY: 0.62 },
+  { name: 'footL', parent: 'shinL', at: [0.25, 0.13, 0.12], tip: [0.27, 0.03, 0.34], radius: 0.09, side: 'L', maxY: 0.3 },
+  { name: 'thighR', parent: 'hips', at: [-0.14, 0.8, 0.12], radius: 0.12, side: 'R', maxY: 0.95 },
+  { name: 'shinR', parent: 'thighR', at: [-0.2, 0.45, 0.12], radius: 0.1, side: 'R', maxY: 0.62 },
+  { name: 'footR', parent: 'shinR', at: [-0.25, 0.13, 0.12], tip: [-0.27, 0.03, 0.34], radius: 0.09, side: 'R', maxY: 0.3 }
+];
+
+export const SERGIO_HIP_HEIGHT = 0.85;

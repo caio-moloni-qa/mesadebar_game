@@ -263,7 +263,8 @@ export class StartMenu {
     const current = this.skinFor(character.id);
     SKIN_ORDER.forEach((skin) => {
       const open = unlocked.includes(skin);
-      const needed = MASTERY_REWARDS.find((reward) => reward.kind === 'skin' && reward.id === skin)?.level ?? 1;
+      const reward = MASTERY_REWARDS.find((entry) => entry.kind === 'skin' && entry.id === skin);
+      const needed = reward?.level ?? 1;
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'skin-chip';
@@ -271,8 +272,8 @@ export class StartMenu {
       chip.setAttribute('role', 'radio');
       chip.setAttribute('aria-checked', String(skin === current));
       chip.style.setProperty('--swatch', SKINS[skin].swatch);
-      chip.title = open ? SKINS[skin].name : `${SKINS[skin].name} · maestria nível ${needed}`;
-      chip.innerHTML = `<i aria-hidden="true"></i><span>${open ? SKINS[skin].name : `Nv ${needed}`}</span>`;
+      chip.title = reward?.comingSoon ? `${reward.name} · maestria nível ${needed}` : open ? SKINS[skin].name : `${SKINS[skin].name} · maestria nível ${needed}`;
+      chip.innerHTML = `<i aria-hidden="true"></i><span>${reward?.comingSoon ? 'Em breve' : open ? SKINS[skin].name : `Nv ${needed}`}</span>`;
       chip.addEventListener('click', () => {
         this.progress.setSkin(character.id, skin);
         this.render();

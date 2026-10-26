@@ -100,3 +100,10 @@ describe('progress', () => {
     expect(parseSave(JSON.stringify({ fichas: -5, mastery: { mage: 'lots' } })).mastery).toEqual({});
   });
 });
+
+describe('signature skins', () => {
+  it('stays locked at max mastery while it is coming soon', () => {
+    expect(unlockedSkins(MASTERY_THRESHOLDS[MASTERY_THRESHOLDS.length - 1])).not.toContain('lenda');
+    expect(unlockedSkins(MASTERY_THRESHOLDS[MASTERY_THRESHOLDS.length - 1])).toContain('ouro');
+  });
+});

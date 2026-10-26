@@ -199,6 +199,8 @@ export interface MasteryReward {
   kind: 'skin' | 'title' | 'frame';
   id: string;
   name: string;
+  /** Announced but not in the game yet: shown as "em breve", never unlocked. */
+  comingSoon?: boolean;
 }
 
 export const MASTERY_REWARDS: MasteryReward[] = [
@@ -210,8 +212,8 @@ export const MASTERY_REWARDS: MasteryReward[] = [
   { level: 7, kind: 'title', id: 'veterano', name: 'Veterano' },
   { level: 8, kind: 'skin', id: 'ouro', name: 'Paleta Ouro' },
   { level: 9, kind: 'frame', id: 'ouro', name: 'Moldura de ouro' },
-  // The signature skin is a new model per hero; until a hero's arrives, "lenda" is its finest palette.
-  { level: 10, kind: 'skin', id: 'lenda', name: 'Skin exclusiva' },
+  // The signature skin is a new model per hero; the models aren't in yet, so it's announced as coming soon.
+  { level: 10, kind: 'skin', id: 'lenda', name: 'Skin exclusiva (em breve)', comingSoon: true },
   { level: 10, kind: 'title', id: 'lenda', name: 'Lenda' }
 ];
 
@@ -231,7 +233,7 @@ export function masteryProgress(xp: number): number {
 
 export function unlockedSkins(xp: number): SkinId[] {
   const level = masteryLevel(xp);
-  return ['base', ...MASTERY_REWARDS.filter((reward) => reward.kind === 'skin' && reward.level <= level).map((reward) => reward.id as SkinId)];
+  return ['base', ...MASTERY_REWARDS.filter((reward) => reward.kind === 'skin' && !reward.comingSoon && reward.level <= level).map((reward) => reward.id as SkinId)];
 }
 
 /** The title shown under the hero's name (the highest one earned), if any. */
