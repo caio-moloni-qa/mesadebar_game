@@ -1,4 +1,4 @@
-import { ENEMY_CONFIG, ENEMY_VARIANTS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, ENEMY_VARIANTS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
@@ -9,6 +9,8 @@ import { SpatialHash } from '../SpatialHash';
 import { circlesOverlap } from '../collision';
 import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffled } from '../math';
 import { BossEvents, BossSystem } from '../systems/BossSystem';
+import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
+import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
@@ -38,14 +40,23 @@ const SEPARATION_STRENGTH = 0.25;
 const FLOW_FIELD_REFRESH_MS = 250;
 /** Boss-wave portals (Phaser: GameScene.onBossWaveCleared): spawn this far apart above the hero, used within reach. */
 const PORTAL = { spread: 110, rise: 160, reach: 70 } as const;
+/** Zone mini-bosses: one slot every this long into each phase; two per cycle, three from cycle 3. */
+const MINI_BOSS_SLOT_MS = 60_000;
+/** Each guardian slain this cycle: the Necromancer comes in with this much less health (and one beam fewer). */
+export const GUARDIAN_WEAKENING = 0.05;
 
 export type PortalKind = 'end' | 'continue';
 
+/** A companion card: join `companion` at `level` (level > 1 = strengthen the one you have). */
+export interface CompanionOffer { companion: CompanionKind; level: number }
+
 export type PendingChoice =
   | { kind: 'starting'; upgrades: Upgrade[]; picksRemaining: number; picksTotal: number }
-  | { kind: 'level-up'; level: number; upgrades: Upgrade[]; extraWeapon: WeaponConfig | null };
+  | { kind: 'level-up'; level: number; upgrades: Upgrade[]; extraWeapon: WeaponConfig | null }
+  /** After a zone mini-boss falls: its zone's companion, or strengthening one already following you. */
+  | { kind: 'companion'; from: MiniBossKind; offers: CompanionOffer[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents {
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean };
   'enemy-defeated': { x: number; y: number; variantId: EnemyVariantId; divineRelic: boolean };
   'player-damaged': { amount: number };
@@ -108,6 +119,12 @@ export class GameSession implements WeaponHost {
   victory = false;
   pendingChoice: PendingChoice | null = null;
   readonly bosses: BossSystem;
+  readonly miniBosses: MiniBossSystem;
+  readonly companions: CompanionSystem;
+  /** Zone guardians slain this cycle (each weakens the Necromancer). */
+  guardiansDefeated = 0;
+  private miniBossSlotsThisPhase = 0;
+  private miniBossRotation = 0;
   /** Boss-wave cycle: cycle 1 is the base 3-minute run; each continue portal adds a minute, 1× difficulty and a boss. */
   bossCycle = 1;
   /** While true (every wave boss dead, portals open) the clock, spawns and combat stand still; only walking and
@@ -160,7 +177,28 @@ export class GameSession implements WeaponHost {
       killPlayer: () => { if (!this.player.invincible) this.player.health = 0; },
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy),
       clearEnemyField: (keep) => this.clearEnemyField(keep),
-      hasLineOfSight: (from, to) => this.arena.hasLineOfSight(from, to)
+      hasLineOfSight: (from, to) => this.arena.hasLineOfSight(from, to),
+      weakening: () => this.guardiansDefeated
+    });
+    this.miniBosses = new MiniBossSystem({
+      player: this.player,
+      rng: this.rng,
+      arena: this.arena,
+      events: this.events,
+      spawnEnemy: (variantId, x, y, maxHealth) => this.spawnEnemy(variantId, x, y, maxHealth),
+      hurtPlayer: (amount) => this.hurtPlayer(amount, this.clock.now),
+      queueRising: (x, y) => { this.bosses.risings.push({ x, y, elapsedMs: 0 }); },
+      healthMultiplier: () => this.difficulty.stageFor(this.elapsedMs).healthMultiplier
+    });
+    this.companions = new CompanionSystem({
+      player: this.player,
+      arena: this.arena,
+      events: this.events,
+      now: () => this.clock.now,
+      heroLevel: () => this.level,
+      nearestEnemy: (from, range) => this.nearestEnemy(from, range),
+      enemiesNear: (from, radius) => this.enemiesWithin(from, radius + BODY_RADIUS.enemy),
+      damageEnemy: (enemy, amount) => this.damageEnemy(enemy, amount, null)
     });
     this.scheduler = new EnemySpawnScheduler({
       getPlayerPosition: () => this.player,
@@ -213,7 +251,7 @@ export class GameSession implements WeaponHost {
   /** Picks one of the offered upgrades from the open choice (level-up card or starting-upgrade card). */
   chooseUpgrade(upgradeId: string): void {
     const choice = this.pendingChoice;
-    if (!choice) return;
+    if (!choice || choice.kind === 'companion') return;
     const upgrade = choice.upgrades.find((candidate) => candidate.id === upgradeId);
     if (!upgrade) return;
     this.applyUpgrade(upgrade);
@@ -221,6 +259,17 @@ export class GameSession implements WeaponHost {
       choice.picksRemaining -= 1;
       if (choice.picksRemaining > 0) return;
     }
+    this.closeChoice();
+    this.processExperience();
+  }
+
+  /** Takes a companion card. */
+  chooseCompanion(index: number): void {
+    const choice = this.pendingChoice;
+    if (!choice || choice.kind !== 'companion') return;
+    const offer = choice.offers[index];
+    if (!offer) return;
+    this.companions.add(offer.companion);
     this.closeChoice();
     this.processExperience();
   }
@@ -255,7 +304,7 @@ export class GameSession implements WeaponHost {
     return upgrade;
   }
 
-  spawnEnemy(variantId: EnemyVariantId, x: number, y: number, maxHealth: number = ENEMY_VARIANTS[variantId].maxHealth): EnemyState | null {
+  spawnEnemy(variantId: EnemyVariantId, x: number, y: number, maxHealth: number = ALL_ENEMY_VARIANTS[variantId].maxHealth): EnemyState | null {
     const enemy = this.enemies.acquire();
     if (!enemy) return null;
     enemy.activate(variantId, x, y, maxHealth, this.clock.now);
@@ -288,12 +337,15 @@ export class GameSession implements WeaponHost {
     }
     this.refreshFlowField(deltaMs);
     this.scheduler.update(deltaMs, this.elapsedMs);
+    this.scheduleMiniBosses();
     this.bosses.update(deltaMs);
+    this.miniBosses.update(deltaMs);
     this.topUpStressEnemies();
     this.rebuildEnemyHash();
     this.updateEnemies(deltaMs, now);
     this.updatePlayerStatus(deltaMs, now);
     this.weapons.update(deltaMs);
+    this.companions.update(deltaMs);
     this.updateSouls(deltaMs, now);
     this.updatePeels(now);
     this.updatePickups(deltaMs);
@@ -353,8 +405,13 @@ export class GameSession implements WeaponHost {
         if (now >= enemy.phaseEndsAt) finished.push(enemy);
         return;
       }
-      if (!enemy.isStatic && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy)) this.pursuePlayer(enemy, deltaMs);
-      if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss') this.separate(enemy);
+      if (!enemy.isStatic && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy)) {
+        // The golem companion pulls nearby enemies off the hero (bosses ignore it).
+        const taunt = enemy.isCommon ? this.companions.tauntTarget(enemy) : null;
+        if (taunt) this.chase(enemy, taunt, deltaMs);
+        else this.pursuePlayer(enemy, deltaMs);
+      }
+      if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss' && !this.miniBosses.controls(enemy)) this.separate(enemy);
       // Every walker - floating wraiths included - slides along walls and stays out of the lake.
       if (!enemy.isStatic) this.arena.resolve(enemy);
       if (enemy.contactDamage > 0 && circlesOverlap(enemy, this.player)) this.hurtPlayer(enemy.contactDamage, now);
@@ -365,6 +422,19 @@ export class GameSession implements WeaponHost {
       if (enemy.hasRottenAura && !enemy.rottenAuraSuppressed && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= enemy.rottenAuraRadius) this.player.refreshRottenAura(now);
     });
     finished.forEach((enemy) => this.enemies.release(enemy));
+  }
+
+  /** Straight at a nearby target (a taunting companion). */
+  private chase(enemy: EnemyState, target: Vec2, deltaMs: number): void {
+    const dx = target.x - enemy.x;
+    const dy = target.y - enemy.y;
+    const length = Math.hypot(dx, dy);
+    if (length === 0) return;
+    const step = Math.min(length, (enemy.effectiveMovementSpeed() * deltaMs) / 1000);
+    enemy.facingX = dx / length;
+    enemy.facingY = dy / length;
+    enemy.x += enemy.facingX * step;
+    enemy.y += enemy.facingY * step;
   }
 
   /** Follow the flow field downhill (routes around walls, through doorways), or walk straight at the hero on an
@@ -510,9 +580,45 @@ export class GameSession implements WeaponHost {
     this.events.emit('boss-wave-cleared', { cycle: this.bossCycle });
   }
 
+  /** The zone's companion first (joining, or strengthening it), then strengthening each other one you have. */
+  private offerCompanion(from: MiniBossKind): void {
+    const zone = MINI_BOSSES[from].companion;
+    const offers: CompanionOffer[] = [];
+    const owned = this.companions.has(zone);
+    if (owned ? owned.level < MAX_COMPANION_LEVEL : this.companions.companions.length < MAX_COMPANIONS) offers.push({ companion: zone, level: owned ? owned.level + 1 : 1 });
+    this.companions.companions.forEach((companion) => {
+      if (companion.kind !== zone && companion.level < MAX_COMPANION_LEVEL) offers.push({ companion: companion.kind, level: companion.level + 1 });
+    });
+    if (offers.length > 0) this.openChoice({ kind: 'companion', from, offers });
+  }
+
+  /** Slots at 1:00 and 2:00 of every phase (and 3:00 from cycle 3): the next guardian in the rotation is announced
+   *  — never while the Necromancer's wave is coming or up, nor over another live guardian (that slot is skipped). */
+  private scheduleMiniBosses(): void {
+    const slots = this.bossCycle >= 3 ? 3 : 2;
+    const due = Math.min(slots, Math.floor((this.elapsedMs - this.phaseStartedAtMs) / MINI_BOSS_SLOT_MS));
+    if (due <= this.miniBossSlotsThisPhase) return;
+    this.miniBossSlotsThisPhase = due;
+    if (this.bosses.hasActiveEncounter() || this.miniBosses.active) return;
+    this.miniBosses.announce(MINI_BOSS_ROTATION[this.miniBossRotation % MINI_BOSS_ROTATION.length]);
+    this.miniBossRotation += 1;
+  }
+
+  /** Sandbox: call a guardian now (ignored while one is up). */
+  spawnMiniBoss(kind: MiniBossKind): boolean {
+    return this.miniBosses.announce(kind);
+  }
+
+  /** Sandbox: a companion joins (or levels up) without a fight. */
+  addCompanion(kind: CompanionKind): boolean {
+    return this.companions.add(kind);
+  }
+
   /** +1 boss, +1 minute next phase, +1× difficulty — all keyed off bossCycle, so the loop repeats indefinitely. */
   private continueToNextCycle(): void {
     this.awaitingPortalChoice = false;
+    this.guardiansDefeated = 0;
+    this.miniBossSlotsThisPhase = 0;
     this.portals = null;
     this.bossCycle += 1;
     this.phaseStartedAtMs = this.elapsedMs;
@@ -543,12 +649,13 @@ export class GameSession implements WeaponHost {
 
   // ── Enemy damage, death and drops ─────────────────────────────────────────────────────────────────────────
 
-  damageEnemy(enemy: EnemyState, amount: number, weaponId: WeaponConfig['id'], critical = false): void {
+  /** `weaponId` null = a companion's hit (no life steal). */
+  damageEnemy(enemy: EnemyState, amount: number, weaponId: WeaponConfig['id'] | null, critical = false): void {
     if (!enemy.alive) return;
     const now = this.clock.now;
     // A roaring boss shrugs hits off and a staggered one takes extra; then a channelling boss's shield soaks hits
     // first and only the overflow reaches its health.
-    amount *= this.bosses.damageTakenMultiplier(enemy);
+    amount *= this.bosses.damageTakenMultiplier(enemy) * this.miniBosses.damageTakenMultiplier(enemy);
     if (amount <= 0) {
       enemy.lastHitAt = now;
       return;
@@ -561,7 +668,7 @@ export class GameSession implements WeaponHost {
     }
     const dealt = Math.min(amount, enemy.health);
     // Roubo de Vida applies to any cone (melee-family) weapon, not just the Espada.
-    if (WEAPONS[weaponId].type === 'cone' && this.player.lifeStealPercent > 0) this.healPlayer(dealt * this.player.lifeStealPercent);
+    if (weaponId && WEAPONS[weaponId].type === 'cone' && this.player.lifeStealPercent > 0) this.healPlayer(dealt * this.player.lifeStealPercent);
     enemy.health -= amount;
     enemy.hitStunUntil = now + ENEMY_HIT_STUN_MS;
     enemy.lastHitAt = now;
@@ -578,6 +685,19 @@ export class GameSession implements WeaponHost {
     enemy.phase = 'dying';
     enemy.phaseEndsAt = this.clock.now + ENEMY_DYING_MS;
     this.kills += 1;
+    if (this.miniBosses.bossFor(enemy)) {
+      // A zone guardian: a chest and a burst of crystals, a companion to pick, and the Necromancer weakens.
+      this.dropPickup('chest', enemy.x, enemy.y, 0);
+      for (let index = 0; index < 6; index += 1) {
+        const point = randomPointAround(this.rng, enemy, 20, 60);
+        this.dropPickup('gem', point.x, point.y, 10);
+      }
+      this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });
+      const kind = this.miniBosses.defeat(enemy)!;
+      this.guardiansDefeated += 1;
+      this.offerCompanion(kind);
+      return;
+    }
     if (this.bosses.bossFor(enemy)) {
       // Bosses give no XP or drops; the last wave boss opens the portals.
       this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });

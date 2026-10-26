@@ -14,6 +14,13 @@ function run(session: GameSession, ms: number): void {
   for (let index = 0; index < steps; index += 1) session.step(STEP_MS);
 }
 
+/** The first card of an open upgrade choice (starting / level-up). */
+function firstUpgradeId(session: GameSession): string {
+  const choice = session.pendingChoice;
+  if (!choice || choice.kind === 'companion') throw new Error('no upgrade choice open');
+  return choice.upgrades[0].id;
+}
+
 /** Real spawn schedule off and no starting-upgrade screen, so a test controls exactly what exists. */
 function quietSession(characterId: CharacterId, seed: number, startingWeaponId?: WeaponConfig['id']): GameSession {
   const session = new GameSession({ characterId, seed, startingWeaponId, skipStartingUpgrades: true, arena: ArenaMap.open(WORLD_SIZE) });
@@ -262,7 +269,7 @@ describe('level-ups and choices', () => {
     const frozenAt = session.elapsedMs;
     run(session, 1000);
     expect(session.elapsedMs).toBe(frozenAt);
-    session.chooseUpgrade(choice.upgrades[0].id);
+    session.chooseUpgrade(firstUpgradeId(session));
     expect(session.pendingChoice).toBeNull();
     expect(session.weapons.primary.upgradeCount).toBe(1);
     run(session, 100);
@@ -355,7 +362,7 @@ describe('pickups, pooling and determinism', () => {
       session.player.invincible = true;
       session.setMoveInput(1, 0.5);
       for (let step = 0; step < 1800; step += 1) {
-        if (session.pendingChoice) session.chooseUpgrade(session.pendingChoice.upgrades[0].id);
+        if (session.pendingChoice) session.chooseUpgrade(firstUpgradeId(session));
         session.step(STEP_MS);
       }
       return { kills: session.kills, level: session.level, currency: session.currency, enemies: session.enemies.activeCount, x: session.player.x };
@@ -403,7 +410,7 @@ describe('sandbox controls', () => {
     expect(session.kills).toBe(6);
     expect(session.experience).toBeGreaterThan(0);
     // The XP opened a level-up (which pauses the run): pick, then let the dying ones return to the pool.
-    while (session.pendingChoice) session.chooseUpgrade(session.pendingChoice.upgrades[0].id);
+    while (session.pendingChoice) session.chooseUpgrade(firstUpgradeId(session));
     run(session, 400);
     expect(session.enemies.activeCount).toBe(0);
     session.setEnemySpawnCap(3);

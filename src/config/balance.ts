@@ -9,6 +9,14 @@ export const ENEMY_VARIANTS = {
   superSkeleton: { maxHealth: 500, movementSpeed: 35, contactDamage: 50, reward: 25 },
   finalBoss: { maxHealth: 10000, movementSpeed: 35, contactDamage: 0, reward: 0 }
 };
+/** 3D-only zone mini-bosses (kept out of ENEMY_VARIANTS so the Phaser build's per-variant tables stay complete).
+ *  Health is multiplied by the difficulty stage when they spawn. */
+export const MINI_BOSS_VARIANTS = {
+  gravedigger: { maxHealth: 1800, movementSpeed: 70, contactDamage: 15, reward: 0 },
+  templeGuardian: { maxHealth: 2600, movementSpeed: 55, contactDamage: 25, reward: 0 }
+};
+/** Every variant the 3D core can spawn. */
+export const ALL_ENEMY_VARIANTS = { ...ENEMY_VARIANTS, ...MINI_BOSS_VARIANTS };
 export const WEAPON_CONFIG = { damage: 10, cooldownMs: 700, projectileSpeed: 450, range: 600, lifetimeMs: 1500, pierces: 0 };
 /** Level-up rewards: the larger selection and the guaranteed extra-weapon card occur every fifth level. */
 export const LEVEL_UPGRADE_CONFIG = { bonusChoiceInterval: 5, defaultChoiceAmount: 3, bonusChoiceAmount: 5 };

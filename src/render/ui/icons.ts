@@ -1,4 +1,5 @@
 import { WeaponConfig } from '../../config/weapons';
+import { CompanionKind } from '../../core/systems/MiniBossSystem';
 
 // One static URL literal per file so Vite rewrites each with the base path.
 // Upgrade art is the 3D UI's regenerated faceted set; other art is shared with Phaser.
@@ -56,6 +57,17 @@ const UPGRADE_ICONS: Record<string, string> = {
   'aura-damage': UPGRADE_ART.auraDamage,
   'aura-tick-speed': UPGRADE_ART.auraTickSpeed
 };
+
+/** Placeholder companion portraits (inline SVG) until there's art: a bow over a skull, a stone face with glowing eyes. */
+const svg = (body: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`)}`;
+const COMPANION_ICONS: Record<CompanionKind, string> = {
+  skeletonArcher: svg('<path d="M14 8 Q44 32 14 56" fill="none" stroke="#8a5a32" stroke-width="5"/><line x1="14" y1="8" x2="14" y2="56" stroke="#e9dfc4" stroke-width="1.5"/><circle cx="38" cy="30" r="13" fill="#e9dfc4"/><rect x="31" y="39" width="14" height="8" fill="#b9ab8c"/><rect x="31" y="26" width="5" height="6" fill="#1c1420"/><rect x="40" y="26" width="5" height="6" fill="#1c1420"/><line x1="16" y1="32" x2="58" y2="32" stroke="#c9b89a" stroke-width="2.5"/><path d="M58 32 l-7 -4 v8z" fill="#cfd6dc"/>'),
+  stoneGolem: svg('<rect x="12" y="10" width="40" height="44" rx="6" fill="#8f8574"/><rect x="12" y="10" width="40" height="12" fill="#a99f8c"/><rect x="20" y="28" width="9" height="7" fill="#6dff9a"/><rect x="35" y="28" width="9" height="7" fill="#6dff9a"/><rect x="22" y="42" width="20" height="5" fill="#5a5246"/><path d="M12 22 l8 6 M52 20 l-6 9" stroke="#5a5246" stroke-width="2.5"/>')
+};
+
+export function companionIcon(kind: CompanionKind): string {
+  return COMPANION_ICONS[kind];
+}
 
 export function weaponIcon(id: WeaponConfig['id'] | 'banana'): string {
   return WEAPON_ICONS[id];

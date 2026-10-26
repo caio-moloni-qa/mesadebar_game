@@ -1,5 +1,7 @@
 import { GameSession, PendingChoice } from '../core/session/GameSession';
-import { upgradeIcon, weaponIcon } from './ui/icons';
+import { COMPANIONS } from '../core/systems/CompanionSystem';
+import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
+import { companionIcon, upgradeIcon, weaponIcon } from './ui/icons';
 
 /** Upgrade picker: whatever choice the session has open — starting upgrades or a level-up, with its bonus weapon
  *  card — using the shared dark panels, rarity colors, icons and keyboard hints.
@@ -28,7 +30,9 @@ export class ChoiceOverlay {
   update(session: GameSession): void {
     this.session = session;
     const choice = session.pendingChoice;
-    const key = choice ? `${choice.kind}:${choice.kind === 'level-up' ? choice.level : choice.picksRemaining}:${choice.upgrades.map((upgrade) => upgrade.id).join(',')}` : '';
+    const key = !choice ? ''
+      : choice.kind === 'companion' ? `companion:${choice.from}:${choice.offers.map((offer) => `${offer.companion}${offer.level}`).join(',')}`
+      : `${choice.kind}:${choice.kind === 'level-up' ? choice.level : choice.picksRemaining}:${choice.upgrades.map((upgrade) => upgrade.id).join(',')}`;
     if (key === this.renderedKey) return;
     this.renderedKey = key;
     this.root.hidden = !choice;
@@ -36,6 +40,10 @@ export class ChoiceOverlay {
   }
 
   private render(choice: PendingChoice): void {
+    if (choice.kind === 'companion') {
+      this.renderCompanions(choice);
+      return;
+    }
     const title = choice.kind === 'starting'
       ? `Melhorias iniciais — escolha ${choice.picksRemaining} de ${choice.picksTotal}`
       : `NÍVEL ${choice.level}! Escolha uma melhoria`;
@@ -55,6 +63,35 @@ export class ChoiceOverlay {
     const hint = document.createElement('p');
     hint.className = 'choice-hint';
     hint.textContent = 'Clique para escolher ou use as teclas 1–5';
+    this.root.append(eyebrow, heading, row, hint);
+    row.querySelector<HTMLButtonElement>('.upgrade-card')?.focus({ preventScroll: true });
+  }
+
+  /** A zone guardian fell: pick its companion, or strengthen one already following you. */
+  private renderCompanions(choice: Extract<PendingChoice, { kind: 'companion' }>): void {
+    this.root.replaceChildren();
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'eyebrow';
+    eyebrow.textContent = `${MINI_BOSSES[choice.from].name.toUpperCase()} CAIU`;
+    const heading = document.createElement('h2');
+    heading.textContent = 'Escolha um companheiro';
+    const row = document.createElement('div');
+    row.className = 'choice-row';
+    choice.offers.forEach((offer, index) => {
+      const spec = COMPANIONS[offer.companion];
+      const card = upgradeCard({
+        icon: companionIcon(offer.companion),
+        name: offer.level > 1 ? `${spec.name} — nível ${offer.level}` : spec.name,
+        description: offer.level > 1 ? `Fortalece seu companheiro: mais dano${offer.companion === 'stoneGolem' ? ' e vida' : ' e cadência'}.` : spec.description,
+        variant: offer.level > 1 ? '' : 'rare',
+        hotkey: index + 1
+      }, () => this.session?.chooseCompanion(index));
+      card.querySelector('.card-tier')!.textContent = offer.level > 1 ? 'FORTALECER' : 'NOVO COMPANHEIRO';
+      row.appendChild(card);
+    });
+    const hint = document.createElement('p');
+    hint.className = 'choice-hint';
+    hint.textContent = 'Clique para escolher ou use as teclas 1–3';
     this.root.append(eyebrow, heading, row, hint);
     row.querySelector<HTMLButtonElement>('.upgrade-card')?.focus({ preventScroll: true });
   }
