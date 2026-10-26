@@ -99,7 +99,7 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     ],
     preferredWeaponId: 'amulet',
     startingWeaponUpgradeChoices: 3,
-    auraWeaponOverrides: { baseDamage: 6.75, cooldown: 1000, range: 80 },
+    auraWeaponOverrides: { baseDamage: 9.45, cooldown: 1000, range: 80 },
     cardArt: { idle: 'reliquia-card-idle', hover: 'reliquia-card-hover' },
     accentColor: 0xa8541a
   },

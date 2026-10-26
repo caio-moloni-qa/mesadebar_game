@@ -198,7 +198,7 @@ export class PlayerState implements Body, UpgradeTarget {
   addProjectileRicochet(): void { this.projectileRicochetChance += 0.1; this.projectileRicochetMax += 1; }
   addProjectileSizeBonus(): void { this.projectileSizeBonus += this.projectileSizeBonus === 0 ? 0.21 : 0.09; }
   addAuraRadiusPercent(): void { this.auraRadiusBonusPercent += 0.06; }
-  addAuraDamageBonus(): void { this.auraDamageBonus += 1.7; }
+  addAuraDamageBonus(): void { this.auraDamageBonus += 2.38; }
   addAuraTickSpeedBonus(): void { this.auraTickSpeedBonusMs += 100; }
   addDivineBlessing(): void { this.bonusPassiveHealPerSecond += 5; }
   addArcaneCurse(): void {

@@ -204,7 +204,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   addAuraDamageBonus(): void {
-    this.auraDamageBonus += 1.7;
+    this.auraDamageBonus += 2.38;
   }
 
   addAuraTickSpeedBonus(): void {
