@@ -621,6 +621,9 @@ export class Game3D {
     events.on('miniboss-stunned', ({ enemy }) => {
       this.floating.spawn(simToWorld(enemy.x, enemy.y, 6, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 28, rise: 40, durationMs: 1100 }, performance.now());
     });
+    events.on('guardian-experience', ({ x, y }) => {
+      window.setTimeout(() => this.floatAt(x, y, '+1 NÍVEL DE XP!', '#8dffa8'), 700);
+    });
     events.on('miniboss-defeated', ({ kind, x, y }) => {
       const point = at(x, y);
       this.particles.emit(point.x, 2, point.z, kind === 'gravedigger' ? 0x6dff9a : kind === 'lakeSpirit' ? 0x6fd3ff : 0x9a8f7c, 50, { spread: 6, rise: 5, gravity: 12, life: 0.9, size: 1.4, jitter: 2 });

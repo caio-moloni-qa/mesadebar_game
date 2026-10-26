@@ -117,6 +117,16 @@ describe('zone mini-bosses', () => {
     expect(boss.enemy.health).toBeCloseTo(boss.enemy.maxHealth * 0.5);
   });
 
+  it('a fallen guardian is worth a level of experience, after its companion card', () => {
+    const { run, boss } = withMiniBoss('gravedigger');
+    const level = run.level;
+    run.damageEnemy(boss.enemy, boss.enemy.health + 1, 'sword');
+    expect(run.pendingChoice?.kind).toBe('companion');
+    run.chooseCompanion(0);
+    expect(run.level).toBe(level + 1);
+    expect(run.pendingChoice?.kind).toBe('level-up');
+  });
+
   it('a fallen guardian offers its zone’s companion; a second kill offers to strengthen it', () => {
     const { run, boss } = withMiniBoss('gravedigger');
     run.damageEnemy(boss.enemy, boss.enemy.health + 1, 'sword');
@@ -126,6 +136,9 @@ describe('zone mini-bosses', () => {
     run.chooseCompanion(0);
     expect(run.companions.companions.map((companion) => companion.kind)).toEqual(['gravedigger']);
     expect(run.guardiansDefeated).toBe(1);
+    // Its level of experience comes right after.
+    const levelUp = run.pendingChoice as Extract<typeof run.pendingChoice, { kind: 'level-up' }>;
+    run.chooseUpgrade(levelUp.upgrades[0].id);
 
     advance(run, 400);
     run.spawnMiniBoss('gravedigger');

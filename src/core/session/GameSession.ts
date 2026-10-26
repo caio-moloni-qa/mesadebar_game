@@ -49,6 +49,9 @@ const SEPARATION_STRENGTH = 0.25;
 const FLOW_FIELD_REFRESH_MS = 250;
 /** Boss-wave portals (Phaser: GameScene.onBossWaveCleared): spawn this far apart above the hero, used within reach. */
 const PORTAL = { spread: 110, rise: 160, reach: 70 } as const;
+/** A zone guardian slain is worth this many of the hero's current levels in experience: a jump mid-stage, where the
+ *  horde alone levels slowest. */
+export const GUARDIAN_EXPERIENCE_LEVELS = 1;
 /** Each guardian slain this cycle: the Necromancer comes in with this much less health (and one beam fewer). */
 export const GUARDIAN_WEAKENING = 0.05;
 
@@ -70,6 +73,8 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'quest-gifts': { names: string[] };
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
   'enemy-defeated': { x: number; y: number; variantId: EnemyVariantId; divineRelic: boolean };
+  /** A guardian fell: its experience is on the way (a level's worth). */
+  'guardian-experience': { x: number; y: number };
   'player-damaged': { amount: number };
   /** Floating callouts above the hero (CURA -N, LENTO +20%, HP -3). */
   'player-status': { text: string; tone: 'heal-cut' | 'slow' | 'rot' | 'heal' };
@@ -1071,7 +1076,8 @@ export class GameSession implements WeaponHost {
     this.abilities.onDefeated(enemy);
     this.stats.killsByVariant[enemy.variantId] = (this.stats.killsByVariant[enemy.variantId] ?? 0) + 1;
     if (this.miniBosses.bossFor(enemy)) {
-      // A zone guardian: a chest and a burst of crystals, a companion to pick, and the Necromancer weakens.
+      // A zone guardian: a chest and a burst of crystals, a level's worth of experience, a companion to pick, and the
+      // Necromancer weakens.
       this.dropPickup('chest', enemy.x, enemy.y, 0);
       for (let index = 0; index < 6; index += 1) {
         const point = randomPointAround(this.rng, enemy, 20, 60);
@@ -1082,7 +1088,11 @@ export class GameSession implements WeaponHost {
       this.guardiansDefeated += 1;
       this.stats.guardians += 1;
       this.stats.guardiansByKind[kind] = (this.stats.guardiansByKind[kind] ?? 0) + 1;
+      this.experience += this.experienceNeeded * GUARDIAN_EXPERIENCE_LEVELS * this.experienceMultiplier;
+      this.events.emit('guardian-experience', { x: enemy.x, y: enemy.y });
       this.offerCompanion(kind);
+      // The level-up waits for the companion card (chooseCompanion picks it up); with none on offer it comes now.
+      this.processExperience();
       return;
     }
     if (this.bosses.bossFor(enemy)) {
