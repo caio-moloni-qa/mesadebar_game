@@ -91,7 +91,7 @@ describe('merchant', () => {
     expect(run.currency).toBe(10);
   });
 
-  it('the Tomo de Afinidade opens a family choice and is sold once per run', () => {
+  it('the Tomo de Afinidade opens a family choice and stops appearing at two affinities', () => {
     const run = session();
     enter(run);
     run.currency = 1000;
@@ -109,10 +109,16 @@ describe('merchant', () => {
     expect(run.merchant.offers[3].id).toBe('max-health');
   });
 
-  it('the Tomo de Afinidade is not offered to a hero who already carries two weapons', () => {
+  it('a second weapon doesn’t take the Tomo de Afinidade away; a second affinity does', () => {
     const run = session();
-    run.addWeapon(run.weapons.weapons[0].config.id === 'whip' ? 'sword' : 'whip');
+    run.addWeapon(run.weapons.weapons[0].config.id === 'whip' ? 'staff' : 'whip');
     expect(run.weapons.weapons).toHaveLength(2);
+    expect(run.affinities.size).toBe(1);
+    enter(run);
+    expect(run.merchant.offers[3].id).toBe('affinity-tome');
+    standAt(run, MERCHANT_ROOM.exit);
+    run.interact();
+    run.grantAffinity(run.merchant.availableFamilies()[0]);
     enter(run);
     expect(run.merchant.offers[3].id).toBe('max-health');
   });
