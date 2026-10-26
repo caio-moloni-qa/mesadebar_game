@@ -105,6 +105,16 @@ describe('zone mini-bosses', () => {
     expect(boss.enemy.health).toBeGreaterThan(boss.enemy.maxHealth * 0.5);
   });
 
+  it('regenerates at most 20% of its max health per retreat', () => {
+    const { run, boss } = withMiniBoss('gravedigger');
+    boss.enemy.health = boss.enemy.maxHealth * 0.3;
+    run.player.x = run.player.prevX = 1760;
+    run.player.y = run.player.prevY = 1760;
+    advance(run, 20000);
+    expect(boss.leashing).toBe(true);
+    expect(boss.enemy.health).toBeCloseTo(boss.enemy.maxHealth * 0.5);
+  });
+
   it('a fallen guardian offers its zone’s companion; a second kill offers to strengthen it', () => {
     const { run, boss } = withMiniBoss('gravedigger');
     run.damageEnemy(boss.enemy, boss.enemy.health + 1, 'sword');
