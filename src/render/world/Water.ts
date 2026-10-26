@@ -27,8 +27,8 @@ export class Water {
         uCenter: { value: new THREE.Vector2(LAKE.center.x * WORLD_SCALE, LAKE.center.y * WORLD_SCALE) },
         uRadius: { value: LAKE.radius * WORLD_SCALE },
         uHarmonics: { value: harmonics },
-        uShallow: { value: new THREE.Color(0x5fae9e) },
-        uDeep: { value: new THREE.Color(0x2b4c78) },
+        uShallow: { value: new THREE.Color(0x72bbaa) },
+        uDeep: { value: new THREE.Color(0x244f69) },
         uFoam: { value: new THREE.Color(0xe6f2ec) }
       },
       vertexShader: /* glsl */ `
@@ -69,6 +69,11 @@ export class Water {
           // Gentle wave bands following the shore.
           float bands = sin(depth * 3.2 - uEnvTime * 1.4 + noise(vWorld * 0.5) * 2.0);
           color *= 0.93 + 0.07 * step(0.6, bands);
+          // Broad crossing ripples and broken highlights give the lake a reflective surface.
+          float rippleA = sin(dot(vWorld, vec2(1.7, 0.65)) + uEnvTime * 0.65);
+          float rippleB = sin(dot(vWorld, vec2(-0.45, 2.1)) - uEnvTime * 0.9);
+          float reflection = smoothstep(1.45, 1.92, rippleA + rippleB);
+          color += vec3(0.11, 0.15, 0.12) * reflection * smoothstep(0.6, 2.0, depth);
           // Foam line: a ragged, breathing band right at the waterline.
           float foamEdge = 0.35 + 0.25 * noise(vWorld * 1.3 + uEnvTime * 0.4) + 0.12 * sin(uEnvTime * 1.7 + angle * 9.0);
           color = mix(color, uFoam, 1.0 - smoothstep(foamEdge * 0.6, foamEdge, depth));

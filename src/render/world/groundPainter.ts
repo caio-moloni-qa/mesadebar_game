@@ -8,11 +8,11 @@ const UNITS_PER_METER = 32;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
 type RGB = [number, number, number];
-const GRASS: RGB[] = [[86, 112, 52], [98, 126, 58], [112, 140, 64], [126, 152, 70], [140, 160, 76]];
-const MEADOW: RGB[] = [[96, 130, 56], [110, 146, 62], [126, 160, 68], [142, 172, 76], [158, 182, 84]];
-const FOREST_SOIL: RGB[] = [[58, 52, 38], [70, 62, 44], [82, 72, 50], [64, 70, 42], [76, 84, 48]];
+const GRASS: RGB[] = [[64, 99, 56], [74, 112, 61], [85, 126, 66], [99, 138, 73], [113, 149, 79]];
+const MEADOW: RGB[] = [[73, 115, 59], [85, 129, 64], [99, 143, 71], [115, 156, 78], [131, 168, 88]];
+const FOREST_SOIL: RGB[] = [[48, 59, 43], [57, 67, 47], [65, 73, 51], [63, 75, 48], [75, 85, 54]];
 const DEAD_GRASS: RGB[] = [[104, 104, 70], [118, 114, 76], [92, 92, 64], [130, 124, 84], [84, 82, 60]];
-const DIRT: RGB[] = [[132, 100, 66], [150, 116, 78], [168, 134, 90], [118, 90, 60]];
+const DIRT: RGB[] = [[119, 99, 70], [135, 113, 80], [151, 128, 91], [107, 90, 66]];
 const SAND: RGB[] = [[176, 156, 112], [190, 170, 124], [160, 140, 100]];
 const MUD: RGB[] = [[88, 74, 56], [100, 84, 62], [76, 64, 50]];
 const FLAGSTONE: RGB[] = [[150, 142, 128], [136, 128, 116], [164, 156, 140], [124, 118, 108]];
@@ -43,7 +43,7 @@ export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
     for (let px = 0; px < size; px += 1) {
       const x = (px + 0.5) * unitsPerTexel;
       const n = noise(px / 90, py / 90) * 0.6 + noise(px / 23, py / 23) * 0.3 + noise(px / 6, py / 6) * 0.1;
-      const dither = (BAYER[(px & 3) + (py & 3) * 4] / 16 - 0.5) * 0.18;
+      const dither = (BAYER[(px & 3) + (py & 3) * 4] / 16 - 0.5) * 0.035;
       const wobble = (noise(px / 11 + 31, py / 11) - 0.5);
       const pick = (palette: RGB[]) => palette[Math.min(palette.length - 1, Math.max(0, Math.floor((n + dither) * palette.length)))];
 
@@ -75,6 +75,7 @@ export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
           const v = (((localY + 2000) / flagstone + (column % 2) * 0.5)) % 1;
           const grout = u < 0.06 || v < 0.06;
           color = grout ? GROUT : FLAGSTONE[Math.floor(slab * 97) % FLAGSTONE.length];
+          if (!grout && (u < .095 || v < .095)) color = [Math.min(255, color[0] + 15), Math.min(255, color[1] + 15), Math.min(255, color[2] + 12)];
           if (!grout && noise(px / 4, py / 4) > 0.82) color = [96, 116, 64]; // moss in the cracks
         } else {
           color = pick(DIRT);
@@ -100,7 +101,7 @@ export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
     if (px < 0 || py < 0 || px >= size || py >= size) return;
     data.set(rgb, (py * size + px) * 4);
   };
-  for (let cluster = 0; cluster < 900; cluster += 1) {
+  for (let cluster = 0; cluster < 220; cluster += 1) {
     const cx = intBetween(rng, 0, size - 1);
     const cy = intBetween(rng, 0, size - 1);
     const wx = cx * unitsPerTexel;
@@ -108,12 +109,27 @@ export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
     if (lakeShoreDistance(wx, wy) < LAKE.shoreWidth || trailDistance(wx, wy) < TRAIL_WIDTH) continue;
     const forest = zoneWeight('forest', wx, wy) > 0.5;
     const flower: RGB = forest ? (rng() < 0.5 ? [150, 90, 40] : [120, 70, 34]) : ([[240, 230, 200], [236, 210, 96], [196, 120, 170], [170, 150, 230]] as RGB[])[intBetween(rng, 0, 3)];
-    const count = zoneWeight('meadow', wx, wy) > 0.4 ? 26 : forest ? 18 : 6;
+    const count = zoneWeight('meadow', wx, wy) > 0.4 ? 8 : forest ? 12 : 3;
     for (let index = 0; index < count; index += 1) speck(cx + Math.round(floatBetween(rng, -10, 10)), cy + Math.round(floatBetween(rng, -10, 10)), flower);
   }
-  for (let index = 0; index < size * 3; index += 1) speck(intBetween(rng, 0, size - 1), intBetween(rng, 0, size - 1), [168, 160, 140]);
+  for (let index = 0; index < size; index += 1) speck(intBetween(rng, 0, size - 1), intBetween(rng, 0, size - 1), [146, 146, 116]);
 
   context.putImageData(image, 0, 0);
+  // Small baked contact shadows tie props into the terrain without extra meshes or per-frame work.
+  for (const obstacle of map.obstacles) {
+    context.save();
+    context.translate(obstacle.x / unitsPerTexel, obstacle.y / unitsPerTexel);
+    context.rotate(obstacle.rotation);
+    const rx = (obstacle.shape === 'circle' ? obstacle.radius : obstacle.halfWidth) / unitsPerTexel;
+    const ry = (obstacle.shape === 'circle' ? obstacle.radius : obstacle.halfHeight) / unitsPerTexel;
+    context.scale(Math.max(1, rx * 1.7), Math.max(1, ry * 1.7));
+    const shadow = context.createRadialGradient(0, 0, .15, 0, 0, 1);
+    shadow.addColorStop(0, 'rgba(18, 33, 22, .36)');
+    shadow.addColorStop(.5, 'rgba(24, 38, 23, .19)');
+    shadow.addColorStop(1, 'rgba(24, 38, 23, 0)');
+    context.fillStyle = shadow; context.fillRect(-1, -1, 2, 2);
+    context.restore();
+  }
   return canvas;
 }
 

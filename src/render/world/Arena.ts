@@ -1,15 +1,14 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { CAMP, LAKE, TEMPLE, TRAIL_WIDTH } from '../../config/arenaLayout';
-import { ArenaMap, lakeShoreDistance, trailDistance, zoneWeight } from '../../core/world/ArenaMap';
-import { createRng, floatBetween, intBetween } from '../../core/math';
+import { ArenaMap } from '../../core/world/ArenaMap';
+import { createRng } from '../../core/math';
 import { PALETTE, toonMaterial } from '../materials';
 import { mergeParts } from '../models/parts';
 import { WORLD_SCALE, toMeters } from '../space';
 import { Ambient, FireSpot } from './Ambient';
 import { EdgeMist } from './EdgeMist';
 import { environmentUniforms, withEnvironment } from './environmentShader';
-import { paintGround, valueNoise } from './groundPainter';
+import { paintGround } from './groundPainter';
+import { Grass } from './Grass';
 import { decorParts, obstacleParts, placeParts } from './props';
 import { Water } from './Water';
 
@@ -20,7 +19,6 @@ const SHADOW_HALF_EXTENT = 34;
 const MIST_COLOR = 0xb8b2c8;
 /** Props are merged per chunk (CHUNKS × CHUNKS over the arena) so off-screen chunks are frustum-culled. */
 const CHUNKS = 4;
-const GRASS_TUFTS = 14000;
 
 /** Draws the ArenaMap the core plays on (THREEJS_3D_MIGRATION_TEMP.md, arena zones): every obstacle at exactly its
  *  collision size, the decoration, a ground painted per zone (each texel unique — nothing repeats), the lake,
@@ -30,6 +28,7 @@ export class Arena {
   readonly sun: THREE.DirectionalLight;
   readonly mist: EdgeMist;
   private readonly ambient: Ambient;
+  private readonly grass: Grass;
   private time = 0;
   private readonly sunOffset = SUN_DIRECTION.clone().multiplyScalar(60);
 
@@ -38,7 +37,8 @@ export class Arena {
     this.root.add(this.createGround(seed, arenaMeters));
     this.root.add(this.createOuterGround(arenaMeters));
     this.createPropChunks().forEach((chunk) => this.root.add(chunk));
-    this.root.add(this.createGrass(seed));
+    this.grass = new Grass(map, seed);
+    this.root.add(this.grass.root);
     this.root.add(new Water(map).root);
     this.mist = new EdgeMist(arenaMeters, MIST_COLOR);
     this.ambient = new Ambient(this.fireSpots(), createRng(seed ^ 0xf17e));
@@ -63,7 +63,7 @@ export class Arena {
 
   /** Objects the pixel pipeline must skip in its normal pass (transparent / glowing — they'd add fake edges). */
   get normalPassExclusions(): THREE.Object3D[] {
-    return [this.mist.root, ...this.ambient.glows];
+    return [this.mist.root, this.grass.root, ...this.ambient.glows];
   }
 
   /** Advances the environment clock (wind, cloud drift, mist, water, flames, fireflies). Pass 0 while frozen. */
@@ -140,68 +140,4 @@ export class Arena {
     }));
   }
 
-  /** Instanced grass tufts that follow the zones: lush in the meadow, sparse and dry in the graveyard, dark in the
-   *  forest, none on paving, trails, water, the camp's trampled ground or under obstacles. Three crossed blades with
-   *  up-facing normals, swaying in the wind shader. */
-  private createGrass(seed: number): THREE.InstancedMesh {
-    const blades = [0, 1, 2].map((index) => {
-      const blade = new THREE.BufferGeometry();
-      const angle = (index / 3) * Math.PI + 0.3;
-      const dx = Math.cos(angle) * 0.14;
-      const dz = Math.sin(angle) * 0.14;
-      const lean = (index - 1) * 0.08;
-      blade.setAttribute('position', new THREE.Float32BufferAttribute([-dx, 0, -dz, dx, 0, dz, lean, 0.42 + index * 0.05, 0], 3));
-      blade.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
-      return blade;
-    });
-    const geometry = mergeGeometries(blades)!;
-    const material = withEnvironment(toonMaterial({ side: THREE.DoubleSide }), { wind: true, clouds: true });
-    const tufts = new THREE.InstancedMesh(geometry, material, GRASS_TUFTS);
-    const rng = createRng(seed ^ 0x6a55);
-    const clumps = valueNoise(rng);
-    const matrix = new THREE.Matrix4();
-    const position = new THREE.Vector3();
-    const rotation = new THREE.Quaternion();
-    const scale = new THREE.Vector3();
-    const color = new THREE.Color();
-    const up = new THREE.Vector3(0, 1, 0);
-    const templeCos = Math.cos(-TEMPLE.rotation);
-    const templeSin = Math.sin(-TEMPLE.rotation);
-    let placed = 0;
-    for (let attempt = 0; attempt < GRASS_TUFTS * 6 && placed < GRASS_TUFTS; attempt += 1) {
-      const x = floatBetween(rng, 20, this.map.size - 20);
-      const y = floatBetween(rng, 20, this.map.size - 20);
-      const meadow = zoneWeight('meadow', x, y);
-      const forest = zoneWeight('forest', x, y);
-      const graveyard = zoneWeight('graveyard', x, y);
-      // Density: clumped noise, boosted in the meadow, thinned on dry/dark ground.
-      const density = clumps(x / 160, y / 160) + meadow * 0.25 - graveyard * 0.2 - forest * 0.1;
-      if (density < 0.55) continue;
-      if (lakeShoreDistance(x, y) < LAKE.shoreWidth * 0.5 || trailDistance(x, y) < TRAIL_WIDTH / 2) continue;
-      if (Math.hypot(x - CAMP.fire.x, y - CAMP.fire.y) < 240) continue;
-      const tx = x - TEMPLE.center.x;
-      const ty = y - TEMPLE.center.y;
-      if (Math.abs(tx * templeCos - ty * templeSin) < TEMPLE.halfWidth && Math.abs(tx * templeSin + ty * templeCos) < TEMPLE.halfHeight && rng() < 0.9) continue;
-      if (!this.map.isWalkable(x, y, 6)) continue;
-      position.set(x * WORLD_SCALE, 0, y * WORLD_SCALE);
-      rotation.setFromAxisAngle(up, rng() * Math.PI * 2);
-      const size = floatBetween(rng, 0.7, 1.5) * (1 + meadow * 0.25);
-      scale.set(size, size * floatBetween(rng, 0.8, 1.3), size);
-      tufts.setMatrixAt(placed, matrix.compose(position, rotation, scale));
-      const swatch = graveyard > 0.5
-        ? [0x9a9466, 0x8a8a5a, 0xa8a070][intBetween(rng, 0, 2)]
-        : forest > 0.5
-          ? [0x4f6232, 0x5a6a34, 0x6a5a34][intBetween(rng, 0, 2)]
-          : rng() < 0.06 ? 0x8a6f9c : [0x7d9a45, 0x8fae4f, 0x6a8a3c, 0xa3b45a][intBetween(rng, 0, 3)];
-      tufts.setColorAt(placed, color.setHex(swatch));
-      placed += 1;
-    }
-    tufts.count = placed;
-    tufts.receiveShadow = true;
-    // Blades are thinner than a texel: if they wrote depth, the outline pass would treat every one as a silhouette
-    // and darken it into dirt specks. Drawn first without depth, they read as ground texture and never hide enemies.
-    material.depthWrite = false;
-    tufts.renderOrder = -1;
-    return tufts;
-  }
 }

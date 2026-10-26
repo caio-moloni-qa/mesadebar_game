@@ -1,7 +1,7 @@
 import { WeaponConfig } from '../../config/weapons';
 
-// The Phaser build's 2D art, reused by the DOM UI. One static URL literal per file so Vite rewrites each with the
-// base path (a computed `new URL` would lose it).
+// One static URL literal per file so Vite rewrites each with the base path.
+// Upgrade art is the 3D UI's regenerated faceted set; other art is shared with Phaser.
 
 export const HUD_ART = {
   hpIcon: new URL('../../assets/ui/hud/hp-icon.png', import.meta.url).href,
@@ -24,19 +24,19 @@ const WEAPON_ICONS: Record<WeaponConfig['id'] | 'banana', string> = {
 };
 
 const UPGRADE_ART = {
-  damage: new URL('../../assets/upgrades/core/damage-icon.png', import.meta.url).href,
-  cooldown: new URL('../../assets/upgrades/core/cooldown-icon.png', import.meta.url).href,
-  speed: new URL('../../assets/upgrades/core/speed-icon.png', import.meta.url).href,
-  lifeSteal: new URL('../../assets/upgrades/core/life-steal-icon.png', import.meta.url).href,
-  colossusArms: new URL('../../assets/upgrades/core/colossus-arms-icon.png', import.meta.url).href,
-  chainedFury: new URL('../../assets/upgrades/core/chained-fury-icon.png', import.meta.url).href,
-  whirlwind: new URL('../../assets/upgrades/core/whirlwind-attack-icon.png', import.meta.url).href,
-  arcaneBlessing: new URL('../../assets/upgrades/core/arcane-blessing-icon.png', import.meta.url).href,
-  arcaneBounce: new URL('../../assets/upgrades/core/arcane-bounce-icon.png', import.meta.url).href,
-  wideBolt: new URL('../../assets/upgrades/core/wide-bolt-icon.png', import.meta.url).href,
-  auraRadius: new URL('../../assets/upgrades/core/aura-radius-icon.png', import.meta.url).href,
-  auraDamage: new URL('../../assets/upgrades/core/aura-damage-icon.png', import.meta.url).href,
-  auraTickSpeed: new URL('../../assets/upgrades/core/aura-tick-speed-icon.png', import.meta.url).href
+  damage: new URL('../../assets/upgrades/modern/damage-icon.webp', import.meta.url).href,
+  cooldown: new URL('../../assets/upgrades/modern/cooldown-icon.webp', import.meta.url).href,
+  speed: new URL('../../assets/upgrades/modern/speed-icon.webp', import.meta.url).href,
+  lifeSteal: new URL('../../assets/upgrades/modern/life-steal-icon.webp', import.meta.url).href,
+  colossusArms: new URL('../../assets/upgrades/modern/colossus-arms-icon.webp', import.meta.url).href,
+  chainedFury: new URL('../../assets/upgrades/modern/chained-fury-icon.webp', import.meta.url).href,
+  whirlwind: new URL('../../assets/upgrades/modern/whirlwind-attack-icon.webp', import.meta.url).href,
+  arcaneBlessing: new URL('../../assets/upgrades/modern/arcane-blessing-icon.webp', import.meta.url).href,
+  arcaneBounce: new URL('../../assets/upgrades/modern/arcane-bounce-icon.webp', import.meta.url).href,
+  wideBolt: new URL('../../assets/upgrades/modern/wide-bolt-icon.webp', import.meta.url).href,
+  auraRadius: new URL('../../assets/upgrades/modern/aura-radius-icon.webp', import.meta.url).href,
+  auraDamage: new URL('../../assets/upgrades/modern/aura-damage-icon.webp', import.meta.url).href,
+  auraTickSpeed: new URL('../../assets/upgrades/modern/aura-tick-speed-icon.webp', import.meta.url).href
 };
 
 /** Upgrade id → icon (Phaser: GameScene UPGRADE_ICON_KEYS). Unknown ids fall back to the damage icon, like there. */

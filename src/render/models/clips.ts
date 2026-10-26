@@ -211,3 +211,104 @@ export function wraithFloatClip(): THREE.AnimationClip {
     { t: 1.2, pose: { chest: [8, 0, 0], upperArmL: [-40, 0, 25], upperArmR: [-40, 0, -25], skirt: [6, 0, 0], head: [5, 0, 0] }, hips: [0, 0, 0] }
   ], [0, 0.9, 0], { includeRest: false, loop: true });
 }
+
+export type BossClipName = 'idle' | 'walk' | 'summon' | 'channel' | 'point' | 'windup' | 'spin' | 'spinBack' | 'kneel' | 'roar' | 'crouch' | 'leap' | 'death';
+
+/** The boss's own clip set: heavier, slower and more theatrical than the heroes' — a stomping walk, arms flung up to
+ *  summon, a floating channel, a pointing beam stance, a sword wind-up and full-body spins for the sweep, a one-knee
+ *  stagger, the phase-2 roar, a crouch-and-leap lunge, and a collapse. Bones: the humanoid set plus `cape` and `jaw`. */
+export function bossClips(hipHeight: number): Record<BossClipName, THREE.AnimationClip> {
+  const hips: Vec3Tuple = [0, hipHeight, 0];
+  const loop = { loop: true };
+  const stepA: Pose = { thighL: [-26, 0, -3], shinL: [8, 0, 0], thighR: [18, 0, 3], shinR: [34, 0, 0], upperArmL: [18, 0, 14], upperArmR: [-18, 0, -14], chest: [8, -6, 0], cape: [20, 0, 4], head: [4, 4, 0] };
+  const stepB: Pose = { thighL: [18, 0, -3], shinL: [34, 0, 0], thighR: [-26, 0, 3], shinR: [8, 0, 0], upperArmL: [-18, 0, 14], upperArmR: [18, 0, -14], chest: [8, 6, 0], cape: [20, 0, -4], head: [4, -4, 0] };
+  const pass: Pose = { thighL: [-4, 0, -3], shinL: [30, 0, 0], thighR: [-4, 0, 3], shinR: [30, 0, 0], chest: [9, 0, 0], cape: [26, 0, 0], head: [5, 0, 0] };
+  const armsUp: Pose = { upperArmL: [-10, 0, 150], upperArmR: [-10, 0, -150], foreArmL: [-15, 0, 0], foreArmR: [-15, 0, 0], chest: [-15, 0, 0], head: [-22, 0, 0], jaw: [22, 0, 0], cape: [30, 0, 0] };
+  const kneel: Pose = {
+    hips: [12, 0, 0], thighL: [-95, 0, -6], shinL: [92, 0, 0], footL: [-8, 0, 0], thighR: [8, 0, 6], shinR: [105, 0, 0], footR: [40, 0, 0],
+    chest: [26, 0, 0], head: [24, 0, 0], jaw: [10, 0, 0], upperArmR: [12, 0, -14], foreArmR: [-10, 0, 0], upperArmL: [-45, 0, 22], foreArmL: [-55, 0, 0], cape: [8, 0, 0]
+  };
+  const crouch: Pose = { thighL: [-55, 0, -6], shinL: [90, 0, 0], thighR: [-55, 0, 6], shinR: [90, 0, 0], chest: [34, 0, 0], head: [-18, 0, 0], upperArmL: [45, 0, 22], upperArmR: [45, 0, -22], cape: [12, 0, 0] };
+  const channelA: Pose = { upperArmL: [-160, 0, 25], upperArmR: [-160, 0, -25], foreArmL: [-20, 0, 0], foreArmR: [-20, 0, 0], chest: [-12, 0, 0], head: [-16, 0, 0], jaw: [10, 0, 0], cape: [30, 0, 0], thighL: [-10, 0, 0], thighR: [6, 0, 0], shinL: [20, 0, 0], shinR: [26, 0, 0] };
+  const channelB: Pose = { upperArmL: [-165, 0, 32], upperArmR: [-165, 0, -32], foreArmL: [-28, 0, 0], foreArmR: [-28, 0, 0], chest: [-16, 0, 0], head: [-20, 0, 0], jaw: [16, 0, 0], cape: [42, 0, 0], thighL: [-6, 0, 0], thighR: [10, 0, 0], shinL: [26, 0, 0], shinR: [20, 0, 0] };
+  const pointA: Pose = { upperArmR: [-88, 0, -4], foreArmR: [0, 0, 0], handR: [-10, 0, 0], upperArmL: [24, 0, 32], foreArmL: [-30, 0, 0], chest: [6, -22, 0], head: [0, -12, 0], jaw: [12, 0, 0], thighL: [-14, 0, 0], thighR: [12, 0, 0], shinR: [14, 0, 0], cape: [18, 0, 0] };
+  const pointB: Pose = { ...pointA, upperArmR: [-92, 0, -4], foreArmR: [-4, 0, 0], handR: [-14, 0, 0], upperArmL: [28, 0, 36], chest: [8, -24, 0], jaw: [16, 0, 0], cape: [24, 0, 0] };
+  const windA: Pose = { upperArmR: [-165, 0, -12], foreArmR: [-10, 0, 0], upperArmL: [-35, 0, 45], foreArmL: [-40, 0, 0], chest: [-8, 30, 0], head: [-6, -10, 0], thighL: [-18, 0, -6], shinL: [32, 0, 0], thighR: [-18, 0, 6], shinR: [32, 0, 0], cape: [16, 0, 0], jaw: [8, 0, 0] };
+  const windB: Pose = { ...windA, upperArmR: [-170, 0, -14], chest: [-10, 34, 0], jaw: [12, 0, 0], cape: [20, 0, 0] };
+  const spinKeys = (direction: number) => [0, 1, 2, 3].map((step) => ({
+    t: (0.32 * step) / 3,
+    pose: { hips: [0, direction * 120 * step, 0] as Vec3Tuple, upperArmL: [0, 0, 85] as Vec3Tuple, upperArmR: [0, 0, -85] as Vec3Tuple, chest: [6, 0, 0] as Vec3Tuple, cape: [55, 0, 0] as Vec3Tuple },
+    hips: [0, -0.06, 0] as Vec3Tuple
+  }));
+  return {
+    idle: poseClip('idle', 2.6, [
+      { t: 0, pose: { chest: [4, 0, 0], head: [5, 3, 0], cape: [10, 0, 2], upperArmL: [0, 0, 12], upperArmR: [0, 0, -12], jaw: [0, 0, 0] }, hips: [0, 0, 0] },
+      { t: 1.3, pose: { chest: [8, 0, 0], head: [8, -3, 0], cape: [16, 0, -2], upperArmL: [0, 0, 16], upperArmR: [0, 0, -16], jaw: [6, 0, 0] }, hips: [0, -0.03, 0] },
+      { t: 2.6, pose: { chest: [4, 0, 0], head: [5, 3, 0], cape: [10, 0, 2], upperArmL: [0, 0, 12], upperArmR: [0, 0, -12], jaw: [0, 0, 0] }, hips: [0, 0, 0] }
+    ], hips, loop),
+    walk: poseClip('walk', 1.4, [
+      { t: 0, pose: stepA, hips: [0, -0.04, 0] },
+      { t: 0.35, pose: pass, hips: [0, 0.02, 0] },
+      { t: 0.7, pose: stepB, hips: [0, -0.04, 0] },
+      { t: 1.05, pose: pass, hips: [0, 0.02, 0] },
+      { t: 1.4, pose: stepA, hips: [0, -0.04, 0] }
+    ], hips, loop),
+    summon: poseClip('summon', 1.1, [
+      { t: 0, pose: {}, hips: [0, 0, 0] },
+      { t: 0.25, pose: armsUp, hips: [0, 0.05, 0] },
+      { t: 0.75, pose: { ...armsUp, chest: [-18, 0, 0], jaw: [28, 0, 0] }, hips: [0, 0.05, 0] },
+      { t: 1.1, pose: {}, hips: [0, 0, 0] }
+    ], hips),
+    // Hovers a little, arms raised to the sky, cape lifting.
+    channel: poseClip('channel', 1.6, [
+      { t: 0, pose: channelA, hips: [0, 0.18, 0] },
+      { t: 0.8, pose: channelB, hips: [0, 0.28, 0] },
+      { t: 1.6, pose: channelA, hips: [0, 0.18, 0] }
+    ], hips, loop),
+    // Right arm thrust at the target, body turned behind it, the off hand drawn back.
+    point: poseClip('point', 1.2, [
+      { t: 0, pose: pointA, hips: [0, -0.03, 0] },
+      { t: 0.6, pose: pointB, hips: [0, -0.05, 0] },
+      { t: 1.2, pose: pointA, hips: [0, -0.03, 0] }
+    ], hips, loop),
+    // Sword summon: the right arm raised high calling the blade, knees bent, coiled to spin.
+    windup: poseClip('windup', 1.0, [
+      { t: 0, pose: windA, hips: [0, -0.1, 0] },
+      { t: 0.5, pose: windB, hips: [0, -0.12, 0] },
+      { t: 1.0, pose: windA, hips: [0, -0.1, 0] }
+    ], hips, loop),
+    // One full turn with the arms flung out, in step with the sword's orbit (and back again in phase 2).
+    spin: poseClip('spin', 0.32, spinKeys(1), hips),
+    spinBack: poseClip('spinBack', 0.32, spinKeys(-1), hips),
+    // Stagger: down on one knee, head hanging, one hand braced on the knee, breathing hard.
+    kneel: poseClip('kneel', 1.0, [
+      { t: 0, pose: kneel, hips: [0, -0.4, 0] },
+      { t: 0.5, pose: { ...kneel, chest: [32, 0, 0], head: [30, 0, 0], jaw: [16, 0, 0] }, hips: [0, -0.42, 0] },
+      { t: 1.0, pose: kneel, hips: [0, -0.4, 0] }
+    ], hips, loop),
+    // Phase 2: gathers itself, then rears up with the jaw thrown open and the arms flung wide.
+    roar: poseClip('roar', 1.6, [
+      { t: 0, pose: {}, hips: [0, 0, 0] },
+      { t: 0.35, pose: { chest: [28, 0, 0], head: [22, 0, 0], upperArmL: [10, 0, 22], upperArmR: [10, 0, -22], thighL: [-28, 0, 0], thighR: [-28, 0, 0], shinL: [48, 0, 0], shinR: [48, 0, 0], cape: [8, 0, 0] }, hips: [0, -0.16, 0] },
+      { t: 0.6, pose: { chest: [-30, 0, 0], head: [-38, 0, 0], jaw: [38, 0, 0], upperArmL: [-30, 0, 85], upperArmR: [-30, 0, -85], foreArmL: [-20, 0, 0], foreArmR: [-20, 0, 0], cape: [60, 0, 0] }, hips: [0, 0.06, 0] },
+      { t: 1.25, pose: { chest: [-26, 0, 0], head: [-34, 0, 0], jaw: [34, 0, 0], upperArmL: [-26, 0, 80], upperArmR: [-26, 0, -80], foreArmL: [-24, 0, 0], foreArmR: [-24, 0, 0], cape: [48, 0, 0] }, hips: [0, 0.04, 0] },
+      { t: 1.6, pose: {}, hips: [0, 0, 0] }
+    ], hips),
+    crouch: poseClip('crouch', 0.6, [
+      { t: 0, pose: crouch, hips: [0, -0.3, 0] },
+      { t: 0.3, pose: { ...crouch, chest: [38, 0, 0] }, hips: [0, -0.33, 0] },
+      { t: 0.6, pose: crouch, hips: [0, -0.3, 0] }
+    ], hips, loop),
+    leap: poseClip('leap', 0.5, [
+      { t: 0, pose: { chest: [42, 0, 0], head: [-26, 0, 0], thighL: [-62, 0, 0], shinL: [40, 0, 0], thighR: [38, 0, 0], shinR: [60, 0, 0], upperArmL: [62, 0, 30], upperArmR: [62, 0, -30], cape: [75, 0, 0] }, hips: [0, 0.25, 0] },
+      { t: 0.5, pose: { chest: [44, 0, 0], head: [-28, 0, 0], thighL: [-58, 0, 0], shinL: [44, 0, 0], thighR: [34, 0, 0], shinR: [64, 0, 0], upperArmL: [66, 0, 34], upperArmR: [66, 0, -34], cape: [80, 0, 0] }, hips: [0, 0.25, 0] }
+    ], hips, loop),
+    // Collapses to its knees, then topples forward; held on the last frame.
+    death: poseClip('death', 1.6, [
+      { t: 0, pose: {}, hips: [0, 0, 0] },
+      { t: 0.5, pose: kneel, hips: [0, -0.4, 0] },
+      { t: 1.0, pose: { ...kneel, chest: [40, 0, 0], head: [40, 0, 0], upperArmL: [-10, 0, 30], upperArmR: [-10, 0, -30] }, hips: [0, -0.45, 0] },
+      { t: 1.6, pose: { ...kneel, hips: [78, 0, 0], chest: [20, 0, 0], head: [20, 0, 0], upperArmL: [-150, 0, 30], upperArmR: [-150, 0, -30], jaw: [30, 0, 0] }, hips: [0, -hipHeight + 0.28, 0] }
+    ], hips)
+  };
+}

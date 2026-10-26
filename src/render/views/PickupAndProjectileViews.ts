@@ -177,7 +177,20 @@ export class HazardView {
   }
 }
 
-interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; maxLife: number; color: number; size: number; }
+interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; maxLife: number; color: number; size: number; gravity: number; }
+
+export interface EmitOptions {
+  /** Horizontal speed (random direction), m/s. */
+  spread?: number;
+  /** Initial upward speed, m/s (a range: rise × 0.5..1.5). */
+  rise?: number;
+  /** Downward acceleration, m/s² (negative floats up, like flames). */
+  gravity?: number;
+  life?: number;
+  size?: number;
+  /** Random offset around the point, m. */
+  jitter?: number;
+}
 
 /** Pixel-square particles (the style reference's chunky trails/sparks): tiny cubes that burst and fall. Purely
  *  visual — advanced with frame time only while the session is running, so they freeze with pause. */
@@ -201,7 +214,21 @@ export class ParticleView {
       this.particles.push({
         x: worldX, y: height, z: worldZ,
         vx: Math.cos(angle) * velocity, vy: 2 + Math.random() * 3, vz: Math.sin(angle) * velocity,
-        life, maxLife: life, color, size: 0.7 + Math.random() * 0.8
+        life, maxLife: life, color, size: 0.7 + Math.random() * 0.8, gravity: 14
+      });
+    }
+  }
+
+  /** Particles at any height with their own motion (flames rise, dust settles, trails hang). */
+  emit(worldX: number, worldY: number, worldZ: number, color: number, count: number, { spread = 1, rise = 1, gravity = 6, life = 0.6, size = 1, jitter = 0 }: EmitOptions = {}): void {
+    for (let index = 0; index < count && this.particles.length < this.capacity; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = spread * Math.random();
+      const lifetime = life * (0.6 + Math.random() * 0.8);
+      this.particles.push({
+        x: worldX + (Math.random() - 0.5) * jitter * 2, y: worldY + (Math.random() - 0.5) * jitter, z: worldZ + (Math.random() - 0.5) * jitter * 2,
+        vx: Math.cos(angle) * velocity, vy: rise * (0.5 + Math.random()), vz: Math.sin(angle) * velocity,
+        life: lifetime, maxLife: lifetime, color, size: size * (0.7 + Math.random() * 0.6), gravity
       });
     }
   }
@@ -211,7 +238,7 @@ export class ParticleView {
       const particle = this.particles[index];
       particle.life -= deltaSeconds;
       if (particle.life <= 0 || particle.y < 0) { this.particles.splice(index, 1); continue; }
-      particle.vy -= 14 * deltaSeconds;
+      particle.vy -= particle.gravity * deltaSeconds;
       particle.x += particle.vx * deltaSeconds;
       particle.y += particle.vy * deltaSeconds;
       particle.z += particle.vz * deltaSeconds;

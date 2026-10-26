@@ -381,3 +381,45 @@ describe('reveal hold', () => {
     expect(session.player.x).toBeGreaterThan(x);
   });
 });
+
+describe('sandbox controls', () => {
+  it('the damage buffer soaks hits before health', () => {
+    const session = quietSession('barbarian', 4);
+    session.player.damageBuffer = 30;
+    const health = session.player.health;
+    session.player.damage(20, session.clock.now);
+    expect(session.player.health).toBe(health);
+    expect(session.player.damageBuffer).toBeLessThan(30);
+  });
+
+  it('kills every enemy with credit, spawns near the player, and caps the field', () => {
+    const session = quietSession('mage', 4);
+    session.spawnNearPlayer('skeleton', 6);
+    expect(session.enemies.activeCount).toBe(6);
+    session.enemies.forEachActive((enemy) => {
+      expect(Math.hypot(enemy.x - session.player.x, enemy.y - session.player.y)).toBeLessThan(300);
+    });
+    session.killAllEnemies();
+    expect(session.kills).toBe(6);
+    expect(session.experience).toBeGreaterThan(0);
+    // The XP opened a level-up (which pauses the run): pick, then let the dying ones return to the pool.
+    while (session.pendingChoice) session.chooseUpgrade(session.pendingChoice.upgrades[0].id);
+    run(session, 400);
+    expect(session.enemies.activeCount).toBe(0);
+    session.setEnemySpawnCap(3);
+    session.spawnNearPlayer('skeleton', 10);
+    expect(session.enemies.activeCount).toBe(3);
+  });
+
+  it('moves the clock (never below zero) and grants weapon or attribute upgrades', () => {
+    const session = quietSession('barbarian', 4, 'sword');
+    session.adjustElapsedMs(30_000);
+    expect(session.elapsedMs).toBeGreaterThanOrEqual(30_000);
+    session.adjustElapsedMs(-90_000);
+    expect(session.elapsedMs).toBe(0);
+    const upgrade = session.grantSandboxUpgrade('weapon');
+    expect(upgrade).not.toBeNull();
+    expect(session.selectedUpgradeCounts.get(upgrade!.id)).toBe(1);
+    expect(session.grantSandboxUpgrade('attribute')).not.toBeNull();
+  });
+});

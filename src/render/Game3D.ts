@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { ENEMY_CONFIG } from '../config/balance';
+import { GameAudio } from '../audio/GameAudio';
+import { SANDBOX_SPAWN_CAPS } from '../config/balance';
 import { CHARACTERS } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
@@ -12,9 +13,13 @@ import { Hud } from './Hud';
 import { PALETTE } from './materials';
 import { PixelPipeline, ndcToCanvas } from './PixelPipeline';
 import { RunChoice, StartMenu } from './StartMenu';
-import { simToWorld } from './space';
+import { WORLD_SCALE, simToWorld } from './space';
 import { FloatingTexts } from './ui/FloatingTexts';
 import { RunScreens } from './ui/RunScreens';
+import { BossUi } from './ui/BossUi';
+import { SandboxPanel } from './ui/SandboxPanel';
+import { BossEffects } from './vfx/BossEffects';
+import { BossViews } from './views/BossView';
 import { ChestRoll } from './ui/ChestRoll';
 import { Joystick, isTouchDevice } from './ui/Joystick';
 import { CombatEffects } from './vfx/CombatEffects';
@@ -43,7 +48,7 @@ export interface Game3DOptions {
   /** Debug close-up camera (1 = normal gameplay framing). */
   zoom?: number;
   /** Test keys: U random upgrade, I +5 upgrades on every weapon, O add another weapon, T toggle enemy separation,
-   *  V spawn one of each enemy variant around the hero. */
+   *  V spawn one of each enemy variant around the hero, B start this cycle's boss wave now. */
   debug?: boolean;
 }
 
@@ -61,20 +66,26 @@ export class Game3D {
   private readonly arenaMap: ArenaMap;
   private readonly hud: Hud;
   private readonly screens: RunScreens;
+  private readonly bossUi: BossUi;
+  private readonly sandbox: SandboxPanel;
+  private readonly bossViews = new BossViews();
+  private readonly bossEffects: BossEffects;
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
   private readonly showJoystick: boolean;
   private readonly choices: ChoiceOverlay;
   private readonly menu: StartMenu;
+  private readonly audio: GameAudio;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
   private inMenu = false;
   private session!: GameSession;
   private playerView!: HeroView;
-  private readonly enemyView = new EnemyHordeView(ENEMY_CONFIG.maxActive);
+  /** Sized for the sandbox's highest spawn limit, so raising it never outgrows the instanced batches. */
+  private readonly enemyView = new EnemyHordeView(SANDBOX_SPAWN_CAPS[SANDBOX_SPAWN_CAPS.length - 1]);
   private readonly projectileView = new ProjectileView(400);
   private readonly pickupView = new PickupView(600);
   private readonly hazardView = new HazardView(80);
-  private readonly particles = new ParticleView(800);
+  private readonly particles = new ParticleView(2000);
   private readonly effects = new CombatEffects();
   private readonly keys = new Set<string>();
   private accumulator = 0;
@@ -89,6 +100,7 @@ export class Game3D {
   private heldKey = '';
 
   constructor(private readonly container: HTMLElement, private readonly options: Game3DOptions) {
+    this.audio = new GameAudio(container);
     this.cameraRig = new CameraRig(options.zoom);
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(1);
@@ -102,9 +114,19 @@ export class Game3D {
     this.arenaMap = ArenaMap.generate(arenaSeed);
     this.arena = new Arena(this.arenaMap, arenaSeed);
     if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
+    this.bossEffects = new BossEffects(this.particles, this.bossViews);
+    this.scene.add(this.bossEffects.root, this.bossViews.root);
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
     this.floating = new FloatingTexts(container);
-    this.hud = new Hud(container, Boolean(options.debug));
+    this.hud = new Hud(container, Boolean(options.debug), () => {
+      if (!this.session.pendingChoice && !this.session.revealing && !this.session.over) this.session.paused = true;
+    });
+    this.bossUi = new BossUi(container, () => this.session.interact());
+    this.sandbox = new SandboxPanel(container, {
+      session: () => this.session,
+      setFogVisible: (visible) => { this.arena.mist.root.visible = visible; },
+      announce: (text) => this.floatAboveHero(text, '#8bff8b')
+    });
     this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
     this.chestRoll = new ChestRoll(container);
@@ -123,19 +145,25 @@ export class Game3D {
   }
 
   startRun(choice: RunChoice): void {
+    this.keys.clear();
     this.run = choice;
     this.inMenu = false;
     this.menu.hide();
     this.hud.setVisible(true);
+    this.bossUi.setVisible(true);
+    this.sandbox.setAllowed(true);
     this.joystick.setVisible(this.showJoystick);
     this.restart();
   }
 
-  /** Back to character select. Behind the menu the arena stays on screen with the last hero standing idle in an
+  /** Back to the title. Behind the menu the arena stays on screen with the last hero standing idle in an
    *  empty, spawn-free session. */
   showMenu(): void {
+    this.keys.clear();
     this.inMenu = true;
     this.hud.setVisible(false);
+    this.bossUi.setVisible(false);
+    this.sandbox.setAllowed(false);
     this.joystick.setVisible(false);
     this.createSession({ skipStartingUpgrades: true, attract: true });
     this.menu.show();
@@ -147,6 +175,7 @@ export class Game3D {
 
   private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
     this.playerView?.dispose();
+    this.bossViews.clear();
     this.floating.clear();
     this.chestRoll.stop();
     const { characterId, weaponId } = this.run;
@@ -158,11 +187,13 @@ export class Game3D {
       skipStartingUpgrades,
       arena: this.arenaMap
     });
+    this.audio.bind(this.session);
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
       this.session.variantSpawnEnabled = false;
     }
     this.session.player.invincible = Boolean(this.options.invincible);
+    if (!attract) this.sandbox.applyTo(this.session, Boolean(this.options.invincible));
     const zone = ZONES.find((spec) => spec.kind === this.options.startZone);
     if (zone && !attract) {
       // The lake's blob centre is deep water; aim at its south shore instead.
@@ -241,6 +272,62 @@ export class Game3D {
       this.particles.burst(point.x, point.z, 0xbfb3a0, 5, 1.0, 1.6);
       if (kind === 'bolt') this.particles.burst(point.x, point.z, PALETTE.boltCore, 4, 1.1, 2.2);
     });
+    events.on('boss-explosion', ({ x, y, radius, kind, blocked }) => {
+      const point = at(x, y);
+      const big = kind === 'shield';
+      this.effects.burst(x, y, radius, 0x52ff45, big ? 0.6 : 0.36, 0.35);
+      this.effects.pulse(x, y, radius, 0xd8ffd0, big ? 0.6 : 0.32, 0.9);
+      this.particles.burst(point.x, point.z, 0x8cff8c, big ? 60 : 12, 1.2, big ? 10 : 3);
+      if (kind === 'meteor') {
+        this.bossEffects.scorch(x, y, radius);
+        this.particles.emit(point.x, 0.4, point.z, 0x6b5a46, 10, { spread: 4, rise: 5, gravity: 16, life: 0.6, size: 1.2 });
+        this.cameraRig.shake(0.12, 0.15);
+      }
+      if (kind === 'dash' || kind === 'lunge') {
+        this.particles.emit(point.x, 0.3, point.z, 0x9a8a70, 30, { spread: 7, rise: 2, gravity: 6, life: 0.7, size: 1.6, jitter: 1 });
+        this.cameraRig.shake(0.3, 0.3);
+      }
+      if (kind === 'center') this.cameraRig.shake(0.2, 0.2);
+      if (big) {
+        this.bossEffects.scorch(x, y, radius * 0.6);
+        this.cameraRig.shake(0.8, 0.9);
+        if (blocked) this.floatAboveHero('PROTEGIDO!', '#bfe4ff');
+      }
+    });
+    events.on('boss-shield-broken', ({ enemy }) => {
+      const point = at(enemy.x, enemy.y);
+      // The dome shatters into shards; the boss drops to a knee.
+      this.particles.emit(point.x, 4, point.z, 0x8cff8c, 70, { spread: 9, rise: 5, gravity: 14, life: 0.9, size: 1.3, jitter: 4 });
+      this.effects.pulse(enemy.x, enemy.y, 230, 0xffffff, 0.45, 0.9);
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 9, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 32, rise: 50, durationMs: 1200 }, performance.now());
+      this.cameraRig.shake(0.35, 0.35);
+    });
+    events.on('boss-phase-two', ({ enemy }) => {
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 10, this.scratch), 'O NECROMANTE DESPERTA!', { color: '#8cff8c', size: 30, rise: 40, durationMs: 1800 }, performance.now());
+      this.cameraRig.shake(0.15, 1.2);
+    });
+    events.on('boss-shockwave', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.pulse(x, y, radius, 0xd8ffd0, 0.5, 1);
+      this.effects.burst(x, y, radius, 0x1f8a46, 0.6, 0.4);
+      for (let index = 0; index < 24; index += 1) {
+        const angle = (index / 24) * Math.PI * 2;
+        const reach = radius * 0.7 * WORLD_SCALE;
+        this.particles.emit(point.x + Math.cos(angle) * reach, 0.3, point.z + Math.sin(angle) * reach, 0x6dff9a, 2, { spread: 3, rise: 3, gravity: 8, life: 0.6, size: 1.3 });
+      }
+      this.cameraRig.shake(0.6, 0.6);
+    });
+    events.on('boss-enraged', ({ enemy, healthGained }) => {
+      this.effects.pulse(enemy.x, enemy.y, 900, 0xff5a3a, 0.8, 0.6);
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 9, this.scratch), healthGained > 0 ? `ENFURECIDO! +${healthGained} HP` : 'ENFURECIDO!', { color: '#ff7a5c', size: 30, rise: 40, durationMs: 1600 }, performance.now());
+      this.cameraRig.shake(0.25, 0.6);
+    });
+    events.on('boss-shield-countdown', ({ enemy, seconds }) => {
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 7, this.scratch), `${seconds}...`, { color: '#ffcc33', size: 26 }, performance.now());
+    });
+    events.on('boss-wave-cleared', () => {
+      Object.values(this.session.portals ?? {}).forEach(({ x, y }) => this.effects.pulse(x, y, 70, 0xffffff, 0.5, 0.8));
+    });
     events.on('chest-opened', ({ upgrade, rolled }) => {
       this.effects.pulse(this.session.player.x, this.session.player.y, 60, 0xffd868, 0.5, 0.7);
       this.chestRoll.play(this.session, upgrade, rolled, () => this.floatAboveHero(`Baú: ${upgrade.name}!`, '#ffe29a'));
@@ -275,9 +362,9 @@ export class Game3D {
   }
 
   /** World point → CSS px over the canvas, matching the pixelated image (see ndcToCanvas). */
-  private projectToScreen = (world: THREE.Vector3, out: { x: number; y: number }): boolean => {
+  private projectToScreen = (world: THREE.Vector3, out: { x: number; y: number }, allowOffscreen = false): boolean => {
     const ndc = this.projected.copy(world).project(this.cameraRig.camera);
-    if (Math.abs(ndc.x) > 1.05 || Math.abs(ndc.y) > 1.05) return false;
+    if (!allowOffscreen && (Math.abs(ndc.x) > 1.05 || Math.abs(ndc.y) > 1.05)) return false;
     const canvas = ndcToCanvas(ndc.x, ndc.y, this.pipeline.layout, this.renderer.domElement.height, this.cameraRig.subTexelOffset);
     out.x = canvas.x / this.pixelRatio;
     out.y = canvas.y / this.pixelRatio;
@@ -291,6 +378,7 @@ export class Game3D {
       // ESC stays blocked while a choice screen is open, like the Phaser build.
       if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
+      if (event.code === 'KeyE') this.session.interact();
       if (event.code === 'KeyM' && (this.session.over || this.session.paused)) this.showMenu();
       if (this.options.debug) this.debugKey(event.code);
     });
@@ -307,6 +395,7 @@ export class Game3D {
       if (next && session.addWeapon(next.id)) session.grantAffinity(next.type === 'cone' ? 'melee' : next.type === 'aura' ? 'aura' : 'ranged');
     }
     if (code === 'KeyT') session.enemySeparation = !session.enemySeparation;
+    if (code === 'KeyB') session.triggerBossWave();
     if (code === 'KeyV') {
       // One of each scheduled variant in a ring around the hero, for reviewing models/animations.
       const variants = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith'] as const;
@@ -344,7 +433,10 @@ export class Game3D {
     const frameMs = Math.min(MAX_FRAME_MS, now - this.lastFrameAt);
     this.lastFrameAt = now;
     this.readMoveInput();
-    const running = !this.session.frozen && !this.session.over;
+    this.audio.update(this.session, this.inMenu);
+    this.menu.update(frameMs / 1000);
+    // Menu backdrop: draw the arena and idle animation, without advancing gameplay, spawns, or boss timers.
+    const running = !this.inMenu && !this.session.frozen && !this.session.over;
     if (running) {
       this.accumulator += frameMs;
       while (this.accumulator >= STEP_MS && !this.session.frozen) {
@@ -354,7 +446,7 @@ export class Game3D {
     }
     const alpha = running ? Math.min(1, this.accumulator / STEP_MS) : 1;
     const simNow = this.session.clock.now + (running ? this.accumulator : 0);
-    const deltaSeconds = running ? frameMs / 1000 : 0;
+    const deltaSeconds = running || this.inMenu ? frameMs / 1000 : 0;
 
     // The hero keeps animating after death (the fall plays out) but freezes with pause / choice screens.
     this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
@@ -369,9 +461,13 @@ export class Game3D {
     this.arena.followFocus(this.cameraRig.focus);
     this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
+    this.bossViews.update(this.session.bosses.bosses, this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.bossEffects.update(this.session, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
-    this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset, [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions, this.playerView.effects], [this.playerView.root]);
+    this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
+      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions, this.bossEffects.root, this.playerView.effects],
+      [this.playerView.root, this.bossViews.root]);
 
     this.fps.frames += 1;
     if (now - this.fps.since >= 500) {
@@ -380,6 +476,7 @@ export class Game3D {
       this.fps.since = now;
     }
     this.screens.update(this.session, this.inMenu);
+    this.bossUi.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {
       fps: this.fps.value,
       drawCalls: this.renderer.info.render.calls,

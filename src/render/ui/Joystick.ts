@@ -55,7 +55,7 @@ export class Joystick {
     let dy = (event.clientY - (rect.top + rect.height / 2)) / unit;
     const distance = Math.hypot(dx, dy);
     if (distance > TRAVEL) { dx *= TRAVEL / distance; dy *= TRAVEL / distance; }
-    this.knob.style.transform = `translate(calc(${dx} * var(--ui-unit)), calc(${dy} * var(--ui-unit)))`;
+    this.knob.style.transform = `translate(${dx * unit}px, ${dy * unit}px)`;
     const dead = distance < DEAD_ZONE;
     this.direction.x = dead ? 0 : dx / TRAVEL;
     this.direction.y = dead ? 0 : -dy / TRAVEL;

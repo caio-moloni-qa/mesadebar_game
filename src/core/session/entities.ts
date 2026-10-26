@@ -44,6 +44,8 @@ export class PlayerState implements Body, UpgradeTarget {
   invulnerableUntil = 0;
   lastDamagedAt = -Infinity;
   invincible = false;
+  /** Sandbox "+500 Buffer de Dano": absorbs incoming damage before health does. */
+  damageBuffer = 0;
   // Upgrade-driven stats (see core/systems/UpgradeSystem).
   lifeStealPercent = 0;
   meleeRangeBonus = 0;
@@ -88,12 +90,15 @@ export class PlayerState implements Body, UpgradeTarget {
   }
 
   /** Blocked during i-frames; the banked aura bonus is added then consumed; armor reduces each hit but never below 1. */
-  damage(amount: number, now: number): number {
-    if (this.invincible || now < this.invulnerableUntil) return 0;
+  /** `unavoidable` hits (the boss's shield explosion) ignore the i-frames — only `invincible` stops them. */
+  damage(amount: number, now: number, unavoidable = false): number {
+    if (this.invincible || (!unavoidable && now < this.invulnerableUntil)) return 0;
     const incoming = amount + this.auraDamageTakenBonus;
     this.auraDamageTakenBonus = 0;
     const dealt = Math.max(1, incoming - this.armor);
-    this.health = Math.max(0, this.health - dealt);
+    const absorbed = Math.min(this.damageBuffer, dealt);
+    this.damageBuffer -= absorbed;
+    this.health = Math.max(0, this.health - (dealt - absorbed));
     this.invulnerableUntil = now + PLAYER_CONFIG.invulnerabilityMs;
     this.lastDamagedAt = now;
     return dealt;
@@ -224,6 +229,8 @@ export class EnemyState implements Body {
   /** Super Esqueleto (and the boss later): shows a health bar, isn't a "common" enemy for the staff execute. */
   isMiniBoss = false;
   hasRottenAura = false;
+  /** The boss's aura goes quiet while it channels its shield. */
+  rottenAuraSuppressed = false;
   /** Display size in game units (the old sprite displaySize) — the renderer scales the model from this. */
   displaySize = 62;
   hitStunUntil = 0;
@@ -236,6 +243,8 @@ export class EnemyState implements Body {
   /** Fabri's banana peel: no movement until this time. */
   slipUntil = 0;
   nextSoulAt = 0;
+  /** Sim time it appeared (the renderer plays a rise-from-the-ground). */
+  spawnedAt = -Infinity;
 
   activate(variantId: EnemyVariantId, x: number, y: number, maxHealth: number, now: number): void {
     const base = ENEMY_VARIANTS[variantId];
@@ -252,6 +261,7 @@ export class EnemyState implements Body {
     this.isStatic = variantId === 'necromancerWraith';
     this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'finalBoss';
     this.hasRottenAura = variantId === 'superSkeleton' || variantId === 'finalBoss';
+    this.rottenAuraSuppressed = false;
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
     this.radius = variantId === 'finalBoss' ? 58 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;
@@ -259,6 +269,7 @@ export class EnemyState implements Body {
     this.slowStackPercent = 0;
     this.slipUntil = 0;
     this.nextSoulAt = now + ('soulCooldownMs' in base ? base.soulCooldownMs : 0);
+    this.spawnedAt = now;
   }
 
   get alive(): boolean {

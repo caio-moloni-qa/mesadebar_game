@@ -19,8 +19,9 @@ interface Entry {
   active: boolean;
 }
 
-/** Projects a world point to CSS pixels from the container's top-left; false when off screen. */
-export type Projector = (world: THREE.Vector3, out: { x: number; y: number }) => boolean;
+/** Projects a world point to CSS pixels from the container's top-left; false when off screen (unless
+ *  `allowOffscreen`, which always writes the position — for edge arrows). */
+export type Projector = (world: THREE.Vector3, out: { x: number; y: number }, allowOffscreen?: boolean) => boolean;
 
 /** Floating combat text (damage numbers, CRIT!, CURA -N, LENTO +%, ...) as DOM spans over the canvas: crisp at native
  *  resolution, outside the pixelated pass (plan §4.3). A fixed pool — under a big horde the oldest text is recycled

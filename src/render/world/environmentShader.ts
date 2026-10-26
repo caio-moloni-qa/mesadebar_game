@@ -13,6 +13,8 @@ export const environmentUniforms = {
 };
 
 export interface EnvironmentFeatures {
+  /** Crossed grass ribbons use upward lighting on both faces, avoiding dark back-facing blades. */
+  foliage?: boolean;
   /** Bend vertices sideways in proportion to their height (grass tufts). Instanced meshes phase by instance. */
   wind?: boolean;
   /** Darken direct sunlight under slowly drifting cloud shadows. */
@@ -40,7 +42,7 @@ const NOISE_GLSL = /* glsl */ `
  *  inject at begin_vertex for displacement, and adjust the summed direct light right before lights_fragment_end
  *  applies it). customProgramCacheKey keeps each feature combination in its own shader program. */
 export function withEnvironment<T extends THREE.Material>(material: T, features: EnvironmentFeatures): T {
-  const key = `env:${features.wind ? 'w' : ''}${features.clouds ? 'c' : ''}${features.occlusion ? 'o' : ''}`;
+  const key = `env:${features.wind ? 'w' : ''}${features.clouds ? 'c' : ''}${features.occlusion ? 'o' : ''}${features.foliage ? 'f' : ''}`;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uEnvTime = environmentUniforms.uEnvTime;
     shader.uniforms.uCloudOffset = environmentUniforms.uCloudOffset;
@@ -49,6 +51,9 @@ export function withEnvironment<T extends THREE.Material>(material: T, features:
     const header = `uniform float uEnvTime;\nuniform vec2 uCloudOffset;\nuniform vec3 uFocus;\nuniform vec3 uViewDirection;\nvarying vec3 vEnvWorld;\n${NOISE_GLSL}\n`;
     shader.vertexShader = header + shader.vertexShader;
     shader.fragmentShader = header + shader.fragmentShader;
+    if (features.foliage) {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>\n#ifdef DOUBLE_SIDED\n normal *= faceDirection;\n#endif`);
+    }
 
     const wind = features.wind ? /* glsl */ `
       #ifdef USE_INSTANCING
@@ -60,6 +65,11 @@ export function withEnvironment<T extends THREE.Material>(material: T, features:
       float envGust = sin(uEnvTime * 1.7 + envAnchor.x * 0.35 + envAnchor.y * 0.22) * 0.6 + sin(uEnvTime * 3.1 + envAnchor.x * 0.9) * 0.25;
       transformed.x += envGust * 0.16 * transformed.y;
       transformed.z += envGust * 0.09 * transformed.y;
+      // A narrow wake around the hero parts the grass; roots remain fixed and enemies stay readable.
+      vec2 envAway = envAnchor - uFocus.xz;
+      float envDistance = length(envAway);
+      float envParting = (1.0 - smoothstep(0.25, 1.35, envDistance)) * transformed.y * 0.65;
+      transformed.xz += envAway / max(0.01, envDistance) * envParting;
     ` : '';
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${wind}`);
     shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', /* glsl */ `#include <project_vertex>
@@ -76,8 +86,8 @@ export function withEnvironment<T extends THREE.Material>(material: T, features:
         float envTowardCamera = dot(envFromFocus, -uViewDirection);
         float envOffLine = length(envFromFocus + uViewDirection * envTowardCamera);
         if (envTowardCamera > 0.4 && envOffLine < 1.9 && vEnvWorld.y > 0.35) {
-          // 50% checkerboard on the low-res target: everything behind shows through, still reads as the object.
-          if (mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0) discard;
+          // Consistent 75% screen-door cutout through overlapping crowns, keeping the hero clearly visible.
+          if (mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y) * 2.0, 4.0) < 3.0) discard;
         }`);
     }
 

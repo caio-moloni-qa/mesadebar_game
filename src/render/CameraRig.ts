@@ -52,6 +52,18 @@ export class CameraRig {
     this.camera.updateProjectionMatrix();
   }
 
+  private shakeStrength = 0;
+  private shakeTime = 0;
+  private readonly shakeOffset = new THREE.Vector3();
+  private readonly shakeScratch = new THREE.Vector3();
+
+  /** Rattles the view: `strength` m of jitter, decaying over `seconds` (the bigger shake wins while overlapping). */
+  shake(strength: number, seconds: number): void {
+    if (strength * seconds < this.shakeStrength * this.shakeTime) return;
+    this.shakeStrength = strength;
+    this.shakeTime = seconds;
+  }
+
   /** Eases the look-at point towards `focus` (meters) and re-snaps the camera. `deltaSeconds` = frame time. */
   follow(focus: THREE.Vector3, deltaSeconds: number): void {
     if (!this.initialized) {
@@ -60,14 +72,22 @@ export class CameraRig {
     } else {
       this.target.lerp(focus, 1 - Math.exp(-FOLLOW_SHARPNESS * deltaSeconds));
     }
+    // Shake rides on top of the smoothed target (it never accumulates into it).
+    this.shakeOffset.set(0, 0, 0);
+    if (this.shakeTime > 0 && deltaSeconds > 0) {
+      const amount = this.shakeStrength * Math.min(1, this.shakeTime * 3);
+      this.shakeOffset.set((Math.random() - 0.5) * 2 * amount, 0, (Math.random() - 0.5) * 2 * amount);
+      this.shakeTime = Math.max(0, this.shakeTime - deltaSeconds);
+    }
+    const shaken = this.shakeScratch.copy(this.target).add(this.shakeOffset);
     // Snap the target's position along the camera's screen axes to whole texels.
-    const alongRight = this.target.dot(this.right);
-    const alongUp = this.target.dot(this.up);
+    const alongRight = shaken.dot(this.right);
+    const alongUp = shaken.dot(this.up);
     const texel = this.metersPerTexel;
     const snappedRight = Math.round(alongRight / texel) * texel;
     const snappedUp = Math.round(alongUp / texel) * texel;
     this.subTexelOffset.set((alongRight - snappedRight) / texel, (alongUp - snappedUp) / texel);
-    this.camera.position.copy(this.target)
+    this.camera.position.copy(shaken)
       .addScaledVector(this.right, snappedRight - alongRight)
       .addScaledVector(this.up, snappedUp - alongUp)
       .add(this.offset);

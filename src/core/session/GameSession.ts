@@ -1,5 +1,6 @@
 import { ENEMY_CONFIG, ENEMY_VARIANTS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
+import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
 import { EventBus } from '../EventBus';
 import { Pool } from '../Pool';
@@ -7,6 +8,7 @@ import { SimClock } from '../SimClock';
 import { SpatialHash } from '../SpatialHash';
 import { circlesOverlap } from '../collision';
 import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffled } from '../math';
+import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
@@ -34,12 +36,16 @@ const PEEL = { spawnChance: 0.03, minRadius: 40, maxRadius: 130, lifetimeMs: 120
 const SEPARATION_STRENGTH = 0.25;
 /** How often the enemy flow field is rebuilt from the hero's position (only when the hero changed grid cell). */
 const FLOW_FIELD_REFRESH_MS = 250;
+/** Boss-wave portals (Phaser: GameScene.onBossWaveCleared): spawn this far apart above the hero, used within reach. */
+const PORTAL = { spread: 110, rise: 160, reach: 70 } as const;
+
+export type PortalKind = 'end' | 'continue';
 
 export type PendingChoice =
   | { kind: 'starting'; upgrades: Upgrade[]; picksRemaining: number; picksTotal: number }
   | { kind: 'level-up'; level: number; upgrades: Upgrade[]; extraWeapon: WeaponConfig | null };
 
-export interface SessionEvents extends WeaponEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents {
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean };
   'enemy-defeated': { x: number; y: number; variantId: EnemyVariantId; divineRelic: boolean };
   'player-damaged': { amount: number };
@@ -53,6 +59,9 @@ export interface SessionEvents extends WeaponEvents {
   'soul-fired': { x: number; y: number };
   'enemy-slipped': { enemy: EnemyState };
   'player-died': Record<string, never>;
+  /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
+  'boss-wave-cleared': { cycle: number };
+  'run-ended': { victory: boolean };
 }
 
 export interface GameSessionOptions {
@@ -95,7 +104,18 @@ export class GameSession implements WeaponHost {
   currency = 0;
   elapsedMs = 0;
   over = false;
+  /** Set when the run ends through the end portal (VITÓRIA) rather than by dying. */
+  victory = false;
   pendingChoice: PendingChoice | null = null;
+  readonly bosses: BossSystem;
+  /** Boss-wave cycle: cycle 1 is the base 3-minute run; each continue portal adds a minute, 1× difficulty and a boss. */
+  bossCycle = 1;
+  /** While true (every wave boss dead, portals open) the clock, spawns and combat stand still; only walking and
+   *  loot pickup continue until the player takes a portal. */
+  awaitingPortalChoice = false;
+  portals: Record<PortalKind, { x: number; y: number }> | null = null;
+  private phaseStartedAtMs = 0;
+  private phaseBossTriggered = false;
   /** Sandbox toggles (same switches the F9 panel has in the Phaser build). */
   skeletonSpawnEnabled = true;
   variantSpawnEnabled = true;
@@ -130,11 +150,23 @@ export class GameSession implements WeaponHost {
     this.weapons.add(startingWeapon);
     // The starting weapon is the one family the character has affinity with for free.
     this.affinities.add(weaponFamily(startingWeapon));
+    this.bosses = new BossSystem({
+      player: this.player,
+      rng: this.rng,
+      arenaSize: this.arena.size,
+      events: this.events,
+      spawnEnemy: (variantId, x, y) => this.spawnEnemy(variantId, x, y),
+      hurtPlayer: (amount, unavoidable) => this.hurtPlayer(amount, this.clock.now, unavoidable),
+      killPlayer: () => { if (!this.player.invincible) this.player.health = 0; },
+      pushPlayer: (dx, dy) => this.pushPlayer(dx, dy),
+      clearEnemyField: (keep) => this.clearEnemyField(keep),
+      hasLineOfSight: (from, to) => this.arena.hasLineOfSight(from, to)
+    });
     this.scheduler = new EnemySpawnScheduler({
       getPlayerPosition: () => this.player,
       isSkeletonSpawnEnabled: () => this.skeletonSpawnEnabled,
       isVariantSpawnEnabled: () => this.variantSpawnEnabled,
-      hasActiveEncounter: () => false,
+      hasActiveEncounter: () => this.bosses.hasActiveEncounter(),
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
     }, this.rng, this.arena.size);
@@ -241,12 +273,22 @@ export class GameSession implements WeaponHost {
   step(deltaMs: number = STEP_MS): void {
     if (this.over || this.clock.paused) return;
     this.clock.advance(deltaMs);
-    this.elapsedMs += deltaMs;
     const now = this.clock.now;
     this.snapshotPositions();
     this.movePlayer(deltaMs, now);
+    if (this.awaitingPortalChoice) {
+      // Between cycles: the run's clock is frozen and the field is empty; every leftover drop flies to the hero.
+      this.updatePickups(deltaMs, Number.POSITIVE_INFINITY);
+      return;
+    }
+    this.elapsedMs += deltaMs;
+    if (!this.phaseBossTriggered && this.elapsedMs - this.phaseStartedAtMs >= this.phaseDurationMs()) {
+      this.phaseBossTriggered = true;
+      this.bosses.warn(this.bossCycle);
+    }
     this.refreshFlowField(deltaMs);
     this.scheduler.update(deltaMs, this.elapsedMs);
+    this.bosses.update(deltaMs);
     this.topUpStressEnemies();
     this.rebuildEnemyHash();
     this.updateEnemies(deltaMs, now);
@@ -256,8 +298,8 @@ export class GameSession implements WeaponHost {
     this.updatePeels(now);
     this.updatePickups(deltaMs);
     if (!this.player.alive && !this.over) {
-      this.over = true;
       this.events.emit('player-died', {});
+      this.finish(false);
     }
   }
 
@@ -311,7 +353,7 @@ export class GameSession implements WeaponHost {
         if (now >= enemy.phaseEndsAt) finished.push(enemy);
         return;
       }
-      if (!enemy.isStatic && now >= enemy.hitStunUntil && now >= enemy.slipUntil) this.pursuePlayer(enemy, deltaMs);
+      if (!enemy.isStatic && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy)) this.pursuePlayer(enemy, deltaMs);
       if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss') this.separate(enemy);
       // Every walker - floating wraiths included - slides along walls and stays out of the lake.
       if (!enemy.isStatic) this.arena.resolve(enemy);
@@ -320,7 +362,7 @@ export class GameSession implements WeaponHost {
         enemy.nextSoulAt = now + ENEMY_VARIANTS.necromancerWraith.soulCooldownMs;
         this.fireSoul(enemy, now);
       }
-      if (enemy.hasRottenAura && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= enemy.rottenAuraRadius) this.player.refreshRottenAura(now);
+      if (enemy.hasRottenAura && !enemy.rottenAuraSuppressed && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= enemy.rottenAuraRadius) this.player.refreshRottenAura(now);
     });
     finished.forEach((enemy) => this.enemies.release(enemy));
   }
@@ -361,8 +403,8 @@ export class GameSession implements WeaponHost {
     }
   }
 
-  private hurtPlayer(amount: number, now: number): void {
-    const dealt = this.player.damage(amount, now);
+  private hurtPlayer(amount: number, now: number, unavoidable = false): void {
+    const dealt = this.player.damage(amount, now, unavoidable);
     if (dealt > 0) this.events.emit('player-damaged', { amount: dealt });
   }
 
@@ -373,11 +415,150 @@ export class GameSession implements WeaponHost {
     if (rot > 0) this.events.emit('player-status', { text: `HP -${Math.round(rot)}`, tone: 'rot' });
   }
 
+  // ── Sandbox (the F9 panel, Phaser: SandboxDebugPanel) ───────────────────────────────────────────────────────
+
+  addCurrency(amount: number): void {
+    this.currency += amount;
+  }
+
+  /** Kills every active enemy (bosses included) with full credit: XP, drops, wave progress. */
+  killAllEnemies(): void {
+    const alive: EnemyState[] = [];
+    this.enemies.forEachActive((enemy) => { if (enemy.alive) alive.push(enemy); });
+    alive.forEach((enemy) => {
+      enemy.health = 0;
+      this.defeatEnemy(enemy);
+    });
+  }
+
+  /** Moves the run clock (and so the difficulty stage and the next boss timer); never below 0. */
+  adjustElapsedMs(deltaMs: number): void {
+    this.elapsedMs = Math.max(0, this.elapsedMs + deltaMs);
+  }
+
+  setForcedDifficultyStage(stage: number | null): void {
+    this.difficulty.setForcedStage(stage);
+  }
+
+  setEnemySpawnCap(cap: number): void {
+    this.enemies.capacity = cap;
+  }
+
+  /** The same spot real "near the player" spawns use. */
+  spawnNearPlayer(variantId: EnemyVariantId, count: number): void {
+    for (let index = 0; index < count; index += 1) {
+      const point = this.scheduler.pointNearPlayer();
+      this.spawnEnemy(variantId, point.x, point.y);
+    }
+  }
+
+  /** One random upgrade from the equipped weapons' own pools (deduped), or from the basic attribute pool. */
+  grantSandboxUpgrade(kind: 'weapon' | 'attribute'): Upgrade | null {
+    const pool = kind === 'attribute'
+      ? this.upgradeSystem.basicUpgradePool()
+      : [...new Map(this.weapons.weapons.flatMap((weapon) => this.upgradeSystem.weaponUpgradePool(weapon.config, this.player)).map((upgrade) => [upgrade.id, upgrade])).values()];
+    if (pool.length === 0) return null;
+    const upgrade = pickOne(this.rng, pool);
+    this.applyUpgrade(upgrade);
+    return upgrade;
+  }
+
+  /** Shoves the hero (boss shockwave), sliding along walls and staying in the arena. */
+  private pushPlayer(dx: number, dy: number): void {
+    const { radius } = this.player;
+    this.player.x = clamp(this.player.x + dx, radius, this.arena.size - radius);
+    this.player.y = clamp(this.player.y + dy, radius, this.arena.size - radius);
+    this.arena.resolve(this.player);
+  }
+
+  // ── Boss waves, portals and cycles ─────────────────────────────────────────────────────────────────────────
+
+  /** Cycle 1 is RUN_DURATION_MS; every continuation adds a minute. */
+  phaseDurationMs(cycle: number = this.bossCycle): number {
+    return RUN_DURATION_MS + (cycle - 1) * 60_000;
+  }
+
+  /** Sandbox: start this cycle's boss warning right now. */
+  triggerBossWave(): void {
+    if (this.phaseBossTriggered || this.awaitingPortalChoice) return;
+    this.phaseBossTriggered = true;
+    this.bosses.warn(this.bossCycle);
+  }
+
+  /** The portal the hero stands at, if any (the end portal wins a tie, like the Phaser build). */
+  get portalInReach(): PortalKind | null {
+    if (!this.portals) return null;
+    const near = (portal: { x: number; y: number }) => Math.hypot(this.player.x - portal.x, this.player.y - portal.y) <= PORTAL.reach;
+    if (near(this.portals.end)) return 'end';
+    if (near(this.portals.continue)) return 'continue';
+    return null;
+  }
+
+  /** The interact key (E): takes the portal in reach. */
+  interact(): void {
+    if (this.over || this.clock.paused) return;
+    const portal = this.portalInReach;
+    if (portal === 'end') this.finish(true);
+    if (portal === 'continue') this.continueToNextCycle();
+  }
+
+  private onBossWaveCleared(): void {
+    this.awaitingPortalChoice = true;
+    this.clearEnemyField(() => false);
+    const place = (offsetX: number) => this.arena.nearestWalkable(this.player.x + offsetX, this.player.y - PORTAL.rise, 30);
+    this.portals = { end: place(-PORTAL.spread), continue: place(PORTAL.spread) };
+    this.events.emit('boss-wave-cleared', { cycle: this.bossCycle });
+  }
+
+  /** +1 boss, +1 minute next phase, +1× difficulty — all keyed off bossCycle, so the loop repeats indefinitely. */
+  private continueToNextCycle(): void {
+    this.awaitingPortalChoice = false;
+    this.portals = null;
+    this.bossCycle += 1;
+    this.phaseStartedAtMs = this.elapsedMs;
+    this.phaseBossTriggered = false;
+    this.difficulty.setCycleMultiplier(this.bossCycle);
+    this.bosses.rearm();
+  }
+
+  private finish(victory: boolean): void {
+    this.over = true;
+    this.victory = victory;
+    this.portals = null;
+    this.events.emit('run-ended', { victory });
+  }
+
+  /** Every active enemy `keep` rejects dies on the spot (no kill credit, no drops). Returns how many. */
+  private clearEnemyField(keep: (enemy: EnemyState) => boolean): number {
+    let cleared = 0;
+    const now = this.clock.now;
+    this.enemies.forEachActive((enemy) => {
+      if (keep(enemy) || !enemy.alive) return;
+      enemy.phase = 'dying';
+      enemy.phaseEndsAt = now + ENEMY_DYING_MS;
+      cleared += 1;
+    });
+    return cleared;
+  }
+
   // ── Enemy damage, death and drops ─────────────────────────────────────────────────────────────────────────
 
   damageEnemy(enemy: EnemyState, amount: number, weaponId: WeaponConfig['id'], critical = false): void {
     if (!enemy.alive) return;
     const now = this.clock.now;
+    // A roaring boss shrugs hits off and a staggered one takes extra; then a channelling boss's shield soaks hits
+    // first and only the overflow reaches its health.
+    amount *= this.bosses.damageTakenMultiplier(enemy);
+    if (amount <= 0) {
+      enemy.lastHitAt = now;
+      return;
+    }
+    const overflow = this.bosses.absorbDamage(enemy, amount);
+    if (overflow !== null) {
+      enemy.lastHitAt = now;
+      if (overflow <= 0) return;
+      amount = overflow;
+    }
     const dealt = Math.min(amount, enemy.health);
     // Roubo de Vida applies to any cone (melee-family) weapon, not just the Espada.
     if (WEAPONS[weaponId].type === 'cone' && this.player.lifeStealPercent > 0) this.healPlayer(dealt * this.player.lifeStealPercent);
@@ -397,6 +578,12 @@ export class GameSession implements WeaponHost {
     enemy.phase = 'dying';
     enemy.phaseEndsAt = this.clock.now + ENEMY_DYING_MS;
     this.kills += 1;
+    if (this.bosses.bossFor(enemy)) {
+      // Bosses give no XP or drops; the last wave boss opens the portals.
+      this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });
+      if (this.bosses.defeat(enemy) && !this.bosses.hasActiveWaveBosses()) this.onBossWaveCleared();
+      return;
+    }
     this.experience += enemy.reward;
     for (let index = 0; index < enemy.currencyDrops; index += 1) {
       const point = index === 0 ? enemy : randomPointAround(this.rng, enemy, 12, 28);
@@ -421,9 +608,9 @@ export class GameSession implements WeaponHost {
     snapPrevious(pickup);
   }
 
-  private updatePickups(deltaMs: number): void {
+  private updatePickups(deltaMs: number, range: number = this.player.pickupRange): void {
     const collected: PickupState[] = [];
-    const rangeSq = this.player.pickupRange * this.player.pickupRange;
+    const rangeSq = range * range;
     this.pickups.forEachActive((pickup) => {
       const dx = this.player.x - pickup.x;
       const dy = this.player.y - pickup.y;
