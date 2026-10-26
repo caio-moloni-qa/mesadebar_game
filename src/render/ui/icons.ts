@@ -26,12 +26,11 @@ const WEAPON_ICONS: Record<WeaponConfig['id'] | 'banana', string> = {
   amulet: new URL('../../assets/weapons/aura-amulet-icon.png', import.meta.url).href,
   whip: new URL('../../assets/weapons/whip-icon.png', import.meta.url).href,
   banana: new URL('../../assets/weapons/banana-boomerang-icon.png', import.meta.url).href,
-  // The regulars' weapons: SVG stand-ins until their art exists.
-  hammer: svg('<rect x="29" y="22" width="6" height="36" rx="2" fill="#7a5232"/><rect x="14" y="8" width="36" height="18" rx="3" fill="#8a8f99"/><rect x="14" y="14" width="36" height="5" fill="#e0b04a"/>'),
-  bow: svg('<path d="M20 6 Q52 32 20 58" fill="none" stroke="#8a6a3a" stroke-width="5"/><line x1="20" y1="6" x2="20" y2="58" stroke="#e9dfc4" stroke-width="1.5"/><line x1="12" y1="32" x2="58" y2="32" stroke="#c9b89a" stroke-width="3"/><path d="M58 32 l-9 -5 v10z" fill="#cfd6dc"/><path d="M14 32 l-6 -5 M14 32 l-6 5" stroke="#7fd47f" stroke-width="3"/>'),
-  coins: svg('<ellipse cx="28" cy="40" rx="16" ry="6" fill="#c9963f"/><ellipse cx="28" cy="36" rx="16" ry="6" fill="#ffd25a"/><ellipse cx="38" cy="26" rx="14" ry="5" fill="#c9963f"/><ellipse cx="38" cy="22" rx="14" ry="5" fill="#ffd25a"/><circle cx="20" cy="16" r="7" fill="#ffd25a" stroke="#c9963f" stroke-width="2"/>'),
-  crystal: svg('<rect x="20" y="46" width="24" height="8" rx="2" fill="#e0b04a"/><circle cx="32" cy="30" r="17" fill="#9fe8ff"/><circle cx="26" cy="24" r="5" fill="#ffffff" opacity=".7"/><circle cx="32" cy="30" r="17" fill="none" stroke="#5aa8e0" stroke-width="2"/>'),
-  pack: svg('<circle cx="26" cy="30" r="17" fill="#4a4a52"/><circle cx="26" cy="30" r="12" fill="#2a2a30"/><rect x="40" y="27" width="20" height="6" rx="2" fill="#3a2a1e"/><rect x="44" y="40" width="10" height="16" rx="3" fill="#3a8a4a"/>')
+  hammer: new URL('../../assets/weapons/hammer-icon.png', import.meta.url).href,
+  bow: new URL('../../assets/weapons/bow-icon.png', import.meta.url).href,
+  coins: new URL('../../assets/weapons/coins-icon_v2.png', import.meta.url).href,
+  crystal: new URL('../../assets/weapons/crystal-icon_v2.png', import.meta.url).href,
+  pack: new URL('../../assets/weapons/pack-icon_v2.png', import.meta.url).href
 };
 
 const UPGRADE_ART = {
@@ -118,14 +117,11 @@ export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
 /** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
 export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'end' | 'continue' | 'merchant' | 'barrel';
 const MARKER_FACES: Record<MarkerKind, string> = {
-  // The Necromancer: a crowned skull with green fire in the sockets.
-  boss: svg('<path d="M14 20 l6 -10 l6 8 l6 -12 l6 12 l6 -8 l6 10 z" fill="#b8923a"/><circle cx="32" cy="36" r="16" fill="#d8cfb4"/><rect x="22" y="31" width="8" height="8" fill="#0c0a10"/><rect x="34" y="31" width="8" height="8" fill="#0c0a10"/><rect x="24" y="33" width="4" height="4" fill="#6dff9a"/><rect x="36" y="33" width="4" height="4" fill="#6dff9a"/><rect x="25" y="46" width="14" height="6" fill="#a89c80"/><rect x="27" y="46" width="2" height="4" fill="#f0e8d0"/><rect x="31" y="46" width="2" height="4" fill="#f0e8d0"/><rect x="35" y="46" width="2" height="4" fill="#f0e8d0"/>'),
-  // O Coveiro: a skull deep in a ragged hood, green pin-prick eyes.
-  gravedigger: svg('<path d="M32 6 L54 46 L10 46 Z" fill="#2a2a24"/><circle cx="32" cy="38" r="12" fill="#e2d8bd"/><rect x="25" y="34" width="6" height="6" fill="#120e16"/><rect x="33" y="34" width="6" height="6" fill="#120e16"/><rect x="27" y="36" width="2" height="2" fill="#6dff9a"/><rect x="35" y="36" width="2" height="2" fill="#6dff9a"/><rect x="27" y="46" width="10" height="5" fill="#b3a685"/>'),
-  // Guardião do Templo: a carved stone face, cyan runes, gold crest.
-  templeGuardian: svg('<path d="M32 4 L40 16 L24 16 Z" fill="#b8923a"/><rect x="14" y="16" width="36" height="38" rx="3" fill="#9a8f7c"/><rect x="14" y="16" width="36" height="8" fill="#6f675a"/><rect x="20" y="30" width="9" height="6" fill="#7fe3ff"/><rect x="35" y="30" width="9" height="6" fill="#7fe3ff"/><rect x="22" y="44" width="20" height="4" fill="#5a5246"/><rect x="30" y="38" width="4" height="4" fill="#7fe3ff"/>'),
-  // O Espírito do Lago: a face of water under a crown of water spikes.
-  lakeSpirit: svg('<path d="M18 22 l4 -12 l4 10 l6 -14 l6 14 l4 -10 l4 12 z" fill="#e6f6ff"/><ellipse cx="32" cy="36" rx="18" ry="18" fill="#8fdcff"/><ellipse cx="32" cy="44" rx="12" ry="7" fill="#4fb3e0"/><rect x="22" y="31" width="8" height="5" fill="#ffffff"/><rect x="34" y="31" width="8" height="5" fill="#ffffff"/><path d="M14 50 q9 -6 18 0 q9 6 18 0" stroke="#e6f6ff" stroke-width="3" fill="none"/>'),
+  // The Necromancer and the zone guardians: their heads, cut from the concept art (art-source/3d/<boss>/views/front.png).
+  boss: new URL('../../assets/ui/markers/boss-head.png', import.meta.url).href,
+  gravedigger: new URL('../../assets/ui/markers/gravedigger-head.png', import.meta.url).href,
+  templeGuardian: new URL('../../assets/ui/markers/templeGuardian-head.png', import.meta.url).href,
+  lakeSpirit: new URL('../../assets/ui/markers/lakeSpirit-head.png', import.meta.url).href,
   end: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#9fb4ff" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#9fb4ff" opacity=".6"/><path d="M26 32 h12 m-5 -5 l5 5 l-5 5" stroke="#ffffff" stroke-width="3" fill="none"/>'),
   // Sergio, the merchant: a wide hat over a grey beard, a gold coin at the brim.
   merchant: svg('<rect x="8" y="22" width="48" height="5" rx="2" fill="#3a2a1e"/><path d="M20 22 L32 6 L44 22 Z" fill="#3a2a1e"/><circle cx="32" cy="34" r="11" fill="#d9a77e"/><rect x="26" y="31" width="4" height="4" fill="#1a1410"/><rect x="34" y="31" width="4" height="4" fill="#1a1410"/><path d="M21 38 L43 38 L32 58 Z" fill="#cfc8bb"/><circle cx="46" cy="18" r="5" fill="#ffc65a" stroke="#b8923a" stroke-width="2"/>'),
