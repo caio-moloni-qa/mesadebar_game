@@ -154,11 +154,11 @@ export function createStoneGolemModel(runes = 0x7fe3ff): ActorModel {
   return finish(bones, parts, hip, 2.3);
 }
 
-// ── Arqueiro Esqueleto (companion) ─────────────────────────────────────────────────────────────────────────────
+// ── Esqueleto aliado (raised by the Coveiro Aliado) ────────────────────────────────────────────────────────────
 
-/** A friendly skeleton archer: teal hood and cloak, a bow in the left hand, a quiver on the back, cyan eyes so it
- *  never reads as one of the horde. */
-export function createSkeletonArcherModel(): ActorModel {
+/** A friendly skeleton: teal hood and mantle, a short rusty sword in the right hand, cyan eyes so it never reads as
+ *  one of the horde. */
+export function createAllySkeletonModel(): ActorModel {
   const hip = 0.82;
   const arm = 0.3;
   const leg = 0.4;
@@ -174,7 +174,6 @@ export function createSkeletonArcherModel(): ActorModel {
     { bone: `shin${s}`, geometry: part(box(0.08, leg, 0.08), BONE, [0, -leg / 2, 0]) },
     { bone: `foot${s}`, geometry: part(box(0.12, 0.06, 0.22), 0x3a3026, [0, 0.03, 0.05]) }
   ];
-  const bowLimb = (sign: number) => part(box(0.04, 0.42, 0.04), wood, [0, sign * 0.22, 0.1], [sign * 0.35, 0, 0]);
   const parts: RigPart[] = [
     ...limb('L'),
     ...limb('R'),
@@ -183,16 +182,14 @@ export function createSkeletonArcherModel(): ActorModel {
     { bone: 'spine', geometry: part(box(0.06, 0.28, 0.06), BONE_DARK, [0, 0.13, -0.04]) },
     ...[0, 1, 2].map((rib) => ({ bone: 'chest', geometry: part(box(0.4 - rib * 0.04, 0.05, 0.22), BONE, [0, -0.04 + rib * 0.1, 0]) })),
     { bone: 'chest', geometry: part(box(0.46, 0.14, 0.26), hood, [0, 0.28, -0.02]) }, // mantle
-    { bone: 'chest', geometry: part(cylinder(0.07, 0.07, 0.5, 6), wood, [0.1, 0.1, -0.18], [0, 0, 0.4]) }, // quiver
-    ...[0, 1, 2].map((index) => ({ bone: 'chest', geometry: part(box(0.02, 0.14, 0.02), 0xcfd6dc, [0.16 + index * 0.03, 0.4, -0.18], [0, 0, 0.4]) })),
     { bone: 'head', geometry: part(ball(0.18, 1), BONE, [0, 0.22, 0.02]) },
     { bone: 'head', geometry: part(box(0.06, 0.05, 0.03), eyes, [0.06, 0.24, 0.18]) },
     { bone: 'head', geometry: part(box(0.06, 0.05, 0.03), eyes, [-0.06, 0.24, 0.18]) },
     { bone: 'head', geometry: part(cone(0.24, 0.42, 7), hood, [0, 0.36, -0.04], [-0.2, 0, 0]) },
-    // The bow, held upright in the left hand, and its string.
-    { bone: 'handL', geometry: bowLimb(1) },
-    { bone: 'handL', geometry: bowLimb(-1) },
-    { bone: 'handL', geometry: part(box(0.01, 0.82, 0.01), 0xe9dfc4, [0, 0, 0.18]) }
+    // A short rusty sword, pointing forward out of the right fist.
+    { bone: 'handR', geometry: part(box(0.04, 0.04, 0.12), wood, [0, -0.05, 0.02]) },
+    { bone: 'handR', geometry: part(box(0.14, 0.03, 0.03), 0x6f6a62, [0, -0.05, 0.09]) },
+    { bone: 'handR', geometry: part(box(0.05, 0.015, 0.5), 0x9a8f7c, [0, -0.05, 0.35]) }
   ];
   return finish(bones, parts, hip, 1.9);
 }

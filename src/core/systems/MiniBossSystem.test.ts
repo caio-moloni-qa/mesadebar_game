@@ -122,9 +122,9 @@ describe('zone mini-bosses', () => {
     run.damageEnemy(boss.enemy, boss.enemy.health + 1, 'sword');
     expect(run.pendingChoice?.kind).toBe('companion');
     const choice = run.pendingChoice as Extract<typeof run.pendingChoice, { kind: 'companion' }>;
-    expect(choice.offers[0]).toEqual({ companion: 'skeletonArcher', level: 1 });
+    expect(choice.offers[0]).toEqual({ companion: 'gravedigger', level: 1 });
     run.chooseCompanion(0);
-    expect(run.companions.companions.map((companion) => companion.kind)).toEqual(['skeletonArcher']);
+    expect(run.companions.companions.map((companion) => companion.kind)).toEqual(['gravedigger']);
     expect(run.guardiansDefeated).toBe(1);
 
     advance(run, 400);
@@ -133,7 +133,7 @@ describe('zone mini-bosses', () => {
     const second = run.miniBosses.bosses[0];
     run.damageEnemy(second.enemy, second.enemy.health + 1, 'sword');
     const again = run.pendingChoice as Extract<typeof run.pendingChoice, { kind: 'companion' }>;
-    expect(again.offers[0]).toEqual({ companion: 'skeletonArcher', level: 2 });
+    expect(again.offers[0]).toEqual({ companion: 'gravedigger', level: 2 });
   });
 
   it('each guardian slain this cycle weakens the Necromancer: less health, a beam fewer', () => {
@@ -240,15 +240,54 @@ describe('companions', () => {
     expect(run.player.isSlowed(run.clock.now)).toBe(false);
   });
 
-  it('the archer shoots the nearest enemy until it dies', () => {
+  it('the Coveiro Aliado raises skeletons that hunt down a distant enemy', () => {
     const run = session();
-    run.addCompanion('skeletonArcher');
+    run.addCompanion('gravedigger');
+    const raised: unknown[] = [];
+    run.events.on('ally-raised', (spot) => raised.push(spot));
     const enemy = run.spawnEnemy('skeleton', run.player.x + 250, run.player.y, 30)!;
     enemy.movementSpeed = 0;
     enemy.contactDamage = 0;
-    // The hero's own weapon is a sword (short reach): the kill is the archer's.
-    advance(run, 6000);
+    // The hero's own weapon is a sword (short reach): the kill is the skeletons'.
+    advance(run, COMPANION_TUNING.raiseCooldownMs + 100);
+    expect(raised).toHaveLength(COMPANION_TUNING.raiseCount);
+    expect(run.companions.skeletons).toHaveLength(COMPANION_TUNING.raiseCount);
+    advance(run, 5000);
     expect(enemy.alive).toBe(false);
+  });
+
+  it('raised skeletons crumble when their time is up, and only so many stand at once', () => {
+    const run = session();
+    run.addCompanion('gravedigger');
+    const enemy = run.spawnEnemy('skeleton', run.player.x + 300, run.player.y, 1_000_000)!;
+    enemy.movementSpeed = 0;
+    enemy.contactDamage = 0;
+    advance(run, COMPANION_TUNING.raiseCooldownMs * 4);
+    expect(run.companions.skeletons.length).toBeLessThanOrEqual(COMPANION_TUNING.maxSkeletons + 1);
+    run.damageEnemy(enemy, enemy.health + 1, 'sword');
+    advance(run, COMPANION_TUNING.skeletonLifeMs + 500);
+    expect(run.companions.skeletons).toHaveLength(0);
+  });
+
+  it('companions are chipped by what touches them, fall at 0 and reform beside the hero', () => {
+    const run = session();
+    run.addCompanion('gravedigger');
+    const coveiro = run.companions.companions[0];
+    const downs: string[] = [];
+    run.events.on('companion-down', ({ kind }) => downs.push(kind));
+    // Let it settle at its spot beside the hero, then put a brute on top of it.
+    advance(run, 2000);
+    const brute = run.spawnEnemy('superSkeleton', coveiro.x, coveiro.y, 1_000_000)!;
+    brute.movementSpeed = 0;
+    advance(run, COMPANION_TUNING.hurtTickMs * 6);
+    expect(downs).toEqual(['gravedigger']);
+    expect(coveiro.downUntil).toBeGreaterThan(0);
+    run.damageEnemy(brute, brute.health + 1, 'sword');
+    // The brute's experience opens a level-up; take it so the run goes on.
+    while (run.pendingChoice?.kind === 'level-up') run.chooseUpgrade(run.pendingChoice.upgrades[0].id);
+    advance(run, COMPANION_TUNING.respawnMs + 100);
+    expect(coveiro.downUntil).toBe(0);
+    expect(coveiro.health).toBe(coveiro.maxHealth);
   });
 
   it('the golem pulls nearby enemies off the hero', () => {
