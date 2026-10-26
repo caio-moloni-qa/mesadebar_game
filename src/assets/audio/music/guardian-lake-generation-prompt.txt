@@ -1,0 +1,17 @@
+STYLE
+ethereal water fantasy turning stormy, harp arpeggios, female wordless choir, glass harmonica, tremolo strings, timpani rolls, instrumental, 120 bpm, F# minor
+
+DESCRIPTION
+A water spirit drains the lake and rises as a towering monster of light-blue water. Flowing harp arpeggios and
+glassy bell tones like water droplets, a haunting wordless female choir (no words), shimmering tremolo strings, then
+rolling timpani and surging low strings like crashing waves — beautiful and dangerous at once. Keep the energy even
+throughout (no quiet intro, no fade, no ending) so it loops seamlessly. Instrumental, no lyrics.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+Only the explicitly requested WORDLESS choir is allowed as an instrumental texture; no intelligible language, sung lyrics, Latin text, or spoken syllables.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+
+TARGET DURATION
+120 seconds.

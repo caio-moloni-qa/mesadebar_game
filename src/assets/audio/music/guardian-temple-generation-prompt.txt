@@ -1,0 +1,17 @@
+STYLE
+ancient temple war, epic, heavy war drums, stone percussion, low brass, didgeridoo-like drone, ritual chant feel, instrumental, 110 bpm, D phrygian
+
+DESCRIPTION
+A carved stone guardian awakens among temple ruins, cyan runes glowing. Massive and slow-footed but crushing: heavy
+ceremonial war drums, deep stone-on-stone percussion hits, low brass and tuba in unison, an ancient droning bass, a
+stern horn melody in a Phrygian mode, occasional metallic gong strikes. Weighty and inexorable, steady from the first
+bar, no intro, no fade, seamless loop. Instrumental, no vocals.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+No choir, humming, singing, narration, or voices of any kind.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+
+TARGET DURATION
+120 seconds.

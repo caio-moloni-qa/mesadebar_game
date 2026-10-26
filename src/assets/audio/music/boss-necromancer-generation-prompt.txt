@@ -1,0 +1,17 @@
+STYLE
+epic dark fantasy boss battle, orchestral, gothic, full orchestra, pipe organ, latin-style wordless choir, war drums, low brass, instrumental, 132 bpm, D minor
+
+DESCRIPTION
+The final boss: an ancient crowned lich in tattered runed robes, green soul-fire in his ribcage, summoning the dead.
+A grand gothic boss theme: thundering war drums, a dark pipe organ, a wordless choir chanting menacing syllables (no
+real words), heavy low brass statements of a sinister main motif, racing string ostinatos, cymbal swells. Majestic and
+evil, steady high energy from the first bar, no intro, no fade, no ending — seamless loop. Instrumental.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+Only the explicitly requested WORDLESS choir is allowed as an instrumental texture; no intelligible language, sung lyrics, Latin text, or spoken syllables.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+
+TARGET DURATION
+150 seconds.

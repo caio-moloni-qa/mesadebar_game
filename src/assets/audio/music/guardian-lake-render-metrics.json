@@ -1,0 +1,41 @@
+{
+  "id": "guardian-lake",
+  "bpm": 120,
+  "bars": 64,
+  "meter": 4,
+  "key": "F# minor",
+  "kind": "lake",
+  "loop": true,
+  "seconds": 128,
+  "noteCount": 1024,
+  "hitCount": 256,
+  "instruments": [
+    "harp",
+    "choir",
+    "strings",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "timpani"
+  ],
+  "seed": "guardian-lake",
+  "rate": 44100,
+  "frames": 5644800,
+  "rawSeconds": 132,
+  "rawPeak": 0.11825265735387802,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.15337810136764707,
+  "gain": 7.10343444956379,
+  "seam": [
+    0.007869304390624166,
+    0.0040069883689284325
+  ],
+  "end": [
+    -0.0049889348447322845,
+    0.010041595436632633
+  ],
+  "file": "guardian-lake.wav",
+  "rawFile": "guardian-lake-raw.wav"
+}

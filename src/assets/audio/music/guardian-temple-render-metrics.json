@@ -1,0 +1,40 @@
+{
+  "id": "guardian-temple",
+  "bpm": 110,
+  "bars": 56,
+  "meter": 4,
+  "key": "D phrygian",
+  "kind": "temple",
+  "loop": true,
+  "seconds": 122.18181818181819,
+  "noteCount": 532,
+  "hitCount": 287,
+  "instruments": [
+    "drone",
+    "horn"
+  ],
+  "percussion": [
+    "frame",
+    "stone",
+    "gong"
+  ],
+  "seed": "guardian-temple",
+  "rate": 44100,
+  "frames": 5388218,
+  "rawSeconds": 126.18181405895692,
+  "rawPeak": 0.26047757267951965,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.09573589442267806,
+  "gain": 3.22350402884782,
+  "seam": [
+    0.0014329180121421814,
+    0.0019338391721248627
+  ],
+  "end": [
+    0.0727715864777565,
+    0.048903461545705795
+  ],
+  "file": "guardian-temple.wav",
+  "rawFile": "guardian-temple-raw.wav"
+}

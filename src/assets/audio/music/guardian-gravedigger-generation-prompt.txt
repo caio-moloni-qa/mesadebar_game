@@ -1,0 +1,17 @@
+STYLE
+macabre graveyard waltz, dark fantasy, pipe organ, out-of-tune music box, low strings, church bells, rattling percussion, instrumental, 3/4, 96 bpm, C minor
+
+DESCRIPTION
+A skeletal gravedigger rises from the cemetery with a shovel and a green lantern. A sinister, slightly mocking 3/4
+waltz: wheezing pipe organ, a warped music-box melody, plucked and bowed low strings, distant tolling church bells,
+bone-like wooden rattles and a shovel-scrape percussion texture. Creepy and danceable at once, steady energy, no
+intro, no fade, seamless loop. Instrumental, no vocals.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+No choir, humming, singing, narration, or voices of any kind.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+
+TARGET DURATION
+120 seconds.

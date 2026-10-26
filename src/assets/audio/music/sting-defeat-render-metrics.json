@@ -1,0 +1,34 @@
+{
+  "id": "sting-defeat",
+  "seconds": 6,
+  "kind": "defeat",
+  "loop": false,
+  "noteCount": 10,
+  "hitCount": 0,
+  "seed": "sting-defeat",
+  "instruments": [
+    "cello",
+    "choir",
+    "glass",
+    "box"
+  ],
+  "percussion": [],
+  "rate": 44100,
+  "frames": 264600,
+  "rawSeconds": 10,
+  "rawPeak": 0.05933542177081108,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.18388967401965609,
+  "gain": 14.156805074118843,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-defeat.wav",
+  "rawFile": "sting-defeat-raw.wav"
+}

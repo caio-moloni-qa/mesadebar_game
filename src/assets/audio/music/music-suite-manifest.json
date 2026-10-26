@@ -1,0 +1,667 @@
+{
+  "status": "all_12_rendered_and_validated",
+  "source": "art-source/audio/compose-music-suite.mjs",
+  "renderer": "art-source/audio/render-music-suite.mjs",
+  "encoding": "final: stereo 44100Hz PCM16 WAV; untouched raw render: stereo 44100Hz float32 WAV, including 4s tail",
+  "loudness": "Peak normalized to -1.51 dBFS. Integrated LUFS not measured or matched; -14 LUFS integration remains deferred.",
+  "motif_pairs": [
+    [
+      "arena",
+      "arena-intense"
+    ],
+    [
+      "boss-necromancer",
+      "boss-necromancer-enraged"
+    ]
+  ],
+  "tracks": [
+    {
+      "id": "tavern",
+      "bpm": 104,
+      "bars": 64,
+      "meter": 4,
+      "key": "D dorian",
+      "kind": "tavern",
+      "loop": true,
+      "seconds": 147.69230769230768,
+      "noteCount": 1264,
+      "hitCount": 384,
+      "seed": "tavern",
+      "instruments": [
+        "lute",
+        "hurdy",
+        "recorder",
+        "fiddle"
+      ],
+      "rate": 44100,
+      "frames": 6513231,
+      "rawSeconds": 151.69231292517006,
+      "rawPeak": 0.11640522629022598,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.09668056235375393,
+      "gain": 7.216170843615558,
+      "seam": [
+        0.00440828874707222,
+        0.006785403937101364
+      ],
+      "end": [
+        -0.05201663076877594,
+        -0.04661300405859947
+      ],
+      "file": "tavern.wav",
+      "rawFile": "tavern-raw.wav",
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "duration_seconds": 147.69231292517006,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -20.2934817904651,
+      "dc_offset": 6.051546918240708e-05,
+      "stereo_difference_rms": 0.03793374352698161,
+      "boundary_sample_delta": [
+        0.00439453125,
+        0.00677490234375
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "3d76e9b94f517cad94dd9ab8c38e2d1615e1f045dcc8afec71f068fe612637dc",
+      "final_sha256": "0ecbb68d01727ceca056d897cd6e16ef50c8182ce189252b4821736dae562a44",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "arena",
+      "bpm": 128,
+      "bars": 80,
+      "meter": 4,
+      "key": "E minor",
+      "kind": "arena",
+      "loop": true,
+      "seconds": 150,
+      "noteCount": 1220,
+      "hitCount": 640,
+      "seed": "arena",
+      "instruments": [
+        "cello",
+        "drone",
+        "horn",
+        "hurdy"
+      ],
+      "percussion": [
+        "frame",
+        "stone",
+        "rattle"
+      ],
+      "rate": 44100,
+      "frames": 6615000,
+      "rawSeconds": 154,
+      "rawPeak": 0.1744203269481659,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.12045858711301377,
+      "gain": 4.8159524448640125,
+      "seam": [
+        0.0013231784105300903,
+        0.0007809996604919434
+      ],
+      "end": [
+        -0.16366684436798096,
+        -0.11614051461219788
+      ],
+      "file": "arena.wav",
+      "rawFile": "arena-raw.wav",
+      "duration_seconds": 150.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -18.38350960488207,
+      "dc_offset": 0.00046492096201002103,
+      "stereo_difference_rms": 0.041451506079961474,
+      "boundary_sample_delta": [
+        0.001312255859375,
+        0.000762939453125
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "dd13edc70854fc16add71df8ee7292059f8dd42d130b6489c7e793ec2aeb29bf",
+      "final_sha256": "155bbfd09ec9d70176cc6204b9755a068a1c231578107e29f0e140c28ffaa510",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "arena-intense",
+      "bpm": 140,
+      "bars": 80,
+      "meter": 4,
+      "key": "E minor",
+      "kind": "arena",
+      "intense": true,
+      "loop": true,
+      "seconds": 137.14285714285714,
+      "noteCount": 1980,
+      "hitCount": 960,
+      "instruments": [
+        "cello",
+        "drone",
+        "horn",
+        "choir",
+        "hurdy"
+      ],
+      "percussion": [
+        "frame",
+        "stone",
+        "rattle"
+      ],
+      "seed": "arena-intense",
+      "rate": 44100,
+      "frames": 6048000,
+      "rawSeconds": 141.14285714285714,
+      "rawPeak": 0.19391052424907684,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.12449638112054914,
+      "gain": 4.331894843010302,
+      "seam": [
+        0.0033886954188346863,
+        0.0016656629741191864
+      ],
+      "end": [
+        -0.047832127660512924,
+        -0.05981149896979332
+      ],
+      "file": "arena-intense.wav",
+      "rawFile": "arena-intense-raw.wav",
+      "duration_seconds": 137.14285714285714,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -18.097130504311856,
+      "dc_offset": 6.437774940773293e-05,
+      "stereo_difference_rms": 0.047088296917701035,
+      "boundary_sample_delta": [
+        0.003387451171875,
+        0.00164794921875
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "80cc32a3e23ab71ee37ab0d5af46ff0576074d017ccc3808cc3fbcad25b07cd3",
+      "final_sha256": "6e8b828549c4f633e2e15edb6742fa7ba162bb331712b8d5c4c12e35c192a617",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "guardian-gravedigger",
+      "bpm": 96,
+      "bars": 64,
+      "meter": 3,
+      "key": "C minor",
+      "kind": "grave",
+      "loop": true,
+      "seconds": 120,
+      "noteCount": 1008,
+      "hitCount": 208,
+      "instruments": [
+        "organ",
+        "cello",
+        "lute",
+        "box",
+        "glass"
+      ],
+      "percussion": [
+        "rattle",
+        "scrape"
+      ],
+      "seed": "guardian-gravedigger",
+      "rate": 44100,
+      "frames": 5292000,
+      "rawSeconds": 124,
+      "rawPeak": 0.09319005161523819,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.14364747134655448,
+      "gain": 9.013837694480314,
+      "seam": [
+        0.008587822550907731,
+        0.008300889807287604
+      ],
+      "end": [
+        -0.0016651151236146688,
+        0.00039421621477231383
+      ],
+      "file": "guardian-gravedigger.wav",
+      "rawFile": "guardian-gravedigger-raw.wav",
+      "duration_seconds": 120.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -16.854305383350688,
+      "dc_offset": -1.6629314927197008e-05,
+      "stereo_difference_rms": 0.05453966295736248,
+      "boundary_sample_delta": [
+        0.00860595703125,
+        0.00830078125
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "630d6a178d15d0cb020584c8602c7dfc9976f3dfdd46cd540e218f0e7ff30e02",
+      "final_sha256": "2c75ba0da7e749ddd189cf20d07cc2dfe2ecfc142e65927185855298cc6aae6f",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "guardian-temple",
+      "bpm": 110,
+      "bars": 56,
+      "meter": 4,
+      "key": "D phrygian",
+      "kind": "temple",
+      "loop": true,
+      "seconds": 122.18181818181819,
+      "noteCount": 532,
+      "hitCount": 287,
+      "instruments": [
+        "drone",
+        "horn"
+      ],
+      "percussion": [
+        "frame",
+        "stone",
+        "gong"
+      ],
+      "seed": "guardian-temple",
+      "rate": 44100,
+      "frames": 5388218,
+      "rawSeconds": 126.18181405895692,
+      "rawPeak": 0.26047757267951965,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.09573589442267806,
+      "gain": 3.22350402884782,
+      "seam": [
+        0.0014329180121421814,
+        0.0019338391721248627
+      ],
+      "end": [
+        0.0727715864777565,
+        0.048903461545705795
+      ],
+      "file": "guardian-temple.wav",
+      "rawFile": "guardian-temple-raw.wav",
+      "duration_seconds": 122.18181405895692,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -20.378768750608096,
+      "dc_offset": 0.0003003563965280358,
+      "stereo_difference_rms": 0.03327894752318296,
+      "boundary_sample_delta": [
+        0.001434326171875,
+        0.001922607421875
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "c12fc604af6e3a03d6dd2b05760d09a7e89a1418c97f2042e0e9cfb9eb1db827",
+      "final_sha256": "e37f307156dc12963f258e9fdee87766179e410e75ce7aa90dbdb62416b8ed36",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "guardian-lake",
+      "bpm": 120,
+      "bars": 64,
+      "meter": 4,
+      "key": "F# minor",
+      "kind": "lake",
+      "loop": true,
+      "seconds": 128,
+      "noteCount": 1024,
+      "hitCount": 256,
+      "instruments": [
+        "harp",
+        "choir",
+        "strings",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "timpani"
+      ],
+      "seed": "guardian-lake",
+      "rate": 44100,
+      "frames": 5644800,
+      "rawSeconds": 132,
+      "rawPeak": 0.11825265735387802,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.15337810136764707,
+      "gain": 7.10343444956379,
+      "seam": [
+        0.007869304390624166,
+        0.0040069883689284325
+      ],
+      "end": [
+        -0.0049889348447322845,
+        0.010041595436632633
+      ],
+      "file": "guardian-lake.wav",
+      "rawFile": "guardian-lake-raw.wav",
+      "duration_seconds": 128.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -16.28499766214993,
+      "dc_offset": 4.7101190571341655e-05,
+      "stereo_difference_rms": 0.08340126777346712,
+      "boundary_sample_delta": [
+        0.007843017578125,
+        0.003997802734375
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "b45af455be1923c04075975221ed4f62a16ec7ebc0e37ea7a45d8562563d9a20",
+      "final_sha256": "7a8ec4487be584d919da43516ff618d1f510697e8e03fd96c50f8b1f4b24c1c0",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "boss-necromancer",
+      "bpm": 132,
+      "bars": 80,
+      "meter": 4,
+      "key": "D minor",
+      "kind": "boss",
+      "loop": true,
+      "seconds": 145.45454545454547,
+      "noteCount": 1540,
+      "hitCount": 970,
+      "instruments": [
+        "cello",
+        "organ",
+        "drone",
+        "choir",
+        "horn"
+      ],
+      "percussion": [
+        "frame",
+        "rattle",
+        "gong"
+      ],
+      "seed": "boss-necromancer",
+      "rate": 44100,
+      "frames": 6414545,
+      "rawSeconds": 149.45453514739228,
+      "rawPeak": 0.2598780691623688,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.10716220195873678,
+      "gain": 3.2322850585563563,
+      "seam": [
+        0.00464668869972229,
+        0.0011967672035098076
+      ],
+      "end": [
+        -0.05363012105226517,
+        -0.006229292135685682
+      ],
+      "file": "boss-necromancer.wav",
+      "rawFile": "boss-necromancer-raw.wav",
+      "duration_seconds": 145.45453514739228,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -19.399432485126468,
+      "dc_offset": 0.00019834380744391262,
+      "stereo_difference_rms": 0.03877681205062869,
+      "boundary_sample_delta": [
+        0.004638671875,
+        0.001190185546875
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "7ac2737e8ded1d4879f01b6860a5a9c2bf2720bd902c65e46fb0971066ef0d6c",
+      "final_sha256": "fde3c867a9909a6a23882a419c9e03239fad97bc0495213b26862937aa1d8943",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "boss-necromancer-enraged",
+      "bpm": 150,
+      "bars": 80,
+      "meter": 4,
+      "key": "D minor",
+      "kind": "boss",
+      "intense": true,
+      "loop": true,
+      "seconds": 128,
+      "noteCount": 2300,
+      "hitCount": 1130,
+      "instruments": [
+        "strings",
+        "organ",
+        "drone",
+        "choir",
+        "horn",
+        "trumpet"
+      ],
+      "percussion": [
+        "frame",
+        "rattle",
+        "gong"
+      ],
+      "seed": "boss-necromancer-enraged",
+      "rate": 44100,
+      "frames": 5644800,
+      "rawSeconds": 132,
+      "rawPeak": 0.26297393441200256,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.11819896589236548,
+      "gain": 3.1942329260814413,
+      "seam": [
+        0.0020942268893122673,
+        0.0013341065496206284
+      ],
+      "end": [
+        -0.007339405827224255,
+        -0.018480824306607246
+      ],
+      "file": "boss-necromancer-enraged.wav",
+      "rawFile": "boss-necromancer-enraged-raw.wav",
+      "duration_seconds": 128.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -18.547991636442788,
+      "dc_offset": 0.00019366795784221485,
+      "stereo_difference_rms": 0.04737729802528451,
+      "boundary_sample_delta": [
+        0.002105712890625,
+        0.001312255859375
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "300125e6cd439731125c54b55c790962b04ed4dff5ac67a85c2f97492e9a8241",
+      "final_sha256": "e2b3082763bfdd624d3630832834f822e39f88950144104ffbef61700056b1d0",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "sting-guardian",
+      "seconds": 4,
+      "kind": "warning",
+      "loop": false,
+      "noteCount": 9,
+      "hitCount": 1,
+      "seed": "sting-guardian",
+      "instruments": [
+        "horn",
+        "strings"
+      ],
+      "percussion": [
+        "frame"
+      ],
+      "rate": 44100,
+      "frames": 176400,
+      "rawSeconds": 8,
+      "rawPeak": 0.16170108318328857,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.07728234460618197,
+      "gain": 5.194770396484344,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-guardian.wav",
+      "rawFile": "sting-guardian-raw.wav",
+      "duration_seconds": 4.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -22.23865880108835,
+      "dc_offset": 0.00017179752964011126,
+      "stereo_difference_rms": 0.030524248592546464,
+      "boundary_sample_delta": [
+        0.0,
+        0.0
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "975d21ca499b100dade546f3da377bd6b950eb8dc17a3f1249e979a56186ee28",
+      "final_sha256": "1008ed8c88a74512343f64e58b4e9d7a5a6be53b488750c96263d7d7e78f5aef",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "sting-boss",
+      "seconds": 6,
+      "kind": "bossWarning",
+      "loop": false,
+      "noteCount": 9,
+      "hitCount": 19,
+      "seed": "sting-boss",
+      "instruments": [
+        "glass",
+        "box",
+        "choir",
+        "horn"
+      ],
+      "percussion": [
+        "timpani",
+        "gong"
+      ],
+      "rate": 44100,
+      "frames": 264600,
+      "rawSeconds": 10,
+      "rawPeak": 0.148001030087471,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.11385540549083546,
+      "gain": 5.675636172961407,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-boss.wav",
+      "rawFile": "sting-boss-raw.wav",
+      "duration_seconds": 6.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -18.873192827336077,
+      "dc_offset": -2.1763092986760678e-05,
+      "stereo_difference_rms": 0.060225474732249415,
+      "boundary_sample_delta": [
+        0.0,
+        0.0
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "0c995a67041c93f10fb855a372a35da8bbf41d7b9226972f3c3bee0e784b8e3f",
+      "final_sha256": "293794ee4f3c5f0f43d3df5031d1c1e3eb660dfc51b2e11c0d716da2947efb50",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "sting-victory",
+      "seconds": 8,
+      "kind": "victory",
+      "loop": false,
+      "noteCount": 23,
+      "hitCount": 13,
+      "seed": "sting-victory",
+      "instruments": [
+        "trumpet",
+        "horn",
+        "lute",
+        "strings"
+      ],
+      "percussion": [
+        "timpani",
+        "gong"
+      ],
+      "rate": 44100,
+      "frames": 352800,
+      "rawSeconds": 12,
+      "rawPeak": 0.09919022023677826,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.1611222003657192,
+      "gain": 8.468576821332034,
+      "seam": [
+        5.514113581739366e-05,
+        5.521182902157307e-05
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-victory.wav",
+      "rawFile": "sting-victory-raw.wav",
+      "duration_seconds": 8.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -15.857157425046628,
+      "dc_offset": 0.00015738264503392503,
+      "stereo_difference_rms": 0.06014219319094794,
+      "boundary_sample_delta": [
+        6.103515625e-05,
+        6.103515625e-05
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "583c28b7142c827339e1e3dd14d023e7f6eca79fe375ae7c50b2d6b199dc910a",
+      "final_sha256": "2f09069bcd26d2632540c83b2e35804454b82619dfd8cbef342e682be28a7737",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    },
+    {
+      "id": "sting-defeat",
+      "seconds": 6,
+      "kind": "defeat",
+      "loop": false,
+      "noteCount": 10,
+      "hitCount": 0,
+      "seed": "sting-defeat",
+      "instruments": [
+        "cello",
+        "choir",
+        "glass",
+        "box"
+      ],
+      "percussion": [],
+      "rate": 44100,
+      "frames": 264600,
+      "rawSeconds": 10,
+      "rawPeak": 0.05933542177081108,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.18388967401965609,
+      "gain": 14.156805074118843,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-defeat.wav",
+      "rawFile": "sting-defeat-raw.wav",
+      "duration_seconds": 6.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -14.709118567830428,
+      "dc_offset": 7.556445294046438e-06,
+      "stereo_difference_rms": 0.07921473746278752,
+      "boundary_sample_delta": [
+        0.0,
+        0.0
+      ],
+      "clipped_samples": 0,
+      "raw_sha256": "e2532e9a5950b426b3778ba53e72df137b2c5afb52edaa70f55cbce6db35a985",
+      "final_sha256": "ef6bae589351233a3eac5df5743cc10b60f04020b2f1c4987203c3e681f8a27c",
+      "validated": true,
+      "method": "Original procedural Web Audio composition; synthesized acoustic-inspired timbres, not recorded instruments."
+    }
+  ]
+}

@@ -21,3 +21,6 @@ src/assets/attacks/staff-impact-sheet-raw.png
 src/assets/attacks/staff-impact-sheet.png
 src/assets/attacks/sword-sweep-sheet-raw.png
 src/assets/attacks/sword-sweep-sheet.png
+# Music renders (hundreds of MB, reproducible with art-source/audio/render-music-suite.mjs); the loudness-matched MP3s ship.
+src/assets/audio/music/*.wav
+art-source/audio/__pycache__/

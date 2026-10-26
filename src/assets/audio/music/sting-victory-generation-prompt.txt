@@ -1,0 +1,15 @@
+STYLE
+triumphant medieval fanfare, brass, timpani, lute flourish, bright, 8 seconds
+
+DESCRIPTION
+A 6–10 second triumphant fanfare after surviving the night: bright brass fanfare, a timpani roll, a lute and fiddle
+flourish answering, ending on a warm major chord that rings out. Instrumental.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+No choir, humming, singing, narration, or voices of any kind.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+One short, complete non-looping sting; allow its natural final resonance within the target duration.
+
+TARGET DURATION
+8 seconds.

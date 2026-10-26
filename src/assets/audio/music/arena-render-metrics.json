@@ -1,0 +1,42 @@
+{
+  "id": "arena",
+  "bpm": 128,
+  "bars": 80,
+  "meter": 4,
+  "key": "E minor",
+  "kind": "arena",
+  "loop": true,
+  "seconds": 150,
+  "noteCount": 1220,
+  "hitCount": 640,
+  "seed": "arena",
+  "instruments": [
+    "cello",
+    "drone",
+    "horn",
+    "hurdy"
+  ],
+  "percussion": [
+    "frame",
+    "stone",
+    "rattle"
+  ],
+  "rate": 44100,
+  "frames": 6615000,
+  "rawSeconds": 154,
+  "rawPeak": 0.1744203269481659,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.12045858711301377,
+  "gain": 4.8159524448640125,
+  "seam": [
+    0.0013231784105300903,
+    0.0007809996604919434
+  ],
+  "end": [
+    -0.16366684436798096,
+    -0.11614051461219788
+  ],
+  "file": "arena.wav",
+  "rawFile": "arena-raw.wav"
+}

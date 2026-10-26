@@ -1,0 +1,43 @@
+{
+  "method": "Original locally composed Web Audio synthesis; no recorded instruments, external music service or voice recordings.",
+  "normalization": "Peak normalized to .84; LUFS matching deferred to integration.",
+  "tracks": [
+    {
+      "id": "sting-victory",
+      "seconds": 8,
+      "kind": "victory",
+      "loop": false,
+      "noteCount": 23,
+      "hitCount": 13,
+      "seed": "sting-victory",
+      "instruments": [
+        "trumpet",
+        "horn",
+        "lute",
+        "strings"
+      ],
+      "percussion": [
+        "timpani",
+        "gong"
+      ],
+      "rate": 44100,
+      "frames": 352800,
+      "rawSeconds": 12,
+      "rawPeak": 0.09919022023677826,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.1611222003657192,
+      "gain": 8.468576821332034,
+      "seam": [
+        0.00005514113581739366,
+        0.00005521182902157307
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-victory.wav",
+      "rawFile": "sting-victory-raw.wav"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "guardian-gravedigger",
+  "bpm": 96,
+  "bars": 64,
+  "meter": 3,
+  "key": "C minor",
+  "kind": "grave",
+  "loop": true,
+  "seconds": 120,
+  "noteCount": 1008,
+  "hitCount": 208,
+  "instruments": [
+    "organ",
+    "cello",
+    "lute",
+    "box",
+    "glass"
+  ],
+  "percussion": [
+    "rattle",
+    "scrape"
+  ],
+  "seed": "guardian-gravedigger",
+  "rate": 44100,
+  "frames": 5292000,
+  "rawSeconds": 124,
+  "rawPeak": 0.09319005161523819,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.14364747134655448,
+  "gain": 9.013837694480314,
+  "seam": [
+    0.008587822550907731,
+    0.008300889807287604
+  ],
+  "end": [
+    -0.0016651151236146688,
+    0.00039421621477231383
+  ],
+  "file": "guardian-gravedigger.wav",
+  "rawFile": "guardian-gravedigger-raw.wav"
+}
