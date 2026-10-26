@@ -83,13 +83,16 @@ export class SheetEffects {
     Object.values(SHEETS).forEach(sheetTexture);
   }
 
-  /** The sword's sweep: pivots on the hero and reaches `range` (game units) towards (dirX, dirY). */
-  sweep(x: number, y: number, dirX: number, dirY: number, range: number): void {
-    const mesh = this.spawn(SHEETS.swordSweep, this.leftPivot, 0.24);
+  /** A melee sweep pivoting on (x, y) and reaching `range` (game units) towards (dirX, dirY): the sword's as drawn;
+   *  `tint` recolours it and `spread` widens the arc sideways (the whip's lash is wider than the sheet's 90°). */
+  sweep(x: number, y: number, dirX: number, dirY: number, range: number, tint = 0xffffff, spread = 1, duration = 0.24): void {
+    const mesh = this.spawn(SHEETS.swordSweep, this.leftPivot, duration);
     if (!mesh) return;
+    (mesh.material as THREE.MeshBasicMaterial).color.setHex(tint);
     mesh.position.set(x * WORLD_SCALE, 0.5, y * WORLD_SCALE);
     mesh.rotation.set(0, -Math.atan2(dirY, dirX), 0);
-    mesh.scale.setScalar(range * WORLD_SCALE * 1.1);
+    const reach = range * WORLD_SCALE * 1.1;
+    mesh.scale.set(reach, 1, reach * spread);
   }
 
   /** A ring of holy light opening out to `radius` (game units) around (x, y). */
@@ -143,6 +146,7 @@ export class SheetEffects {
       material.needsUpdate = true;
     }
     showFrame(material.map!, spec, 0);
+    material.color.setHex(0xffffff);
     mesh.visible = true;
     this.playing.push({ mesh, spec, age: 0, duration });
     return mesh;
