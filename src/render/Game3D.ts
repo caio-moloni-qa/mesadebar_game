@@ -66,6 +66,9 @@ export interface Game3DOptions {
 const STATUS_COLORS: Record<'heal-cut' | 'slow' | 'rot' | 'heal', string> = { 'heal-cut': '#ffb347', slow: '#8bbcff', rot: '#b98bff', heal: '#8effa0' };
 
 /** The Three.js run: owns the WebGL renderer, the fixed-step loop and the views over one GameSession. */
+/** The whip's sweep: the sword sheet dyed ember orange. */
+const WHIP_TINT = 0xff9a5a;
+
 export class Game3D {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -271,8 +274,10 @@ export class Game3D {
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, color, kind === 'gem' ? 3 : 14, 0.8, 1.8);
     });
     events.on('melee-swing', ({ x, y, dirX, dirY, range, coneAngle, weaponId }) => {
-      // The sword's own swing is the generated sweep sheet; the whip keeps its flat lash arc.
+      // Both blades draw the sweep sheet: the sword's steel-blue, the whip's ember-orange lash wider (its cone is 140°
+      // to the sword's 90°) and a touch slower; its chain jumps between enemies are small flicks of the same.
       if (weaponId === 'sword') this.sheetEffects.sweep(x, y, dirX, dirY, range);
+      else if (weaponId === 'whip') this.sheetEffects.sweep(x, y, dirX, dirY, range, WHIP_TINT, Math.max(1, coneAngle / 90), 0.28);
       else this.effects.swing(x, y, dirX, dirY, range, coneAngle, weaponId);
       // Whip chain links also emit swings, centred on the enemy they jump to — only the hero's own swing animates.
       if (x === this.session.player.x && y === this.session.player.y) {
