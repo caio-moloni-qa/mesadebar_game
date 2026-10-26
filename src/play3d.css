@@ -337,3 +337,32 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Zone guardians: an amber banner and named bars; companions in the HUD tray. */
+.boss-banner.mini { color: #ffc890; }
+.boss-bar.mini .boss-health > div { background: linear-gradient(#ff9a5a, #c4521f); }
+.boss-name { margin: 0 0 2px; text-align: center; color: #ffc890; font-size: calc(14 * var(--ui-unit)); }
+.offscreen-arrow[data-kind="miniboss"] { background: #ff9a5a; }
+.hud-build-slot.companion { border-color: rgba(139, 255, 208, 0.85); }
+.hud-build-slot.down { opacity: 0.4; filter: grayscale(1); }
+
+/* Off-screen markers: who (portrait in a ring), which way (arrow on the rim), how far. Tier colours: Necromancer
+   green, guardians orange, portals their own colour. */
+.offscreen-marker { position: absolute; top: 0; left: 0; --tier: #8cff8c; --size: calc(64 * var(--ui-unit)); width: var(--size); height: var(--size);
+  pointer-events: none; animation: marker-pulse 1.4s ease-in-out infinite; }
+.offscreen-marker[hidden] { display: none; }
+.offscreen-marker[data-tier="miniboss"] { --tier: #ff9a5a; }
+.offscreen-marker[data-tier="end"] { --tier: #9fb4ff; }
+.offscreen-marker[data-tier="continue"] { --tier: #7dffa0; }
+.marker-ring { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; box-sizing: border-box;
+  background: radial-gradient(circle, #2a2233 55%, #14101a); border: calc(3 * var(--ui-unit)) solid var(--tier);
+  box-shadow: 0 0 calc(10 * var(--ui-unit)) var(--tier), inset 0 0 calc(8 * var(--ui-unit)) rgba(0, 0, 0, 0.6); }
+.marker-ring img { width: 100%; height: 100%; image-rendering: pixelated; }
+.marker-pointer { position: absolute; inset: 0; }
+.marker-pointer span { position: absolute; top: 50%; left: 100%; width: 0; height: 0; transform: translate(-12%, -50%);
+  border-top: calc(15 * var(--ui-unit)) solid transparent; border-bottom: calc(15 * var(--ui-unit)) solid transparent;
+  border-left: calc(24 * var(--ui-unit)) solid var(--tier); filter: drop-shadow(0 0 calc(4 * var(--ui-unit)) rgba(0, 0, 0, 0.8)); }
+.marker-distance { position: absolute; top: 100%; left: 50%; transform: translate(-50%, calc(4 * var(--ui-unit))); white-space: nowrap;
+  font: 600 calc(12 * var(--ui-unit)) / 1 MedievalSharp, Georgia, serif; color: #f7f1dc;
+  text-shadow: 0 1px 0 #14101c, 1px 0 #14101c, -1px 0 #14101c, 0 -1px #14101c; }
+@keyframes marker-pulse { 0%, 100% { scale: 1; } 50% { scale: 1.08; } }

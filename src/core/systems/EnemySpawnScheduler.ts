@@ -1,13 +1,17 @@
-import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry } from '../../config/balance';
+import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, MINI_BOSS_VARIANTS } from '../../config/balance';
 import { WORLD_SIZE } from '../../config/world';
 import { Rng, Vec2, intBetween, randomPointAround } from '../math';
 import { DifficultyStage } from './DifficultySystem';
 
-export type EnemyVariantId = keyof typeof ENEMY_VARIANTS;
+/** The variants the timed schedule spawns (shared with the Phaser build). */
+export type ScheduledVariantId = keyof typeof ENEMY_VARIANTS;
+export type MiniBossVariantId = keyof typeof MINI_BOSS_VARIANTS;
+/** Everything the 3D core can spawn: the schedule's variants plus the zone mini-bosses. */
+export type EnemyVariantId = ScheduledVariantId | MiniBossVariantId;
 
 /** One enemy the scheduler wants on the field. How it looks and which pooled object carries it is the caller's job. */
 export interface SpawnRequest {
-  variantId: EnemyVariantId;
+  variantId: ScheduledVariantId;
   x: number;
   y: number;
   maxHealth: number;

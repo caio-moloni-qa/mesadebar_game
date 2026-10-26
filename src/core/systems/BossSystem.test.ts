@@ -36,7 +36,8 @@ function stage({ lineOfSight = true } = {}) {
     killPlayer: () => { killed = true; },
     pushPlayer: (dx, dy) => { pushes.push({ dx, dy }); },
     clearEnemyField: () => { cleared += 1; return 3; },
-    hasLineOfSight: () => lineOfSight
+    hasLineOfSight: () => lineOfSight,
+    weakening: () => 0
   });
   const run = (ms: number) => {
     for (let elapsed = 0; elapsed < ms; elapsed += STEP_MS) system.update(STEP_MS);

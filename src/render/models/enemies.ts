@@ -185,6 +185,10 @@ export function createEnemyModels(): Record<EnemyVariantId, BakedEnemyModel> {
     necromancerWraith: wraith(0x4a2f6b, 0x9a6bd8, 0x7dff9a, true),
     apparitionWraith: wraith(0x8fd8f0, 0xe6fbff, 0xffffff, false),
     // The boss has no 3D model yet (it isn't spawned on the 3D page); the armored skeleton stands in.
-    finalBoss: superSkeleton
+    finalBoss: superSkeleton,
+    // Drawn by their own rigged views; never instanced.
+    gravedigger: superSkeleton,
+    templeGuardian: superSkeleton,
+    lakeSpirit: superSkeleton
   };
 }

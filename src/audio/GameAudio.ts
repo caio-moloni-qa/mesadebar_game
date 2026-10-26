@@ -168,6 +168,13 @@ export class GameAudio {
       on('boss-enraged', () => this.play('roar', undefined, .8)),
       on('boss-shockwave', ({ x, y }) => this.play('explosion', { x, y })),
       on('boss-wave-cleared', () => this.play('victory')),
+      on('miniboss-warning', () => this.play('warning', undefined, .7)),
+      on('miniboss-impact', ({ x, y, attack }) => this.play(attack === 'shockwave' || attack === 'geyser' ? 'explosion' : attack === 'wave' ? 'dash' : 'impact', { x, y }, attack === 'shockwave' ? .7 : attack === 'geyser' ? .45 : 1)),
+      on('companion-heal', () => this.play('aura', undefined, .45)),
+      on('miniboss-stunned', ({ enemy }) => this.play('shield-break', enemy, .6)),
+      on('miniboss-defeated', ({ x, y }) => this.play('explosion', { x, y }, .8)),
+      on('companion-joined', () => this.play('upgrade', undefined, .8, true)),
+      on('companion-attack', ({ kind, x, y }) => this.play(kind === 'skeletonArcher' ? 'bolt' : 'impact', { x, y }, .35)),
       on('run-ended', ({ victory }) => this.play(victory ? 'victory' : 'defeat', undefined, .8, true))
     );
   }

@@ -29,6 +29,7 @@ export class Arena {
   readonly mist: EdgeMist;
   private readonly ambient: Ambient;
   private readonly grass: Grass;
+  private readonly water: Water;
   private time = 0;
   private readonly sunOffset = SUN_DIRECTION.clone().multiplyScalar(60);
 
@@ -39,7 +40,8 @@ export class Arena {
     this.createPropChunks().forEach((chunk) => this.root.add(chunk));
     this.grass = new Grass(map, seed);
     this.root.add(this.grass.root);
-    this.root.add(new Water(map).root);
+    this.water = new Water(map);
+    this.root.add(this.water.root);
     this.mist = new EdgeMist(arenaMeters, MIST_COLOR);
     this.ambient = new Ambient(this.fireSpots(), createRng(seed ^ 0xf17e));
     this.root.add(this.mist.root, this.ambient.root);
@@ -74,6 +76,7 @@ export class Arena {
     environmentUniforms.uEnvTime.value = this.time;
     environmentUniforms.uCloudOffset.value.set(this.time * 0.9, this.time * 0.4);
     this.ambient.update(this.time, deltaSeconds, focus);
+    this.water.update(this.map.lakeLevel, deltaSeconds);
   }
 
   /** Keeps the shadow frustum centered on what the camera sees, snapped to whole shadow texels to avoid shimmer. */

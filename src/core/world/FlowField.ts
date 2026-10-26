@@ -26,10 +26,16 @@ export class FlowField {
     this.passable = new Uint8Array(cells);
     this.distance = new Float32Array(cells).fill(Number.POSITIVE_INFINITY);
     this.heap = new MinHeap(cells);
-    for (let index = 0; index < cells; index += 1) {
+    this.refreshPassable();
+  }
+
+  /** Re-reads which cells are open (the lake drains and refills mid-run); the next update() routes with it. */
+  refreshPassable(): void {
+    for (let index = 0; index < this.passable.length; index += 1) {
       const { x, y } = this.cellCenter(index);
-      this.passable[index] = map.isWalkable(x, y, CLEARANCE) ? 1 : 0;
+      this.passable[index] = this.map.isWalkable(x, y, CLEARANCE) ? 1 : 0;
     }
+    this.targetCell = -1;
   }
 
   cellOf(x: number, y: number): number {

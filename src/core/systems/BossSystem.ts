@@ -161,6 +161,8 @@ export interface BossState {
   beams: BeamState[];
   beamsLaunched: number;
   beamCount: number;
+  /** Beams fewer per volley (one per guardian slain before it arrived). */
+  beamPenalty: number;
   /** Shield dash (phase 2, while channelling) or lunge (any time the player kites far away). */
   dash: { kind: 'shield' | 'lunge'; phase: 'idle' | 'telegraph' | 'dashing'; elapsedMs: number; fromX: number; fromY: number; targetX: number; targetY: number };
   dashCooldownElapsed: number;
@@ -197,6 +199,8 @@ export interface BossHost {
   /** Removes every active enemy `keep` rejects; returns how many. */
   clearEnemyField(keep: (enemy: EnemyState) => boolean): number;
   hasLineOfSight(from: Vec2, to: Vec2): boolean;
+  /** Zone guardians slain this cycle: each takes GUARDIAN weakening off the next boss (health, one beam). */
+  weakening(): number;
 }
 
 export class BossSystem {
@@ -337,6 +341,9 @@ export class BossSystem {
     const size = this.host.arenaSize;
     const enemy = this.host.spawnEnemy('finalBoss', clamp(x, margin, size - margin), clamp(y, margin, size - margin));
     if (!enemy) return;
+    const weakening = this.host.weakening();
+    enemy.maxHealth = Math.round(enemy.maxHealth * Math.max(0.5, 1 - 0.05 * weakening));
+    enemy.health = enemy.maxHealth;
     this.bosses.push({
       enemy,
       isMain,
@@ -369,6 +376,7 @@ export class BossSystem {
       beams: [],
       beamsLaunched: 0,
       beamCount: 1,
+      beamPenalty: weakening,
       dash: { kind: 'lunge', phase: 'idle', elapsedMs: 0, fromX: 0, fromY: 0, targetX: 0, targetY: 0 },
       dashCooldownElapsed: 0,
       dashCountThisChannel: 0
@@ -591,7 +599,7 @@ export class BossSystem {
   private activateBeam(boss: BossState): void {
     boss.beamState = 'active';
     boss.beamActiveElapsed = 0;
-    boss.beamCount = Math.round(boss.phaseTwo ? BOSS_TUNING.beamCountPhase2 : BOSS_TUNING.beamCountPhase1);
+    boss.beamCount = Math.max(1, Math.round(boss.phaseTwo ? BOSS_TUNING.beamCountPhase2 : BOSS_TUNING.beamCountPhase1) - boss.beamPenalty);
     boss.beams = [];
     boss.beamsLaunched = 0;
     this.launchBeam(boss);

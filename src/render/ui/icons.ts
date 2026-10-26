@@ -1,4 +1,5 @@
 import { WeaponConfig } from '../../config/weapons';
+import { CompanionKind } from '../../core/systems/MiniBossSystem';
 
 // One static URL literal per file so Vite rewrites each with the base path.
 // Upgrade art is the 3D UI's regenerated faceted set; other art is shared with Phaser.
@@ -57,6 +58,18 @@ const UPGRADE_ICONS: Record<string, string> = {
   'aura-tick-speed': UPGRADE_ART.auraTickSpeed
 };
 
+/** Placeholder companion portraits (inline SVG) until there's art: a bow over a skull, a stone face with glowing eyes. */
+const svg = (body: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`)}`;
+const COMPANION_ICONS: Record<CompanionKind, string> = {
+  skeletonArcher: svg('<path d="M14 8 Q44 32 14 56" fill="none" stroke="#8a5a32" stroke-width="5"/><line x1="14" y1="8" x2="14" y2="56" stroke="#e9dfc4" stroke-width="1.5"/><circle cx="38" cy="30" r="13" fill="#e9dfc4"/><rect x="31" y="39" width="14" height="8" fill="#b9ab8c"/><rect x="31" y="26" width="5" height="6" fill="#1c1420"/><rect x="40" y="26" width="5" height="6" fill="#1c1420"/><line x1="16" y1="32" x2="58" y2="32" stroke="#c9b89a" stroke-width="2.5"/><path d="M58 32 l-7 -4 v8z" fill="#cfd6dc"/>'),
+  waterFairy: svg('<ellipse cx="20" cy="26" rx="14" ry="9" fill="#9fe8ff" opacity=".75" transform="rotate(-30 20 26)"/><ellipse cx="44" cy="26" rx="14" ry="9" fill="#9fe8ff" opacity=".75" transform="rotate(30 44 26)"/><ellipse cx="32" cy="36" rx="7" ry="11" fill="#6fd3ff"/><circle cx="32" cy="22" r="7" fill="#e6f6ff"/><circle cx="32" cy="22" r="11" fill="none" stroke="#e6f6ff" stroke-opacity=".5" stroke-width="1.5"/><path d="M28 52 q4 6 8 0" stroke="#6fd3ff" stroke-width="2" fill="none"/>'),
+  stoneGolem: svg('<rect x="12" y="10" width="40" height="44" rx="6" fill="#8f8574"/><rect x="12" y="10" width="40" height="12" fill="#a99f8c"/><rect x="20" y="28" width="9" height="7" fill="#6dff9a"/><rect x="35" y="28" width="9" height="7" fill="#6dff9a"/><rect x="22" y="42" width="20" height="5" fill="#5a5246"/><path d="M12 22 l8 6 M52 20 l-6 9" stroke="#5a5246" stroke-width="2.5"/>')
+};
+
+export function companionIcon(kind: CompanionKind): string {
+  return COMPANION_ICONS[kind];
+}
+
 export function weaponIcon(id: WeaponConfig['id'] | 'banana'): string {
   return WEAPON_ICONS[id];
 }
@@ -67,3 +80,22 @@ export function upgradeIcon(id: string): string {
 
 /** The life-steal art doubles as the Aura Podre "healing cut" status icon (Phaser: GameHud.rottenHealIcon). */
 export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
+
+/** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
+export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'end' | 'continue';
+const MARKER_FACES: Record<MarkerKind, string> = {
+  // The Necromancer: a crowned skull with green fire in the sockets.
+  boss: svg('<path d="M14 20 l6 -10 l6 8 l6 -12 l6 12 l6 -8 l6 10 z" fill="#b8923a"/><circle cx="32" cy="36" r="16" fill="#d8cfb4"/><rect x="22" y="31" width="8" height="8" fill="#0c0a10"/><rect x="34" y="31" width="8" height="8" fill="#0c0a10"/><rect x="24" y="33" width="4" height="4" fill="#6dff9a"/><rect x="36" y="33" width="4" height="4" fill="#6dff9a"/><rect x="25" y="46" width="14" height="6" fill="#a89c80"/><rect x="27" y="46" width="2" height="4" fill="#f0e8d0"/><rect x="31" y="46" width="2" height="4" fill="#f0e8d0"/><rect x="35" y="46" width="2" height="4" fill="#f0e8d0"/>'),
+  // O Coveiro: a skull deep in a ragged hood, green pin-prick eyes.
+  gravedigger: svg('<path d="M32 6 L54 46 L10 46 Z" fill="#2a2a24"/><circle cx="32" cy="38" r="12" fill="#e2d8bd"/><rect x="25" y="34" width="6" height="6" fill="#120e16"/><rect x="33" y="34" width="6" height="6" fill="#120e16"/><rect x="27" y="36" width="2" height="2" fill="#6dff9a"/><rect x="35" y="36" width="2" height="2" fill="#6dff9a"/><rect x="27" y="46" width="10" height="5" fill="#b3a685"/>'),
+  // Guardião do Templo: a carved stone face, cyan runes, gold crest.
+  templeGuardian: svg('<path d="M32 4 L40 16 L24 16 Z" fill="#b8923a"/><rect x="14" y="16" width="36" height="38" rx="3" fill="#9a8f7c"/><rect x="14" y="16" width="36" height="8" fill="#6f675a"/><rect x="20" y="30" width="9" height="6" fill="#7fe3ff"/><rect x="35" y="30" width="9" height="6" fill="#7fe3ff"/><rect x="22" y="44" width="20" height="4" fill="#5a5246"/><rect x="30" y="38" width="4" height="4" fill="#7fe3ff"/>'),
+  // O Espírito do Lago: a face of water under a crown of water spikes.
+  lakeSpirit: svg('<path d="M18 22 l4 -12 l4 10 l6 -14 l6 14 l4 -10 l4 12 z" fill="#e6f6ff"/><ellipse cx="32" cy="36" rx="18" ry="18" fill="#8fdcff"/><ellipse cx="32" cy="44" rx="12" ry="7" fill="#4fb3e0"/><rect x="22" y="31" width="8" height="5" fill="#ffffff"/><rect x="34" y="31" width="8" height="5" fill="#ffffff"/><path d="M14 50 q9 -6 18 0 q9 6 18 0" stroke="#e6f6ff" stroke-width="3" fill="none"/>'),
+  end: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#9fb4ff" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#9fb4ff" opacity=".6"/><path d="M26 32 h12 m-5 -5 l5 5 l-5 5" stroke="#ffffff" stroke-width="3" fill="none"/>'),
+  continue: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#7dffa0" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#7dffa0" opacity=".6"/><path d="M32 24 v16 M24 32 h16" stroke="#ffffff" stroke-width="3"/>')
+};
+
+export function markerFace(kind: MarkerKind): string {
+  return MARKER_FACES[kind];
+}

@@ -6,6 +6,7 @@ import { CLIP_SAMPLE_RATE, humanoidClips, mirrorClip, smoothCurve } from './clip
 import { createEnemyModels } from './enemies';
 import { attachWeapons, createHeroModel } from './heroes';
 import { createBossModel } from './boss';
+import { createGravediggerModel, createLakeSpiritModel, createSkeletonArcherModel, createStoneGolemModel } from './zoneActors';
 import { box, part } from './parts';
 import { buildRiggedModel, humanoidBones } from './rig';
 import { weaponGeometry } from './weapons';
@@ -135,6 +136,24 @@ describe('boss model', () => {
       expect(clip.validate()).toBe(true);
       clip.tracks.forEach((track) => expect(bones.has(track.name.split('.')[0])).toBe(true));
     });
+  });
+});
+
+describe('zone actors', () => {
+  it.each([
+    ['gravedigger', createGravediggerModel],
+    ['stone golem', () => createStoneGolemModel()],
+    ['skeleton archer', createSkeletonArcherModel],
+    ['lake spirit', createLakeSpiritModel]
+  ] as const)('%s builds with every actor clip bound to bones it has', (_name, create) => {
+    const model = create();
+    const bones = new Set(Object.keys(model.bones));
+    expect(Object.keys(model.clips)).toHaveLength(15);
+    Object.values(model.clips).forEach((clip) => {
+      expect(clip.validate()).toBe(true);
+      clip.tracks.forEach((track) => expect(bones.has(track.name.split('.')[0])).toBe(true));
+    });
+    expect(model.height).toBeGreaterThan(1.5);
   });
 });
 

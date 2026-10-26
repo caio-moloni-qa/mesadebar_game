@@ -1,4 +1,4 @@
-import { ENEMY_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, MINI_BOSS_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
 import { CharacterConfig } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -109,6 +109,11 @@ export class PlayerState implements Body, UpgradeTarget {
     const effective = this.isRotten(now) ? amount * (1 - ROTTEN_AURA_CONFIG.healReduction) : amount;
     this.health = Math.min(this.maxHealth, this.health + effective);
     return amount - effective;
+  }
+
+  /** The water fairy's cleanse. */
+  clearSlows(): void {
+    this.slows.length = 0;
   }
 
   applySlow(percent: number, durationMs: number, now: number): void {
@@ -247,7 +252,7 @@ export class EnemyState implements Body {
   spawnedAt = -Infinity;
 
   activate(variantId: EnemyVariantId, x: number, y: number, maxHealth: number, now: number): void {
-    const base = ENEMY_VARIANTS[variantId];
+    const base = ALL_ENEMY_VARIANTS[variantId];
     this.variantId = variantId;
     this.phase = 'active';
     this.x = x;
@@ -259,11 +264,11 @@ export class EnemyState implements Body {
     this.reward = base.reward;
     this.currencyDrops = 'currencyDrops' in base ? base.currencyDrops : 1;
     this.isStatic = variantId === 'necromancerWraith';
-    this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'finalBoss';
+    this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'finalBoss' || variantId in MINI_BOSS_VARIANTS;
     this.hasRottenAura = variantId === 'superSkeleton' || variantId === 'finalBoss';
     this.rottenAuraSuppressed = false;
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
-    this.radius = variantId === 'finalBoss' ? 58 : BODY_RADIUS.enemy;
+    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 38 : variantId === 'gravedigger' ? 30 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
@@ -278,12 +283,12 @@ export class EnemyState implements Body {
 
   /** GameScene.isCommonEnemy — what the staff's execute is allowed to one-shot. */
   get isCommon(): boolean {
-    return this.variantId !== 'superSkeleton' && this.variantId !== 'finalBoss';
+    return this.variantId !== 'superSkeleton' && this.variantId !== 'finalBoss' && !(this.variantId in MINI_BOSS_VARIANTS);
   }
 
   /** GameScene.enemyRangePadding: the huge boss sprite is easier to reach than its center point suggests. */
   get rangePadding(): number {
-    return this.variantId === 'finalBoss' ? this.displaySize * 0.35 : 0;
+    return this.variantId === 'finalBoss' ? this.displaySize * 0.35 : this.variantId in MINI_BOSS_VARIANTS ? this.displaySize * 0.2 : 0;
   }
 
   /** Rotten Aura reach: half the display size, so it scales with the model. */
@@ -302,7 +307,11 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   necromancerWraith: 68,
   apparitionWraith: 68,
   superSkeleton: 92,
-  finalBoss: 390
+  finalBoss: 390,
+  gravedigger: 160,
+  templeGuardian: 190,
+  /** Grows to 230 as it drinks the lake (MiniBossSystem). */
+  lakeSpirit: 80
 };
 
 export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword';
