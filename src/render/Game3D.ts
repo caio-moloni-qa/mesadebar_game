@@ -30,6 +30,8 @@ import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
 import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, metaBonuses, rosterFor } from '../core/progress/Progress';
 import { HeroKitViews } from './views/HeroKitViews';
+import { PowerViews } from './views/PowerViews';
+import { PowerBanner } from './ui/PowerBanner';
 import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
 import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
@@ -100,6 +102,7 @@ export class Game3D {
   private readonly miniBossViews = new MiniBossViews();
   private readonly guardianIntro: GuardianIntro;
   private readonly tipDialog: TipDialog;
+  private readonly powerBanner: PowerBanner;
   private readonly companionViews = new CompanionViews();
   private readonly heroKitViews = new HeroKitViews();
   /** Sandbox: every hero playable, without touching the save. */
@@ -137,6 +140,7 @@ export class Game3D {
   private readonly pickupView = new PickupView(600);
   private readonly hazardView = new HazardView(80);
   private readonly particles = new ParticleView(2000);
+  private readonly powerViews = new PowerViews(this.particles);
   private readonly effects = new CombatEffects();
   private readonly sheetEffects: SheetEffects;
   private readonly keys = new Set<string>();
@@ -223,9 +227,10 @@ export class Game3D {
     this.choices = new ChoiceOverlay(container);
     this.tavernDialog = new TavernDialog(container, (hero) => this.menu.showCharacters(hero));
     this.companionBars = new CompanionBars(container);
-    this.scene.add(this.questBarrels.root, this.heroKitViews.root);
+    this.scene.add(this.questBarrels.root, this.heroKitViews.root, this.powerViews.root);
     this.chestRoll = new ChestRoll(container);
     this.tipDialog = new TipDialog(container);
+    this.powerBanner = new PowerBanner(container);
     // After a guardian's entrance: Sergio explains guardians the first time, otherwise play resumes.
     this.guardianIntro = new GuardianIntro(container, () => {
       if (this.progress.guardianTipSeen) this.session.revealing = false;
@@ -393,6 +398,8 @@ export class Game3D {
     this.companionViews.clear();
     this.miniBossEffects.clear();
     this.sheetEffects.clear();
+    this.powerViews.clear();
+    this.powerBanner.hide();
     if (this.merchantRoom) this.scene.remove(this.merchantRoom.root, this.merchantRoom.characters);
     this.floating.clear();
     this.chestRoll.stop();
@@ -690,6 +697,7 @@ export class Game3D {
       this.effects.burst(x, y, radius, 0xb26bff, 0.35, 0.5);
       this.particles.burst(point.x, point.z, 0xd8a8ff, 16, 2, 1.4);
     });
+    this.bindPowerEffects();
     events.on('hero-ability', ({ kind }) => {
       const text = { mead: 'Hidromel!', jackpot: 'Tudo ou Nada: escolha dupla!', sale: 'Liquidação: um item grátis na loja!', fate: 'Destino Selado', rain: 'Chuva de Flechas!' }[kind];
       const color = { mead: '#ffd25a', jackpot: '#8dffa8', sale: '#ffc65a', fate: '#d8a8ff', rain: '#9fe08a' }[kind];
@@ -731,6 +739,143 @@ export class Game3D {
   }
 
   /** First weapon in the right hand, second in the left. */
+  /** The heroes' power tiers: the announcement, then each power's burst (persistent pieces are PowerViews'). */
+  private bindPowerEffects(): void {
+    const { events } = this.session;
+    const at = (x: number, y: number) => simToWorld(x, y, 0, this.scratch);
+    events.on('power-unlocked', ({ tier, level, name, text }) => {
+      if (this.attract) return;
+      this.powerBanner.show(level, tier, name, text);
+      const { player } = this.session;
+      this.effects.pulse(player.x, player.y, 90, 0xffe29a, 0.6, 0.8);
+      this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffe29a, 24, 2, 2);
+    });
+    events.on('power-arc', ({ points }) => {
+      this.powerViews.arc(points);
+      const end = points[points.length - 1];
+      const point = at(end.x, end.y);
+      this.particles.emit(point.x, 1.1, point.z, 0xc8f4ff, 4, { spread: 2, rise: 2, gravity: 6, life: 0.25, size: 1 });
+    });
+    events.on('power-blast', ({ kind, x, y, radius }) => {
+      const point = at(x, y);
+      switch (kind) {
+        case 'storm':
+          this.powerViews.arc([{ x, y }], true);
+          this.effects.pulse(x, y, radius * 1.6, 0xc8f4ff, 0.3, 0.9);
+          this.particles.emit(point.x, 0.3, point.z, 0xe6faff, 14, { spread: 3, rise: 4, gravity: 10, life: 0.4, size: 1.2, jitter: 0.4 });
+          this.cameraRig.shake(0.08, 0.12);
+          break;
+        case 'warcry':
+          this.effects.pulse(x, y, radius, 0xff7a3a, 0.5, 0.9);
+          this.effects.burst(x, y, radius, 0xff4a2a, 0.4, 0.3);
+          this.particles.emit(point.x, 0.3, point.z, 0x9a8a70, 30, { spread: 8, rise: 2, gravity: 6, life: 0.6, size: 1.4, jitter: 1 });
+          this.floatAboveHero('GRITO DE GUERRA!', '#ff9a6a');
+          this.playerView.play('slam', 'R');
+          this.cameraRig.shake(0.3, 0.35);
+          break;
+        case 'holy':
+          this.sheetEffects.ring(x, y, radius, 0.6);
+          this.effects.pulse(x, y, radius, 0xfff2a0, 0.55, 0.8);
+          break;
+        case 'sanctuary':
+          this.effects.burst(x, y, radius, 0xfff6c0, 0.6, 0.5);
+          this.effects.pulse(x, y, radius, 0xffffff, 0.7, 1);
+          this.particles.emit(point.x, 0.4, point.z, 0xfff0a0, 50, { spread: 8, rise: 6, gravity: 4, life: 0.9, size: 1.4, jitter: 1.5 });
+          this.floatAboveHero('SANTUÁRIO!', '#fff0a0');
+          this.cameraRig.shake(0.25, 0.4);
+          break;
+        case 'meteor':
+          this.effects.burst(x, y, radius, 0xff7a2a, 0.5, 0.5);
+          this.effects.pulse(x, y, radius, 0xffd070, 0.45, 1);
+          this.bossEffects.scorch(x, y, radius * 0.8);
+          this.particles.emit(point.x, 0.3, point.z, 0xff8a2a, 40, { spread: 8, rise: 7, gravity: 14, life: 0.8, size: 1.6, jitter: 1 });
+          this.particles.emit(point.x, 0.3, point.z, 0x6b5a46, 20, { spread: 6, rise: 4, gravity: 14, life: 0.7, size: 1.3 });
+          this.cameraRig.shake(0.5, 0.45);
+          break;
+        case 'gold':
+          this.effects.burst(x, y, radius, 0xffc93a, 0.3, 0.5);
+          this.particles.burst(point.x, point.z, 0xffe066, 14, 1.4, 2.4);
+          break;
+        case 'gold-rain':
+          this.effects.pulse(x, y, radius, 0xffc93a, 0.5, 0.8);
+          for (let index = 0; index < 24; index += 1) {
+            const angle = Math.random() * Math.PI * 2;
+            const reach = Math.sqrt(Math.random()) * radius * WORLD_SCALE;
+            this.particles.emit(point.x + Math.cos(angle) * reach, 6, point.z + Math.sin(angle) * reach, 0xffd84a, 1, { spread: 0.1, rise: -16, gravity: 20, life: 0.35, size: 1.5 });
+          }
+          this.floatAt(x, y, 'CHUVA DE OURO!', '#ffd84a');
+          break;
+        case 'eclipse':
+          this.effects.burst(x, y, radius, 0x8a4dff, 0.5, 0.6);
+          this.effects.pulse(x, y, radius, 0xd8a8ff, 0.5, 1);
+          this.particles.emit(point.x, 2, point.z, 0xb26bff, 50, { spread: 9, rise: 4, gravity: 6, life: 0.8, size: 1.5, jitter: 1.5 });
+          this.cameraRig.shake(0.35, 0.4);
+          break;
+        case 'crate':
+          this.effects.burst(x, y, radius, 0xd8a25a, 0.35, 0.5);
+          this.particles.emit(point.x, 0.6, point.z, 0x9a6a3a, 20, { spread: 5, rise: 5, gravity: 16, life: 0.7, size: 1.4, jitter: 0.5 });
+          this.particles.burst(point.x, point.z, 0xffd84a, 12, 1.4, 2.4);
+          this.cameraRig.shake(0.12, 0.15);
+          break;
+        case 'hawk':
+          this.particles.emit(point.x, 1, point.z, 0xc8ffd8, 12, { spread: 3, rise: 3, gravity: 8, life: 0.4, size: 1.1 });
+          break;
+        case 'roots':
+          this.effects.pulse(x, y, radius, 0x6fdc5a, 0.6, 0.7);
+          for (let index = 0; index < 14; index += 1) {
+            const angle = Math.random() * Math.PI * 2;
+            const reach = Math.sqrt(Math.random()) * radius * WORLD_SCALE;
+            this.particles.emit(point.x + Math.cos(angle) * reach, 0.1, point.z + Math.sin(angle) * reach, 0x4fa83a, 3, { spread: 0.2, rise: 3, gravity: 4, life: 0.7, size: 1.2 });
+          }
+          break;
+        case 'crack':
+          this.effects.pulse(x, y, radius, 0x6a5a3a, 0.5, 0.7);
+          this.particles.emit(point.x, 0.1, point.z, 0x3a3022, 8, { spread: 2.5, rise: 1, gravity: 8, life: 0.5, size: 1 });
+          break;
+        case 'anvil':
+          this.effects.pulse(x, y, radius, 0xffd070, 0.4, 0.9);
+          this.effects.burst(x, y, radius, 0xd9c7a0, 0.35, 0.4);
+          this.particles.emit(point.x, 0.3, point.z, 0xffc070, 16, { spread: 5, rise: 5, gravity: 16, life: 0.5, size: 1.1, jitter: 0.5 });
+          this.cameraRig.shake(0.2, 0.2);
+          break;
+        case 'peel-slip':
+          this.particles.burst(point.x, point.z, 0xf2d33b, 8, 0.4, 2);
+          break;
+      }
+    });
+    events.on('power-cast', ({ kind, x, y }) => {
+      switch (kind) {
+        case 'fury':
+          this.floatAboveHero('FÚRIA IMORTAL!', '#ff5a3a');
+          this.effects.pulse(x, y, 160, 0xff3a2a, 0.6, 1);
+          this.cameraRig.shake(0.35, 0.5);
+          break;
+        case 'fury-end': this.floatAboveHero('A fúria passa', '#ff9a8a'); break;
+        case 'hurricane': this.floatAboveHero('Furacão Arcano!', '#bfe9ff'); this.playerView.play('cast', this.handOf('staff')); break;
+        case 'monkey': this.floatAboveHero('Macaco Furioso!', '#f2d33b'); this.playerView.play('swing', 'R'); break;
+        case 'meteor': this.powerViews.meteor(x, y); this.playerView.play('slam', this.handOf('hammer')); break;
+        case 'crate': this.playerView.play('hurl', this.handOf('pack')); break;
+        case 'sale':
+          this.floatAboveHero('LIQUIDAÇÃO TOTAL!', '#ffc65a');
+          this.playerView.play('hurl', this.handOf('pack'));
+          break;
+        case 'eclipse': this.floatAt(x, y, 'Eclipse', '#d8a8ff'); break;
+        case 'foresight':
+          this.floatAboveHero('PREVISTO!', '#d8a8ff');
+          this.effects.pulse(x, y, 50, 0xd8a8ff, 0.4, 0.9);
+          break;
+        case 'foresight-ready': this.effects.pulse(x, y, 40, 0xb26bff, 0.35, 0.5); break;
+      }
+    });
+    events.on('power-item', ({ kind, x, y }) => {
+      const point = at(x, y);
+      this.particles.emit(point.x, 5, point.z, kind === 'pan' ? 0x9a9aa4 : kind === 'bottle' ? 0x6ad46a : 0xff6a8a, 3, { spread: 0.2, rise: -14, gravity: 20, life: 0.25, size: 1.4 });
+      if (kind === 'pan') this.effects.pulse(x, y, 55, 0xd8d8e0, 0.25, 0.7);
+      if (kind === 'bottle') this.effects.burst(x, y, 65, 0x6ad46a, 0.3, 0.45);
+      if (kind === 'potion') this.particles.burst(point.x, point.z, 0xff6a8a, 8, 1.2, 1.4);
+    });
+  }
+
   private handOf(weaponId: WeaponConfig['id']): Hand {
     return this.session.weapons.weapons.findIndex((weapon) => weapon.config.id === weaponId) === 1 ? 'L' : 'R';
   }
@@ -903,6 +1048,7 @@ export class Game3D {
     this.bossEffects.update(this.session, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen && !this.guardianIntro.filming ? 0 : frameMs / 1000);
     this.heroKitViews.update(this.session, alpha, simNow);
+    this.powerViews.update(this.session, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.companionViews.update(this.session.companions.companions, this.session.companions.skeletons, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossEffects.update(this.session.miniBosses, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
@@ -910,7 +1056,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;

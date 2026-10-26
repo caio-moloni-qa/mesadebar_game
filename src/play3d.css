@@ -520,3 +520,17 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 @media (max-width: 520px) { .character-step .hero-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .hero-confirm:disabled, .preview-attack:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(1); }
 .tavern-area { margin: 2px 0 0; color: var(--muted); font-size: 13px; } .tavern-area b { color: var(--gold); }
+
+/* A power tier switching on mid-run (PowerBanner). */
+.power-banner { position: absolute; top: 96px; left: 50%; z-index: 6; width: min(460px, calc(100% - 32px)); padding: 12px 20px 14px; transform: translateX(-50%); border: 1px solid #dec28a70; border-radius: 6px; background: linear-gradient(180deg, #1a2627f2, #101b1df2); box-shadow: 0 8px 30px #0009, inset 0 0 24px #dec28a14; text-align: center; pointer-events: none; }
+.power-banner.showing { animation: power-banner 3.6s ease forwards; }
+.power-banner-eyebrow { display: block; color: var(--gold); font: 600 10px/1.5 var(--sans); letter-spacing: .23em; text-transform: uppercase; }
+.power-banner strong { display: block; margin: 2px 0 4px; color: var(--cream); font: 700 24px/1.2 var(--display); text-shadow: 0 0 18px #dec28a66; }
+.power-banner p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+@keyframes power-banner { 0% { opacity: 0; transform: translate(-50%, -14px) scale(.96); } 9% { opacity: 1; transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .power-banner.showing { animation: none; } }
+@media (max-width: 520px) { .power-banner { top: 84px; } .power-banner strong { font-size: 20px; } }
+.hero-powers { display: grid; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
+.hero-powers li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: baseline; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.hero-powers b { grid-row: span 2; min-width: 42px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--gold); font: 600 11px/1.5 var(--sans); text-align: center; }
+.hero-powers strong { color: var(--cream); font-weight: 600; }

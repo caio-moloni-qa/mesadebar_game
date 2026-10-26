@@ -1,3 +1,4 @@
+import { POWER_TIERS, POWER_TIER_LEVELS } from '../config/powerTiers';
 import { weaponIcon } from './ui/icons';
 import { MASTERY_REWARDS, MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, SkinId, masteryFrame, masteryLevel, masteryProgress, masteryTitle, unlockSteps, unlockedSkins } from '../core/progress/Progress';
 import { SKINS, SKIN_ORDER } from './models/skins';
@@ -245,7 +246,24 @@ export class StartMenu {
     choose.type = 'button'; choose.className = 'ui-button primary hero-confirm';
     choose.textContent = `Escolher ${character.name}  →`;
     choose.addEventListener('click', () => this.navigate('weapons'));
-    details.append(advantages, signature, choose);
+    // The powers the hero grows into during a run.
+    const powersHeading = document.createElement('p');
+    powersHeading.className = 'hero-abilities-heading';
+    powersHeading.textContent = 'PODERES NA RUN';
+    const powers = document.createElement('ol');
+    powers.className = 'hero-powers';
+    POWER_TIERS[character.id].forEach((power, index) => {
+      const item = document.createElement('li');
+      const level = document.createElement('b');
+      level.textContent = `Nv ${POWER_TIER_LEVELS[index]}`;
+      const name = document.createElement('strong');
+      name.textContent = power.name;
+      const text = document.createElement('span');
+      text.textContent = power.text;
+      item.append(level, name, text);
+      powers.append(item);
+    });
+    details.append(advantages, powersHeading, powers, signature, choose);
     details.insertBefore(this.masteryPanel(character), details.querySelector('.hero-abilities-heading'));
     return details;
   }

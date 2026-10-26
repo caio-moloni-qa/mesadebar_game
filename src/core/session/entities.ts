@@ -251,6 +251,19 @@ export class EnemyState implements Body {
   slipUntil = 0;
   /** Zora's Destino Selado: double damage taken, and a burst on death, until this sim time. */
   markedUntil = 0;
+  // The heroes' power tiers (core/systems/PowerTierSystem): a bleed, a timed slow, held in place (roots), lifted
+  // into the air (no moving, no hitting), fleeing the hero, pulled toward a point, turned to gold on death.
+  bleedUntil = 0;
+  bleedPerSecond = 0;
+  slowUntil = 0;
+  slowPercent = 0;
+  heldUntil = 0;
+  liftedUntil = 0;
+  fleeUntil = 0;
+  pullUntil = 0;
+  pullX = 0;
+  pullY = 0;
+  gilded = false;
   nextSoulAt = 0;
   /** Sim time it appeared (the renderer plays a rise-from-the-ground). */
   spawnedAt = -Infinity;
@@ -278,6 +291,9 @@ export class EnemyState implements Body {
     this.slowStackPercent = 0;
     this.slipUntil = 0;
     this.markedUntil = 0;
+    this.bleedUntil = this.bleedPerSecond = this.slowUntil = this.slowPercent = 0;
+    this.heldUntil = this.liftedUntil = this.fleeUntil = this.pullUntil = 0;
+    this.gilded = false;
     this.nextSoulAt = now + ('soulCooldownMs' in base ? base.soulCooldownMs : 0);
     this.spawnedAt = now;
   }
@@ -301,8 +317,16 @@ export class EnemyState implements Body {
     return this.displaySize / 2;
   }
 
-  effectiveMovementSpeed(): number {
-    return this.movementSpeed * (1 - this.slowStackPercent);
+  /** The banana stack, then any timed slow still running at `now`. */
+  effectiveMovementSpeed(now = 0): number {
+    const timed = now < this.slowUntil ? this.slowPercent : 0;
+    return this.movementSpeed * (1 - this.slowStackPercent) * (1 - timed);
+  }
+
+  /** A timed slow; a stronger or longer one replaces it. */
+  applySlow(percent: number, ms: number, now: number): void {
+    if (now >= this.slowUntil || percent >= this.slowPercent) this.slowPercent = percent;
+    this.slowUntil = Math.max(this.slowUntil, now + ms);
   }
 }
 
@@ -359,6 +383,12 @@ export class ProjectileState implements Body {
   launchAngle = 0;
   /** Visual spin, advanced by the sim so it stays deterministic and freezes with pause. */
   spin = 0;
+  /** Grimbo's Moeda de Ouro: this coin bursts on its first hit. */
+  golden = false;
+  /** Fabri's Macaco Furioso: circling the hero until this sim time (0 = flying normally). */
+  orbitUntil = 0;
+  orbitAngle = 0;
+  orbitHitsResetAt = 0;
   readonly outboundHits = new Set<EnemyState>();
   readonly returnHits = new Set<EnemyState>();
 
@@ -409,6 +439,8 @@ export class PickupState implements Body {
   radius: number = BODY_RADIUS.gem;
   kind: PickupKind = 'gem';
   value = 0;
+  /** Flies to the hero from anywhere (Grimbo's Lucro Rápido). */
+  magnet = false;
 }
 
 /** Fabri's banana peel hazard. */
