@@ -4,6 +4,9 @@ import { npcPortrait } from './icons';
 
 export interface SergioShopActions {
   save(): SaveData;
+  /** Sergio has joined the roster: offer to play as him. */
+  canPlaySergio(): boolean;
+  playSergio(): void;
   buy(id: MetaUpgradeId): void;
   exportSave(): void;
   importSave(): void;
@@ -121,7 +124,16 @@ export class SergioShop {
     importButton.className = 'link-button';
     importButton.textContent = 'Importar progresso';
     importButton.addEventListener('click', () => this.actions.importSave());
-    footer.append(close, exportButton, importButton);
+    footer.append(close);
+    if (this.actions.canPlaySergio()) {
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'ui-button';
+      play.textContent = 'Jogar com o Sergio';
+      play.addEventListener('click', () => this.actions.playSergio());
+      footer.append(play);
+    }
+    footer.append(exportButton, importButton);
     body.append(name, said, balance, list, footer);
     this.root.append(portrait, body);
   }

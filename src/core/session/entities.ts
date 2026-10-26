@@ -20,7 +20,7 @@ export function snapPrevious(body: Body): void {
 }
 
 /** Collision radii in game units, matching the Arcade bodies they replace (display-space radii). */
-export const BODY_RADIUS = { player: 18, enemy: 18, bolt: 7, boomerang: 17, thrownSword: 20, soul: 13, gem: 8, peel: 19, chest: 21, potion: 14 } as const;
+export const BODY_RADIUS = { player: 18, enemy: 18, bolt: 7, boomerang: 17, thrownSword: 20, soul: 13, gem: 8, peel: 19, chest: 21, potion: 14, arrow: 9, coin: 10, pan: 14, bottle: 12, flask: 12 } as const;
 
 /** Relíquia Divina's banked "risk/reward" bonus on the next hit taken is capped (GameScene AURA_DAMAGE_TAKEN_BONUS_CAP). */
 export const AURA_DAMAGE_TAKEN_BONUS_CAP = 15;
@@ -249,6 +249,8 @@ export class EnemyState implements Body {
   slowStackPercent = 0;
   /** Fabri's banana peel: no movement until this time. */
   slipUntil = 0;
+  /** Zora's Destino Selado: double damage taken, and a burst on death, until this sim time. */
+  markedUntil = 0;
   nextSoulAt = 0;
   /** Sim time it appeared (the renderer plays a rise-from-the-ground). */
   spawnedAt = -Infinity;
@@ -275,6 +277,7 @@ export class EnemyState implements Body {
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
     this.slipUntil = 0;
+    this.markedUntil = 0;
     this.nextSoulAt = now + ('soulCooldownMs' in base ? base.soulCooldownMs : 0);
     this.spawnedAt = now;
   }
@@ -316,7 +319,13 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   lakeSpirit: 80
 };
 
-export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword';
+export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword' | 'arrow' | 'coin' | 'pan' | 'bottle' | 'potion';
+
+/** Kinds that fly out and come back to the hero (the boomerang family and the Espada's thrown swords); every
+ *  other kind flies straight and is spent on its last hit. */
+export function isReturningKind(kind: ProjectileKind): boolean {
+  return kind === 'boomerang' || kind === 'banana' || kind === 'thrownSword';
+}
 
 /** One pooled player projectile — covers the Cajado bolt, the (banana) boomerang and the Espada's thrown swords,
  *  with entities/Projectile's out-and-back, per-leg hit sets, ricochet and execute behaviour. */
@@ -340,6 +349,8 @@ export class ProjectileState implements Body {
   expiresAt = 0;
   remainingPierces = 0;
   remainingRicochets = 0;
+  /** The weapon's own guaranteed ricochets (the Moedas'), spent before the upgrade's chance-based ones. */
+  innateRicochets = 0;
   executeToken = 0;
   criticalChance = 0;
   sizeMultiplier = 1;
@@ -352,7 +363,7 @@ export class ProjectileState implements Body {
   readonly returnHits = new Set<EnemyState>();
 
   get isReturning(): boolean {
-    return this.kind !== 'bolt' && this.returning;
+    return isReturningKind(this.kind) && this.returning;
   }
 
   /** Each enemy can be hit once per leg (outbound / return) — false if this leg already struck it. */

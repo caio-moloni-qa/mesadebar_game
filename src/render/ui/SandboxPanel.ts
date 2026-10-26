@@ -66,6 +66,8 @@ export interface SandboxHost {
   setFogVisible(visible: boolean): void;
   /** "Sandbox: <upgrade>!" over the hero. */
   announce(text: string): void;
+  /** Every hero playable (the tavern regulars and Sergio), without touching the save. */
+  unlockAllHeroes(): void;
 }
 
 interface Control {
@@ -164,6 +166,7 @@ export class SandboxPanel {
       toggle('Spawn variantes', 'variants', (value) => { run().variantSpawnEnabled = value; }),
       toggle('Mercador', 'merchant', (value) => { run().merchant.enabled = value; }),
       { label: () => 'Abrir portal do mercador', run: () => run().openMerchantPortal() },
+      { label: () => 'Liberar todos os heróis', run: () => this.host.unlockAllHeroes() },
       { label: () => 'Concluir missões ativas', run: () => run().quests.completeActive() },
       toggle('Invencível', 'invincible', (value) => { run().player.invincible = value; }),
       { label: () => '+500 Buffer de Dano', run: () => { run().player.damageBuffer += 500; } },

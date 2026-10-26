@@ -5,7 +5,7 @@ import { EventBus } from '../EventBus';
 import { Pool } from '../Pool';
 import { SimClock } from '../SimClock';
 import { Rng, Vec2, degToRad, pickOne } from '../math';
-import { BODY_RADIUS, EnemyState, PlayerState, ProjectileKind, ProjectileState, snapPrevious } from '../session/entities';
+import { BODY_RADIUS, EnemyState, PlayerState, ProjectileKind, ProjectileState, isReturningKind, snapPrevious } from '../session/entities';
 
 /** Same tuning as GameScene (see its constant block for the design notes behind each number). */
 export const WEAPON_TUNING = {
@@ -28,7 +28,25 @@ export const WEAPON_TUNING = {
   projectileSpreadDegrees: 30,
   boomerangCatchRadius: 26,
   thrownSwordCatchRadius: 30,
-  ricochetMinLifetimeMs: 650
+  ricochetMinLifetimeMs: 650,
+  /** Martelo de Forja: the shockwave lands this far along the swing, this wide, for this share of the damage. */
+  hammerQuakeReach: 0.75,
+  hammerQuakeRadius: 70,
+  hammerQuakeDamage: 0.5,
+  /** Mochila de Tralhas: the pan knocks down, the bottle bursts, the potion heals the thrower (share of max). */
+  panStunMs: 900,
+  bottleBurstRadius: 65,
+  bottleBurstDamage: 0.8,
+  potionHeal: 0.03,
+  /** Bola de Cristal: orbs (2, +1 every 3 upgrades, up to 5) circle at the weapon's range, each hitting an enemy
+   *  at most once per the weapon's cooldown. */
+  crystalOrbs: 2,
+  crystalMaxOrbs: 5,
+  crystalOrbRadius: 22,
+  crystalSpin: 2.6,
+  /** Lyra's Olho de Falcão: extra crit chance on targets this far away. */
+  falconEyeDistance: 300,
+  falconEyeCrit: 0.25
 } as const;
 
 /** One weapon in the loadout. `upgradeCount` is shared progress: every upgrade picked bumps every owned weapon. */
@@ -45,11 +63,14 @@ export interface ActiveWeapon {
   auraRampPercent: number;
   auraTotalDamageDealt: number;
   auraRampSyncedAt: number;
+  /** Bola de Cristal: where the orbs are in their circle, and when each enemy was last hit by one. */
+  orbAngle: number;
+  orbHits: Map<EnemyState, number>;
 }
 
 export function createActiveWeapon(config: WeaponConfig): ActiveWeapon {
   // -Infinity: the first attack is available immediately (Phaser's scene clock is already far from 0 at run start).
-  return { config, upgradeCount: 0, lastAttackAt: -Infinity, lastWhirlwindAt: -Infinity, thrownSwordReadyAt: -Infinity, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0, auraRampPercent: 0, auraTotalDamageDealt: 0, auraRampSyncedAt: -Infinity };
+  return { config, upgradeCount: 0, lastAttackAt: -Infinity, lastWhirlwindAt: -Infinity, thrownSwordReadyAt: -Infinity, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0, auraRampPercent: 0, auraTotalDamageDealt: 0, auraRampSyncedAt: -Infinity, orbAngle: 0, orbHits: new Map() };
 }
 
 export interface WeaponEvents extends Record<string, unknown> {
@@ -60,6 +81,9 @@ export interface WeaponEvents extends Record<string, unknown> {
   'projectile-fired': { x: number; y: number; dirX: number; dirY: number; kind: ProjectileKind; weaponId: WeaponConfig['id'] };
   /** A projectile hit a tall obstacle (wall, tree, pillar...) - bolts vanish, boomerangs/thrown swords turn back. */
   'projectile-blocked': { x: number; y: number; kind: ProjectileKind };
+  'hammer-quake': { x: number; y: number; radius: number };
+  'bottle-burst': { x: number; y: number; radius: number };
+  'potion-heal': { x: number; y: number };
 }
 
 /** What WeaponSystem needs from the session — kept narrow (same Host pattern as the other systems). */
@@ -88,6 +112,9 @@ export interface WeaponHost {
    *  array on hot paths; never share one `out` between nested calls. */
   enemiesOverlapping(x: number, y: number, radius: number, out?: EnemyState[]): EnemyState[];
   damageEnemy(enemy: EnemyState, amount: number, weaponId: WeaponConfig['id'], critical?: boolean): void;
+  /** Knocks an enemy down for `ms` (bosses keep their footing). */
+  stunEnemy(enemy: EnemyState, ms: number): void;
+  healPlayer(amount: number): void;
   /** Fabri's banana hit side effects (slow stack + chance to drop a peel). */
   onBananaHit(enemy: EnemyState): void;
 }
@@ -125,7 +152,7 @@ export class WeaponSystem {
   }
 
   update(deltaMs: number): void {
-    this.weapons.forEach((weapon) => this.attackWithWeapon(weapon));
+    this.weapons.forEach((weapon) => this.attackWithWeapon(weapon, deltaMs));
     this.weapons.filter((weapon) => weapon.config.type === 'cone').forEach((weapon) => this.updateWhirlwind(weapon));
     this.updateThrownSwordVolley();
     this.updateProjectiles(deltaMs);
@@ -139,10 +166,14 @@ export class WeaponSystem {
     return weapon.config.range + (weapon.config.type === 'cone' ? this.host.player.meleeRangeBonus : 0);
   }
 
-  private attackWithWeapon(weapon: ActiveWeapon): void {
+  private attackWithWeapon(weapon: ActiveWeapon, deltaMs: number): void {
     const { player, clock } = this.host;
     const now = clock.now;
     const attackSpeed = player.effectiveAttackSpeedMultiplier();
+    if (weapon.config.id === 'crystal') {
+      this.updateCrystal(weapon, deltaMs, attackSpeed);
+      return;
+    }
     if (weapon.config.type === 'aura') {
       const cooldown = Math.max(200, this.auraStats(weapon).cooldown - player.auraTickSpeedBonusMs);
       if (now < weapon.lastAttackAt + cooldown / attackSpeed) return;
@@ -165,11 +196,9 @@ export class WeaponSystem {
     }
     const baseAngle = Math.atan2(enemy.y - player.y, enemy.x - player.x);
     const executeToken = this.staffExecuteTokenForAttack(weapon);
-    const isBoomerang = weapon.config.type === 'boomerang';
-    const kind: ProjectileKind = isBoomerang ? (this.isBananaTransformActive(weapon) ? 'banana' : 'boomerang') : 'bolt';
     let launched = false;
     projectileAngles(baseAngle, 1 + player.projectileExtraCount).forEach((angle) => {
-      launched = this.launchProjectile(weapon, angle, kind, executeToken) || launched;
+      launched = this.launchProjectile(weapon, angle, this.projectileKind(weapon), executeToken) || launched;
     });
     if (launched) weapon.lastAttackAt = now;
   }
@@ -189,7 +218,49 @@ export class WeaponSystem {
     hits.forEach((enemy) => this.host.damageEnemy(enemy, weapon.config.baseDamage * player.damageMultiplier, weapon.config.id));
     this.host.events.emit('melee-swing', { x: player.x, y: player.y, dirX: direction.x, dirY: direction.y, range, coneAngle: weapon.config.coneAngle ?? 90, weaponId: weapon.config.id });
     if (weapon.config.id === 'whip' && hits.length > 0) this.applyWhipChainAndBuff(weapon, hits);
+    if (weapon.config.id === 'hammer') this.hammerQuake(weapon, direction, range, hits);
     return hits;
+  }
+
+  /** Martelo de Forja: the blow lands with a shockwave a little ahead, hurting what the cone missed. */
+  private hammerQuake(weapon: ActiveWeapon, direction: Vec2, range: number, hits: EnemyState[]): void {
+    const { player } = this.host;
+    const T = WEAPON_TUNING;
+    const x = player.x + direction.x * range * T.hammerQuakeReach;
+    const y = player.y + direction.y * range * T.hammerQuakeReach;
+    const damage = weapon.config.baseDamage * player.damageMultiplier * T.hammerQuakeDamage;
+    this.host.enemiesWithin({ x, y }, T.hammerQuakeRadius).filter((enemy) => !hits.includes(enemy)).forEach((enemy) => this.host.damageEnemy(enemy, damage, weapon.config.id));
+    this.host.events.emit('hammer-quake', { x, y, radius: T.hammerQuakeRadius });
+  }
+
+  // ── Bola de Cristal ────────────────────────────────────────────────────────────────────────────────────────
+
+  /** Where each crystal orb is right now (the renderer draws them; the orbit uses the aura family's upgrades). */
+  crystalOrbs(weapon: ActiveWeapon): Vec2[] {
+    const { player } = this.host;
+    const T = WEAPON_TUNING;
+    const count = Math.min(T.crystalMaxOrbs, T.crystalOrbs + Math.floor(weapon.upgradeCount / 3));
+    const radius = weapon.config.range * (1 + player.auraRadiusBonusPercent);
+    return Array.from({ length: count }, (_value, index) => {
+      const angle = weapon.orbAngle + (index / count) * Math.PI * 2;
+      return { x: player.x + Math.cos(angle) * radius, y: player.y + Math.sin(angle) * radius };
+    });
+  }
+
+  private updateCrystal(weapon: ActiveWeapon, deltaMs: number, attackSpeed: number): void {
+    const { player, clock } = this.host;
+    const T = WEAPON_TUNING;
+    weapon.orbAngle = (weapon.orbAngle + (deltaMs / 1000) * T.crystalSpin * attackSpeed) % (Math.PI * 2);
+    const interval = Math.max(200, weapon.config.cooldown - player.auraTickSpeedBonusMs);
+    const damage = (weapon.config.baseDamage + player.auraDamageBonus) * player.damageMultiplier;
+    if (weapon.orbHits.size > 400) weapon.orbHits.clear();
+    this.crystalOrbs(weapon).forEach((orb) => {
+      this.host.enemiesOverlapping(orb.x, orb.y, T.crystalOrbRadius).forEach((enemy) => {
+        if (clock.now - (weapon.orbHits.get(enemy) ?? -Infinity) < interval) return;
+        weapon.orbHits.set(enemy, clock.now);
+        this.host.damageEnemy(enemy, damage, weapon.config.id);
+      });
+    });
   }
 
   /** Each hit chains to one more nearby enemy (which chains onward too) up to the target cap; enough connections
@@ -291,6 +362,18 @@ export class WeaponSystem {
 
   // ── Projectiles (Cajado / Bumerangue) ──────────────────────────────────────────────────────────────────────
 
+  /** What a weapon throws: the boomerang (or Fabri's banana), the Cajado's bolt, the Arco's arrow, the Moedas' coin,
+   *  or whatever the Mochila pulls out this time. */
+  private projectileKind(weapon: ActiveWeapon): ProjectileKind {
+    switch (weapon.config.id) {
+      case 'boomerang': return this.isBananaTransformActive(weapon) ? 'banana' : 'boomerang';
+      case 'bow': return 'arrow';
+      case 'coins': return 'coin';
+      case 'pack': return pickOne(this.host.rng, ['pan', 'bottle', 'potion'] as const);
+      default: return 'bolt';
+    }
+  }
+
   /** Fabri's transform: same "upgrades + affinity" gate as every other weapon exclusive. */
   isBananaTransformActive(weapon: ActiveWeapon): boolean {
     const transform = CHARACTERS[this.host.characterId].boomerangBananaTransform;
@@ -318,13 +401,15 @@ export class WeaponSystem {
     const speed = weapon.config.projectileSpeed ?? WEAPON_CONFIG.projectileSpeed;
     resetProjectile(projectile, kind, weapon.config.id, player.x, player.y, speed, weapon.config.range);
     projectile.sizeMultiplier = 1 + player.projectileSizeBonus;
-    projectile.radius = (kind === 'bolt' ? BODY_RADIUS.bolt : BODY_RADIUS.boomerang) * projectile.sizeMultiplier;
+    const radius = kind === 'banana' ? BODY_RADIUS.boomerang : kind === 'potion' ? BODY_RADIUS.flask : BODY_RADIUS[kind];
+    projectile.radius = radius * projectile.sizeMultiplier;
     projectile.damage = weapon.config.baseDamage * player.damageMultiplier;
     projectile.expiresAt = clock.now + (weapon.config.projectileLifetime ?? WEAPON_CONFIG.lifetimeMs);
-    projectile.remainingPierces = WEAPON_CONFIG.pierces;
+    projectile.remainingPierces = weapon.config.pierces ?? WEAPON_CONFIG.pierces;
     projectile.remainingRicochets = player.projectileRicochetMax;
+    projectile.innateRicochets = weapon.config.ricochets ?? 0;
     projectile.executeToken = executeToken;
-    projectile.criticalChance = kind !== 'bolt' && this.exclusiveUnlocked(weapon) ? 0.15 + weapon.upgradeCount * 0.025 : 0;
+    projectile.criticalChance = isReturningKind(kind) && this.exclusiveUnlocked(weapon) ? 0.15 + weapon.upgradeCount * 0.025 : 0;
     projectile.aimAt(angle);
     this.host.events.emit('projectile-fired', { x: projectile.x, y: projectile.y, dirX: Math.cos(angle), dirY: Math.sin(angle), kind, weaponId: weapon.config.id });
     return true;
@@ -334,7 +419,7 @@ export class WeaponSystem {
     const now = this.host.clock.now;
     const spent: ProjectileState[] = [];
     this.host.projectiles.forEachActive((projectile) => {
-      if (projectile.kind !== 'bolt') {
+      if (isReturningKind(projectile.kind)) {
         if (!this.steerReturning(projectile)) { spent.push(projectile); return; }
         projectile.spin += (projectile.returning ? -1 : 1) * (projectile.kind === 'thrownSword' ? 0.28 : 0.2) * (deltaMs / (1000 / 60));
       }
@@ -345,7 +430,7 @@ export class WeaponSystem {
         this.host.events.emit('projectile-blocked', { x: projectile.x, y: projectile.y, kind: projectile.kind });
         // A bolt is spent on the wall; boomerangs and thrown swords bounce back to the hero instead - unless
         // they're already coming back, in which case they would only grind against it.
-        if (projectile.kind === 'bolt' || projectile.returning) { spent.push(projectile); return; }
+        if (!isReturningKind(projectile.kind) || projectile.returning) { spent.push(projectile); return; }
         projectile.returning = true;
         projectile.aimAt(Math.atan2(this.host.player.y - projectile.y, this.host.player.x - projectile.x));
       }
@@ -383,13 +468,28 @@ export class WeaponSystem {
     const { amount, critical } = this.projectileDamage(projectile, enemy);
     this.host.damageEnemy(enemy, amount, projectile.weaponId, critical);
     if (projectile.kind === 'banana') this.host.onBananaHit(enemy);
+    this.packEffect(projectile, enemy);
     this.triggerStaffExplosion(projectile, enemy);
     if (this.tryRicochet(projectile, enemy)) return false;
-    if (projectile.kind === 'bolt') {
+    if (!isReturningKind(projectile.kind)) {
       if (projectile.remainingPierces <= 0) return true;
       projectile.remainingPierces -= 1;
     }
     return false;
+  }
+
+  /** Mochila de Tralhas: the pan knocks the target down, the bottle bursts on it, the potion heals the thrower. */
+  private packEffect(projectile: ProjectileState, enemy: EnemyState): void {
+    const T = WEAPON_TUNING;
+    if (projectile.kind === 'pan') this.host.stunEnemy(enemy, T.panStunMs);
+    if (projectile.kind === 'bottle') {
+      this.host.enemiesWithin(enemy, T.bottleBurstRadius).filter((other) => other !== enemy).forEach((other) => this.host.damageEnemy(other, projectile.damage * T.bottleBurstDamage, projectile.weaponId));
+      this.host.events.emit('bottle-burst', { x: enemy.x, y: enemy.y, radius: T.bottleBurstRadius });
+    }
+    if (projectile.kind === 'potion') {
+      this.host.healPlayer(this.host.player.maxHealth * T.potionHeal);
+      this.host.events.emit('potion-heal', { x: enemy.x, y: enemy.y });
+    }
   }
 
   private projectileDamage(projectile: ProjectileState, enemy: EnemyState): { amount: number; critical: boolean } {
@@ -397,7 +497,11 @@ export class WeaponSystem {
       this.consumedExecuteTokens.add(projectile.executeToken);
       return { amount: enemy.health, critical: false };
     }
-    if (projectile.criticalChance > 0 && this.host.rng() < projectile.criticalChance) return { amount: projectile.damage * 2, critical: true };
+    // Lyra's Olho de Falcão: far targets are easier to hit where it hurts.
+    const { player } = this.host;
+    const falconEye = this.host.characterId === 'lyra' && Math.hypot(enemy.x - player.x, enemy.y - player.y) > WEAPON_TUNING.falconEyeDistance ? WEAPON_TUNING.falconEyeCrit : 0;
+    const criticalChance = projectile.criticalChance + falconEye;
+    if (criticalChance > 0 && this.host.rng() < criticalChance) return { amount: projectile.damage * 2, critical: true };
     return { amount: projectile.damage, critical: false };
   }
 
@@ -416,13 +520,16 @@ export class WeaponSystem {
 
   private tryRicochet(projectile: ProjectileState, hitEnemy: EnemyState): boolean {
     if (projectile.isReturning) return false;
-    if (projectile.remainingRicochets <= 0 || this.host.rng() >= this.host.player.projectileRicochetChance) return false;
+    // The Moedas' own ricochets always jump; the Rebote Arcano upgrade's are a chance.
+    const innate = projectile.innateRicochets > 0;
+    if (!innate && (projectile.remainingRicochets <= 0 || this.host.rng() >= this.host.player.projectileRicochetChance)) return false;
     const target = this.host.nearestEnemy(projectile, projectile.range, (enemy) => enemy === hitEnemy || projectile.hasHit(enemy));
     if (!target) return false;
-    projectile.remainingRicochets -= 1;
+    if (innate) projectile.innateRicochets -= 1;
+    else projectile.remainingRicochets -= 1;
     projectile.returning = false;
     // Boomerangs keep their original launch point so the return leg still measures from the hero's throw.
-    if (projectile.kind === 'bolt') {
+    if (!isReturningKind(projectile.kind)) {
       projectile.originX = projectile.x;
       projectile.originY = projectile.y;
     }
@@ -508,6 +615,7 @@ function resetProjectile(projectile: ProjectileState, kind: ProjectileKind, weap
   projectile.returning = false;
   projectile.remainingPierces = 0;
   projectile.remainingRicochets = 0;
+  projectile.innateRicochets = 0;
   projectile.executeToken = 0;
   projectile.criticalChance = 0;
   projectile.sizeMultiplier = 1;

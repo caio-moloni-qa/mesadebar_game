@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { SkinId } from '../../core/progress/Progress';
 import { applySkin } from './skins';
+import { REGULAR_FIGURES } from './regulars';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { toonMaterial } from '../materials';
@@ -126,7 +127,13 @@ const PART_BUILDERS: Record<CharacterId, (accent: number) => RigPart[]> = {
   barbarian: barbarianParts,
   mage: mageParts,
   reliquia: reliquiaParts,
-  fabri: fabriParts
+  fabri: fabriParts,
+  // The regulars play as their tavern figures (hands free for the weapon) until their own models exist.
+  brom: () => REGULAR_FIGURES.brom(false),
+  lyra: () => REGULAR_FIGURES.lyra(false),
+  grimbo: () => REGULAR_FIGURES.grimbo(false),
+  zora: () => REGULAR_FIGURES.zora(false),
+  sergio: () => REGULAR_FIGURES.sergio(false)
 };
 
 const CLIPS = humanoidClips(HIP_HEIGHT);
@@ -165,6 +172,7 @@ export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig
   } else {
     const boneSpecs = humanoidBones({ hipHeight: HIP_HEIGHT, armLength: ARM, legLength: LEG, withTail: characterId === 'fabri' });
     model = buildRiggedModel(boneSpecs, PART_BUILDERS[characterId](character.accentColor), material);
+    if (character.modelScale) model.root.scale.setScalar(character.modelScale);
   }
 
   const clips = Object.fromEntries(Object.entries(clipSet).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<HeroClipName, THREE.AnimationClip>;

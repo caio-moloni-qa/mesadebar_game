@@ -12,6 +12,7 @@ import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
 import { QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
+import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
 import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
@@ -60,7 +61,7 @@ export type PendingChoice =
   /** The merchant's Tomo de Afinidade: unlock one weapon family's upgrade pool. */
   | { kind: 'affinity'; families: WeaponFamily[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents {
   /** A mission's upgrade reward: what was granted. */
   'quest-gifts': { names: string[] };
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
@@ -145,6 +146,11 @@ export class GameSession implements WeaponHost {
   readonly companions: CompanionSystem;
   readonly merchant: MerchantSystem;
   readonly quests: QuestSystem;
+  readonly abilities: HeroAbilitySystem;
+  /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
+  private jackpotPending = false;
+  /** Sergio's Loja Portátil can open again at this sim time. */
+  portableShopReadyAt = 0;
   /** The tavern regular you're talking to (QUEST_NPCS index), or null. */
   dialogue: number | null = null;
   /** Zone guardians slain this cycle (each weakens the Necromancer). */
@@ -227,12 +233,29 @@ export class GameSession implements WeaponHost {
     });
     this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events }, options.questTiers);
     this.events.on('quest-claimed', () => { this.stats.missions += 1; });
+    this.abilities = new HeroAbilitySystem({
+      player: this.player,
+      clock: this.clock,
+      rng: this.rng,
+      characterId: this.characterId,
+      arena: this.arena,
+      events: this.events,
+      primaryWeapon: () => this.weapons.primary,
+      hasAffinity: (weapon) => this.hasAffinity(weapon),
+      enemiesWithin: (from, radius) => this.enemiesWithin(from, radius),
+      nearestEnemy: (from, range) => this.nearestEnemy(from, range),
+      damageEnemy: (enemy, amount, weaponId) => this.damageEnemy(enemy, amount, weaponId),
+      stunEnemy: (enemy, ms) => this.stunEnemy(enemy, ms),
+      healPlayer: (amount) => this.healPlayer(amount),
+      addFreeItem: () => { this.merchant.freeItems += 1; }
+    });
     this.merchant = new MerchantSystem({
       player: this.player,
       rng: this.rng,
       arena: this.arena,
       events: this.events,
       affinities: () => this.affinities,
+      priceMultiplier: () => (this.characterId === 'grimbo' ? HERO_ABILITY_TUNING.grimboPrices : 1),
       encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
     });
     this.companions = new CompanionSystem({
@@ -345,7 +368,37 @@ export class GameSession implements WeaponHost {
       if (choice.picksRemaining > 0) return;
     }
     this.closeChoice();
+    // Grimbo's Tudo ou Nada: a six on the die is a second pick at this level.
+    if (choice.kind === 'level-up' && this.jackpotPending) {
+      this.jackpotPending = false;
+      const extra = this.upgradeSystem.choices(this.weapons.primary.config, this.player, LEVEL_UPGRADE_CONFIG.defaultChoiceAmount, this.secondaryWithAffinity());
+      if (extra.length > 0) {
+        this.openChoice({ kind: 'level-up', level: this.level, upgrades: extra, extraWeapon: null });
+        return;
+      }
+    }
     this.processExperience();
+  }
+
+  /** Sergio's Loja Portátil: opens the tavern portal at his feet (on a cooldown, never during the boss). */
+  openPortableShop(): boolean {
+    if (this.characterId !== 'sergio' || this.over || this.clock.paused) return false;
+    if (this.merchant.portal || this.merchant.inside || this.bosses.hasActiveEncounter() || this.clock.now < this.portableShopReadyAt) return false;
+    this.portableShopReadyAt = this.clock.now + HERO_ABILITY_TUNING.portableShopCooldownMs;
+    this.merchant.openPortalAt(this.player.x, this.player.y, HERO_ABILITY_TUNING.portableShopMarkup);
+    return true;
+  }
+
+  /** Zora's Previsão: the next zone guardian and where it will rise, shown this long before it's announced. */
+  prophecy(): { kind: MiniBossKind; x: number; y: number } | null {
+    if (this.characterId !== 'zora' || this.miniBosses.active || this.miniBosses.pending) return null;
+    const slots = this.bossCycle >= 3 ? 3 : 2;
+    if (this.miniBossSlotsThisPhase >= slots) return null;
+    const slotMs = this.phaseDurationMs() / (slots + 1);
+    const untilNext = (this.miniBossSlotsThisPhase + 1) * slotMs - (this.elapsedMs - this.phaseStartedAtMs);
+    if (untilNext > HERO_ABILITY_TUNING.prophecyLeadMs) return null;
+    const kind = MINI_BOSS_ROTATION[this.miniBossRotation % MINI_BOSS_ROTATION.length];
+    return { kind, ...MINI_BOSSES[kind].anchor };
   }
 
   /** The Tomo de Afinidade's pick. */
@@ -531,6 +584,7 @@ export class GameSession implements WeaponHost {
     this.updatePlayerStatus(deltaMs, now);
     this.weapons.update(deltaMs);
     this.companions.update(deltaMs);
+    this.abilities.update(deltaMs);
     this.updateSouls(deltaMs, now);
     this.updatePeels(now);
     this.updatePickups(deltaMs);
@@ -887,6 +941,8 @@ export class GameSession implements WeaponHost {
     // A roaring boss shrugs hits off and a staggered one takes extra; then a channelling boss's shield soaks hits
     // first and only the overflow reaches its health.
     amount *= this.bosses.damageTakenMultiplier(enemy) * this.miniBosses.damageTakenMultiplier(enemy);
+    // Zora's Destino Selado: a marked enemy takes double.
+    if (this.abilities.isMarked(enemy)) amount *= 2;
     if (amount <= 0) {
       enemy.lastHitAt = now;
       return;
@@ -908,7 +964,7 @@ export class GameSession implements WeaponHost {
     if (enemy.health <= 0) this.defeatEnemy(enemy);
   }
 
-  private healPlayer(amount: number): void {
+  healPlayer(amount: number): void {
     const prevented = this.player.heal(amount, this.clock.now);
     if (Math.round(prevented) > 0) this.events.emit('player-status', { text: `CURA -${Math.round(prevented)}`, tone: 'heal-cut' });
   }
@@ -917,6 +973,7 @@ export class GameSession implements WeaponHost {
     enemy.phase = 'dying';
     enemy.phaseEndsAt = this.clock.now + ENEMY_DYING_MS;
     this.kills += 1;
+    this.abilities.onDefeated(enemy);
     this.stats.killsByVariant[enemy.variantId] = (this.stats.killsByVariant[enemy.variantId] ?? 0) + 1;
     if (this.miniBosses.bossFor(enemy)) {
       // A zone guardian: a chest and a burst of crystals, a companion to pick, and the Necromancer weakens.
@@ -988,7 +1045,8 @@ export class GameSession implements WeaponHost {
   }
 
   private collect(pickup: PickupState): void {
-    if (pickup.kind === 'gem') this.currency += pickup.value;
+    // Grimbo's Mão Leve: half as many coins again.
+    if (pickup.kind === 'gem') this.currency += this.characterId === 'grimbo' ? Math.round(pickup.value * HERO_ABILITY_TUNING.grimboCoins) : pickup.value;
     if (pickup.kind === 'potion') this.healPlayer(pickup.value);
     if (pickup.kind === 'chest') {
       // Baú: one random upgrade from the same 5-option pool the bonus level-up screen offers, applied on pickup.
@@ -1060,10 +1118,15 @@ export class GameSession implements WeaponHost {
   }
 
   /** Down on the ground for ENEMY_SLIP_MS. Only the horde slips: bosses (and anything else) keep their footing. */
-  private slipEnemy(enemy: EnemyState, now: number): void {
+  private slipEnemy(enemy: EnemyState, now: number, ms = ENEMY_SLIP_MS): void {
     if (!SLIPPERY_VARIANTS.has(enemy.variantId)) return;
-    enemy.slipUntil = now + ENEMY_SLIP_MS;
+    enemy.slipUntil = Math.max(enemy.slipUntil, now + ms);
     this.events.emit('enemy-slipped', { enemy });
+  }
+
+  /** Knocks an enemy down for `ms` (the Mochila's frying pan, Brom's barrel foam). */
+  stunEnemy(enemy: EnemyState, ms: number): void {
+    this.slipEnemy(enemy, this.clock.now, ms);
   }
 
   private updatePeels(now: number): void {
@@ -1103,7 +1166,9 @@ export class GameSession implements WeaponHost {
     this.level += 1;
     this.experienceNeeded = requiredExperience(this.level);
     const bonusLevel = this.level % LEVEL_UPGRADE_CONFIG.bonusChoiceInterval === 0;
-    const amount = bonusLevel ? LEVEL_UPGRADE_CONFIG.bonusChoiceAmount : LEVEL_UPGRADE_CONFIG.defaultChoiceAmount;
+    // Zora's Previsão: one more card on every choice.
+    const amount = (bonusLevel ? LEVEL_UPGRADE_CONFIG.bonusChoiceAmount : LEVEL_UPGRADE_CONFIG.defaultChoiceAmount) + (this.characterId === 'zora' ? 1 : 0);
+    if (this.abilities.rollJackpot()) this.jackpotPending = true;
     const extraWeapon = this.rollExtraWeaponOffer(bonusLevel);
     const upgrades = this.upgradeSystem.choices(this.weapons.primary.config, this.player, extraWeapon ? amount - 1 : amount, this.secondaryWithAffinity());
     this.openChoice({ kind: 'level-up', level: this.level, upgrades, extraWeapon });

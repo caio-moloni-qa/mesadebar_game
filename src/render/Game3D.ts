@@ -27,7 +27,8 @@ import { TavernDialog } from './ui/TavernDialog';
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
-import { STARTING_HEROES, SaveData, applyRun, buyUpgrade, metaBonuses } from '../core/progress/Progress';
+import { STARTING_HEROES, SaveData, applyRun, buyUpgrade, metaBonuses, rosterFor } from '../core/progress/Progress';
+import { HeroKitViews } from './views/HeroKitViews';
 import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
 import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
@@ -89,6 +90,9 @@ export class Game3D {
   private readonly bossEffects: BossEffects;
   private readonly miniBossViews = new MiniBossViews();
   private readonly companionViews = new CompanionViews();
+  private readonly heroKitViews = new HeroKitViews();
+  /** Sandbox: every hero playable, without touching the save. */
+  private allHeroesUnlocked = false;
   private merchantRoom?: MerchantRoom;
   private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
@@ -166,7 +170,11 @@ export class Game3D {
     this.sandbox = new SandboxPanel(container, {
       session: () => this.session,
       setFogVisible: (visible) => { this.arena.mist.root.visible = visible; },
-      announce: (text) => this.floatAboveHero(text, '#8bff8b')
+      announce: (text) => this.floatAboveHero(text, '#8bff8b'),
+      unlockAllHeroes: () => {
+        this.allHeroesUnlocked = true;
+        this.floatAboveHero('Sandbox: todos os heróis liberados', '#8bff8b');
+      }
     });
     this.screens = new RunScreens(container, {
       resume: () => { this.session.paused = false; },
@@ -184,9 +192,9 @@ export class Game3D {
       }
     });
     this.choices = new ChoiceOverlay(container);
-    this.tavernDialog = new TavernDialog(container);
+    this.tavernDialog = new TavernDialog(container, (hero) => this.menu.showCharacters(hero));
     this.companionBars = new CompanionBars(container);
-    this.scene.add(this.questBarrels.root);
+    this.scene.add(this.questBarrels.root, this.heroKitViews.root);
     this.chestRoll = new ChestRoll(container);
     this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
     this.showJoystick = Boolean(options.touch) || isTouchDevice();
@@ -208,7 +216,12 @@ export class Game3D {
           this.shop.render();
         });
       },
-      close: () => this.shop.hide()
+      close: () => this.shop.hide(),
+      canPlaySergio: () => this.roster().includes('sergio'),
+      playSergio: () => {
+        this.shop.hide();
+        this.menu.showCharacters('sergio');
+      }
     });
     this.tavernHeader = new TavernHeader(container);
     this.tierPicker = new TierPicker(container, (tier) => {
@@ -225,7 +238,8 @@ export class Game3D {
         SaveStore.save(this.progress);
       },
       play: () => this.enterHub(),
-      closeToTavern: () => this.menu.hide()
+      closeToTavern: () => this.menu.hide(),
+      roster: () => this.roster()
     });
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
@@ -292,6 +306,11 @@ export class Game3D {
       SaveStore.save(this.progress);
       this.shop.show(true);
     }
+  }
+
+  /** The heroes the player may pick: the save's roster (or everyone, with the sandbox toggle). */
+  private roster(): CharacterId[] {
+    return this.allHeroesUnlocked ? (Object.keys(CHARACTERS) as CharacterId[]) : (rosterFor(this.progress) as CharacterId[]);
   }
 
   /** In the tavern: become this hero (the room rebuilds with you in their place). */
@@ -571,6 +590,46 @@ export class Game3D {
     events.on('boss-wave-cleared', () => {
       Object.values(this.session.portals ?? {}).forEach(({ x, y }) => this.effects.pulse(x, y, 70, 0xffffff, 0.5, 0.8));
     });
+    // The regulars' kits.
+    events.on('hammer-quake', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.pulse(x, y, radius, 0xd9c7a0, 0.3, 0.6);
+      this.particles.emit(point.x, 0.15, point.z, 0x8a7a5a, 12, { spread: 3, rise: 2.5, gravity: 10, life: 0.5, size: 1.2, jitter: 0.8 });
+      this.cameraRig.shake(0.06, 0.15);
+    });
+    events.on('bottle-burst', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.burst(x, y, radius, 0x6ad46a, 0.3, 0.45);
+      this.particles.burst(point.x, point.z, 0x8affa0, 14, 1.8, 1.2);
+    });
+    events.on('potion-heal', ({ x, y }) => {
+      const point = at(x, y);
+      this.particles.burst(point.x, point.z, 0xff6a8a, 8, 1.2, 1.4);
+    });
+    events.on('barrel-burst', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.burst(x, y, radius, 0xf5ecd0, 0.4, 0.55);
+      this.particles.emit(point.x, 0.3, point.z, 0xf5ecd0, 26, { spread: 4.5, rise: 3, gravity: 6, life: 0.8, size: 1.6, jitter: 1 });
+    });
+    events.on('arrow-rain', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.pulse(x, y, radius, 0x9fe08a, 0.25, 0.5);
+      for (let index = 0; index < 10; index += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const reach = Math.random() * radius * WORLD_SCALE;
+        this.particles.emit(point.x + Math.cos(angle) * reach, 4, point.z + Math.sin(angle) * reach, 0xe9dfc4, 1, { spread: 0.1, rise: -14, gravity: 20, life: 0.3, size: 1.4 });
+      }
+    });
+    events.on('fate-burst', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.burst(x, y, radius, 0xb26bff, 0.35, 0.5);
+      this.particles.burst(point.x, point.z, 0xd8a8ff, 16, 2, 1.4);
+    });
+    events.on('hero-ability', ({ kind }) => {
+      const text = { mead: 'Hidromel!', jackpot: 'Tudo ou Nada: escolha dupla!', sale: 'Liquidação: um item grátis na loja!', fate: 'Destino Selado', rain: 'Chuva de Flechas!' }[kind];
+      const color = { mead: '#ffd25a', jackpot: '#8dffa8', sale: '#ffc65a', fate: '#d8a8ff', rain: '#9fe08a' }[kind];
+      this.floatAboveHero(text, color);
+    });
     events.on('merchant-portal-opened', ({ x, y }) => {
       const point = at(x, y);
       this.particles.burst(point.x, point.z, 0xffc65a, 18, 2.2, 1.2);
@@ -667,6 +726,10 @@ export class Game3D {
       else if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
       if (event.code === 'KeyE') this.session.interact();
+      // Sergio's Loja Portátil.
+      if (event.code === 'KeyQ' && this.mode === 'run' && this.session.characterId === 'sergio') {
+        if (!this.session.openPortableShop()) this.floatAboveHero('A loja ainda não está pronta', '#c9b89a');
+      }
       if (event.code === 'KeyM' && (this.session.over || this.session.paused)) this.showMenu();
       if (this.options.debug) this.debugKey(event.code);
     });
@@ -754,6 +817,7 @@ export class Game3D {
     this.bossViews.update(this.session.bosses.bosses, this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.bossEffects.update(this.session, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.heroKitViews.update(this.session, alpha, simNow);
     this.companionViews.update(this.session.companions.companions, this.session.companions.skeletons, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossEffects.update(this.session.miniBosses, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
@@ -761,7 +825,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;

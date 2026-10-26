@@ -43,6 +43,7 @@ export class EnemyHordeView {
   private readonly euler = new THREE.Euler();
   private readonly color = new THREE.Color();
   private readonly bananaTint = new THREE.Color(0xf2d33b);
+  private readonly fateTint = new THREE.Color(0xb26bff);
 
   constructor(capacity: number) {
     const models = createEnemyModels();
@@ -128,6 +129,7 @@ export class EnemyHordeView {
 
       this.color.setRGB(1, 1, 1);
       if (enemy.slowStackPercent > 0) this.color.lerp(this.bananaTint, Math.min(0.8, enemy.slowStackPercent * 1.6));
+      if (enemy.markedUntil > nowMs) this.color.lerp(this.fateTint, 0.6 + Math.sin(nowMs / 120) * 0.15);
       if (nowMs - enemy.lastHitAt < HIT_FLASH_MS) this.color.multiplyScalar(3.2);
       batch.mesh.setColorAt(index, this.color);
 

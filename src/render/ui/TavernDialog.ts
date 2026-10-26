@@ -1,6 +1,7 @@
 import { GameSession } from '../../core/session/GameSession';
 import { MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, SaveData, masteryLevel, rosterFor } from '../../core/progress/Progress';
 import { heroName } from '../progress/heroNames';
+import { CharacterId } from '../../config/characters';
 import { npcFace } from './icons';
 import { goalText, progressText, rewardText } from './questText';
 
@@ -12,7 +13,8 @@ export class TavernDialog {
   private renderedKey = '';
   private session: GameSession | null = null;
 
-  constructor(container: HTMLElement) {
+  /** `onPlay`: between runs, an unlocked regular's "Jogar com …" opens their hero card. */
+  constructor(container: HTMLElement, private readonly onPlay: (hero: CharacterId) => void = () => {}) {
     this.root = document.createElement('div');
     this.root.className = 'tavern-dialog';
     this.root.setAttribute('role', 'dialog');
@@ -100,7 +102,13 @@ export class TavernDialog {
     details.children[0].append(next);
     details.children[1].append(joined ? 'liberado!' : `as ${MISSIONS_PER_REGULAR} missões (${done}/${MISSIONS_PER_REGULAR}) e maestria ${rule.level} com ${heroName(rule.hero)} (nível ${level})`);
     const actions = this.root.querySelector('.dialog-actions')!;
-    actions.appendChild(this.button('Até mais (Esc)', 'primary', () => this.session?.closeDialogue()));
+    if (joined) {
+      actions.appendChild(this.button(`Jogar com ${npc.name}`, 'primary', () => {
+        this.session?.closeDialogue();
+        this.onPlay(id);
+      }));
+    }
+    actions.appendChild(this.button('Até mais (Esc)', joined ? '' : 'primary', () => this.session?.closeDialogue()));
     actions.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
   }
 

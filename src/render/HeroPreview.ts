@@ -5,7 +5,7 @@ import { WeaponConfig } from '../config/weapons';
 import { HeroClipName } from './models/clips';
 import { HeroModel, attachWeapons, createHeroModel } from './models/heroes';
 
-const ATTACKS: Record<WeaponConfig['id'], HeroClipName> = { staff: 'cast', sword: 'swing', whip: 'lash', boomerang: 'throw', amulet: 'pulse' };
+const ATTACKS: Record<WeaponConfig['id'], HeroClipName> = { staff: 'cast', sword: 'swing', whip: 'lash', boomerang: 'throw', amulet: 'pulse', hammer: 'swing', bow: 'cast', coins: 'throw', crystal: 'pulse', pack: 'throw' };
 
 /** One lazily-created preview renderer and one active hero, reused by every menu screen.
  * Uses the game's real imported meshes, rigs, clips and weapons. Driven by Game3D's existing frame loop.

@@ -99,6 +99,8 @@ export interface MerchantHost {
   affinities(): ReadonlySet<WeaponFamily>;
   /** True while the Necromancer is coming or up (no portal then). */
   encounterActive(): boolean;
+  /** Grimbo's Mão Leve makes everything cheaper. */
+  priceMultiplier(): number;
 }
 
 /** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing —
@@ -119,6 +121,10 @@ export class MerchantSystem {
   /** The room's centre in game units (outside the arena). */
   readonly room: Vec2;
   private elapsedMs = 0;
+  /** This visit's markup (Sergio's pocket portal sells at a premium). */
+  private visitMarkup = 1;
+  /** Sergio's Liquidação: items to give away on the next visits. */
+  freeItems = 0;
   private itemsPurchased = 0;
   /** Where the hero stood when stepping into the portal. */
   private returnTo: Vec2 = { x: 0, y: 0 };
@@ -187,8 +193,16 @@ export class MerchantSystem {
   openPortal(): void {
     this.elapsedMs = 0;
     const spot = this.pickSpot();
+    this.visitMarkup = 1;
     this.portal = { x: spot.x, y: spot.y, remainingMs: MERCHANT_TUNING.portalOpenMs };
     this.host.events.emit('merchant-portal-opened', spot);
+  }
+
+  /** Sergio's Loja Portátil: a portal right where he stands, with a markup on everything. */
+  openPortalAt(x: number, y: number, markup: number): void {
+    this.visitMarkup = markup;
+    this.portal = { x, y, remainingMs: MERCHANT_TUNING.portalOpenMs };
+    this.host.events.emit('merchant-portal-opened', { x, y });
   }
 
   /** Steps through the portal: the hero lands at the room's entrance and the offers are laid out. */
@@ -286,7 +300,13 @@ export class MerchantSystem {
     const randomBuff = { ...pickOne(this.host.rng, RANDOM_BUFFS), cost: MERCHANT_TUNING.randomBuffCost };
     const tome = this.host.affinities().size < MAX_AFFINITIES && this.availableFamilies().length > 0;
     const fourth = tome ? AFFINITY_TOME : VITALITY_ELIXIR;
-    return [DIVINE_BLESSING, ARCANE_CURSE, randomBuff, fourth].map((spec) => ({ ...spec, cost: Math.round(spec.cost * multiplier), purchased: false }));
+    const prices = multiplier * this.visitMarkup * this.host.priceMultiplier();
+    const offers = [DIVINE_BLESSING, ARCANE_CURSE, randomBuff, fourth].map((spec) => ({ ...spec, cost: Math.round(spec.cost * prices), purchased: false }));
+    if (this.freeItems > 0) {
+      this.freeItems -= 1;
+      pickOne(this.host.rng, offers).cost = 0;
+    }
+    return offers;
   }
 
   /** A walkable spot a short walk from the hero, inside the arena and off the water. */

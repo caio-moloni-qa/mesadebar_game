@@ -17,13 +17,21 @@ export const HUD_ART = {
   upgradeCard: new URL('../../assets/ui/theme/upgrade_card_panel_v2.png', import.meta.url).href
 };
 
+const svg = (body: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`)}`;
+
 const WEAPON_ICONS: Record<WeaponConfig['id'] | 'banana', string> = {
   staff: new URL('../../assets/weapons/staff-icon.png', import.meta.url).href,
   sword: new URL('../../assets/weapons/sword-icon.png', import.meta.url).href,
   boomerang: new URL('../../assets/weapons/boomerang-icon.png', import.meta.url).href,
   amulet: new URL('../../assets/weapons/aura-amulet-icon.png', import.meta.url).href,
   whip: new URL('../../assets/weapons/whip-icon.png', import.meta.url).href,
-  banana: new URL('../../assets/weapons/banana-boomerang-icon.png', import.meta.url).href
+  banana: new URL('../../assets/weapons/banana-boomerang-icon.png', import.meta.url).href,
+  // The regulars' weapons: SVG stand-ins until their art exists.
+  hammer: svg('<rect x="29" y="22" width="6" height="36" rx="2" fill="#7a5232"/><rect x="14" y="8" width="36" height="18" rx="3" fill="#8a8f99"/><rect x="14" y="14" width="36" height="5" fill="#e0b04a"/>'),
+  bow: svg('<path d="M20 6 Q52 32 20 58" fill="none" stroke="#8a6a3a" stroke-width="5"/><line x1="20" y1="6" x2="20" y2="58" stroke="#e9dfc4" stroke-width="1.5"/><line x1="12" y1="32" x2="58" y2="32" stroke="#c9b89a" stroke-width="3"/><path d="M58 32 l-9 -5 v10z" fill="#cfd6dc"/><path d="M14 32 l-6 -5 M14 32 l-6 5" stroke="#7fd47f" stroke-width="3"/>'),
+  coins: svg('<ellipse cx="28" cy="40" rx="16" ry="6" fill="#c9963f"/><ellipse cx="28" cy="36" rx="16" ry="6" fill="#ffd25a"/><ellipse cx="38" cy="26" rx="14" ry="5" fill="#c9963f"/><ellipse cx="38" cy="22" rx="14" ry="5" fill="#ffd25a"/><circle cx="20" cy="16" r="7" fill="#ffd25a" stroke="#c9963f" stroke-width="2"/>'),
+  crystal: svg('<rect x="20" y="46" width="24" height="8" rx="2" fill="#e0b04a"/><circle cx="32" cy="30" r="17" fill="#9fe8ff"/><circle cx="26" cy="24" r="5" fill="#ffffff" opacity=".7"/><circle cx="32" cy="30" r="17" fill="none" stroke="#5aa8e0" stroke-width="2"/>'),
+  pack: svg('<circle cx="26" cy="30" r="17" fill="#4a4a52"/><circle cx="26" cy="30" r="12" fill="#2a2a30"/><rect x="40" y="27" width="20" height="6" rx="2" fill="#3a2a1e"/><rect x="44" y="40" width="10" height="16" rx="3" fill="#3a8a4a"/>')
 };
 
 const UPGRADE_ART = {
@@ -61,7 +69,6 @@ const UPGRADE_ICONS: Record<string, string> = {
 };
 
 /** Placeholder companion portraits (inline SVG) until there's art: a bow over a skull, a stone face with glowing eyes. */
-const svg = (body: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`)}`;
 const COMPANION_ICONS: Record<CompanionKind, string> = {
   // Coveiro Aliado: a hooded skull with friendly cyan eyes over a crossed shovel.
   gravedigger: svg('<line x1="10" y1="58" x2="50" y2="14" stroke="#8a5a32" stroke-width="5"/><path d="M4 50 l12 -4 l4 12 l-12 4 z" fill="#8f8a80"/><path d="M32 6 L52 40 L12 40 Z" fill="#2c4a4f"/><circle cx="32" cy="34" r="11" fill="#e2d8bd"/><rect x="26" y="31" width="5" height="5" fill="#7fe3ff"/><rect x="34" y="31" width="5" height="5" fill="#7fe3ff"/><rect x="27" y="42" width="10" height="4" fill="#b3a685"/>'),

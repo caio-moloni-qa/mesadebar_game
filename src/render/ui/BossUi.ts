@@ -200,6 +200,8 @@ ${offer.description}`,
     if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor, kind: session.miniBosses.pending.kind, tier: 'miniboss' });
     if (session.portals) targets.push({ ...session.portals.end, kind: 'end', tier: 'end' }, { ...session.portals.continue, kind: 'continue', tier: 'continue' });
     if (session.merchant.portal && !session.merchant.inside) targets.push({ x: session.merchant.portal.x, y: session.merchant.portal.y, kind: 'merchant', tier: 'merchant' });
+    const prophecy = session.merchant.inside ? null : session.prophecy();
+    if (prophecy) targets.push({ x: prophecy.x, y: prophecy.y, kind: prophecy.kind, tier: 'prophecy' });
     if (!session.merchant.inside) session.quests.barrels.forEach((barrel) => targets.push({ ...barrel, kind: 'barrel', tier: 'quest' }));
     const { player } = session;
     const width = this.container.clientWidth;

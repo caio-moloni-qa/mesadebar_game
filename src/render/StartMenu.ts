@@ -1,3 +1,4 @@
+import { weaponIcon } from './ui/icons';
 import { MASTERY_REWARDS, MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, SkinId, masteryFrame, masteryLevel, masteryProgress, masteryTitle, unlockedSkins } from '../core/progress/Progress';
 import { SKINS, SKIN_ORDER } from './models/skins';
 import { CHARACTERS, CharacterConfig, CharacterId } from '../config/characters';
@@ -9,20 +10,18 @@ export interface RunChoice {
   weaponId: WeaponConfig['id'];
 }
 
-const WEAPON_ICONS: Record<WeaponConfig['id'], string> = {
-  staff: new URL('../assets/weapons/staff-icon.png', import.meta.url).href,
-  sword: new URL('../assets/weapons/sword-icon.png', import.meta.url).href,
-  whip: new URL('../assets/weapons/whip-icon.png', import.meta.url).href,
-  boomerang: new URL('../assets/weapons/boomerang-icon.png', import.meta.url).href,
-  amulet: new URL('../assets/weapons/aura-amulet-icon.png', import.meta.url).href
-};
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 const HERO_ROLES: Record<CharacterId, { title: string; trait: string }> = {
   barbarian: { title: 'A força da última linha', trait: 'RESISTÊNCIA · CORPO A CORPO' },
   mage: { title: 'O poder do arcano', trait: 'MAGIA · MOBILIDADE' },
   reliquia: { title: 'Guardião do poder ancestral', trait: 'AURA · ALCANCE' },
-  fabri: { title: 'Instinto e precisão', trait: 'AGILIDADE · CONTROLE' }
+  fabri: { title: 'Instinto e precisão', trait: 'AGILIDADE · CONTROLE' },
+  brom: { title: 'A muralha da taverna', trait: 'TANQUE · CORPO A CORPO' },
+  lyra: { title: 'A flecha que não erra', trait: 'ALCANCE · CRÍTICO' },
+  grimbo: { title: 'A sorte vira ouro', trait: 'SORTE · MOEDAS' },
+  zora: { title: 'O destino nas mãos', trait: 'MAGIA · PREVISÃO' },
+  sergio: { title: 'A loja vai junto', trait: 'MERCADOR · VERSÁTIL' }
 };
 
 type MenuScreen = 'title' | 'characters' | 'weapons' | 'controls' | 'credits';
@@ -36,6 +35,8 @@ export interface MenuProgress {
   play(): void;
   /** Hero selection opened from the tavern was closed without choosing. */
   closeToTavern(): void;
+  /** The heroes that may be picked (the regulars join as they're unlocked). */
+  roster(): CharacterId[];
 }
 
 export class StartMenu {
@@ -64,7 +65,7 @@ export class StartMenu {
       }
       if (this.screen === 'characters' && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.code)) {
         event.preventDefault();
-        const heroes = Object.values(CHARACTERS);
+        const heroes = this.progress.roster().map((id) => CHARACTERS[id]);
         const index = heroes.findIndex(hero => hero.id === this.selected?.id);
         const next = event.code === 'Home' ? 0 : event.code === 'End' ? heroes.length - 1 : (index + (event.code === 'ArrowRight' ? 1 : -1) + heroes.length) % heroes.length;
         this.selected = heroes[next]; this.render();
@@ -193,7 +194,7 @@ export class StartMenu {
     });
     const preferred = WEAPONS[character.preferredWeaponId ?? 'staff'];
     const signature = document.createElement('div'); signature.className = 'hero-signature';
-    signature.innerHTML = `<img src="${WEAPON_ICONS[preferred.id]}" alt=""><span><small>ARMA DE AFINIDADE</small><strong>${preferred.name}</strong></span><span class="signature-bonus">+${character.startingWeaponUpgradeChoices ?? 0} melhorias</span>`;
+    signature.innerHTML = `<img src="${weaponIcon(preferred.id)}" alt=""><span><small>ARMA DE AFINIDADE</small><strong>${preferred.name}</strong></span><span class="signature-bonus">+${character.startingWeaponUpgradeChoices ?? 0} melhorias</span>`;
     const choose = document.createElement('button');
     choose.type = 'button'; choose.className = 'ui-button primary hero-confirm';
     choose.textContent = `Escolher ${character.name}  →`;
@@ -203,7 +204,7 @@ export class StartMenu {
     showcase.append(this.previewStage(character, preferred.id), details);
     const roster = document.createElement('div');
     roster.className = 'hero-roster'; roster.setAttribute('role', 'group'); roster.setAttribute('aria-label', 'Heróis disponíveis');
-    Object.values(CHARACTERS).forEach((hero, index) => {
+    this.progress.roster().map((id) => CHARACTERS[id]).forEach((hero, index) => {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'hero-choice';
       button.dataset.heroId = hero.id; button.style.setProperty('--accent', hex(hero.accentColor));
       button.setAttribute('aria-pressed', String(hero.id === character.id));
@@ -332,7 +333,7 @@ export class StartMenu {
     row.addEventListener('pointerenter', previewWeapon);
     row.addEventListener('focus', previewWeapon);
     const icon = document.createElement('img');
-    icon.src = WEAPON_ICONS[weapon.id];
+    icon.src = weaponIcon(weapon.id);
     icon.alt = '';
     const text = document.createElement('div');
     const name = document.createElement('strong');

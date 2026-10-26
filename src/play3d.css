@@ -490,3 +490,4 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .bestiary li.unseen span, .bestiary li.unseen b { color: var(--muted); }
 .run-history li { color: var(--muted); }
 .run-history li.won { color: #8dffa8; }
+.offscreen-marker[data-tier="prophecy"] { --tier: #b26bff; opacity: .8; }
