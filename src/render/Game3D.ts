@@ -180,7 +180,13 @@ export class Game3D {
     this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
     this.showJoystick = Boolean(options.touch) || isTouchDevice();
     this.joystick.setVisible(false);
-    this.menu = new StartMenu(container, (choice) => this.startRun(choice));
+    this.menu = new StartMenu(container, (choice) => this.startRun(choice), {
+      save: () => this.progress,
+      setSkin: (hero, skin) => {
+        this.progress = { ...this.progress, skins: { ...this.progress.skins, [hero]: skin } };
+        SaveStore.save(this.progress);
+      }
+    });
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
     this.bindInput();
@@ -263,7 +269,7 @@ export class Game3D {
       Object.assign(this.session.player, spot);
       snapPrevious(this.session.player);
     }
-    this.playerView = new HeroView(characterId, weaponId);
+    this.playerView = new HeroView(characterId, weaponId, this.progress.skins[characterId] ?? 'base');
     this.heldKey = weaponId;
     this.scene.add(this.playerView.root, this.playerView.effects);
     this.accumulator = 0;

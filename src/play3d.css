@@ -429,3 +429,21 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .save-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; margin-top: 10px; }
 .link-button { padding: 4px 2px; border: 0; background: none; color: var(--muted); font: 500 13px/1.4 var(--sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .link-button:hover { color: var(--gold); }
+
+/* Mastery on the hero card: level, title, XP bar and the skin picker; level badge and frames on the roster. */
+.hero-mastery { display: grid; gap: 6px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: #0d1719b3; }
+.hero-mastery-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; font-size: 12px; }
+.hero-mastery-head strong { font: 600 13px var(--display); color: var(--gold); }
+.hero-mastery-head span { color: #8dffa8; font-weight: 600; }
+.hero-mastery-head small { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hero-mastery-bar { height: 6px; border-radius: 999px; background: #1f2e30; overflow: hidden; }
+.hero-mastery-bar i { display: block; height: 100%; background: linear-gradient(90deg, #518b88, #a7d2b4); }
+.skin-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.skin-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 4px; border: 1px solid var(--line); border-radius: 999px; background: #101b1d; color: #d8d2bf; font: 500 11px/1.4 var(--sans); cursor: pointer; }
+.skin-chip i { width: 14px; height: 14px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 1px #0007; }
+.skin-chip[aria-checked="true"] { border-color: var(--gold); color: var(--gold); background: #23312c; }
+.skin-chip:disabled { cursor: default; opacity: .5; }
+.skin-chip:disabled i { filter: grayscale(.8) brightness(.6); }
+.hero-choice-level { margin-left: auto; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 600 11px/1.5 var(--sans); white-space: nowrap; }
+.hero-choice[data-frame="bronze"] { box-shadow: inset 0 0 0 2px #b0763f; }
+.hero-choice[data-frame="ouro"] { box-shadow: inset 0 0 0 2px #e2b24a, 0 0 14px #e2b24a40; }

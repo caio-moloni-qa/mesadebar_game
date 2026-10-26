@@ -1,3 +1,5 @@
+import { MASTERY_REWARDS, MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, SkinId, masteryFrame, masteryLevel, masteryProgress, masteryTitle, unlockedSkins } from '../core/progress/Progress';
+import { SKINS, SKIN_ORDER } from './models/skins';
 import { CHARACTERS, CharacterConfig, CharacterId } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { HeroPreview } from './HeroPreview';
@@ -26,6 +28,12 @@ const HERO_ROLES: Record<CharacterId, { title: string; trait: string }> = {
 type MenuScreen = 'title' | 'characters' | 'weapons' | 'controls' | 'credits';
 
 /** Title and loadout screens over the idle 3D arena. */
+/** What the menu reads from and writes to the progress save. */
+export interface MenuProgress {
+  save(): SaveData;
+  setSkin(hero: CharacterId, skin: SkinId): void;
+}
+
 export class StartMenu {
   private readonly root: HTMLDivElement;
   private readonly content: HTMLDivElement;
@@ -33,7 +41,7 @@ export class StartMenu {
   private selected: CharacterConfig | null = null;
   private preview: HeroPreview | null = null;
 
-  constructor(container: HTMLElement, private readonly onStart: (choice: RunChoice) => void) {
+  constructor(container: HTMLElement, private readonly onStart: (choice: RunChoice) => void, private readonly progress: MenuProgress) {
     this.root = document.createElement('div');
     this.root.className = 'start-menu';
     this.root.hidden = true;
@@ -172,6 +180,7 @@ export class StartMenu {
     choose.textContent = `Escolher ${character.name}  →`;
     choose.addEventListener('click', () => this.navigate('weapons'));
     details.append(advantages, signature, choose);
+    details.insertBefore(this.masteryPanel(character), details.querySelector('.hero-abilities-heading'));
     showcase.append(this.previewStage(character, preferred.id), details);
     const roster = document.createElement('div');
     roster.className = 'hero-roster'; roster.setAttribute('role', 'group'); roster.setAttribute('aria-label', 'Heróis disponíveis');
@@ -179,7 +188,10 @@ export class StartMenu {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'hero-choice';
       button.dataset.heroId = hero.id; button.style.setProperty('--accent', hex(hero.accentColor));
       button.setAttribute('aria-pressed', String(hero.id === character.id));
-      button.innerHTML = `<span class="hero-choice-number" aria-hidden="true">0${index + 1}</span><span><strong>${hero.name}</strong><small>${HERO_ROLES[hero.id].trait}</small></span><span class="hero-choice-mark" aria-hidden="true">◆</span>`;
+      const xp = this.progress.save().mastery[hero.id] ?? 0;
+      const frame = masteryFrame(xp);
+      if (frame) button.dataset.frame = frame;
+      button.innerHTML = `<span class="hero-choice-number" aria-hidden="true">0${index + 1}</span><span><strong>${hero.name}</strong><small>${HERO_ROLES[hero.id].trait}</small></span><span class="hero-choice-level" title="Nível de maestria">Nv ${masteryLevel(xp)}</span>`;
       button.addEventListener('click', () => { this.selected = hero; this.render(); });
       roster.append(button);
     });
@@ -189,6 +201,57 @@ export class StartMenu {
     footer.append(hint);
     step.append(showcase, roster, footer);
     return step;
+  }
+
+  /** The chosen skin, if it's still unlocked (a reset or imported save can take one away). */
+  private skinFor(hero: CharacterId): SkinId {
+    const save = this.progress.save();
+    const skin = save.skins[hero] ?? 'base';
+    return unlockedSkins(save.mastery[hero] ?? 0).includes(skin) ? skin : 'base';
+  }
+
+  /** Mastery level, title and XP bar, and the skin picker (locked skins show the level they need). */
+  private masteryPanel(character: CharacterConfig): HTMLElement {
+    const save = this.progress.save();
+    const xp = save.mastery[character.id] ?? 0;
+    const level = masteryLevel(xp);
+    const panel = document.createElement('div');
+    panel.className = 'hero-mastery';
+    const head = document.createElement('p');
+    head.className = 'hero-mastery-head';
+    const title = masteryTitle(xp);
+    head.innerHTML = `<strong>Maestria nível ${level}</strong>${title ? `<span>${title}</span>` : ''}<small>${level >= MAX_MASTERY ? 'Máximo' : `${xp} / ${MASTERY_THRESHOLDS[level]} XP`}</small>`;
+    const bar = document.createElement('div');
+    bar.className = 'hero-mastery-bar';
+    const fill = document.createElement('i');
+    fill.style.width = `${Math.round(masteryProgress(xp) * 100)}%`;
+    bar.append(fill);
+    const skins = document.createElement('div');
+    skins.className = 'skin-picker';
+    skins.setAttribute('role', 'radiogroup');
+    skins.setAttribute('aria-label', 'Skin');
+    const unlocked = unlockedSkins(xp);
+    const current = this.skinFor(character.id);
+    SKIN_ORDER.forEach((skin) => {
+      const open = unlocked.includes(skin);
+      const needed = MASTERY_REWARDS.find((reward) => reward.kind === 'skin' && reward.id === skin)?.level ?? 1;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'skin-chip';
+      chip.disabled = !open;
+      chip.setAttribute('role', 'radio');
+      chip.setAttribute('aria-checked', String(skin === current));
+      chip.style.setProperty('--swatch', SKINS[skin].swatch);
+      chip.title = open ? SKINS[skin].name : `${SKINS[skin].name} · maestria nível ${needed}`;
+      chip.innerHTML = `<i aria-hidden="true"></i><span>${open ? SKINS[skin].name : `Nv ${needed}`}</span>`;
+      chip.addEventListener('click', () => {
+        this.progress.setSkin(character.id, skin);
+        this.render();
+      });
+      skins.append(chip);
+    });
+    panel.append(head, bar, skins);
+    return panel;
   }
 
   private previewStage(character: CharacterConfig, weaponId: WeaponConfig['id']): HTMLElement {
@@ -209,7 +272,7 @@ export class StartMenu {
     const equipped = document.createElement('p'); equipped.className = 'hero-equipped'; equipped.textContent = `Em mãos: ${WEAPONS[weaponId].name}`;
     stage.append(equipped, viewport, controls, hint);
     this.preview ??= new HeroPreview();
-    this.preview.mount(viewport, character.id, weaponId);
+    this.preview.mount(viewport, character.id, weaponId, this.skinFor(character.id));
     return stage;
   }
 
@@ -234,7 +297,7 @@ export class StartMenu {
     row.type = 'button';
     row.className = preferred ? 'weapon-row preferred' : 'weapon-row';
     const previewWeapon = () => {
-      this.preview?.setCharacter(character.id, weapon.id);
+      this.preview?.setCharacter(character.id, weapon.id, this.skinFor(character.id));
       const equipped = this.root.querySelector('.hero-equipped');
       if (equipped) equipped.textContent = `Em mãos: ${weapon.name}`;
     };

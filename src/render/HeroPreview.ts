@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SkinId } from '../core/progress/Progress';
 import { CharacterId } from '../config/characters';
 import { WeaponConfig } from '../config/weapons';
 import { HeroClipName } from './models/clips';
@@ -19,6 +20,7 @@ export class HeroPreview {
   private model: HeroModel | null = null;
   private mixer: THREE.AnimationMixer | null = null;
   private characterId: CharacterId | null = null;
+  private skin: SkinId = 'base';
   private weaponId: WeaponConfig['id'] = 'sword';
   private host: HTMLElement | null = null;
   private elapsed = 0;
@@ -73,23 +75,23 @@ export class HeroPreview {
     canvas.addEventListener('lostpointercapture', release);
   }
 
-  mount(host: HTMLElement, characterId: CharacterId, weaponId: WeaponConfig['id']): void {
+  mount(host: HTMLElement, characterId: CharacterId, weaponId: WeaponConfig['id'], skin: SkinId = 'base'): void {
     this.host = host;
     host.append(this.renderer.domElement);
-    this.setCharacter(characterId, weaponId);
+    this.setCharacter(characterId, weaponId, skin);
     this.width = 0;
   }
 
-  setCharacter(characterId: CharacterId, weaponId: WeaponConfig['id']): void {
-    if (this.characterId === characterId && this.model) {
+  setCharacter(characterId: CharacterId, weaponId: WeaponConfig['id'], skin: SkinId = this.skin): void {
+    if (this.characterId === characterId && this.model && this.skin === skin) {
       if (this.weaponId !== weaponId) {
         this.weaponId = weaponId; attachWeapons(this.model, [weaponId]); this.measure(); this.width = 0;
       }
       return;
     }
     this.clearModel();
-    this.characterId = characterId; this.weaponId = weaponId;
-    this.model = createHeroModel(characterId, weaponId);
+    this.characterId = characterId; this.weaponId = weaponId; this.skin = skin;
+    this.model = createHeroModel(characterId, weaponId, skin);
     this.scene.add(this.model.root);
     this.mixer = new THREE.AnimationMixer(this.model.root);
     this.mixer.clipAction(this.model.clips.idle).play();

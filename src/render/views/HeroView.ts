@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SkinId } from '../../core/progress/Progress';
 import { CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { PlayerState } from '../../core/session/entities';
@@ -42,8 +43,8 @@ export class HeroView {
   private aimSeconds = 0;
   private twist = 0;
 
-  constructor(characterId: CharacterId, weaponId: WeaponConfig['id']) {
-    this.model = createHeroModel(characterId, weaponId);
+  constructor(characterId: CharacterId, weaponId: WeaponConfig['id'], skin: SkinId = 'base') {
+    this.model = createHeroModel(characterId, weaponId, skin);
     this.root.add(this.model.root);
     this.effects.add(this.relicGlow.root);
     this.mixer = new THREE.AnimationMixer(this.model.root);

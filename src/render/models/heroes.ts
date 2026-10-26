@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { SkinId } from '../../core/progress/Progress';
+import { applySkin } from './skins';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { toonMaterial } from '../materials';
@@ -148,7 +150,7 @@ export interface HeroModel extends RiggedModel {
 
 /** The hero model: the imported mesh auto-rigged to the humanoid skeleton when one is loaded (heroMeshes.ts),
  *  otherwise the procedural low-poly one. Same bone and clip names either way, so HeroView doesn't care. */
-export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig['id']): HeroModel {
+export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig['id'], skin: SkinId = 'base'): HeroModel {
   const character = CHARACTERS[characterId];
   const material = toonMaterial({ vertexColors: true, flatShading: true });
   const imported = IMPORTED[characterId];
@@ -167,6 +169,8 @@ export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig
 
   const clips = Object.fromEntries(Object.entries(clipSet).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<HeroClipName, THREE.AnimationClip>;
 
+  // A mastery palette recolours the body (the held weapons keep their own colours).
+  applySkin(model.mesh.geometry, skin);
   const hero: HeroModel = { ...model, clips, material, held: [] };
   attachWeapons(hero, [weaponId]);
   return hero;
