@@ -137,11 +137,19 @@ export function composeTrack(ctx,destination,track,renderWindow=null){
         chord(notes,p(0),beat*1.6,.055,'horn',.22);if(b%2)chord(notes,p(2),beat*1.3,.04,'horn',.25);
         if(b%8===0)hit(t,.16,'gong');
       }else if(track.kind==='lake'){
-        for(let k=0;k<8;k++)note(notes[[0,1,2,1,0,2,1,2][k]]+12+(k>=4?12:0),p(k*.5),.18,.035*pulse,'harp',Math.sin(k)*.55);
-        if(b%2===0){chord(notes.map(n=>n+12),t,bar*1.75,.017,'choir',.48);chord(notes,t,bar*1.8,.020,'strings',.3);}
-        for(const off of[0,2])hit(p(off),.14,'timpani');
+        // Epic take: the harp and glass keep the water, under a surging low-string ostinato, brass, full choir and war drums.
+        const surge=b>=32;
+        for(let k=0;k<8;k++)note(notes[[0,1,2,1,0,2,1,2][k]]+12+(k>=4?12:0),p(k*.5),.18,.03*pulse,'harp',Math.sin(k)*.55);
+        for(let k=0;k<16;k++)note(notes[[0,0,2,0,1,0,2,1][k%8]]-12+(k%8===7?12:0),p(k*.25),beat*.2,.05*pulse,'cello',k%2?-.3:.25);
+        note(notes[0]-24,t,bar-.15,.06,'drone');
+        if(b%2===0){chord(notes.map(n=>n+12),t,bar*1.8,surge?.034:.028,'choir',.5);chord(notes,t,bar*1.8,.03,'strings',.3);}
+        chord(notes,p(0),beat*1.4,.05,'horn',.24);if(b%2)chord(notes,p(2.5),beat*1.1,.04,'horn',.26);
+        hit(t,.36,'frame');hit(p(1.5),.2,'frame');hit(p(2),.3,'frame');hit(p(3),.16,'frame');hit(p(3.5),.22,'frame');
+        for(const off of[0,2])hit(p(off),.22,'timpani');
+        if(b%4===3)for(let k=0;k<8;k++)hit(p(3+k*.125),.04+k*.012,'timpani');
+        if(b%8===0)hit(t,.16,'gong');
         if(b%2===1)bell(notes[1]+24,p(1.5),.03);
-        if(b%4===3)for(let k=0;k<8;k++)hit(p(3+k*.125),.025+k*.008,'timpani');
+        if(surge&&b%2===1){let cursor=0;for(const[offset,len]of[[14,1],[12,.5],[10,.5],[12,2]]){note(base+24+offset,p(cursor),len*beat*.85,.04,'trumpet',-.15);cursor+=len;}}
       }else if(track.kind==='boss'){
         const count=isIntense?16:8,step=isIntense?.25:.5;
         for(let k=0;k<count;k++)note(notes[[0,2,1,2][k%4]]+12,p(k*step),beat*step*.72,.037*pulse,isIntense?'strings':'cello',k%2?.34:-.34);
@@ -155,9 +163,9 @@ export function composeTrack(ctx,destination,track,renderWindow=null){
       }
       // Two-bar motifs recur across variants; alternate phrases create continuity without a build-up.
       if(b%2===0){
-        const theme=themes[track.kind],lead=track.kind==='tavern'?(Math.floor(b/2)%2?'fiddle':'lute'):track.kind==='arena'?'hurdy':track.kind==='grave'?'box':track.kind==='temple'?'horn':track.kind==='lake'?'glass':'horn';
+        const theme=themes[track.kind],lead=track.kind==='tavern'?(Math.floor(b/2)%2?'fiddle':'lute'):track.kind==='arena'?'hurdy':track.kind==='grave'?'box':track.kind==='temple'?'horn':track.kind==='lake'?'trumpet':'horn';
         let cursor=0;
-        for(const [offset,len]of theme){if(cursor>=track.meter*2)break;const allowed=Math.min(len,track.meter*2-cursor);note(base+24+offset,t+cursor*beat,allowed*beat*.82,track.kind==='temple'?.045:track.kind==='grave'?.042:track.kind==='boss'?.048:.055,lead,.1,track.kind==='grave'?(cursor%2?6:-5):0);cursor+=len;}
+        for(const [offset,len]of theme){if(cursor>=track.meter*2)break;const allowed=Math.min(len,track.meter*2-cursor);note(base+24+offset,t+cursor*beat,allowed*beat*.82,track.kind==='temple'?.045:track.kind==='grave'?.042:track.kind==='boss'?.048:.055,lead,.1,track.kind==='grave'?(cursor%2?6:-5):0);if(track.kind==='lake')note(base+36+offset,t+cursor*beat,allowed*beat*.82,.022,'glass',-.25);cursor+=len;}
       }
     }
   }else if(track.kind==='warning'){

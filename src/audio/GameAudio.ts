@@ -8,11 +8,12 @@ import { SoundName, synthesizeSound } from './soundbank';
  *  file so Vite rewrites them; each is fetched the first time it's needed. */
 const TRACK_URLS = {
   tavern: new URL('../assets/audio/music/tavern.mp3', import.meta.url).href,
-  arena: new URL('../assets/audio/music/arena.mp3', import.meta.url).href,
+  // The original score ("The Last Watch", src/audio/score.ts) stays the arena's theme.
+  arena: new URL('../assets/audio/the-last-watch.mp3', import.meta.url).href,
   'arena-intense': new URL('../assets/audio/music/arena-intense.mp3', import.meta.url).href,
   'guardian-gravedigger': new URL('../assets/audio/music/guardian-gravedigger.mp3', import.meta.url).href,
   'guardian-temple': new URL('../assets/audio/music/guardian-temple.mp3', import.meta.url).href,
-  'guardian-lake': new URL('../assets/audio/music/guardian-lake.mp3', import.meta.url).href,
+  'guardian-lake': new URL('../assets/audio/music/guardian-lake_v2.mp3', import.meta.url).href,
   'boss-necromancer': new URL('../assets/audio/music/boss-necromancer.mp3', import.meta.url).href,
   'boss-necromancer-enraged': new URL('../assets/audio/music/boss-necromancer-enraged.mp3', import.meta.url).href
 };
