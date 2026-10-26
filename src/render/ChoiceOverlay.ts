@@ -1,5 +1,6 @@
 import { GameSession, PendingChoice } from '../core/session/GameSession';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
+import { FAMILY_LABELS, WEAPONS, weaponFamily } from '../config/weapons';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
 import { companionIcon, upgradeIcon, weaponIcon } from './ui/icons';
 
@@ -32,6 +33,7 @@ export class ChoiceOverlay {
     const choice = session.pendingChoice;
     const key = !choice ? ''
       : choice.kind === 'companion' ? `companion:${choice.from}:${choice.offers.map((offer) => `${offer.companion}${offer.level}`).join(',')}`
+      : choice.kind === 'affinity' ? `affinity:${choice.families.join(',')}`
       : `${choice.kind}:${choice.kind === 'level-up' ? choice.level : choice.picksRemaining}:${choice.upgrades.map((upgrade) => upgrade.id).join(',')}`;
     if (key === this.renderedKey) return;
     this.renderedKey = key;
@@ -42,6 +44,10 @@ export class ChoiceOverlay {
   private render(choice: PendingChoice): void {
     if (choice.kind === 'companion') {
       this.renderCompanions(choice);
+      return;
+    }
+    if (choice.kind === 'affinity') {
+      this.renderAffinity(choice);
       return;
     }
     const title = choice.kind === 'starting'
@@ -64,6 +70,27 @@ export class ChoiceOverlay {
     hint.className = 'choice-hint';
     hint.textContent = 'Clique para escolher ou use as teclas 1–5';
     this.root.append(eyebrow, heading, row, hint);
+    row.querySelector<HTMLButtonElement>('.upgrade-card')?.focus({ preventScroll: true });
+  }
+
+  /** The merchant's Tomo de Afinidade: one card per weapon family not yet unlocked. */
+  private renderAffinity(choice: Extract<PendingChoice, { kind: 'affinity' }>): void {
+    this.root.replaceChildren();
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'eyebrow';
+    eyebrow.textContent = 'TOMO DE AFINIDADE';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Escolha a família de arma';
+    const row = document.createElement('div');
+    row.className = 'choice-row';
+    choice.families.forEach((family, index) => {
+      const label = FAMILY_LABELS[family];
+      const representative = Object.values(WEAPONS).find((weapon) => weaponFamily(weapon) === family)!;
+      const card = upgradeCard({ icon: weaponIcon(representative.id), name: `Afinidade ${label.toLowerCase()}`, description: `Desbloqueia as melhorias de armas ${label.toLowerCase()} que você já possui ou vier a possuir.`, variant: 'rare', hotkey: index + 1 }, () => this.session?.chooseAffinity(family));
+      card.querySelector('.card-tier')!.textContent = label;
+      row.appendChild(card);
+    });
+    this.root.append(eyebrow, heading, row);
     row.querySelector<HTMLButtonElement>('.upgrade-card')?.focus({ preventScroll: true });
   }
 
