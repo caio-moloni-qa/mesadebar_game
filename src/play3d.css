@@ -366,3 +366,9 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
   font: 600 calc(12 * var(--ui-unit)) / 1 MedievalSharp, Georgia, serif; color: #f7f1dc;
   text-shadow: 0 1px 0 #14101c, 1px 0 #14101c, -1px 0 #14101c, 0 -1px #14101c; }
 @keyframes marker-pulse { 0%, 100% { scale: 1; } 50% { scale: 1.08; } }
+
+/* The merchant: gold banner and marker, prompts that keep the item's description on a second line. */
+.boss-banner.merchant { color: #ffd98a; }
+.offscreen-marker[data-tier="merchant"] { --tier: #ffc65a; }
+.portal-prompt { white-space: pre-line; }
+.portal-prompt.poor { color: #d7a0a0; border-color: #d7a0a070; }

@@ -17,7 +17,7 @@ function run(session: GameSession, ms: number): void {
 /** The first card of an open upgrade choice (starting / level-up). */
 function firstUpgradeId(session: GameSession): string {
   const choice = session.pendingChoice;
-  if (!choice || choice.kind === 'companion') throw new Error('no upgrade choice open');
+  if (!choice || choice.kind === 'companion' || choice.kind === 'affinity') throw new Error('no upgrade choice open');
   return choice.upgrades[0].id;
 }
 

@@ -82,7 +82,7 @@ export function upgradeIcon(id: string): string {
 export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
 
 /** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
-export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'end' | 'continue';
+export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'end' | 'continue' | 'merchant';
 const MARKER_FACES: Record<MarkerKind, string> = {
   // The Necromancer: a crowned skull with green fire in the sockets.
   boss: svg('<path d="M14 20 l6 -10 l6 8 l6 -12 l6 12 l6 -8 l6 10 z" fill="#b8923a"/><circle cx="32" cy="36" r="16" fill="#d8cfb4"/><rect x="22" y="31" width="8" height="8" fill="#0c0a10"/><rect x="34" y="31" width="8" height="8" fill="#0c0a10"/><rect x="24" y="33" width="4" height="4" fill="#6dff9a"/><rect x="36" y="33" width="4" height="4" fill="#6dff9a"/><rect x="25" y="46" width="14" height="6" fill="#a89c80"/><rect x="27" y="46" width="2" height="4" fill="#f0e8d0"/><rect x="31" y="46" width="2" height="4" fill="#f0e8d0"/><rect x="35" y="46" width="2" height="4" fill="#f0e8d0"/>'),
@@ -93,6 +93,8 @@ const MARKER_FACES: Record<MarkerKind, string> = {
   // O Espírito do Lago: a face of water under a crown of water spikes.
   lakeSpirit: svg('<path d="M18 22 l4 -12 l4 10 l6 -14 l6 14 l4 -10 l4 12 z" fill="#e6f6ff"/><ellipse cx="32" cy="36" rx="18" ry="18" fill="#8fdcff"/><ellipse cx="32" cy="44" rx="12" ry="7" fill="#4fb3e0"/><rect x="22" y="31" width="8" height="5" fill="#ffffff"/><rect x="34" y="31" width="8" height="5" fill="#ffffff"/><path d="M14 50 q9 -6 18 0 q9 6 18 0" stroke="#e6f6ff" stroke-width="3" fill="none"/>'),
   end: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#9fb4ff" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#9fb4ff" opacity=".6"/><path d="M26 32 h12 m-5 -5 l5 5 l-5 5" stroke="#ffffff" stroke-width="3" fill="none"/>'),
+  // Sergio, the merchant: a wide hat over a grey beard, a gold coin at the brim.
+  merchant: svg('<rect x="8" y="22" width="48" height="5" rx="2" fill="#3a2a1e"/><path d="M20 22 L32 6 L44 22 Z" fill="#3a2a1e"/><circle cx="32" cy="34" r="11" fill="#d9a77e"/><rect x="26" y="31" width="4" height="4" fill="#1a1410"/><rect x="34" y="31" width="4" height="4" fill="#1a1410"/><path d="M21 38 L43 38 L32 58 Z" fill="#cfc8bb"/><circle cx="46" cy="18" r="5" fill="#ffc65a" stroke="#b8923a" stroke-width="2"/>'),
   continue: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#7dffa0" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#7dffa0" opacity=".6"/><path d="M32 24 v16 M24 32 h16" stroke="#ffffff" stroke-width="3"/>')
 };
 

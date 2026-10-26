@@ -64,6 +64,11 @@ export class CameraRig {
     this.shakeTime = seconds;
   }
 
+  /** Jumps straight to the next focus instead of easing there (teleports). */
+  cut(): void {
+    this.initialized = false;
+  }
+
   /** Eases the look-at point towards `focus` (meters) and re-snaps the camera. `deltaSeconds` = frame time. */
   follow(focus: THREE.Vector3, deltaSeconds: number): void {
     if (!this.initialized) {

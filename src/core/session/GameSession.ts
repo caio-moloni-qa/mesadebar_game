@@ -10,6 +10,7 @@ import { circlesOverlap } from '../collision';
 import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffled } from '../math';
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
+import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -54,9 +55,11 @@ export type PendingChoice =
   | { kind: 'starting'; upgrades: Upgrade[]; picksRemaining: number; picksTotal: number }
   | { kind: 'level-up'; level: number; upgrades: Upgrade[]; extraWeapon: WeaponConfig | null }
   /** After a zone mini-boss falls: its zone's companion, or strengthening one already following you. */
-  | { kind: 'companion'; from: MiniBossKind; offers: CompanionOffer[] };
+  | { kind: 'companion'; from: MiniBossKind; offers: CompanionOffer[] }
+  /** The merchant's Tomo de Afinidade: unlock one weapon family's upgrade pool. */
+  | { kind: 'affinity'; families: WeaponFamily[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents {
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean };
   'enemy-defeated': { x: number; y: number; variantId: EnemyVariantId; divineRelic: boolean };
   'player-damaged': { amount: number };
@@ -121,6 +124,7 @@ export class GameSession implements WeaponHost {
   readonly bosses: BossSystem;
   readonly miniBosses: MiniBossSystem;
   readonly companions: CompanionSystem;
+  readonly merchant: MerchantSystem;
   /** Zone guardians slain this cycle (each weakens the Necromancer). */
   guardiansDefeated = 0;
   private miniBossSlotsThisPhase = 0;
@@ -193,6 +197,14 @@ export class GameSession implements WeaponHost {
       setLakeLevel: (level) => this.setLakeLevel(level),
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
     });
+    this.merchant = new MerchantSystem({
+      player: this.player,
+      rng: this.rng,
+      arena: this.arena,
+      events: this.events,
+      affinities: () => this.affinities,
+      encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
+    });
     this.companions = new CompanionSystem({
       player: this.player,
       arena: this.arena,
@@ -255,7 +267,7 @@ export class GameSession implements WeaponHost {
   /** Picks one of the offered upgrades from the open choice (level-up card or starting-upgrade card). */
   chooseUpgrade(upgradeId: string): void {
     const choice = this.pendingChoice;
-    if (!choice || choice.kind === 'companion') return;
+    if (!choice || choice.kind === 'companion' || choice.kind === 'affinity') return;
     const upgrade = choice.upgrades.find((candidate) => candidate.id === upgradeId);
     if (!upgrade) return;
     this.applyUpgrade(upgrade);
@@ -265,6 +277,50 @@ export class GameSession implements WeaponHost {
     }
     this.closeChoice();
     this.processExperience();
+  }
+
+  /** The Tomo de Afinidade's pick. */
+  chooseAffinity(family: WeaponFamily): void {
+    const choice = this.pendingChoice;
+    if (!choice || choice.kind !== 'affinity' || !choice.families.includes(family)) return;
+    this.grantAffinity(family);
+    this.closeChoice();
+  }
+
+  /** Buys pedestal `index` in the merchant's room and applies it (Phaser MerchantSystem item effects). */
+  private buyFromMerchant(index: number): void {
+    const offer = this.merchant.buy(index, this.currency);
+    if (!offer) return;
+    this.currency -= offer.cost;
+    const { player } = this;
+    switch (offer.id) {
+      case 'divine-blessing': player.addDivineBlessing(); break;
+      case 'arcane-curse': player.addArcaneCurse(); break;
+      case 'heal': this.healPlayer(40); break;
+      case 'damage': player.damageMultiplier += 0.15; break;
+      case 'speed': player.movementSpeed += 15; break;
+      case 'max-health':
+        player.maxHealth += 20;
+        this.healPlayer(player.maxHealth * 0.5);
+        break;
+      case 'affinity-tome': this.openChoice({ kind: 'affinity', families: this.merchant.availableFamilies() }); break;
+    }
+  }
+
+  private walkInMerchantRoom(deltaMs: number): void {
+    const distance = (this.player.effectiveMovementSpeed(this.clock.now) * deltaMs) / 1000;
+    this.player.x += this.moveX * distance;
+    this.player.y += this.moveY * distance;
+    this.merchant.confine(this.player);
+    if (this.moveX !== 0 || this.moveY !== 0) {
+      this.player.facingX = this.moveX;
+      this.player.facingY = this.moveY;
+    }
+  }
+
+  /** Sandbox: open the merchant's portal now (near the hero). */
+  openMerchantPortal(): void {
+    if (!this.merchant.inside) this.merchant.openPortal();
   }
 
   /** Takes a companion card. */
@@ -325,6 +381,12 @@ export class GameSession implements WeaponHost {
 
   step(deltaMs: number = STEP_MS): void {
     if (this.over || this.clock.paused) return;
+    if (this.merchant.inside) {
+      // In the merchant's room the whole arena stands still (its clock too): only the hero walks around in here.
+      snapPrevious(this.player);
+      this.walkInMerchantRoom(deltaMs);
+      return;
+    }
     this.clock.advance(deltaMs);
     const now = this.clock.now;
     this.snapshotPositions();
@@ -344,6 +406,7 @@ export class GameSession implements WeaponHost {
     this.scheduleMiniBosses();
     this.bosses.update(deltaMs);
     this.miniBosses.update(deltaMs);
+    this.merchant.update(deltaMs);
     this.topUpStressEnemies();
     this.rebuildEnemyHash();
     this.updateEnemies(deltaMs, now);
@@ -579,9 +642,19 @@ export class GameSession implements WeaponHost {
     return null;
   }
 
-  /** The interact key (E): takes the portal in reach. */
+  /** The interact key (E): the merchant's portal, a pedestal or his exit; otherwise the end/continue portal in reach. */
   interact(): void {
     if (this.over || this.clock.paused) return;
+    if (this.merchant.inside) {
+      const spot = this.merchant.roomSpot;
+      if (spot?.kind === 'exit') this.merchant.leave();
+      if (spot?.kind === 'slot') this.buyFromMerchant(spot.index);
+      return;
+    }
+    if (this.merchant.portalInReach) {
+      this.merchant.enter();
+      return;
+    }
     const portal = this.portalInReach;
     if (portal === 'end') this.finish(true);
     if (portal === 'continue') this.continueToNextCycle();
