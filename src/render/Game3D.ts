@@ -15,7 +15,7 @@ import { PixelPipeline, ndcToCanvas } from './PixelPipeline';
 import { RunChoice, StartMenu } from './StartMenu';
 import { WORLD_SCALE, simToWorld } from './space';
 import { FloatingTexts } from './ui/FloatingTexts';
-import { RunScreens } from './ui/RunScreens';
+import { RunResult, RunScreens } from './ui/RunScreens';
 import { BossUi } from './ui/BossUi';
 import { SandboxPanel } from './ui/SandboxPanel';
 import { BossEffects } from './vfx/BossEffects';
@@ -27,6 +27,8 @@ import { TavernDialog } from './ui/TavernDialog';
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
+import { SaveData, applyRun, metaBonuses } from '../core/progress/Progress';
+import { SaveStore } from './progress/SaveStore';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
@@ -97,6 +99,10 @@ export class Game3D {
   private readonly menu: StartMenu;
   private readonly audio: GameAudio;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
+  /** Progress between runs (browser storage), and what the last finished run banked. */
+  private progress: SaveData = SaveStore.load();
+  private result: RunResult = { outcome: null };
+  private attract = false;
   private inMenu = false;
   private session!: GameSession;
   private playerView!: HeroView;
@@ -152,7 +158,20 @@ export class Game3D {
       setFogVisible: (visible) => { this.arena.mist.root.visible = visible; },
       announce: (text) => this.floatAboveHero(text, '#8bff8b')
     });
-    this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
+    this.screens = new RunScreens(container, {
+      resume: () => { this.session.paused = false; },
+      restart: () => this.restart(),
+      menu: () => this.showMenu(),
+      exportSave: () => SaveStore.export(this.progress),
+      importSave: () => {
+        void SaveStore.import().then((save) => {
+          if (!save) { this.floatAboveHero('Arquivo de progresso inválido', '#ff9a8a'); return; }
+          this.progress = save;
+          SaveStore.save(save);
+          this.floatAboveHero(`Progresso importado: ${save.fichas} Fichas`, '#8dffa8');
+        });
+      }
+    });
     this.choices = new ChoiceOverlay(container);
     this.tavernDialog = new TavernDialog(container);
     this.companionBars = new CompanionBars(container);
@@ -214,13 +233,18 @@ export class Game3D {
     this.floating.clear();
     this.chestRoll.stop();
     const { characterId, weaponId } = this.run;
+    this.attract = attract;
+    this.result = { outcome: null };
     this.session = new GameSession({
       characterId,
       startingWeaponId: weaponId,
       seed: this.options.seed ?? randomSeed(),
       stressEnemyCount: attract ? undefined : this.options.stressEnemyCount,
       skipStartingUpgrades,
-      arena: this.arenaMap
+      arena: this.arenaMap,
+      // Sergio's permanent upgrades and the regulars' mission progress carry into every real run.
+      meta: attract ? undefined : metaBonuses(this.progress),
+      questTiers: attract ? undefined : this.progress.regularMissions
     });
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
@@ -246,9 +270,28 @@ export class Game3D {
     this.bindSessionEffects();
   }
 
+  /** Banks the finished run into the save (not the menu's backdrop run, nor a sandbox or god-mode one). */
+  private bankRun(): void {
+    if (this.attract) return;
+    if (this.sandbox.enabled || this.options.invincible) {
+      this.result = { outcome: null, note: 'Partida de teste (sandbox ou modo deus): o progresso não foi salvo.' };
+      return;
+    }
+    const outcome = applyRun(this.progress, this.session.runSummary(this.run.characterId, Date.now()));
+    this.progress = outcome.save;
+    const saved = SaveStore.save(this.progress);
+    this.result = { outcome, note: saved ? undefined : 'Não foi possível salvar o progresso neste navegador.' };
+  }
+
   /** Session events → particles and ground effects. Fresh listeners per session (the old bus is dropped with it). */
   private bindSessionEffects(): void {
     const { events } = this.session;
+    events.on('run-ended', () => this.bankRun());
+    events.on('player-revived', () => {
+      this.floatAboveHero('SEGUNDA CHANCE!', '#ffe29a');
+      this.effects.pulse(this.session.player.x, this.session.player.y, 140, 0xffe29a, 0.6, 0.8);
+      this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffe29a, 30, 2.4, 1.6);
+    });
     const at = (x: number, y: number) => simToWorld(x, y, 0, this.scratch);
     events.on('enemy-defeated', ({ x, y, variantId, divineRelic }) => {
       const point = at(x, y);
@@ -620,7 +663,7 @@ export class Game3D {
       this.fps.frames = 0;
       this.fps.since = now;
     }
-    this.screens.update(this.session, this.inMenu);
+    this.screens.update(this.session, this.inMenu, this.result);
     this.bossUi.update(this.session, this.projectToScreen);
     this.companionBars.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {

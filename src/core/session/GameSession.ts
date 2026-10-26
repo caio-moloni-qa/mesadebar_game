@@ -11,7 +11,8 @@ import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffle
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
-import { QuestEvents, QuestReward, QuestSystem } from '../systems/QuestSystem';
+import { QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
+import { HeroId, MetaBonuses, NO_META_BONUSES, RunSummary } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -74,6 +75,8 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'soul-fired': { x: number; y: number };
   'enemy-slipped': { enemy: EnemyState };
   'player-died': Record<string, never>;
+  /** Segunda chance: back on their feet once, at half health. */
+  'player-revived': Record<string, never>;
   /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
   'boss-wave-cleared': { cycle: number };
   'run-ended': { victory: boolean };
@@ -90,6 +93,10 @@ export interface GameSessionOptions {
   skipStartingUpgrades?: boolean;
   /** The arena to play in. Defaults to the authored map with this run's seed; tests pass ArenaMap.open(size). */
   arena?: ArenaMap;
+  /** Sergio's permanent upgrades bought between runs (none by default). */
+  meta?: MetaBonuses;
+  /** Missions already done with each regular in earlier runs: they pick up at the next one. */
+  questTiers?: Partial<Record<QuestNpcId, number>>;
 }
 
 /** Engine-agnostic run simulation — the GameScene replacement described in THREEJS_3D_MIGRATION_TEMP.md. Covers
@@ -131,6 +138,10 @@ export class GameSession implements WeaponHost {
   dialogue: number | null = null;
   /** Zone guardians slain this cycle (each weakens the Necromancer). */
   guardiansDefeated = 0;
+  /** Run totals for the results screen and the save (guardiansDefeated resets every cycle). */
+  readonly stats = { guardians: 0, bosses: 0, missions: 0, killsByVariant: {} as Record<string, number>, guardiansByKind: {} as Record<string, number> };
+  /** Segunda chance revives still to use this run. */
+  revivesLeft = 0;
   private miniBossSlotsThisPhase = 0;
   private miniBossRotation = 0;
   /** Boss-wave cycle: cycle 1 is the base 3-minute run; each continue portal adds a minute, 1× difficulty and a boss. */
@@ -201,7 +212,8 @@ export class GameSession implements WeaponHost {
       setLakeLevel: (level) => this.setLakeLevel(level),
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
     });
-    this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events });
+    this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events }, options.questTiers);
+    this.events.on('quest-claimed', () => { this.stats.missions += 1; });
     this.merchant = new MerchantSystem({
       player: this.player,
       rng: this.rng,
@@ -229,10 +241,43 @@ export class GameSession implements WeaponHost {
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
     }, this.rng, this.arena.size);
+    const meta = options.meta ?? NO_META_BONUSES;
+    this.applyMeta(meta);
     if (!options.skipStartingUpgrades && character.preferredWeaponId === startingWeapon.id && character.startingWeaponUpgradeChoices) {
-      const total = character.startingWeaponUpgradeChoices;
+      const total = character.startingWeaponUpgradeChoices + meta.extraStartingPicks;
       this.openChoice({ kind: 'starting', upgrades: shuffled(this.rng, this.upgradeSystem.weaponUpgradePool(startingWeapon, this.player)).slice(0, total), picksRemaining: total, picksTotal: total });
     }
+  }
+
+  /** Sergio's permanent upgrades, on top of the character's own stats. */
+  private applyMeta(meta: MetaBonuses): void {
+    const { player } = this;
+    player.maxHealth += meta.maxHealth;
+    player.health = player.maxHealth;
+    player.damageMultiplier += meta.damage;
+    player.movementSpeed *= 1 + meta.speed;
+    player.pickupRange *= 1 + meta.pickupRange;
+    this.currency += meta.startingCoins;
+    this.revivesLeft = meta.revives;
+  }
+
+  /** What this run counts, for the results screen and the save. */
+  runSummary(heroId: HeroId, endedAt: number): RunSummary {
+    return {
+      heroId,
+      victory: this.victory,
+      elapsedMs: this.elapsedMs,
+      kills: this.kills,
+      guardians: this.stats.guardians,
+      bosses: this.stats.bosses,
+      missions: this.stats.missions,
+      coins: this.currency,
+      cycle: this.bossCycle,
+      killsByVariant: { ...this.stats.killsByVariant },
+      guardiansByKind: { ...this.stats.guardiansByKind },
+      questTiers: Object.fromEntries(this.quests.quests.map((quest) => [quest.npc.id, quest.tier])),
+      endedAt
+    };
   }
 
   // ── Control surface (renderer / UI) ───────────────────────────────────────────────────────────────────────
@@ -465,6 +510,14 @@ export class GameSession implements WeaponHost {
     this.updatePeels(now);
     this.updatePickups(deltaMs);
     if (!this.player.alive && !this.over) {
+      if (this.revivesLeft > 0) {
+        // Segunda chance: half health and a moment of grace.
+        this.revivesLeft -= 1;
+        this.player.health = this.player.maxHealth * 0.5;
+        this.player.invulnerableUntil = now + 2500;
+        this.events.emit('player-revived', {});
+        return;
+      }
       this.events.emit('player-died', {});
       this.finish(false);
     }
@@ -829,6 +882,7 @@ export class GameSession implements WeaponHost {
     enemy.phase = 'dying';
     enemy.phaseEndsAt = this.clock.now + ENEMY_DYING_MS;
     this.kills += 1;
+    this.stats.killsByVariant[enemy.variantId] = (this.stats.killsByVariant[enemy.variantId] ?? 0) + 1;
     if (this.miniBosses.bossFor(enemy)) {
       // A zone guardian: a chest and a burst of crystals, a companion to pick, and the Necromancer weakens.
       this.dropPickup('chest', enemy.x, enemy.y, 0);
@@ -839,13 +893,18 @@ export class GameSession implements WeaponHost {
       this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });
       const kind = this.miniBosses.defeat(enemy)!;
       this.guardiansDefeated += 1;
+      this.stats.guardians += 1;
+      this.stats.guardiansByKind[kind] = (this.stats.guardiansByKind[kind] ?? 0) + 1;
       this.offerCompanion(kind);
       return;
     }
     if (this.bosses.bossFor(enemy)) {
       // Bosses give no XP or drops; the last wave boss opens the portals.
       this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });
-      if (this.bosses.defeat(enemy) && !this.bosses.hasActiveWaveBosses()) this.onBossWaveCleared();
+      if (this.bosses.defeat(enemy)) {
+        this.stats.bosses += 1;
+        if (!this.bosses.hasActiveWaveBosses()) this.onBossWaveCleared();
+      }
       return;
     }
     this.experience += enemy.reward;
