@@ -86,7 +86,6 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
    *  book. */
   'hub-exit': Record<string, never>;
   'hub-records': Record<string, never>;
-  'hub-hero': { index: number };
   'hub-sergio': Record<string, never>;
   /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
   'boss-wave-cleared': { cycle: number };
@@ -860,7 +859,6 @@ export class GameSession implements WeaponHost {
       if (this.merchant.hub) {
         // Between runs the room's stations are the renderer's to answer; the regulars still talk.
         if (spot?.kind === 'exit') this.events.emit('hub-exit', {});
-        if (spot?.kind === 'hero') this.events.emit('hub-hero', { index: spot.index });
         if (spot?.kind === 'sergio') this.events.emit('hub-sergio', {});
         if (spot?.kind === 'records') this.events.emit('hub-records', {});
         if (spot?.kind === 'npc') this.dialogue = spot.index;

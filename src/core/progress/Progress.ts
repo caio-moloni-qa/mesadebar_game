@@ -1,4 +1,4 @@
-import { CharacterId } from '../../config/characters';
+import { CHARACTERS, CharacterId } from '../../config/characters';
 import { QuestNpcId } from '../systems/QuestSystem';
 
 // Progress between runs: what a finished run pays (Fichas and mastery XP), what the Fichas buy at Sergio's counter
@@ -268,6 +268,11 @@ export function totalMastery(save: SaveData): number {
   return Object.values(save.mastery).reduce((sum, xp) => sum + masteryLevel(xp ?? 0), 0);
 }
 
+/** Heroes unlocked that the tavern hasn't announced yet (in roster order). */
+export function heroesToWelcome(save: SaveData): HeroId[] {
+  return rosterFor(save).filter((hero) => !save.welcomed.includes(hero));
+}
+
 /** Every hero the save has unlocked, in roster order. */
 export function rosterFor(save: SaveData): HeroId[] {
   const roster: HeroId[] = [...STARTING_HEROES];
@@ -277,6 +282,35 @@ export function rosterFor(save: SaveData): HeroId[] {
   });
   if ((Object.keys(REGULAR_UNLOCKS) as QuestNpcId[]).every((npc) => roster.includes(npc)) && totalMastery(save) >= SERGIO_TOTAL_MASTERY) roster.push('sergio');
   return roster;
+}
+
+/** One condition to unlock a hero, with how far the save is. */
+export interface UnlockStep {
+  label: string;
+  current: number;
+  needed: number;
+}
+
+/** What a hero still asks for (empty for the starting heroes): a regular's missions and a mastery level with the hero
+ *  closest to them; Sergio, every regular and a mastery total. */
+export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
+  if (hero in REGULAR_UNLOCKS) {
+    const npc = hero as QuestNpcId;
+    const rule = REGULAR_UNLOCKS[npc];
+    return [
+      { label: `Concluir as missões de ${CHARACTERS[npc].name} na taverna`, current: Math.min(MISSIONS_PER_REGULAR, save.regularMissions[npc] ?? 0), needed: MISSIONS_PER_REGULAR },
+      { label: `Maestria nível ${rule.level} com ${CHARACTERS[rule.hero].name}`, current: Math.min(rule.level, masteryLevel(save.mastery[rule.hero] ?? 0)), needed: rule.level }
+    ];
+  }
+  if (hero === 'sergio') {
+    const roster = rosterFor(save);
+    const regulars = Object.keys(REGULAR_UNLOCKS) as QuestNpcId[];
+    return [
+      { label: 'Liberar os quatro frequentadores da taverna', current: regulars.filter((npc) => roster.includes(npc)).length, needed: regulars.length },
+      { label: `Somar ${SERGIO_TOTAL_MASTERY} níveis de maestria entre todos os heróis`, current: Math.min(SERGIO_TOTAL_MASTERY, totalMastery(save)), needed: SERGIO_TOTAL_MASTERY }
+    ];
+  }
+  return [];
 }
 
 // ── The save ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -323,6 +357,10 @@ export interface SaveData {
   tutorialSeen: boolean;
   /** Sergio has explained zone guardians (the first time one rises). */
   guardianTipSeen: boolean;
+  /** Sergio has explained the run's goal (at the start of the first run). */
+  firstRunTipSeen: boolean;
+  /** Heroes the tavern has announced as playable (the welcome on coming back after an unlock). */
+  welcomed: HeroId[];
 }
 
 export function emptySave(): SaveData {
@@ -339,7 +377,9 @@ export function emptySave(): SaveData {
     tierUnlocked: 1,
     announced: [...STARTING_HEROES],
     tutorialSeen: false,
-    guardianTipSeen: false
+    guardianTipSeen: false,
+    firstRunTipSeen: false,
+    welcomed: [...STARTING_HEROES]
   };
 }
 
@@ -377,7 +417,9 @@ export function parseSave(text: string | null | undefined): SaveData {
     tierUnlocked: Math.min(DIFFICULTY_TIERS.length, Math.max(1, Math.floor(number(raw.tierUnlocked, 1)))),
     announced: Array.isArray(raw.announced) ? raw.announced.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES],
     tutorialSeen: raw.tutorialSeen === true,
-    guardianTipSeen: raw.guardianTipSeen === true
+    guardianTipSeen: raw.guardianTipSeen === true,
+    firstRunTipSeen: raw.firstRunTipSeen === true,
+    welcomed: Array.isArray(raw.welcomed) ? raw.welcomed.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES]
   };
 }
 

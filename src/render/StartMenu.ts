@@ -1,5 +1,5 @@
 import { weaponIcon } from './ui/icons';
-import { MASTERY_REWARDS, MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, SkinId, masteryFrame, masteryLevel, masteryProgress, masteryTitle, unlockedSkins } from '../core/progress/Progress';
+import { MASTERY_REWARDS, MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, SkinId, masteryFrame, masteryLevel, masteryProgress, masteryTitle, unlockSteps, unlockedSkins } from '../core/progress/Progress';
 import { SKINS, SKIN_ORDER } from './models/skins';
 import { CHARACTERS, CharacterConfig, CharacterId } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
@@ -65,7 +65,7 @@ export class StartMenu {
       }
       if (this.screen === 'characters' && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.code)) {
         event.preventDefault();
-        const heroes = this.progress.roster().map((id) => CHARACTERS[id]);
+        const heroes = Object.values(CHARACTERS);
         const index = heroes.findIndex(hero => hero.id === this.selected?.id);
         const next = event.code === 'Home' ? 0 : event.code === 'End' ? heroes.length - 1 : (index + (event.code === 'ArrowRight' ? 1 : -1) + heroes.length) % heroes.length;
         this.selected = heroes[next]; this.render();
@@ -173,14 +173,60 @@ export class StartMenu {
     return step;
   }
 
+  private unlocked(hero: CharacterId): boolean {
+    return this.progress.roster().includes(hero);
+  }
+
   private characterStep(): HTMLElement {
     const character = this.selected ??= CHARACTERS.barbarian;
+    const locked = !this.unlocked(character.id);
     const step = document.createElement('section');
     step.className = 'start-step character-step';
-    step.style.setProperty('--accent', hex(character.accentColor));
-    step.innerHTML = '<header class="selection-heading"><p class="eyebrow">01 / PREPARE SUA JORNADA</p><h1>Escolha seu herói</h1><p class="start-subtitle">Quem vai enfrentar a próxima rodada?</p></header>';
+    step.style.setProperty('--accent', locked ? '#6b6478' : hex(character.accentColor));
+    step.innerHTML = `<header class="selection-heading"><p class="eyebrow">01 / ${this.fromTavern ? 'ANTES DE ATRAVESSAR O PORTAL' : 'PREPARE SUA JORNADA'}</p><h1>Escolha seu herói</h1><p class="start-subtitle">Quem vai enfrentar a próxima rodada?</p></header>`;
     const showcase = document.createElement('div');
     showcase.className = 'hero-showcase';
+    const details = locked ? this.lockedDetails(character) : this.heroDetails(character);
+    showcase.append(this.previewStage(character, character.preferredWeaponId ?? 'staff', locked), details);
+    const roster = document.createElement('div');
+    roster.className = 'hero-roster'; roster.setAttribute('role', 'group'); roster.setAttribute('aria-label', 'Heróis');
+    Object.values(CHARACTERS).forEach((hero, index) => {
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'hero-choice';
+      button.dataset.heroId = hero.id; button.style.setProperty('--accent', hex(hero.accentColor));
+      button.setAttribute('aria-pressed', String(hero.id === character.id));
+      const number = `<span class="hero-choice-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>`;
+      if (!this.unlocked(hero.id)) {
+        button.classList.add('locked');
+        button.setAttribute('aria-label', `Herói bloqueado ${index + 1}`);
+        button.innerHTML = `${number}<span><strong>???</strong><small>BLOQUEADO</small></span><span class="hero-choice-level" aria-hidden="true">🔒</span>`;
+      } else {
+        const xp = this.progress.save().mastery[hero.id] ?? 0;
+        const frame = masteryFrame(xp);
+        if (frame) button.dataset.frame = frame;
+        button.innerHTML = `${number}<span><strong>${hero.name}</strong><small>${HERO_ROLES[hero.id].trait}</small></span><span class="hero-choice-level" title="Nível de maestria">Nv ${masteryLevel(xp)}</span>`;
+      }
+      button.addEventListener('click', () => { this.selected = hero; this.render(); });
+      roster.append(button);
+    });
+    const footer = document.createElement('div'); footer.className = 'selection-footer';
+    if (this.fromTavern) {
+      const toTavern = document.createElement('button');
+      toTavern.type = 'button';
+      toTavern.className = 'start-back';
+      toTavern.innerHTML = '<span aria-hidden="true">←</span> Voltar à taverna <kbd>Esc</kbd>';
+      toTavern.addEventListener('click', () => this.progress.closeToTavern());
+      footer.append(toTavern);
+    } else {
+      footer.append(this.backButton('title', 'Menu principal'));
+    }
+    const hint = document.createElement('p'); hint.className = 'selection-keyboard-hint'; hint.innerHTML = '<kbd>←</kbd><kbd>→</kbd> Trocar herói';
+    footer.append(hint);
+    step.append(showcase, roster, footer);
+    return step;
+  }
+
+  /** An unlocked hero's card: attributes, abilities, signature weapon, mastery and skins, and the button onwards. */
+  private heroDetails(character: CharacterConfig): HTMLElement {
     const details = document.createElement('div');
     details.className = 'hero-details';
     const role = HERO_ROLES[character.id];
@@ -201,35 +247,33 @@ export class StartMenu {
     choose.addEventListener('click', () => this.navigate('weapons'));
     details.append(advantages, signature, choose);
     details.insertBefore(this.masteryPanel(character), details.querySelector('.hero-abilities-heading'));
-    showcase.append(this.previewStage(character, preferred.id), details);
-    const roster = document.createElement('div');
-    roster.className = 'hero-roster'; roster.setAttribute('role', 'group'); roster.setAttribute('aria-label', 'Heróis disponíveis');
-    this.progress.roster().map((id) => CHARACTERS[id]).forEach((hero, index) => {
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'hero-choice';
-      button.dataset.heroId = hero.id; button.style.setProperty('--accent', hex(hero.accentColor));
-      button.setAttribute('aria-pressed', String(hero.id === character.id));
-      const xp = this.progress.save().mastery[hero.id] ?? 0;
-      const frame = masteryFrame(xp);
-      if (frame) button.dataset.frame = frame;
-      button.innerHTML = `<span class="hero-choice-number" aria-hidden="true">0${index + 1}</span><span><strong>${hero.name}</strong><small>${HERO_ROLES[hero.id].trait}</small></span><span class="hero-choice-level" title="Nível de maestria">Nv ${masteryLevel(xp)}</span>`;
-      button.addEventListener('click', () => { this.selected = hero; this.render(); });
-      roster.append(button);
+    return details;
+  }
+
+  /** A hero not unlocked yet: no name, no kit — just what it takes, with the save's progress on each condition. */
+  private lockedDetails(character: CharacterConfig): HTMLElement {
+    const details = document.createElement('div');
+    details.className = 'hero-details hero-locked';
+    details.innerHTML = '<p class="eyebrow">HERÓI MISTERIOSO</p><h2>???</h2><p class="hero-role">Alguém na taverna ainda não confia em você.</p><p class="hero-abilities-heading">PARA LIBERAR</p>';
+    const list = document.createElement('ul');
+    list.className = 'unlock-steps';
+    unlockSteps(this.progress.save(), character.id).forEach((condition) => {
+      const item = document.createElement('li');
+      if (condition.current >= condition.needed) item.classList.add('done');
+      const label = document.createElement('span');
+      label.textContent = condition.label;
+      const count = document.createElement('small');
+      count.textContent = `${condition.current} / ${condition.needed}`;
+      const bar = document.createElement('i');
+      bar.style.setProperty('--progress', `${Math.round((condition.current / condition.needed) * 100)}%`);
+      item.append(label, count, bar);
+      list.append(item);
     });
-    const footer = document.createElement('div'); footer.className = 'selection-footer';
-    if (this.fromTavern) {
-      const toTavern = document.createElement('button');
-      toTavern.type = 'button';
-      toTavern.className = 'start-back';
-      toTavern.innerHTML = '<span aria-hidden="true">←</span> Voltar à taverna <kbd>Esc</kbd>';
-      toTavern.addEventListener('click', () => this.progress.closeToTavern());
-      footer.append(toTavern);
-    } else {
-      footer.append(this.backButton('title', 'Menu principal'));
-    }
-    const hint = document.createElement('p'); hint.className = 'selection-keyboard-hint'; hint.innerHTML = '<kbd>←</kbd><kbd>→</kbd> Trocar herói';
-    footer.append(hint);
-    step.append(showcase, roster, footer);
-    return step;
+    const choose = document.createElement('button');
+    choose.type = 'button'; choose.className = 'ui-button primary hero-confirm'; choose.disabled = true;
+    choose.textContent = 'Bloqueado';
+    details.append(list, choose);
+    return details;
   }
 
   /** The chosen skin, if it's still unlocked (a reset or imported save can take one away). */
@@ -284,9 +328,9 @@ export class StartMenu {
     return panel;
   }
 
-  private previewStage(character: CharacterConfig, weaponId: WeaponConfig['id']): HTMLElement {
+  private previewStage(character: CharacterConfig, weaponId: WeaponConfig['id'], silhouette = false): HTMLElement {
     const stage = document.createElement('div'); stage.className = 'hero-stage';
-    stage.setAttribute('role', 'group'); stage.setAttribute('aria-label', `Modelo de ${character.name}. Arraste para girar ou use os botões.`);
+    stage.setAttribute('role', 'group'); stage.setAttribute('aria-label', silhouette ? 'Herói bloqueado. Arraste para girar.' : `Modelo de ${character.name}. Arraste para girar ou use os botões.`);
     const viewport = document.createElement('div'); viewport.className = 'hero-viewport';
     const controls = document.createElement('div'); controls.className = 'hero-preview-controls';
     const rotateLeft = document.createElement('button'); rotateLeft.type = 'button'; rotateLeft.className = 'preview-rotate';
@@ -299,10 +343,11 @@ export class StartMenu {
     rotateRight.addEventListener('click', () => this.preview?.rotate(1));
     controls.append(rotateLeft, attack, rotateRight);
     const hint = document.createElement('p'); hint.className = 'hero-stage-hint'; hint.textContent = 'Arraste para girar · veja de todos os ângulos';
-    const equipped = document.createElement('p'); equipped.className = 'hero-equipped'; equipped.textContent = `Em mãos: ${WEAPONS[weaponId].name}`;
+    const equipped = document.createElement('p'); equipped.className = 'hero-equipped'; equipped.textContent = silhouette ? 'Em mãos: ???' : `Em mãos: ${WEAPONS[weaponId].name}`;
+    if (silhouette) attack.disabled = true;
     stage.append(equipped, viewport, controls, hint);
     this.preview ??= new HeroPreview();
-    this.preview.mount(viewport, character.id, weaponId, this.skinFor(character.id));
+    this.preview.mount(viewport, character.id, weaponId, this.skinFor(character.id), silhouette);
     return stage;
   }
 

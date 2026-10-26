@@ -25,19 +25,16 @@ describe('the tavern between runs', () => {
     expect(run.enemies.activeCount).toBe(0);
   });
 
-  it('its stations answer E with events: the exit, a waiting hero, Sergio', () => {
+  it('its stations answer E with events: the exit, Sergio', () => {
     const run = hub();
     const heard: string[] = [];
     run.events.on('hub-exit', () => heard.push('exit'));
-    run.events.on('hub-hero', ({ index }) => heard.push(`hero ${index}`));
     run.events.on('hub-sergio', () => heard.push('sergio'));
     standAt(run, MERCHANT_ROOM.exit);
     run.interact();
-    standAt(run, { x: MERCHANT_ROOM.heroStands[2].x, y: MERCHANT_ROOM.heroStands[2].y + 40 });
-    run.interact();
     standAt(run, MERCHANT_ROOM.sergioSpot);
     run.interact();
-    expect(heard).toEqual(['exit', 'hero 2', 'sergio']);
+    expect(heard).toEqual(['exit', 'sergio']);
     expect(run.merchant.inside).toBe(true);
   });
 

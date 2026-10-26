@@ -43,8 +43,6 @@ export const MERCHANT_ROOM = {
   tableRadius: 34,
   npcRadius: 18,
   /** Between runs: the heroes waiting along the north wall (roster order), and where you talk to Sergio. */
-  heroStands: [{ x: -120, y: -245 }, { x: 100, y: -245 }, { x: 180, y: -245 }, { x: 260, y: -245 }],
-  heroReach: 70,
   sergioSpot: { x: -140, y: 0 },
   sergioReach: 110,
   /** Between runs: the lectern with the record book, by the fireplace. */
@@ -105,7 +103,7 @@ export interface MerchantHost {
 
 /** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing —
  *  and between runs, a waiting hero or Sergio himself. */
-export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | { kind: 'hero'; index: number } | { kind: 'sergio' } | { kind: 'records' } | null;
+export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | { kind: 'sergio' } | { kind: 'records' } | null;
 
 export class MerchantSystem {
   enabled = true;
@@ -148,8 +146,6 @@ export class MerchantSystem {
     if (near(MERCHANT_ROOM.exit)) return { kind: 'exit' };
     if (this.hub) {
       const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
-      const stand = MERCHANT_ROOM.heroStands.findIndex((spot) => distance(spot) <= MERCHANT_ROOM.heroReach);
-      if (stand >= 0) return { kind: 'hero', index: stand };
       if (distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
       if (distance(MERCHANT_ROOM.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
     }
@@ -257,7 +253,6 @@ export class MerchantSystem {
     const circles = [
       ...MERCHANT_ROOM.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
       ...MERCHANT_ROOM.npcs.map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
-      ...(this.hub ? MERCHANT_ROOM.heroStands.map((stand) => ({ ...stand, radius: MERCHANT_ROOM.npcRadius })) : []),
       { ...MERCHANT_ROOM.records, radius: 16 }
     ];
     circles.forEach((circle) => {

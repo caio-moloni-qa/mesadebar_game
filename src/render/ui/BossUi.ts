@@ -5,8 +5,6 @@ import { MINI_BOSSES } from '../../core/systems/MiniBossSystem';
 import { GameSession, PortalKind } from '../../core/session/GameSession';
 import { WORLD_SCALE, simToWorld } from '../space';
 import { MarkerKind, markerFace, npcPortrait } from './icons';
-import { STARTING_HEROES } from '../../core/progress/Progress';
-import { heroName } from '../progress/heroNames';
 import { Projector } from './FloatingTexts';
 
 const MAX_BARS = 3;
@@ -153,13 +151,7 @@ export class BossUi {
     if (merchant.portalInReach && merchant.portal) return { ...merchant.portal, text: 'Pressione E para entrar no portal', poor: false };
     const spot = merchant.roomSpot;
     if (!spot) return null;
-    if (spot.kind === 'exit') return { x: merchant.room.x + MERCHANT_ROOM.exit.x, y: merchant.room.y + MERCHANT_ROOM.exit.y, text: merchant.hub ? 'Pressione E para começar a partida' : 'Pressione E para voltar à arena', poor: false };
-    if (spot.kind === 'hero') {
-      const stand = MERCHANT_ROOM.heroStands[spot.index];
-      const hero = STARTING_HEROES[spot.index];
-      const text = hero === session.characterId ? `Você está jogando com ${heroName(hero)}` : `Pressione E para jogar com ${heroName(hero)}`;
-      return { x: merchant.room.x + stand.x, y: merchant.room.y + stand.y, text, poor: false };
-    }
+    if (spot.kind === 'exit') return { x: merchant.room.x + MERCHANT_ROOM.exit.x, y: merchant.room.y + MERCHANT_ROOM.exit.y, text: merchant.hub ? 'Pressione E para escolher o herói e partir' : 'Pressione E para voltar à arena', poor: false };
     if (spot.kind === 'records') {
       return { x: merchant.room.x + MERCHANT_ROOM.records.x, y: merchant.room.y + MERCHANT_ROOM.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
     }

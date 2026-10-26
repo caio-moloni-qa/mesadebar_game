@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DIFFICULTY_TIERS, MASTERY_THRESHOLDS, MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, RunSummary, SERGIO_TOTAL_MASTERY, applyRun, buyUpgrade, emptySave,
-  masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockedSkins
+  heroesToWelcome, masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockSteps, unlockedSkins
 } from './Progress';
 
 function run(overrides: Partial<RunSummary> = {}): RunSummary {
@@ -105,5 +105,24 @@ describe('signature skins', () => {
   it('stays locked at max mastery while it is coming soon', () => {
     expect(unlockedSkins(MASTERY_THRESHOLDS[MASTERY_THRESHOLDS.length - 1])).not.toContain('lenda');
     expect(unlockedSkins(MASTERY_THRESHOLDS[MASTERY_THRESHOLDS.length - 1])).toContain('ouro');
+  });
+});
+
+describe('unlocking the tavern heroes', () => {
+  it('lists what a regular still needs, then welcomes them once in the tavern', () => {
+    const save = emptySave();
+    expect(unlockSteps(save, 'barbarian')).toEqual([]);
+    const steps = unlockSteps(save, 'brom');
+    expect(steps.map((step) => [step.current, step.needed])).toEqual([[0, MISSIONS_PER_REGULAR], [1, REGULAR_UNLOCKS.brom.level]]);
+    const unlocked = { ...save, regularMissions: { brom: MISSIONS_PER_REGULAR }, mastery: { barbarian: MASTERY_THRESHOLDS[REGULAR_UNLOCKS.brom.level - 1] } };
+    expect(unlockSteps(unlocked, 'brom').every((step) => step.current >= step.needed)).toBe(true);
+    expect(heroesToWelcome(unlocked)).toEqual(['brom']);
+    expect(heroesToWelcome({ ...unlocked, welcomed: [...unlocked.welcomed, 'brom'] })).toEqual([]);
+  });
+
+  it('keeps Sergio for last: every regular and a mastery total', () => {
+    const steps = unlockSteps(emptySave(), 'sergio');
+    expect(steps.map((step) => step.needed)).toEqual([4, SERGIO_TOTAL_MASTERY]);
+    expect(steps[1].current).toBe(0);
   });
 });
