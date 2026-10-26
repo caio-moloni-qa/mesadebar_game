@@ -1,4 +1,4 @@
-import { WEAPONS, WeaponFamily, weaponFamily } from '../../config/weapons';
+import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponFamily, weaponFamily } from '../../config/weapons';
 import { EventBus } from '../EventBus';
 import { Rng, Vec2, floatBetween, pickOne } from '../math';
 import { PlayerState } from '../session/entities';
@@ -58,7 +58,8 @@ const RANDOM_BUFFS: ItemSpec[] = [
   { id: 'speed', name: 'Botas Ligeiras', description: '+15 de velocidade de movimento.', cost: 0 }
 ];
 const AFFINITY_TOME: ItemSpec = { id: 'affinity-tome', name: 'Tomo de Afinidade', description: 'Escolha uma família de arma para desbloquear afinidade com ela.', cost: 150 };
-/** Takes the tome's slot once it's been bought (it's once per run) or every family is already unlocked. */
+/** Takes the tome's slot once it's been bought (it's once per run), every family is already unlocked, or the hero
+ *  already carries the most weapons a run allows. */
 const VITALITY_ELIXIR: ItemSpec = { id: 'max-health', name: 'Elixir de Vitalidade', description: '+20 de vida máxima e cura 50% da vida máxima.', cost: 25 };
 
 export interface MerchantEvents extends Record<string, unknown> {
@@ -76,6 +77,8 @@ export interface MerchantHost {
   readonly events: Pick<EventBus<MerchantEvents>, 'emit'>;
   /** Families already unlocked (the tome only offers the others). */
   affinities(): ReadonlySet<WeaponFamily>;
+  /** Weapons the hero carries (the tome is only for a hero who can still pick up a second one). */
+  weaponCount(): number;
   /** True while the Necromancer is coming or up (no portal then). */
   encounterActive(): boolean;
 }
@@ -217,7 +220,8 @@ export class MerchantSystem {
   private buildOffers(): MerchantOffer[] {
     const multiplier = MERCHANT_TUNING.priceInflation ** this.itemsPurchased;
     const randomBuff = { ...pickOne(this.host.rng, RANDOM_BUFFS), cost: MERCHANT_TUNING.randomBuffCost };
-    const fourth = !this.tomeBought && this.availableFamilies().length > 0 ? AFFINITY_TOME : VITALITY_ELIXIR;
+    const tome = !this.tomeBought && this.host.weaponCount() < MAX_ACTIVE_WEAPONS && this.availableFamilies().length > 0;
+    const fourth = tome ? AFFINITY_TOME : VITALITY_ELIXIR;
     return [DIVINE_BLESSING, ARCANE_CURSE, randomBuff, fourth].map((spec) => ({ ...spec, cost: Math.round(spec.cost * multiplier), purchased: false }));
   }
 

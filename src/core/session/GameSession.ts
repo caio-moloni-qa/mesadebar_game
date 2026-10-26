@@ -203,6 +203,7 @@ export class GameSession implements WeaponHost {
       arena: this.arena,
       events: this.events,
       affinities: () => this.affinities,
+      weaponCount: () => this.weapons.weapons.length,
       encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
     });
     this.companions = new CompanionSystem({
