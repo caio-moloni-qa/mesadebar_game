@@ -2,7 +2,7 @@ import { GameSession, PendingChoice } from '../core/session/GameSession';
 import { upgradeIcon, weaponIcon } from './ui/icons';
 
 /** Upgrade picker: whatever choice the session has open — starting upgrades or a level-up, with its bonus weapon
- *  card — as the Phaser build's framed wood cards (upgrade_card_panel art, icon, gold name, cream description).
+ *  card — using the shared dark panels, rarity colors, icons and keyboard hints.
  *  Click a card or press 1–5. Re-renders only when the open choice (or its remaining picks) changes. */
 export class ChoiceOverlay {
   private readonly root: HTMLDivElement;
@@ -12,6 +12,9 @@ export class ChoiceOverlay {
   constructor(container: HTMLElement) {
     this.root = document.createElement('div');
     this.root.className = 'choice-overlay';
+    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('aria-modal', 'true');
+    this.root.setAttribute('aria-label', 'Escolha uma melhoria');
     this.root.hidden = true;
     container.appendChild(this.root);
     window.addEventListener('keydown', (event) => {
@@ -46,7 +49,13 @@ export class ChoiceOverlay {
       const weapon = choice.extraWeapon;
       row.appendChild(upgradeCard({ icon: weaponIcon(weapon.id), name: `ARMA EXTRA: ${weapon.name}`, description: weapon.description, variant: 'weapon', hotkey: choice.upgrades.length + 1 }, () => this.session?.chooseExtraWeapon()));
     }
-    this.root.append(heading, row);
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'eyebrow';
+    eyebrow.textContent = choice.kind === 'starting' ? 'SEU PRIMEIRO PODER' : 'A JORNADA TE FORTALECE';
+    const hint = document.createElement('p');
+    hint.className = 'choice-hint';
+    hint.textContent = 'Clique para escolher ou use as teclas 1–5';
+    this.root.append(eyebrow, heading, row, hint);
     row.querySelector<HTMLButtonElement>('.upgrade-card')?.focus({ preventScroll: true });
   }
 }
@@ -59,14 +68,15 @@ export interface UpgradeCardContent {
   hotkey?: number;
 }
 
-/** One framed card. A <button> so it's focusable and works with keyboard and touch. */
+/** One power card. A <button> so it's focusable and works with keyboard and touch. */
 export function upgradeCard(content: UpgradeCardContent, onPick?: () => void): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `upgrade-card ${content.variant ?? ''}`.trim();
-  button.innerHTML = '<img alt=""><strong></strong><span></span>';
+  button.innerHTML = '<small class="card-tier"></small><img alt=""><strong></strong><span></span>';
   fillUpgradeCard(button, content);
   if (content.hotkey) button.dataset.hotkey = String(content.hotkey);
+  button.querySelector('.card-tier')!.textContent = content.variant === 'rare' ? 'RARA' : content.variant === 'weapon' ? 'NOVA ARMA' : 'MELHORIA';
   if (onPick) button.addEventListener('click', onPick);
   else button.disabled = true;
   return button;

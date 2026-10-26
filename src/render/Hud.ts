@@ -3,9 +3,8 @@ import { HUD_ART, LIFE_STEAL_ICON, upgradeIcon, weaponIcon } from './ui/icons';
 
 export interface RenderStats { fps: number; drawCalls: number; triangles: number; pixelScale: number; geometries: number; textures: number; }
 
-/** The run HUD, laid out like the Phaser build's GameHud (1280×720 coordinates scaled by --ui-unit): build icons over
- *  the HP bar with its art border, level, crystals and the Aura Podre status row top-left; kills and survival time
- *  top-right; the XP bar across the bottom. Writes to the DOM only when a value actually changes. */
+/** Compact run HUD: vitals, centered timer, counters, build tray and experience rail.
+ * Writes to the DOM only when a value actually changes. */
 export class Hud {
   private readonly root: HTMLDivElement;
   private readonly fields: Record<'health' | 'level' | 'time' | 'kills' | 'currency' | 'stats', HTMLElement>;
@@ -16,24 +15,22 @@ export class Hud {
   private readonly last = new Map<string, string>();
 
   /** `showStats` shows the renderer counters (fps, draws, tris); they're always written, so tools can read them. */
-  constructor(container: HTMLElement, showStats = false) {
+  constructor(container: HTMLElement, showStats = false, onPause?: () => void) {
     this.root = document.createElement('div');
     this.root.className = 'hud';
     this.root.innerHTML = `
       <div class="hud-top-left">
-        <div class="hud-build"></div>
+        <div class="hud-hero-name">VITALIDADE <span data-field="level"></span></div>
         <div class="hud-health">
           <img class="hud-health-icon" src="${HUD_ART.hpIcon}" alt="">
-          <div class="hud-health-bar"><div class="hud-fill"></div><img src="${HUD_ART.hpBarBorder}" alt=""><span data-field="health"></span></div>
+          <div class="hud-health-bar"><div class="hud-fill"></div><span data-field="health"></span></div>
         </div>
-        <div class="hud-level" data-field="level"></div>
-        <div class="hud-currency">
-          <img src="${HUD_ART.gem}" alt=""><span data-field="currency"></span>
-          <div class="hud-rotten" hidden><img src="${LIFE_STEAL_ICON}" alt="Cura reduzida"><b>↓</b><span>HP</span><b>↓</b></div>
-        </div>
+        <div class="hud-rotten" hidden><img src="${LIFE_STEAL_ICON}" alt=""><span>Aura podre · cura reduzida</span></div>
       </div>
-      <div class="hud-top-right"><span data-field="kills"></span><span data-field="time"></span></div>
-      <div class="hud-xp"><div class="hud-xp-track"><div class="hud-fill"></div></div><img src="${HUD_ART.expBarBorder}" alt=""></div>
+      <div class="hud-timer"><span class="eyebrow">SOBREVIVA</span><strong data-field="time"></strong></div>
+      <div class="hud-top-right"><div class="hud-counters"><span data-field="kills"></span><span class="hud-currency"><img src="${HUD_ART.gem}" alt="Cristais"><span data-field="currency"></span></span></div><button type="button" class="hud-pause" aria-label="Pausar jogo" title="Pausar (Esc)">Ⅱ</button></div>
+      <div class="hud-loadout"><div class="hud-build"></div></div>
+      <div class="hud-xp" role="progressbar" aria-label="Experiência" aria-valuemin="0" aria-valuemax="100"><div class="hud-xp-track"><div class="hud-fill"></div></div></div>
       <div class="hud-stats" data-field="stats"${showStats ? '' : ' hidden'}></div>
     `;
     container.appendChild(this.root);
@@ -43,6 +40,7 @@ export class Hud {
     this.xpFill = this.root.querySelector<HTMLDivElement>('.hud-xp .hud-fill')!;
     this.build = this.root.querySelector<HTMLDivElement>('.hud-build')!;
     this.rotten = this.root.querySelector<HTMLDivElement>('.hud-rotten')!;
+    this.root.querySelector('.hud-pause')!.addEventListener('click', () => onPause?.());
   }
 
   setVisible(visible: boolean): void {
@@ -55,10 +53,10 @@ export class Hud {
     this.set('health', `${Math.ceil(player.health)} / ${player.maxHealth}`);
     this.setWidth('healthPct', this.healthFill, player.health / player.maxHealth);
     this.setWidth('xpPct', this.xpFill, session.experience / session.experienceNeeded);
-    this.set('level', `Nível ${session.level}`);
+    this.set('level', `NV. ${session.level}`);
     this.set('currency', `${session.currency}`);
-    this.set('time', `Sobreviva: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
-    this.set('kills', `Eliminações: ${session.kills}`);
+    this.set('time', `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`);
+    this.set('kills', `${session.kills} eliminações`);
     this.set('stats', `${stats.fps} fps · ${stats.drawCalls} draws · ${(stats.triangles / 1000).toFixed(0)}k tris · ${session.enemies.activeCount} inimigos · ${stats.pixelScale}× · ${stats.geometries} geo · ${stats.textures} tex`);
     const rotten = player.isRotten(session.clock.now);
     if (this.last.get('rotten') !== String(rotten)) {
@@ -96,5 +94,6 @@ export class Hud {
     if (this.last.get(key) === value) return;
     this.last.set(key, value);
     element.style.width = value;
+    if (key === 'xpPct') element.closest('[role="progressbar"]')?.setAttribute('aria-valuenow', String(Math.round(Math.max(0, Math.min(1, ratio)) * 100)));
   }
 }

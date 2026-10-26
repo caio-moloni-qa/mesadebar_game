@@ -5,6 +5,7 @@ import { WEAPONS, WeaponConfig } from '../../config/weapons';
 import { CLIP_SAMPLE_RATE, humanoidClips, mirrorClip, smoothCurve } from './clips';
 import { createEnemyModels } from './enemies';
 import { attachWeapons, createHeroModel } from './heroes';
+import { createBossModel } from './boss';
 import { box, part } from './parts';
 import { buildRiggedModel, humanoidBones } from './rig';
 import { weaponGeometry } from './weapons';
@@ -120,6 +121,20 @@ describe('two weapons', () => {
     attachWeapons(model, ['sword', 'amulet']);
     expect(model.bones.handL.children.filter((child) => child instanceof THREE.Mesh)).toHaveLength(0);
     expect(model.held[1].parent).toBe(model.bones.chest);
+  });
+});
+
+describe('boss model', () => {
+  it('builds with every boss clip, each binding only bones the rig has', () => {
+    const boss = createBossModel();
+    const bones = new Set(Object.keys(boss.bones));
+    expect(bones.has('cape')).toBe(true);
+    expect(bones.has('jaw')).toBe(true);
+    expect(Object.keys(boss.clips).sort()).toEqual(['channel', 'crouch', 'death', 'idle', 'kneel', 'leap', 'point', 'roar', 'spin', 'spinBack', 'summon', 'walk', 'windup']);
+    Object.values(boss.clips).forEach((clip) => {
+      expect(clip.validate()).toBe(true);
+      clip.tracks.forEach((track) => expect(bones.has(track.name.split('.')[0])).toBe(true));
+    });
   });
 });
 

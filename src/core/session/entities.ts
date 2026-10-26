@@ -243,6 +243,8 @@ export class EnemyState implements Body {
   /** Fabri's banana peel: no movement until this time. */
   slipUntil = 0;
   nextSoulAt = 0;
+  /** Sim time it appeared (the renderer plays a rise-from-the-ground). */
+  spawnedAt = -Infinity;
 
   activate(variantId: EnemyVariantId, x: number, y: number, maxHealth: number, now: number): void {
     const base = ENEMY_VARIANTS[variantId];
@@ -267,6 +269,7 @@ export class EnemyState implements Body {
     this.slowStackPercent = 0;
     this.slipUntil = 0;
     this.nextSoulAt = now + ('soulCooldownMs' in base ? base.soulCooldownMs : 0);
+    this.spawnedAt = now;
   }
 
   get alive(): boolean {

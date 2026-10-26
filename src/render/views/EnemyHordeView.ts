@@ -7,11 +7,13 @@ import { PALETTE, toonMaterial } from '../materials';
 import { WORLD_SCALE, yawFromSimDirection } from '../space';
 import { groundSector } from '../vfx/CombatEffects';
 
+/** Walkers rise out of the ground over this long after spawning. */
+const RISE_MS = 420;
 const HIT_FLASH_MS = 110;
 /** Game-units/s at which the baked walk cycle plays at 1× (slow Super Esqueletos shuffle, Aparições glide). */
 const WALK_REFERENCE_SPEED = 120;
 const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith'];
-/** finalBoss has no model of its own yet; it borrows the armored skeleton's mesh. */
+/** finalBoss is drawn by BossView (its mesh entry here is never used). */
 const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', finalBoss: 'superSkeleton' };
 
 interface VariantBatch {
@@ -77,6 +79,17 @@ export class EnemyHordeView {
     let blobIndex = 0;
     let auraIndex = 0;
     enemies.forEachActive((enemy) => {
+      if (enemy.variantId === 'finalBoss') {
+        // Drawn by BossView; only its Rotten Aura ring lives here.
+        if (enemy.hasRottenAura && !enemy.rottenAuraSuppressed && enemy.alive) {
+          this.position.set((enemy.prevX + (enemy.x - enemy.prevX) * alpha) * WORLD_SCALE, 0.04, (enemy.prevY + (enemy.y - enemy.prevY) * alpha) * WORLD_SCALE);
+          this.rotation.identity();
+          this.scale.setScalar(enemy.rottenAuraRadius * WORLD_SCALE * (1 + Math.sin(nowMs / 300) * 0.04));
+          this.rottenAuras.setMatrixAt(auraIndex, this.matrix.compose(this.position, this.rotation, this.scale));
+          auraIndex += 1;
+        }
+        return;
+      }
       const batch = this.batches.get(MESH_FOR[enemy.variantId])!;
       const index = batch.count;
       batch.count += 1;
@@ -101,7 +114,9 @@ export class EnemyHordeView {
       const yaw = slipping ? previousYaw + deltaSeconds * 14 : previousYaw + Math.atan2(Math.sin(targetYaw - previousYaw), Math.cos(targetYaw - previousYaw)) * Math.min(1, deltaSeconds * 10);
       this.yaws.set(enemy, yaw);
 
-      this.position.set(x, -dying * 0.9 * size, z);
+      // Skeletons climb out of the ground when they appear (the boss's undead squad most visibly).
+      const rising = model.hovers ? 0 : Math.max(0, 1 - (nowMs - enemy.spawnedAt) / RISE_MS);
+      this.position.set(x, -dying * 0.9 * size - rising * rising * 2 * size, z);
       this.euler.set(-dying * 1.3, yaw, 0, 'YXZ');
       this.rotation.setFromEuler(this.euler);
       this.scale.setScalar(size * (1 - dying * 0.3));

@@ -9,14 +9,44 @@ import { WORLD_SCALE } from '../space';
  *  width axis, local Z = its depth axis, so placing it with yaw = -rotation lines it up with the collision box. */
 type Parts = THREE.BufferGeometry[];
 
-const STONE = [PALETTE.stone, PALETTE.stoneDark, 0xa89d8a, 0xc9bfac];
-const MOSS = 0x5e7a3a;
+const STONE = [0xaaa99c, 0x969a92, 0xb8b6a5, 0xc9c4ad];
+const MOSS = 0x6c884c;
 const BARK = 0x4a3426;
 const IRON = 0x2e2a30;
 const CANVAS = [0xcdb48a, 0xb89a6a, 0x8f6a4a];
 const WOOD = PALETTE.wood;
 
 const m = (units: number) => units * WORLD_SCALE;
+
+/** Seeded, irregular stone with contiguous facets: repeated vertices use the same deformation, so no cracks.
+ * Moss follows the upper faces; the buried base has a darker mineral tint. Footprint stays inside radius.
+ */
+export function weatheredRock(radius: number, variant: number): THREE.BufferGeometry {
+  const geometry = new THREE.IcosahedronGeometry(1, 1);
+  geometry.deleteAttribute('uv');
+  const position = geometry.attributes.position;
+  const height = radius * (.8 + variant * .65);
+  for (let i = 0; i < position.count; i++) {
+    const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
+    const wobble = .84 + .12 * Math.sin(x * 7.1 + y * 4.7 + z * 8.3 + variant * 13);
+    position.setXYZ(i, x * radius * wobble, Math.max(0, (y + 1) * .5) ** .8 * height, z * radius * wobble * (.82 + variant * .14));
+  }
+  position.needsUpdate = true; geometry.computeVertexNormals();
+  const normal = geometry.attributes.normal;
+  const colors = new Float32Array(position.count * 3);
+  const stone = new THREE.Color(STONE[Math.floor(variant * 37) % STONE.length]);
+  const moss = new THREE.Color(MOSS), pale = new THREE.Color(0xd2cbb4), tint = new THREE.Color();
+  for (let face = 0; face < position.count; face += 3) {
+    const faceY = (position.getY(face) + position.getY(face + 1) + position.getY(face + 2)) / 3;
+    const sample = Math.sin(position.getX(face) * 12.3 + position.getZ(face) * 9.7 + variant * 31) * .5 + .5;
+    tint.copy(stone).multiplyScalar(.76 + sample * .29);
+    if (normal.getY(face) > .24 && faceY > height * .45 && sample > .47) tint.lerp(moss, .65);
+    else if (sample > .91) tint.lerp(pale, .35);
+    for (let j = 0; j < 3; j++) tint.clone().multiplyScalar(.77 + Math.min(1, position.getY(face + j) / height) * .23).toArray(colors, (face + j) * 3);
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geometry;
+}
 
 /** Visual for one obstacle, sized from its collision shape — what you see is exactly what blocks you. */
 export function obstacleParts(obstacle: Obstacle): Parts {
@@ -64,9 +94,16 @@ export function obstacleParts(obstacle: Obstacle): Parts {
           const y = height * floatBetween(rng, 0.5, 0.92);
           parts.push(part(cylinder(0.05, 0.12, length, 4), BARK, [Math.cos(heading) * length * 0.35, y + length * 0.3, Math.sin(heading) * length * 0.35], [Math.sin(heading) * 0.95, 0, -Math.cos(heading) * 0.95]));
         }
-        // A few forest trees keep a sparse, dark crown high up (never low enough to hide what's under them).
-        if (tall && v > 0.55) {
-          for (let clump = 0; clump < 3; clump += 1) parts.push(part(ball(floatBetween(rng, 0.5, 0.9)), pickOne(rng, [0x3e4f2c, 0x4a5a30, 0x5a4a2c]), [floatBetween(rng, -0.8, 0.8), height + floatBetween(rng, -0.3, 0.4), floatBetween(rng, -0.8, 0.8)], [rng(), rng(), rng()], [1, 0.7, 1]));
+        // Layered crowns sit above the sight line; the occlusion shader reveals the hero underneath.
+        if (tall && v > 0.25) {
+          for (let clump = 0; clump < 5; clump += 1) {
+            const angle = clump * 2.4 + v * 5;
+            const spread = clump === 4 ? .15 : .58;
+            const color = clump === 4 ? 0x91a65c : pickOne(rng, [0x567943, 0x68884a, 0x7b9650, 0x4c7043]);
+            parts.push(part(ball(floatBetween(rng, .66, .98)), color, [Math.cos(angle) * spread, height + (clump === 4 ? .58 : -.05), Math.sin(angle) * spread], [rng() * .3, rng() * 3, rng() * .3], [1, .7, 1]));
+          }
+        } else if (!tall) {
+          parts.push(part(cylinder(r * .5, r * .85, .06, 6), 0x778152, [0, .19, 0]));
         }
         return parts;
       }
@@ -89,7 +126,7 @@ export function obstacleParts(obstacle: Obstacle): Parts {
       }
       case 'rock':
       default:
-        return [part(new THREE.DodecahedronGeometry(r * 1.05, 0), pickOne(rng, STONE), [0, r * 0.35, 0], [rng() * 3, rng() * 3, rng() * 3], [1, floatBetween(rng, 0.55, 0.9), 1])];
+        return [weatheredRock(r, v)];
     }
   }
 
@@ -99,7 +136,16 @@ export function obstacleParts(obstacle: Obstacle): Parts {
     case 'wall': {
       // Ruined wall block: height varies block to block so the outline reads broken.
       const height = 0.9 + v * 2.4;
-      const parts = [part(box(w, height, d), pickOne(rng, STONE), [0, height / 2, 0])];
+      const parts = [part(box(w, height, d), 0x6b7168, [0, height / 2, 0])];
+      // Recessed joints and offset courses make the ruin read as masonry instead of an unbroken box.
+      const rows = Math.max(2, Math.ceil(height / .52));
+      for (let row = 0; row < rows; row++) {
+        const columns = Math.max(1, Math.ceil(w / .85) + row % 2);
+        for (let col = 0; col < columns; col++) {
+          const bw = w / columns, bh = height / rows;
+          parts.push(part(box(Math.max(.04, bw - .035), bh - .025, d + .012), pickOne(rng, STONE), [-w / 2 + (col + .5) * bw, (row + .5) * bh, 0]));
+        }
+      }
       if (rng() < 0.4) parts.push(part(box(w * 0.5, 0.35, d * 1.02), PALETTE.stoneDark, [floatBetween(rng, -w / 4, w / 4), height + 0.17, 0]));
       if (rng() < 0.5) parts.push(part(box(w * 1.02, 0.18, d * 1.05), MOSS, [0, 0.09, 0]));
       return parts;
@@ -157,7 +203,12 @@ export function obstacleParts(obstacle: Obstacle): Parts {
       ];
     }
     case 'crate':
-      return [part(box(w, w * 0.9, d), 0x8a6238, [0, w * 0.45, 0], [0, 0, 0]), part(box(w * 1.02, 0.06, d * 1.02), 0x5a3a20, [0, w * 0.6, 0])];
+      return [
+        part(box(w, w * .9, d), 0x8a6238, [0, w * .45, 0]),
+        ...[-.3, .3].map(y => part(box(w * 1.02, .07, d * 1.02), 0x4c3829, [0, w * (.45 + y), 0])),
+        ...[-.32, .32].map(x => part(box(.065, w * .9, d * 1.015), 0xb38952, [w * x, w * .45, 0])),
+        part(box(w * 1.01, .05, d * .2), 0xb38952, [0, w * .92, 0])
+      ];
     case 'cart':
       return [
         part(box(w, 0.35, d), WOOD, [0, 0.75, 0]),
@@ -185,18 +236,18 @@ export function decorParts(decor: Decor): Parts {
   const rng: Rng = createRng(Math.floor(decor.variant * 1e9));
   switch (decor.kind) {
     case 'bush': {
-      const colors = [0x55703a, 0x4a6634, 0x6a7f3c, 0x7a6a3a];
+      const colors = [0x5a8249, 0x6e934f, 0x84a65d, 0x567849];
       const parts: Parts = [];
       const blobs = intBetween(rng, 2, 4);
       for (let index = 0; index < blobs; index += 1) {
         const size = floatBetween(rng, 0.35, 0.65);
-        parts.push(part(ball(size), pickOne(rng, colors), [floatBetween(rng, -0.4, 0.4), size * 0.7, floatBetween(rng, -0.4, 0.4)], [rng(), rng(), rng()], [1, 0.8, 1]));
+        parts.push(part(ball(size), pickOne(rng, colors), [floatBetween(rng, -0.4, 0.4), size * 0.7, floatBetween(rng, -0.4, 0.4)], [rng(), rng(), rng()], [1, .72, 1]));
       }
       if (rng() < 0.3) parts.push(part(ball(0.09), 0xb04a6a, [0.2, 0.85, 0.3]), part(ball(0.09), 0xb04a6a, [-0.25, 0.7, -0.1]));
       return parts;
     }
     case 'rubble':
-      return [0, 1, 2].map(() => part(box(floatBetween(rng, 0.2, 0.5), floatBetween(rng, 0.12, 0.3), floatBetween(rng, 0.2, 0.5)), pickOne(rng, STONE), [floatBetween(rng, -0.5, 0.5), 0.08, floatBetween(rng, -0.5, 0.5)], [rng() * 0.4, rng() * 3, rng() * 0.4]));
+      return [0, 1, 2, 3].map(() => weatheredRock(floatBetween(rng, .10, .24), rng()).translate(floatBetween(rng, -.45, .45), .005, floatBetween(rng, -.45, .45)));
     case 'lilyPad':
       return [
         part(cylinder(floatBetween(rng, 0.3, 0.5), floatBetween(rng, 0.3, 0.5), 0.03, 8, ), 0x4f8a3c, [0, 0.05, 0]),

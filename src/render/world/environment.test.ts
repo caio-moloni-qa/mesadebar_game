@@ -5,6 +5,7 @@ import { environmentUniforms, withEnvironment } from './environmentShader';
 import { ArenaMap, Obstacle } from '../../core/world/ArenaMap';
 import { WORLD_SCALE } from '../space';
 import { decorParts, obstacleParts } from './props';
+import { grassGeometry } from './Grass';
 
 /** Runs a material's onBeforeCompile against the real r186 toon shader source, like the renderer would. */
 function compile(material: THREE.Material): { vertexShader: string; fragmentShader: string; uniforms: Record<string, THREE.IUniform> } {
@@ -49,6 +50,14 @@ describe('withEnvironment', () => {
   it('leaves the wind out when only clouds are asked for', () => {
     expect(compile(withEnvironment(new THREE.MeshToonMaterial(), { clouds: true })).vertexShader).not.toContain('envGust');
   });
+
+  it('lights both sides of grass consistently without changing stone and architecture normals', () => {
+    const grass = compile(withEnvironment(new THREE.MeshToonMaterial(), { foliage: true, wind: true }));
+    expect(grass.fragmentShader).toContain('normal *= faceDirection;');
+    const stone = compile(withEnvironment(new THREE.MeshToonMaterial(), { clouds: true }));
+    expect(stone.fragmentShader).not.toContain('normal *= faceDirection;');
+    expect(withEnvironment(new THREE.MeshToonMaterial(), { foliage: true }).customProgramCacheKey()).not.toBe(withEnvironment(new THREE.MeshToonMaterial(), {}).customProgramCacheKey());
+  });
 });
 
 describe('obstacle visuals match their collision', () => {
@@ -87,5 +96,30 @@ describe('obstacle visuals match their collision', () => {
       const decor = map.decor.find((item) => item.kind === kind)!;
       expect(mergeParts(decorParts(decor)).attributes.position.count).toBeGreaterThan(0);
     });
+  });
+
+  it('merges mixed stone, foliage and architectural geometry into the same spatial batch', () => {
+    const obstacles = ['rock', 'tree', 'wall', 'crate'].map(kind => map.obstacles.find(obstacle => obstacle.kind === kind)!);
+    const geometry = mergeParts(obstacles.flatMap(obstacleParts));
+    expect(geometry.attributes.position.count).toBeGreaterThan(0);
+    expect(geometry.attributes.normal.count).toBe(geometry.attributes.position.count);
+    expect(geometry.attributes.color.count).toBe(geometry.attributes.position.count);
+    expect(geometry.attributes.uv).toBeUndefined();
+    geometry.dispose();
+  });
+});
+
+describe('grass ribbons', () => {
+  it('has grounded roots, bounded tips and a complete vertex gradient', () => {
+    const geometry = grassGeometry();
+    const position = geometry.attributes.position;
+    expect(geometry.attributes.color.count).toBe(position.count);
+    expect(geometry.attributes.normal.count).toBe(position.count);
+    for (let i = 0; i < position.count; i++) {
+      expect(position.getY(i)).toBeGreaterThanOrEqual(0);
+      expect(position.getY(i)).toBeLessThan(.5);
+      expect(Math.hypot(position.getX(i), position.getZ(i))).toBeLessThan(.5);
+    }
+    geometry.dispose();
   });
 });
