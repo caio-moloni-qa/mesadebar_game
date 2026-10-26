@@ -7,6 +7,7 @@ import { CompanionKind } from '../../core/systems/MiniBossSystem';
 
 export const HUD_ART = {
   hpIcon: new URL('../../assets/ui/hud/hp-icon.png', import.meta.url).href,
+  tavern: new URL('../../assets/ui/hud/tavern-icon.png', import.meta.url).href,
   hpBarBorder: new URL('../../assets/ui/hud/hp-bar-border.png', import.meta.url).href,
   expBarBorder: new URL('../../assets/ui/hud/exp-bar-border.png', import.meta.url).href,
   gem: new URL('../../assets/pickups/exp-crystal.png', import.meta.url).href,
@@ -126,6 +127,6 @@ const MARKER_FACES: Record<MarkerKind, string> = {
 };
 
 export function markerFace(kind: MarkerKind): string {
-  if (kind === 'merchant') return npcPortrait('sergio') ?? MARKER_FACES.merchant;
+  if (kind === 'merchant') return HUD_ART.tavern;
   return MARKER_FACES[kind];
 }

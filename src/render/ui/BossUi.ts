@@ -4,7 +4,7 @@ import { MERCHANT_ROOM, MERCHANT_TUNING } from '../../core/systems/MerchantSyste
 import { MINI_BOSSES } from '../../core/systems/MiniBossSystem';
 import { GameSession, PortalKind } from '../../core/session/GameSession';
 import { WORLD_SCALE, simToWorld } from '../space';
-import { MarkerKind, markerFace } from './icons';
+import { MarkerKind, markerFace, npcPortrait } from './icons';
 import { Projector } from './FloatingTexts';
 
 const MAX_BARS = 3;
@@ -66,6 +66,15 @@ export class BossUi {
     if (this.last.get('bannerText') !== banner) {
       this.last.set('bannerText', banner);
       if (banner) this.banner.textContent = banner;
+      // Sergio himself announces his tavern.
+      const sergio = npcPortrait('sergio');
+      if (banner === MERCHANT_NEWS && sergio) {
+        const face = document.createElement('img');
+        face.className = 'banner-portrait';
+        face.src = sergio;
+        face.alt = '';
+        this.banner.prepend(face);
+      }
       this.banner.classList.toggle('mini', !bosses.warningActive && !!pending);
       this.banner.classList.toggle('merchant', banner === MERCHANT_NEWS);
     }
