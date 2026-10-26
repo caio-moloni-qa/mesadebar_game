@@ -1,6 +1,6 @@
 import { MINI_BOSS_VARIANTS } from '../../config/balance';
 import * as THREE from 'three';
-import { ENEMY_DYING_MS, EnemyState } from '../../core/session/entities';
+import { ENEMY_DYING_MS, ENEMY_SLIP_MS, EnemyState } from '../../core/session/entities';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
 import { Pool } from '../../core/Pool';
 import { BakedEnemyModel, createEnemyModels } from '../models/enemies';
@@ -112,13 +112,16 @@ export class EnemyHordeView {
 
       const previousYaw = this.yaws.get(enemy) ?? yawFromSimDirection(enemy.facingX, enemy.facingY);
       const targetYaw = yawFromSimDirection(enemy.facingX, enemy.facingY);
-      const yaw = slipping ? previousYaw + deltaSeconds * 14 : previousYaw + Math.atan2(Math.sin(targetYaw - previousYaw), Math.cos(targetYaw - previousYaw)) * Math.min(1, deltaSeconds * 10);
+      const yaw = slipping ? previousYaw : previousYaw + Math.atan2(Math.sin(targetYaw - previousYaw), Math.cos(targetYaw - previousYaw)) * Math.min(1, deltaSeconds * 10);
       this.yaws.set(enemy, yaw);
 
       // Skeletons climb out of the ground when they appear (the boss's undead squad most visibly).
       const rising = model.hovers ? 0 : Math.max(0, 1 - (nowMs - enemy.spawnedAt) / RISE_MS);
       this.position.set(x, -dying * 0.9 * size - rising * rising * 2 * size, z);
-      this.euler.set(-dying * 1.3, yaw, 0, 'YXZ');
+      // A slip throws it flat on its back (quick fall, lies there, scrambles up at the end).
+      const slipLeft = enemy.slipUntil - nowMs;
+      const fallen = slipping ? Math.min(1, (ENEMY_SLIP_MS - slipLeft) / 110) * Math.min(1, slipLeft / 180) : 0;
+      this.euler.set(-dying * 1.3 - fallen * 1.45, yaw, 0, 'YXZ');
       this.rotation.setFromEuler(this.euler);
       this.scale.setScalar(size * (1 - dying * 0.3));
       batch.mesh.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));

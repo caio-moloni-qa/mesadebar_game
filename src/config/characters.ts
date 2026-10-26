@@ -25,7 +25,10 @@ export interface CharacterConfig {
    *  guardrail every other weapon exclusive uses), it permanently transforms into bananas — same projectile family,
    *  new visuals, and every hit stacks `slowPercentPerHit` of cumulative slow onto the enemy struck (see
    *  GameScene.applyBananaSlow / Enemy.addSlowStack). */
-  boomerangBananaTransform?: { upgradeThreshold: number; slowPercentPerHit: number };
+  boomerangBananaTransform?: { upgradeThreshold: number; slowPercentPerHit: number; slipChancePerHit: number };
+  /** Relíquia's exclusive: every hit that lands (any weapon) adds `perHit` points of shield, which soaks damage
+   *  before health, up to `maxHealthFraction` of max health on top of it. */
+  hitShield?: { perHit: number; maxHealthFraction: number };
   /** Full-bleed character-select card art (see MenuScene.renderCharacterCard) — replaces the plain wood
    *  badge/turning-sprite roundel with a unique illustrated scene per character, texture-swapped on hover.
    *  Optional: characters without a pair here keep the badge/roundel presentation. */
@@ -49,7 +52,7 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     armor: 2,
     advantages: [
       'Espada: 3 melhorias iniciais',
-      '+30% de dano com armas',
+      '+30% de dano com armas brancas',
       'Pouca vida: até +40% velocidade de ataque e movimento'
     ],
     preferredWeaponId: 'sword',
@@ -72,12 +75,12 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     advantages: [
       'Cajado: 3 melhorias iniciais',
       '+30% de velocidade de movimento',
-      'Cura 1 HP a cada 3s'
+      'Cura 3 HP por segundo'
     ],
     preferredWeaponId: 'staff',
     startingWeaponUpgradeChoices: 3,
-    passiveHealAmount: 1,
-    passiveHealIntervalMs: 3000,
+    passiveHealAmount: 3,
+    passiveHealIntervalMs: 1000,
     cardArt: { idle: 'mage-card-idle', hover: 'mage-card-hover' },
     accentColor: 0x2c4f8c
   },
@@ -95,11 +98,13 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     advantages: [
       'Relíquia Divina: 3 melhorias iniciais',
       'Transforma amuletos em relíquias: +dano, +raio, tick mais rápido',
+      'Cada acerto gera 1 de escudo além da vida (até a vida máxima)',
       '+40 de alcance de coleta'
     ],
     preferredWeaponId: 'amulet',
     startingWeaponUpgradeChoices: 3,
-    auraWeaponOverrides: { baseDamage: 6.75, cooldown: 1000, range: 80 },
+    auraWeaponOverrides: { baseDamage: 9.45, cooldown: 1000, range: 80 },
+    hitShield: { perHit: 1, maxHealthFraction: 1 },
     cardArt: { idle: 'reliquia-card-idle', hover: 'reliquia-card-hover' },
     accentColor: 0xa8541a
   },
@@ -116,12 +121,12 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     armor: 1,
     advantages: [
       'Bumerangue Rúnico: 3 melhorias iniciais',
-      'Aos 10 upgrades, o bumerangue vira banana: lentidão acumulativa de 1% por acerto',
+      'Aos 10 upgrades, o bumerangue vira banana: lentidão acumulativa de 1% por acerto e 10% de chance de escorregar',
       '+20 de velocidade de movimento'
     ],
     preferredWeaponId: 'boomerang',
     startingWeaponUpgradeChoices: 3,
-    boomerangBananaTransform: { upgradeThreshold: 10, slowPercentPerHit: 0.01 },
+    boomerangBananaTransform: { upgradeThreshold: 10, slowPercentPerHit: 0.01, slipChancePerHit: 0.1 },
     cardArt: { idle: 'fabri-card-idle', hover: 'fabri-card-hover' },
     accentColor: 0x9c7a1e
   }

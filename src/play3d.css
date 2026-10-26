@@ -125,6 +125,7 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .hud-health-icon { width: 21px; height: 21px; object-fit: contain; image-rendering: pixelated; }
 .hud-health-bar { position: relative; flex: 1; height: 18px; background: #080f12; border: 1px solid #dbb9aa28; border-radius: 3px; overflow: hidden; }
 .hud-health-bar .hud-fill { height: 100%; background: linear-gradient(90deg, #9c3d43, #db796a); transition: width .18s; }
+.hud-health-bar .hud-shield-fill { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, #f3d27ab0, #fff1c2b0); box-shadow: inset 0 0 0 1px #ffe9a6; transition: width .18s; }
 .hud-health-bar > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; font-weight: 600; }
 .hud-rotten { display: flex; align-items: center; gap: 6px; margin-top: 9px; color: #c6b0d0; font-size: 10px; }
 .hud-rotten img { width: 18px; height: 18px; }
