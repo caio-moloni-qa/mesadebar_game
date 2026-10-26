@@ -40,7 +40,16 @@ export interface MenuProgress {
   roster(): CharacterId[];
 }
 
+type DetailTab = 'habilidades' | 'poderes' | 'maestria';
+const DETAIL_TABS: Array<{ id: DetailTab; label: string }> = [
+  { id: 'habilidades', label: 'Habilidades' },
+  { id: 'poderes', label: 'Poderes na run' },
+  { id: 'maestria', label: 'Maestria' }
+];
+
 export class StartMenu {
+  /** The hero details' open tab (kept while browsing heroes). */
+  private detailTab: DetailTab = 'habilidades';
   private readonly root: HTMLDivElement;
   private readonly content: HTMLDivElement;
   private screen: MenuScreen = 'title';
@@ -188,6 +197,7 @@ export class StartMenu {
     const showcase = document.createElement('div');
     showcase.className = 'hero-showcase';
     const details = locked ? this.lockedDetails(character) : this.heroDetails(character);
+    showcase.append(this.previewStage(character, character.preferredWeaponId ?? 'staff', locked), details);
     const roster = document.createElement('div');
     roster.className = 'hero-roster'; roster.setAttribute('role', 'group'); roster.setAttribute('aria-label', 'Heróis');
     Object.values(CHARACTERS).forEach((hero, index) => {
@@ -221,12 +231,7 @@ export class StartMenu {
     }
     const hint = document.createElement('p'); hint.className = 'selection-keyboard-hint'; hint.innerHTML = '<kbd>←</kbd><kbd>→</kbd> Trocar herói';
     footer.append(hint);
-    // The roster sits under the 3D stage, in the column beside the (taller) details.
-    const side = document.createElement('div');
-    side.className = 'hero-side';
-    side.append(this.previewStage(character, character.preferredWeaponId ?? 'staff', locked), roster);
-    showcase.append(side, details);
-    step.append(showcase, footer);
+    step.append(showcase, roster, footer);
     return step;
   }
 
@@ -236,8 +241,7 @@ export class StartMenu {
     details.className = 'hero-details';
     const role = HERO_ROLES[character.id];
     details.innerHTML = `<p class="eyebrow">${role.trait}</p><h2>${character.name}</h2><p class="hero-role">${role.title}</p><p class="hero-description">${character.description}</p>
-      <dl class="hero-attributes"><div><dt>Vida</dt><dd>${character.maxHealth}<small>HP</small></dd></div><div><dt>Movimento</dt><dd>${character.movementSpeed}</dd></div><div><dt>Armadura</dt><dd>${character.armor}</dd></div></dl>
-      <p class="hero-abilities-heading">HABILIDADES DO HERÓI</p>`;
+      <dl class="hero-attributes"><div><dt>Vida</dt><dd>${character.maxHealth}<small>HP</small></dd></div><div><dt>Movimento</dt><dd>${character.movementSpeed}</dd></div><div><dt>Armadura</dt><dd>${character.armor}</dd></div></dl>`;
     const advantages = document.createElement('ul');
     advantages.className = 'hero-abilities';
     character.advantages.forEach(advantage => {
@@ -251,9 +255,6 @@ export class StartMenu {
     choose.textContent = `Escolher ${character.name}  →`;
     choose.addEventListener('click', () => this.navigate('weapons'));
     // The powers the hero grows into during a run.
-    const powersHeading = document.createElement('p');
-    powersHeading.className = 'hero-abilities-heading';
-    powersHeading.textContent = 'PODERES NA RUN';
     const powers = document.createElement('ol');
     powers.className = 'hero-powers';
     POWER_TIERS[character.id].forEach((power, index) => {
@@ -267,9 +268,41 @@ export class StartMenu {
       item.append(level, name, text);
       powers.append(item);
     });
-    details.append(advantages, powersHeading, powers, signature, choose);
-    details.insertBefore(this.masteryPanel(character), details.querySelector('.hero-abilities-heading'));
+    // The kit tab: the hero's abilities, then their weapon of affinity.
+    const kit = document.createElement('div');
+    kit.className = 'hero-kit';
+    kit.append(advantages, signature);
+    details.append(this.detailTabs({ habilidades: kit, poderes: powers, maestria: this.masteryPanel(character) }), choose);
     return details;
+  }
+
+  /** The kit, the run's powers and the mastery share one tabbed panel (its height fixed to the tallest), so the
+   *  details column stays as short as the 3D stage beside it. The tab chosen carries over between heroes. */
+  private detailTabs(panels: Record<DetailTab, HTMLElement>): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'hero-detail-tabs';
+    const tabs = document.createElement('div');
+    tabs.className = 'hero-tabs';
+    tabs.setAttribute('role', 'tablist');
+    const panel = document.createElement('div');
+    panel.className = 'hero-tabpanel';
+    panel.setAttribute('role', 'tabpanel');
+    DETAIL_TABS.forEach(({ id, label }) => {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(id === this.detailTab));
+      tab.textContent = label;
+      tab.addEventListener('click', () => {
+        this.detailTab = id;
+        tabs.querySelectorAll('[role="tab"]').forEach((other) => other.setAttribute('aria-selected', String(other === tab)));
+        panel.replaceChildren(panels[id]);
+      });
+      tabs.append(tab);
+    });
+    panel.append(panels[this.detailTab]);
+    wrap.append(tabs, panel);
+    return wrap;
   }
 
   /** A hero not unlocked yet: no name, no kit — just what it takes, with the save's progress on each condition. */

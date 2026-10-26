@@ -564,12 +564,25 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .store-buy:disabled { opacity: .5; cursor: default; }
 .store-footer { flex-wrap: wrap; }
 @media (max-width: 620px) { .store-header { grid-template-columns: auto 1fr; } .store-balance { grid-column: 1 / -1; justify-items: start; } .store-portrait { width: 64px; height: 64px; } .store-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
-/* Hero selection: the 3D stage (its own height) with the hero roster under it, beside the details column. */
-.hero-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.character-step .hero-side .hero-roster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-/* Phones: one column again, the roster first (as before). */
-@media (max-width: 520px) {
-  .hero-side { display: contents; }
-  .hero-showcase .hero-roster { order: -1; }
-  .character-step .hero-side .hero-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+
+/* Hero details: the kit, the run's powers and the mastery in one tabbed panel, so the column stays as short as the
+   3D stage. The stage matches the column's height and its viewport grows into it (the preview frames the hero by
+   height); the fixed viewport heights become minimums. */
+.hero-detail-tabs { width: 100%; margin-bottom: 14px; }
+.hero-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); }
+.hero-tabs [role="tab"] { margin-bottom: -1px; padding: 6px 12px; border: 1px solid transparent; border-radius: 5px 5px 0 0; background: none; color: #a0afa4; font: 600 10px/1.4 var(--sans); letter-spacing: .14em; text-transform: uppercase; }
+.hero-tabs [role="tab"]:hover { color: var(--cream); }
+.hero-tabs [role="tab"][aria-selected="true"] { color: var(--gold); border-color: var(--line); border-bottom-color: #101b1d; background: #ffffff06; }
+.hero-tabpanel { min-height: 140px; padding-top: 10px; }
+.hero-kit { display: grid; gap: 10px; }
+.hero-kit .hero-signature { margin-top: 0; }
+.hero-tabpanel .hero-powers { gap: 5px; }
+.hero-tabpanel .hero-powers li { line-height: 1.35; }
+.hero-showcase .hero-attributes { margin: 12px 0; padding: 10px 0; }
+.hero-showcase .hero-confirm { margin-top: 0; }
+.hero-tabpanel .hero-abilities, .hero-tabpanel .hero-powers { margin: 0; }
+.hero-showcase .hero-viewport { height: auto; min-height: 340px; }
+@media (min-width: 851px) and (max-height: 800px) { .hero-showcase .hero-viewport { min-height: 285px; } }
+@media (max-width: 850px) { .hero-showcase .hero-viewport { min-height: 310px; } }
+@media (max-width: 520px) { .hero-showcase .hero-viewport { min-height: 290px; } }
+@media (max-height: 580px) and (min-width: 650px) { .hero-showcase .hero-viewport { min-height: 230px; } }
