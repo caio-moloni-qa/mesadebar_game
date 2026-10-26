@@ -12,9 +12,9 @@ export const ENEMY_VARIANTS = {
 /** 3D-only zone mini-bosses (kept out of ENEMY_VARIANTS so the Phaser build's per-variant tables stay complete).
  *  Health is multiplied by the difficulty stage when they spawn. */
 export const MINI_BOSS_VARIANTS = {
-  gravedigger: { maxHealth: 1800, movementSpeed: 70, contactDamage: 15, reward: 0 },
-  templeGuardian: { maxHealth: 2600, movementSpeed: 55, contactDamage: 25, reward: 0 },
-  lakeSpirit: { maxHealth: 3000, movementSpeed: 60, contactDamage: 20, reward: 0 }
+  gravedigger: { maxHealth: 1200, movementSpeed: 70, contactDamage: 10, reward: 0 },
+  templeGuardian: { maxHealth: 1700, movementSpeed: 55, contactDamage: 15, reward: 0 },
+  lakeSpirit: { maxHealth: 2000, movementSpeed: 60, contactDamage: 12, reward: 0 }
 };
 /** Every variant the 3D core can spawn. */
 export const ALL_ENEMY_VARIANTS = { ...ENEMY_VARIANTS, ...MINI_BOSS_VARIANTS };
