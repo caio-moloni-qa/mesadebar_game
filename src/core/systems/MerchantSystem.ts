@@ -1,4 +1,4 @@
-import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponFamily, weaponFamily } from '../../config/weapons';
+import { WEAPONS, WeaponFamily, weaponFamily } from '../../config/weapons';
 import { EventBus } from '../EventBus';
 import { Rng, Vec2, floatBetween, pickOne } from '../math';
 import { PlayerState } from '../session/entities';
@@ -46,6 +46,10 @@ export const MERCHANT_ROOM = {
   talkReach: 110
 };
 
+/** The Tomo de Afinidade is sold until the hero has this many weapon-family affinities (the starting weapon's
+ *  counts), however many weapons they carry. */
+export const MAX_AFFINITIES = 2;
+
 export type MerchantItemId = 'divine-blessing' | 'arcane-curse' | 'heal' | 'damage' | 'speed' | 'affinity-tome' | 'max-health';
 
 export interface MerchantOffer {
@@ -67,8 +71,7 @@ const RANDOM_BUFFS: ItemSpec[] = [
   { id: 'speed', name: 'Botas Ligeiras', description: '+15 de velocidade de movimento.', cost: 0 }
 ];
 const AFFINITY_TOME: ItemSpec = { id: 'affinity-tome', name: 'Tomo de Afinidade', description: 'Escolha uma família de arma para desbloquear afinidade com ela.', cost: 150 };
-/** Takes the tome's slot once it's been bought (it's once per run), every family is already unlocked, or the hero
- *  already carries the most weapons a run allows. */
+/** Takes the tome's slot once the hero has MAX_AFFINITIES affinities (or every family is already unlocked). */
 const VITALITY_ELIXIR: ItemSpec = { id: 'max-health', name: 'Elixir de Vitalidade', description: '+20 de vida máxima e cura 50% da vida máxima.', cost: 25 };
 
 export interface MerchantEvents extends Record<string, unknown> {
@@ -86,8 +89,6 @@ export interface MerchantHost {
   readonly events: Pick<EventBus<MerchantEvents>, 'emit'>;
   /** Families already unlocked (the tome only offers the others). */
   affinities(): ReadonlySet<WeaponFamily>;
-  /** Weapons the hero carries (the tome is only for a hero who can still pick up a second one). */
-  weaponCount(): number;
   /** True while the Necromancer is coming or up (no portal then). */
   encounterActive(): boolean;
 }
@@ -107,7 +108,6 @@ export class MerchantSystem {
   readonly room: Vec2;
   private elapsedMs = 0;
   private itemsPurchased = 0;
-  private tomeBought = false;
   /** Where the hero stood when stepping into the portal. */
   private returnTo: Vec2 = { x: 0, y: 0 };
 
@@ -233,7 +233,6 @@ export class MerchantSystem {
     if (!this.inside || !offer || offer.purchased || currency < offer.cost) return null;
     offer.purchased = true;
     this.itemsPurchased += 1;
-    if (offer.id === 'affinity-tome') this.tomeBought = true;
     // Run-wide inflation: what's still on the table re-prices at once (Phaser priced each visit on entry).
     this.offers.forEach((other) => {
       if (!other.purchased) other.cost = Math.round(other.cost * MERCHANT_TUNING.priceInflation);
@@ -253,7 +252,7 @@ export class MerchantSystem {
   private buildOffers(): MerchantOffer[] {
     const multiplier = MERCHANT_TUNING.priceInflation ** this.itemsPurchased;
     const randomBuff = { ...pickOne(this.host.rng, RANDOM_BUFFS), cost: MERCHANT_TUNING.randomBuffCost };
-    const tome = !this.tomeBought && this.host.weaponCount() < MAX_ACTIVE_WEAPONS && this.availableFamilies().length > 0;
+    const tome = this.host.affinities().size < MAX_AFFINITIES && this.availableFamilies().length > 0;
     const fourth = tome ? AFFINITY_TOME : VITALITY_ELIXIR;
     return [DIVINE_BLESSING, ARCANE_CURSE, randomBuff, fourth].map((spec) => ({ ...spec, cost: Math.round(spec.cost * multiplier), purchased: false }));
   }
