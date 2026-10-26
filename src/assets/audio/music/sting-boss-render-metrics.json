@@ -1,0 +1,37 @@
+{
+  "id": "sting-boss",
+  "seconds": 6,
+  "kind": "bossWarning",
+  "loop": false,
+  "noteCount": 9,
+  "hitCount": 19,
+  "seed": "sting-boss",
+  "instruments": [
+    "glass",
+    "box",
+    "choir",
+    "horn"
+  ],
+  "percussion": [
+    "timpani",
+    "gong"
+  ],
+  "rate": 44100,
+  "frames": 264600,
+  "rawSeconds": 10,
+  "rawPeak": 0.148001030087471,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.11385540549083546,
+  "gain": 5.675636172961407,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-boss.wav",
+  "rawFile": "sting-boss-raw.wav"
+}

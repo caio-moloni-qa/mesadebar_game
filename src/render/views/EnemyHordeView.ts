@@ -3,10 +3,14 @@ import * as THREE from 'three';
 import { ENEMY_DYING_MS, ENEMY_SLIP_MS, EnemyState } from '../../core/session/entities';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
 import { Pool } from '../../core/Pool';
+import { POWER_TUNING } from '../../core/systems/PowerTierSystem';
 import { BakedEnemyModel, createEnemyModels } from '../models/enemies';
 import { PALETTE, toonMaterial } from '../materials';
 import { WORLD_SCALE, yawFromSimDirection } from '../space';
 import { groundSector } from '../vfx/CombatEffects';
+
+/** Enemy tints for the heroes' power tiers. */
+const POWER_TINTS = { bleed: new THREE.Color(0xff3030), slow: new THREE.Color(0x8fd8ff), held: new THREE.Color(0x6fdc5a), gold: new THREE.Color(0xffc93a) };
 
 /** Walkers rise out of the ground over this long after spawning. */
 const RISE_MS = 420;
@@ -43,6 +47,7 @@ export class EnemyHordeView {
   private readonly euler = new THREE.Euler();
   private readonly color = new THREE.Color();
   private readonly bananaTint = new THREE.Color(0xf2d33b);
+  private readonly fateTint = new THREE.Color(0xb26bff);
 
   constructor(capacity: number) {
     const models = createEnemyModels();
@@ -103,7 +108,7 @@ export class EnemyHordeView {
 
       // Advance this enemy's own cycle phase: walkers by their real speed, hoverers at a steady float.
       const { model } = batch;
-      const speedFactor = model.hovers ? 1 : enemy.effectiveMovementSpeed() / WALK_REFERENCE_SPEED;
+      const speedFactor = model.hovers ? 1 : enemy.effectiveMovementSpeed(nowMs) / WALK_REFERENCE_SPEED;
       const frozen = dying > 0 || slipping || stunned || (!model.hovers && enemy.isStatic);
       let phase = this.phases.get(enemy) ?? Math.abs(enemy.x * 0.0137 + enemy.y * 0.0071) % 1;
       if (!frozen) phase = (phase + (deltaSeconds * speedFactor) / model.cycleSeconds) % 1;
@@ -117,17 +122,26 @@ export class EnemyHordeView {
 
       // Skeletons climb out of the ground when they appear (the boss's undead squad most visibly).
       const rising = model.hovers ? 0 : Math.max(0, 1 - (nowMs - enemy.spawnedAt) / RISE_MS);
-      this.position.set(x, -dying * 0.9 * size - rising * rising * 2 * size, z);
+      // The Mago's hurricane carries it up and turns it over in the air.
+      const liftLeft = enemy.liftedUntil - nowMs;
+      const lift = liftLeft > 0 ? Math.min(1, liftLeft / 250, (POWER_TUNING.hurricaneLiftMs - liftLeft) / 250) * (2.2 + Math.sin(nowMs / 140 + x) * 0.3) : 0;
+      this.position.set(x, lift - dying * 0.9 * size - rising * rising * 2 * size, z);
       // A slip throws it flat on its back (quick fall, lies there, scrambles up at the end).
       const slipLeft = enemy.slipUntil - nowMs;
       const fallen = slipping ? Math.min(1, (ENEMY_SLIP_MS - slipLeft) / 110) * Math.min(1, slipLeft / 180) : 0;
-      this.euler.set(-dying * 1.3 - fallen * 1.45, yaw, 0, 'YXZ');
+      this.euler.set(-dying * 1.3 - fallen * 1.45 + lift * 0.5, yaw + (lift > 0 ? nowMs / 120 : 0), 0, 'YXZ');
       this.rotation.setFromEuler(this.euler);
       this.scale.setScalar(size * (1 - dying * 0.3));
       batch.mesh.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));
 
       this.color.setRGB(1, 1, 1);
       if (enemy.slowStackPercent > 0) this.color.lerp(this.bananaTint, Math.min(0.8, enemy.slowStackPercent * 1.6));
+      if (enemy.markedUntil > nowMs) this.color.lerp(this.fateTint, 0.6 + Math.sin(nowMs / 120) * 0.15);
+      // Power tiers: a bleed, a slow, roots, gold.
+      if (enemy.bleedUntil > nowMs) this.color.lerp(POWER_TINTS.bleed, 0.45);
+      if (enemy.slowUntil > nowMs) this.color.lerp(POWER_TINTS.slow, 0.4);
+      if (enemy.heldUntil > nowMs) this.color.lerp(POWER_TINTS.held, 0.5);
+      if (enemy.gilded) this.color.copy(POWER_TINTS.gold).multiplyScalar(1.6);
       if (nowMs - enemy.lastHitAt < HIT_FLASH_MS) this.color.multiplyScalar(3.2);
       batch.mesh.setColorAt(index, this.color);
 

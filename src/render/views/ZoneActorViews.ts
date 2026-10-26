@@ -9,6 +9,8 @@ import { simToWorld, yawFromSimDirection } from '../space';
 const FADE = 0.18;
 const HIT_FLASH_MS = 70;
 const DEATH_SECONDS = 2.6;
+/** A guardian's entrance (seconds): below ground while the camera arrives, climbing out, then a roar. */
+export const GUARDIAN_ENTRANCE = { wait: 0.7, rise: 1.1, total: 3.5 };
 const ONE_SHOTS: ActorClipName[] = ['raise', 'slamHit', 'emerge', 'shockSlam', 'shoot', 'death'];
 /** Companion display sizes (game units, like an enemy's displaySize): the Coveiro hero-sized, golem a head taller;
  *  the skeletons he raises a little smaller than the horde's. */
@@ -86,6 +88,8 @@ class MiniBossView {
   private readonly last = new THREE.Vector3();
   private dyingFor = -1;
   private readonly head = new THREE.Vector3();
+  /** Seconds into its entrance (GUARDIAN_ENTRANCE), or -1 when it isn't making one. */
+  entrance = -1;
 
   constructor(readonly state: MiniBossState) {
     this.actor = new RiggedActor(state.kind === 'gravedigger' ? createGravediggerModel() : state.kind === 'lakeSpirit' ? createLakeSpiritModel() : createStoneGolemModel());
@@ -129,6 +133,10 @@ class MiniBossView {
     actor.root.rotation.y = this.yaw;
 
     actor.root.visible = true;
+    if (this.entrance >= 0 && this.entrance < GUARDIAN_ENTRANCE.total) {
+      this.playEntrance(deltaSeconds);
+      return;
+    }
     const attack = state.attack;
     if (state.kind === 'gravedigger') {
       if (attack?.type === 'burrow') {
@@ -180,12 +188,32 @@ class MiniBossView {
     else if (state.leashing) actor.tint(0, 0.02, 0.04);
     else actor.tint(0, 0, 0);
   }
+
+  /** Climbs out of the ground (the Coveiro digging his way up, the others rising), then roars with its arms up. */
+  private playEntrance(deltaSeconds: number): void {
+    const { actor } = this;
+    const { wait, rise } = GUARDIAN_ENTRANCE;
+    const before = this.entrance;
+    this.entrance += deltaSeconds;
+    const climbed = Math.min(1, Math.max(0, (this.entrance - wait) / rise));
+    actor.root.position.y = -(1 - climbed) * (1 - climbed) * 3 * actor.root.scale.y;
+    if (before === 0) actor.restart(this.state.kind === 'gravedigger' ? 'emerge' : 'idle', 0);
+    if (before < wait + rise && this.entrance >= wait + rise) actor.restart('raise');
+    actor.update(deltaSeconds);
+    actor.tint(0, 0, 0);
+  }
 }
 
 /** One view per live mini-boss; defeated ones finish their collapse. */
 export class MiniBossViews {
   readonly root = new THREE.Group();
   private readonly views = new Map<EnemyState, MiniBossView>();
+  private readonly entrances = new Set<EnemyState>();
+
+  /** This guardian makes an entrance when it first shows (the intro scene). */
+  playEntrance(enemy: EnemyState): void {
+    this.entrances.add(enemy);
+  }
 
   update(bosses: MiniBossState[], alpha: number, nowMs: number, deltaSeconds: number): void {
     const live = new Set(bosses.map((boss) => boss.enemy));
@@ -197,6 +225,7 @@ export class MiniBossViews {
       }
       if (this.views.has(boss.enemy)) return;
       const view = new MiniBossView(boss);
+      if (this.entrances.delete(boss.enemy)) view.entrance = 0;
       this.views.set(boss.enemy, view);
       this.root.add(view.actor.root);
     });

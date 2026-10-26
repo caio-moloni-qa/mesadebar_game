@@ -1,0 +1,18 @@
+STYLE
+medieval tavern folk, warm, cozy, lute, hurdy-gurdy, fiddle, frame drum, tambourine, instrumental, 104 bpm, D dorian
+
+DESCRIPTION
+A warm, lively medieval fantasy tavern at night: crackling-hearth coziness, mugs on wooden tables, a travelling
+merchant's welcome. Lead melody on lute and fiddle trading phrases, hurdy-gurdy drone underneath, light frame drum and
+tambourine keeping a gentle dance pulse, a little recorder counter-melody. Cheerful but with a hint of mystery (the
+tavern sits in a pocket realm outside the haunted arena). Steady and even from the first bar, no intro, no fade, no
+ending — it must loop seamlessly. Instrumental, no vocals, no lyrics.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+No choir, humming, singing, narration, or voices of any kind.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+
+TARGET DURATION
+150 seconds.

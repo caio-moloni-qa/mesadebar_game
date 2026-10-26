@@ -1,4 +1,4 @@
-import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, MINI_BOSS_VARIANTS } from '../../config/balance';
+import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, GUARDIAN_FIGHT_SPAWNS, MINI_BOSS_VARIANTS } from '../../config/balance';
 import { WORLD_SIZE } from '../../config/world';
 import { Rng, Vec2, intBetween, randomPointAround } from '../math';
 import { DifficultyStage } from './DifficultySystem';
@@ -23,6 +23,10 @@ export interface EnemySpawnSchedulerHost {
   isSkeletonSpawnEnabled(): boolean;
   isVariantSpawnEnabled(): boolean;
   hasActiveEncounter(): boolean;
+  /** A zone guardian is announced or up: spawns thin out (GUARDIAN_FIGHT_SPAWNS). */
+  guardianFight?(): boolean;
+  /** Enemies on the field now (the guardian fight's cap). */
+  liveEnemyCount?(): number;
   difficultyStageFor(elapsedMs: number): DifficultyStage;
   spawn(request: SpawnRequest): void;
 }
@@ -58,7 +62,8 @@ export class EnemySpawnScheduler {
    *  session's current elapsedMs (used to look up the active difficulty stage). */
   update(delta: number, elapsedMs: number): void {
     this.skeletonSpawnElapsed += delta;
-    ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta));
+    // The hordes wait out a guardian fight instead of arriving the moment it ends.
+    if (!this.host.guardianFight?.()) ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta));
     this.spawnDueSkeletons(elapsedMs);
     this.spawnDueVariants(elapsedMs);
   }
@@ -71,16 +76,19 @@ export class EnemySpawnScheduler {
   private spawnDueSkeletons(elapsedMs: number): void {
     if (!this.host.isSkeletonSpawnEnabled() || this.host.hasActiveEncounter()) return;
     const stage = this.host.difficultyStageFor(elapsedMs);
-    if (this.skeletonSpawnElapsed < stage.spawnInterval) return;
+    const fight = this.host.guardianFight?.() ?? false;
+    if (this.skeletonSpawnElapsed < stage.spawnInterval * (fight ? GUARDIAN_FIGHT_SPAWNS.intervalMultiplier : 1)) return;
     this.skeletonSpawnElapsed = 0;
-    for (let i = 0; i < stage.count; i += 1) {
+    if (fight && (this.host.liveEnemyCount?.() ?? 0) >= GUARDIAN_FIGHT_SPAWNS.enemyCap) return;
+    const count = fight ? Math.min(stage.count, GUARDIAN_FIGHT_SPAWNS.maxPerTick) : stage.count;
+    for (let i = 0; i < count; i += 1) {
       const position = randomPointAround(this.rng, this.host.getPlayerPosition(), SKELETON_SPAWN_DISTANCE.min, SKELETON_SPAWN_DISTANCE.max);
       this.host.spawn({ variantId: 'skeleton', ...position, maxHealth: ENEMY_VARIANTS.skeleton.maxHealth * stage.healthMultiplier });
     }
   }
 
   private spawnDueVariants(elapsedMs: number): void {
-    if (!this.host.isVariantSpawnEnabled() || this.host.hasActiveEncounter()) return;
+    if (!this.host.isVariantSpawnEnabled() || this.host.hasActiveEncounter() || this.host.guardianFight?.()) return;
     ENEMY_VARIANT_SCHEDULE.forEach((entry) => {
       const elapsed = this.variantSpawnElapsed.get(entry.variantId) ?? 0;
       if (elapsed < entry.intervalMs) return;

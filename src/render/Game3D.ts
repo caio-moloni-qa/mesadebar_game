@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { GameAudio } from '../audio/GameAudio';
 import { SANDBOX_SPAWN_CAPS } from '../config/balance';
-import { CHARACTERS } from '../config/characters';
+import { CHARACTERS, CharacterId } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { ArenaMap } from '../core/world/ArenaMap';
-import { snapPrevious } from '../core/session/entities';
+import { ProjectileKind, snapPrevious } from '../core/session/entities';
+import { HandAttack } from './models/clips';
 import { ZONES, ZoneKind } from '../config/arenaLayout';
 import { CameraRig } from './CameraRig';
 import { ChoiceOverlay } from './ChoiceOverlay';
@@ -15,7 +16,7 @@ import { PixelPipeline, ndcToCanvas } from './PixelPipeline';
 import { RunChoice, StartMenu } from './StartMenu';
 import { WORLD_SCALE, simToWorld } from './space';
 import { FloatingTexts } from './ui/FloatingTexts';
-import { RunScreens } from './ui/RunScreens';
+import { RunResult, RunScreens } from './ui/RunScreens';
 import { BossUi } from './ui/BossUi';
 import { SandboxPanel } from './ui/SandboxPanel';
 import { BossEffects } from './vfx/BossEffects';
@@ -27,6 +28,18 @@ import { TavernDialog } from './ui/TavernDialog';
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
+import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses } from '../core/progress/Progress';
+import { HeroKitViews } from './views/HeroKitViews';
+import { PowerViews } from './views/PowerViews';
+import { PowerBanner } from './ui/PowerBanner';
+import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
+import { heroName } from './progress/heroNames';
+import { SaveStore } from './progress/SaveStore';
+import { GuardianIntro } from './GuardianIntro';
+import { CURRENT_AREA } from '../config/areas';
+import { QuestNpcId } from '../core/systems/QuestSystem';
+import { Tip, TipDialog } from './ui/TipDialog';
+import { FIRST_RUN_TIP, GUARDIAN_TIP, welcomeTip } from './ui/tips';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
@@ -63,6 +76,9 @@ export interface Game3DOptions {
 }
 
 /** Floating callout colours per player-status tone (Phaser: Player.spawnFloatingStatusText call sites). */
+/** The hero's attack for each projectile: the bolt is cast, an arrow drawn and loosed, a coin flipped, whatever comes
+ *  out of Sergio's pack lobbed overarm; boomerangs and the thrown sword go sidearm. */
+const PROJECTILE_ATTACKS: Record<ProjectileKind, HandAttack> = { bolt: 'cast', arrow: 'shoot', coin: 'toss', pan: 'hurl', bottle: 'hurl', potion: 'hurl', boomerang: 'throw', banana: 'throw', thrownSword: 'throw' };
 const STATUS_COLORS: Record<'heal-cut' | 'slow' | 'rot' | 'heal', string> = { 'heal-cut': '#ffb347', slow: '#8bbcff', rot: '#b98bff', heal: '#8effa0' };
 
 /** The Three.js run: owns the WebGL renderer, the fixed-step loop and the views over one GameSession. */
@@ -84,7 +100,13 @@ export class Game3D {
   private readonly bossViews = new BossViews();
   private readonly bossEffects: BossEffects;
   private readonly miniBossViews = new MiniBossViews();
+  private readonly guardianIntro: GuardianIntro;
+  private readonly tipDialog: TipDialog;
+  private readonly powerBanner: PowerBanner;
   private readonly companionViews = new CompanionViews();
+  private readonly heroKitViews = new HeroKitViews();
+  /** Sandbox: every hero playable, without touching the save. */
+  private allHeroesUnlocked = false;
   private merchantRoom?: MerchantRoom;
   private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
@@ -97,6 +119,18 @@ export class Game3D {
   private readonly menu: StartMenu;
   private readonly audio: GameAudio;
   private run: RunChoice = { characterId: 'mage', weaponId: 'staff' };
+  /** Progress between runs (browser storage), and what the last finished run banked. */
+  private progress: SaveData = SaveStore.load();
+  private result: RunResult = { outcome: null };
+  private attract = false;
+  /** The title menu, the tavern between runs, or a run. */
+  private mode: 'menu' | 'hub' | 'run' = 'menu';
+  private readonly shop: SergioShop;
+  private readonly tavernHeader: TavernHeader;
+  private readonly tierPicker: TierPicker;
+  private readonly recordBook: RecordBook;
+  /** Difficulty tier for the next run (kept for "Tentar novamente"). */
+  private tier = 1;
   private inMenu = false;
   private session!: GameSession;
   private playerView!: HeroView;
@@ -106,6 +140,7 @@ export class Game3D {
   private readonly pickupView = new PickupView(600);
   private readonly hazardView = new HazardView(80);
   private readonly particles = new ParticleView(2000);
+  private readonly powerViews = new PowerViews(this.particles);
   private readonly effects = new CombatEffects();
   private readonly sheetEffects: SheetEffects;
   private readonly keys = new Set<string>();
@@ -150,18 +185,106 @@ export class Game3D {
     this.sandbox = new SandboxPanel(container, {
       session: () => this.session,
       setFogVisible: (visible) => { this.arena.mist.root.visible = visible; },
-      announce: (text) => this.floatAboveHero(text, '#8bff8b')
+      announce: (text) => this.floatAboveHero(text, '#8bff8b'),
+      unlockAllHeroes: () => {
+        this.allHeroesUnlocked = true;
+        this.floatAboveHero('Sandbox: todos os heróis liberados', '#8bff8b');
+      },
+      addFichas: (amount) => {
+        this.saveProgress({ fichas: this.progress.fichas + amount });
+        this.floatAboveHero(`Sandbox: +${amount} Fichas`, '#8bff8b');
+      },
+      addMasteryLevel: () => {
+        const hero = this.run.characterId;
+        const level = masteryLevel(this.progress.mastery[hero] ?? 0);
+        if (level >= MAX_MASTERY) return this.floatAboveHero('Sandbox: maestria já no máximo', '#8bff8b');
+        this.saveProgress({ mastery: { ...this.progress.mastery, [hero]: MASTERY_THRESHOLDS[level] } });
+        this.floatAboveHero(`Sandbox: maestria nível ${level + 1}`, '#8bff8b');
+      },
+      resetProgress: () => {
+        if (!window.confirm('Apagar todo o progresso salvo (Fichas, maestria, missões, heróis liberados, dicas vistas)?')) return;
+        this.allHeroesUnlocked = false;
+        this.progress = emptySave();
+        SaveStore.save(this.progress);
+        this.showMenu();
+      }
     });
-    this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
+    this.screens = new RunScreens(container, {
+      resume: () => { this.session.paused = false; },
+      restart: () => this.restart(),
+      menu: () => this.showMenu(),
+      tavern: () => this.enterHub(),
+      exportSave: () => SaveStore.export(this.progress),
+      importSave: () => {
+        void SaveStore.import().then((save) => {
+          if (!save) { this.floatAboveHero('Arquivo de progresso inválido', '#ff9a8a'); return; }
+          this.progress = save;
+          SaveStore.save(save);
+          this.floatAboveHero(`Progresso importado: ${save.fichas} Fichas`, '#8dffa8');
+        });
+      }
+    });
     this.choices = new ChoiceOverlay(container);
-    this.tavernDialog = new TavernDialog(container);
+    this.tavernDialog = new TavernDialog(container, (hero) => this.menu.showCharacters(hero));
     this.companionBars = new CompanionBars(container);
-    this.scene.add(this.questBarrels.root);
+    this.scene.add(this.questBarrels.root, this.heroKitViews.root, this.powerViews.root);
     this.chestRoll = new ChestRoll(container);
+    this.tipDialog = new TipDialog(container);
+    this.powerBanner = new PowerBanner(container, () => this.audio.fanfare());
+    // After a guardian's entrance: Sergio explains guardians the first time, otherwise play resumes.
+    this.guardianIntro = new GuardianIntro(container, () => {
+      if (this.progress.guardianTipSeen) this.session.revealing = false;
+      else this.showTip(GUARDIAN_TIP, () => this.saveProgress({ guardianTipSeen: true }));
+    });
     this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
     this.showJoystick = Boolean(options.touch) || isTouchDevice();
     this.joystick.setVisible(false);
-    this.menu = new StartMenu(container, (choice) => this.startRun(choice));
+    this.shop = new SergioShop(container, {
+      save: () => this.progress,
+      buy: (id) => {
+        const bought = buyUpgrade(this.progress, id);
+        if (!bought) return;
+        this.progress = bought;
+        SaveStore.save(this.progress);
+      },
+      buyConsumable: (id) => {
+        const bought = buyConsumable(this.progress, id);
+        if (bought) this.saveProgress(bought);
+      },
+      exportSave: () => SaveStore.export(this.progress),
+      importSave: () => {
+        void SaveStore.import().then((save) => {
+          if (!save) return;
+          this.progress = save;
+          SaveStore.save(save);
+          this.shop.render();
+        });
+      },
+      close: () => this.shop.hide(),
+      canPlaySergio: () => this.roster().includes('sergio'),
+      playSergio: () => {
+        this.shop.hide();
+        this.menu.showCharacters('sergio');
+      }
+    });
+    this.tavernHeader = new TavernHeader(container);
+    this.tierPicker = new TierPicker(container, (tier) => {
+      this.tier = tier;
+      this.tierPicker.hide();
+      this.startRun(this.run);
+    }, () => this.tierPicker.hide());
+    this.recordBook = new RecordBook(container, () => this.recordBook.hide());
+    // From the title "Jogar" enters the tavern; there, picking a hero (and weapon) makes them yours in the room.
+    this.menu = new StartMenu(container, (choice) => (this.mode === 'hub' ? this.departFromTavern(choice) : this.startRun(choice)), {
+      save: () => this.progress,
+      setSkin: (hero, skin) => {
+        this.progress = { ...this.progress, skins: { ...this.progress.skins, [hero]: skin } };
+        SaveStore.save(this.progress);
+      },
+      play: () => this.enterHub(),
+      closeToTavern: () => this.menu.hide(),
+      roster: () => this.roster()
+    });
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
     this.bindInput();
@@ -174,6 +297,10 @@ export class Game3D {
 
   startRun(choice: RunChoice): void {
     this.keys.clear();
+    this.mode = 'run';
+    this.shop.hide();
+    this.tierPicker.hide();
+    this.recordBook.hide();
     this.run = choice;
     this.inMenu = false;
     this.menu.hide();
@@ -183,12 +310,16 @@ export class Game3D {
     this.sandbox.setAllowed(true);
     this.joystick.setVisible(this.showJoystick);
     this.restart();
+    // The very first run: Sergio says what it's about.
+    if (!this.progress.firstRunTipSeen) this.showTip(FIRST_RUN_TIP, () => this.saveProgress({ firstRunTipSeen: true }));
   }
 
   /** Back to the title. Behind the menu the arena stays on screen with the last hero standing idle in an
    *  empty, spawn-free session. */
   showMenu(): void {
     this.keys.clear();
+    this.mode = 'menu';
+    this.shop.hide();
     this.inMenu = true;
     this.hud.setVisible(false);
     this.bossUi.setVisible(false);
@@ -203,25 +334,100 @@ export class Game3D {
     this.createSession({ skipStartingUpgrades: false, attract: false });
   }
 
-  private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
+  /** The tavern between runs: walk the room, spend Fichas with Sergio, pick a hero, leave by the portal to play. */
+  enterHub(): void {
+    this.keys.clear();
+    this.mode = 'hub';
+    this.inMenu = false;
+    this.menu.hide();
+    this.hud.setVisible(false);
+    this.bossUi.setVisible(true);
+    this.companionBars.setVisible(false);
+    this.sandbox.setAllowed(true);
+    this.joystick.setVisible(this.showJoystick);
+    this.createSession({ skipStartingUpgrades: true, attract: false, hub: true });
+    this.cameraRig.cut();
+    if (!this.progress.tutorialSeen) {
+      this.saveProgress({ tutorialSeen: true });
+      this.shop.show(true);
+    } else {
+      this.welcomeNewHeroes();
+    }
+  }
+
+  /** The heroes the player may pick: the save's roster (or everyone, with the sandbox toggle). */
+  private roster(): CharacterId[] {
+    return this.allHeroesUnlocked ? (Object.keys(CHARACTERS) as CharacterId[]) : (rosterFor(this.progress) as CharacterId[]);
+  }
+
+  /** Leaving the tavern through its portal with the hero just picked: the difficulty next, once a harder one is open. */
+  private departFromTavern(choice: RunChoice): void {
+    this.run = choice;
+    this.menu.hide();
+    if (this.progress.tierUnlocked > 1) this.tierPicker.show(this.progress, Math.min(this.tier, this.progress.tierUnlocked));
+    else {
+      this.tier = 1;
+      this.startRun(choice);
+    }
+  }
+
+  /** Holds the game under a tip; `after` runs once it's dismissed. */
+  private showTip(tip: Tip, after: () => void = () => {}): void {
+    this.session.revealing = true;
+    this.tipDialog.show(tip, () => {
+      this.session.revealing = false;
+      after();
+    });
+  }
+
+  private saveProgress(changes: Partial<SaveData>): void {
+    this.progress = { ...this.progress, ...changes };
+    SaveStore.save(this.progress);
+  }
+
+  /** Back in the tavern: each hero unlocked since the last visit says they're playable now, one after another. */
+  private welcomeNewHeroes(heroes = heroesToWelcome(this.progress)): void {
+    const [hero, ...rest] = heroes;
+    if (!hero || !(hero in CHARACTERS)) return;
+    this.showTip(welcomeTip(hero as CharacterId), () => {
+      this.saveProgress({ welcomed: [...new Set([...this.progress.welcomed, hero])] });
+      this.welcomeNewHeroes(rest);
+    });
+  }
+
+  private createSession({ skipStartingUpgrades, attract, hub = false }: { skipStartingUpgrades: boolean; attract: boolean; hub?: boolean }): void {
     this.playerView?.dispose();
     this.bossViews.clear();
     this.miniBossViews.clear();
     this.companionViews.clear();
     this.miniBossEffects.clear();
     this.sheetEffects.clear();
+    this.powerViews.clear();
+    this.powerBanner.reset();
     if (this.merchantRoom) this.scene.remove(this.merchantRoom.root, this.merchantRoom.characters);
     this.floating.clear();
     this.chestRoll.stop();
+    this.guardianIntro.reset();
+    this.tipDialog.reset();
     const { characterId, weaponId } = this.run;
+    this.attract = attract || hub;
+    this.result = { outcome: null };
     this.session = new GameSession({
       characterId,
       startingWeaponId: weaponId,
       seed: this.options.seed ?? randomSeed(),
       stressEnemyCount: attract ? undefined : this.options.stressEnemyCount,
       skipStartingUpgrades,
-      arena: this.arenaMap
+      arena: this.arenaMap,
+      // Sergio's permanent upgrades (and what's in the pack) and the regulars' mission progress carry into every real run.
+      meta: attract || hub ? undefined : runBonuses(this.progress),
+      questTiers: attract ? undefined : this.progress.regularMissions,
+      regularsAway: rosterFor(this.progress).filter((hero): hero is QuestNpcId => CURRENT_AREA.regulars.includes(hero)),
+      hub,
+      tier: attract || hub ? 1 : this.tier
     });
+    // The pack is spent on the run it came into.
+    if (!attract && !hub && this.progress.pack.length > 0) this.saveProgress({ pack: [] });
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
     this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);
@@ -239,16 +445,40 @@ export class Game3D {
       Object.assign(this.session.player, spot);
       snapPrevious(this.session.player);
     }
-    this.playerView = new HeroView(characterId, weaponId);
+    this.playerView = new HeroView(characterId, weaponId, this.progress.skins[characterId] ?? 'base');
     this.heldKey = weaponId;
     this.scene.add(this.playerView.root, this.playerView.effects);
     this.accumulator = 0;
     this.bindSessionEffects();
   }
 
+  /** Banks the finished run into the save (not the menu's backdrop run, nor a sandbox or god-mode one). */
+  private bankRun(): void {
+    if (this.attract) return;
+    if (this.sandbox.enabled || this.options.invincible) {
+      this.result = { outcome: null, note: 'Partida de teste (sandbox ou modo deus): o progresso não foi salvo.' };
+      return;
+    }
+    const outcome = applyRun(this.progress, this.session.runSummary(this.run.characterId, Date.now()));
+    this.progress = outcome.save;
+    const saved = SaveStore.save(this.progress);
+    this.result = { outcome, note: saved ? undefined : 'Não foi possível salvar o progresso neste navegador.' };
+  }
+
   /** Session events → particles and ground effects. Fresh listeners per session (the old bus is dropped with it). */
   private bindSessionEffects(): void {
     const { events } = this.session;
+    events.on('run-ended', () => this.bankRun());
+    // The portal starts the run, after picking the difficulty once a harder one is open.
+    // The portal opens hero selection (with 3D previews); picking one leaves for the arena.
+    events.on('hub-exit', () => this.menu.showCharacters(this.run.characterId));
+    events.on('hub-records', () => this.recordBook.show(this.progress));
+    events.on('hub-sergio', () => this.shop.show());
+    events.on('player-revived', () => {
+      this.floatAboveHero('SEGUNDA CHANCE!', '#ffe29a');
+      this.effects.pulse(this.session.player.x, this.session.player.y, 140, 0xffe29a, 0.6, 0.8);
+      this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffe29a, 30, 2.4, 1.6);
+    });
     const at = (x: number, y: number) => simToWorld(x, y, 0, this.scratch);
     events.on('enemy-defeated', ({ x, y, variantId, divineRelic }) => {
       const point = at(x, y);
@@ -282,12 +512,12 @@ export class Game3D {
       // Whip chain links also emit swings, centred on the enemy they jump to — only the hero's own swing animates.
       if (x === this.session.player.x && y === this.session.player.y) {
         this.playerView.aim(dirX, dirY);
-        this.playerView.play(weaponId === 'whip' ? 'lash' : 'swing', this.handOf(weaponId));
+        this.playerView.play(weaponId === 'whip' ? 'lash' : weaponId === 'hammer' ? 'slam' : 'swing', this.handOf(weaponId));
       }
     });
     events.on('projectile-fired', ({ kind, dirX, dirY, weaponId }) => {
       this.playerView.aim(dirX, dirY);
-      this.playerView.play(kind === 'bolt' ? 'cast' : 'throw', this.handOf(weaponId));
+      this.playerView.play(PROJECTILE_ATTACKS[kind], this.handOf(weaponId));
     });
     events.on('player-damaged', ({ amount }) => {
       this.playerView.play('hit');
@@ -381,8 +611,18 @@ export class Game3D {
       this.particles.emit(point.x, 0.3, point.z, 0x6b5a46, attack === 'shockwave' ? 30 : 16, { spread: attack === 'shockwave' ? 8 : 5, rise: 4, gravity: 14, life: 0.6, size: 1.3, jitter: 0.5 });
       this.cameraRig.shake(attack === 'shockwave' || attack === 'charge' ? 0.35 : 0.2, 0.3);
     });
+    // A guardian's entrance: the game holds while the camera goes to watch it rise (not from inside the tavern).
+    events.on('miniboss-spawned', ({ kind, enemy }) => {
+      if (this.mode !== 'run' || this.attract || this.session.merchant.inside || this.session.over) return;
+      this.miniBossViews.playEntrance(enemy);
+      this.guardianIntro.start(kind, enemy);
+      this.session.revealing = true;
+    });
     events.on('miniboss-stunned', ({ enemy }) => {
       this.floating.spawn(simToWorld(enemy.x, enemy.y, 6, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 28, rise: 40, durationMs: 1100 }, performance.now());
+    });
+    events.on('guardian-experience', ({ x, y }) => {
+      window.setTimeout(() => this.floatAt(x, y, '+1 NÍVEL DE XP!', '#8dffa8'), 700);
     });
     events.on('miniboss-defeated', ({ kind, x, y }) => {
       const point = at(x, y);
@@ -431,6 +671,47 @@ export class Game3D {
     events.on('boss-wave-cleared', () => {
       Object.values(this.session.portals ?? {}).forEach(({ x, y }) => this.effects.pulse(x, y, 70, 0xffffff, 0.5, 0.8));
     });
+    // The regulars' kits.
+    events.on('hammer-quake', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.pulse(x, y, radius, 0xd9c7a0, 0.3, 0.6);
+      this.particles.emit(point.x, 0.15, point.z, 0x8a7a5a, 12, { spread: 3, rise: 2.5, gravity: 10, life: 0.5, size: 1.2, jitter: 0.8 });
+      this.cameraRig.shake(0.06, 0.15);
+    });
+    events.on('bottle-burst', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.burst(x, y, radius, 0x6ad46a, 0.3, 0.45);
+      this.particles.burst(point.x, point.z, 0x8affa0, 14, 1.8, 1.2);
+    });
+    events.on('potion-heal', ({ x, y }) => {
+      const point = at(x, y);
+      this.particles.burst(point.x, point.z, 0xff6a8a, 8, 1.2, 1.4);
+    });
+    events.on('barrel-burst', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.burst(x, y, radius, 0xf5ecd0, 0.4, 0.55);
+      this.particles.emit(point.x, 0.3, point.z, 0xf5ecd0, 26, { spread: 4.5, rise: 3, gravity: 6, life: 0.8, size: 1.6, jitter: 1 });
+    });
+    events.on('arrow-rain', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.pulse(x, y, radius, 0x9fe08a, 0.25, 0.5);
+      for (let index = 0; index < 10; index += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const reach = Math.random() * radius * WORLD_SCALE;
+        this.particles.emit(point.x + Math.cos(angle) * reach, 4, point.z + Math.sin(angle) * reach, 0xe9dfc4, 1, { spread: 0.1, rise: -14, gravity: 20, life: 0.3, size: 1.4 });
+      }
+    });
+    events.on('fate-burst', ({ x, y, radius }) => {
+      const point = at(x, y);
+      this.effects.burst(x, y, radius, 0xb26bff, 0.35, 0.5);
+      this.particles.burst(point.x, point.z, 0xd8a8ff, 16, 2, 1.4);
+    });
+    this.bindPowerEffects();
+    events.on('hero-ability', ({ kind }) => {
+      const text = { mead: 'Hidromel!', jackpot: 'Tudo ou Nada: escolha dupla!', sale: 'Liquidação: um item grátis na loja!', fate: 'Destino Selado', rain: 'Chuva de Flechas!' }[kind];
+      const color = { mead: '#ffd25a', jackpot: '#8dffa8', sale: '#ffc65a', fate: '#d8a8ff', rain: '#9fe08a' }[kind];
+      this.floatAboveHero(text, color);
+    });
     events.on('merchant-portal-opened', ({ x, y }) => {
       const point = at(x, y);
       this.particles.burst(point.x, point.z, 0xffc65a, 18, 2.2, 1.2);
@@ -467,6 +748,145 @@ export class Game3D {
   }
 
   /** First weapon in the right hand, second in the left. */
+  /** The heroes' power tiers: the announcement, then each power's burst (persistent pieces are PowerViews'). */
+  private bindPowerEffects(): void {
+    const { events } = this.session;
+    const at = (x: number, y: number) => simToWorld(x, y, 0, this.scratch);
+    events.on('power-unlocked', ({ tier, level, name, text }) => {
+      if (this.attract) return;
+      // The run holds while the card is up (like any reveal), and goes on once the last one closes.
+      this.session.revealing = true;
+      this.powerBanner.show({ level, tier, name, text }, () => { this.session.revealing = false; });
+      const { player } = this.session;
+      this.effects.pulse(player.x, player.y, 90, 0xffe29a, 0.6, 0.8);
+      this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffe29a, 24, 2, 2);
+    });
+    events.on('power-arc', ({ points }) => {
+      this.powerViews.arc(points);
+      const end = points[points.length - 1];
+      const point = at(end.x, end.y);
+      this.particles.emit(point.x, 1.1, point.z, 0xc8f4ff, 4, { spread: 2, rise: 2, gravity: 6, life: 0.25, size: 1 });
+    });
+    events.on('power-blast', ({ kind, x, y, radius }) => {
+      const point = at(x, y);
+      switch (kind) {
+        case 'storm':
+          this.powerViews.arc([{ x, y }], true);
+          this.effects.pulse(x, y, radius * 1.6, 0xc8f4ff, 0.3, 0.9);
+          this.particles.emit(point.x, 0.3, point.z, 0xe6faff, 14, { spread: 3, rise: 4, gravity: 10, life: 0.4, size: 1.2, jitter: 0.4 });
+          this.cameraRig.shake(0.08, 0.12);
+          break;
+        case 'warcry':
+          this.effects.pulse(x, y, radius, 0xff7a3a, 0.5, 0.9);
+          this.effects.burst(x, y, radius, 0xff4a2a, 0.4, 0.3);
+          this.particles.emit(point.x, 0.3, point.z, 0x9a8a70, 30, { spread: 8, rise: 2, gravity: 6, life: 0.6, size: 1.4, jitter: 1 });
+          this.floatAboveHero('GRITO DE GUERRA!', '#ff9a6a');
+          this.playerView.play('slam', 'R');
+          this.cameraRig.shake(0.3, 0.35);
+          break;
+        case 'holy':
+          this.sheetEffects.ring(x, y, radius, 0.6);
+          this.effects.pulse(x, y, radius, 0xfff2a0, 0.55, 0.8);
+          break;
+        case 'sanctuary':
+          this.effects.burst(x, y, radius, 0xfff6c0, 0.6, 0.5);
+          this.effects.pulse(x, y, radius, 0xffffff, 0.7, 1);
+          this.particles.emit(point.x, 0.4, point.z, 0xfff0a0, 50, { spread: 8, rise: 6, gravity: 4, life: 0.9, size: 1.4, jitter: 1.5 });
+          this.floatAboveHero('SANTUÁRIO!', '#fff0a0');
+          this.cameraRig.shake(0.25, 0.4);
+          break;
+        case 'meteor':
+          this.effects.burst(x, y, radius, 0xff7a2a, 0.5, 0.5);
+          this.effects.pulse(x, y, radius, 0xffd070, 0.45, 1);
+          this.bossEffects.scorch(x, y, radius * 0.8);
+          this.particles.emit(point.x, 0.3, point.z, 0xff8a2a, 40, { spread: 8, rise: 7, gravity: 14, life: 0.8, size: 1.6, jitter: 1 });
+          this.particles.emit(point.x, 0.3, point.z, 0x6b5a46, 20, { spread: 6, rise: 4, gravity: 14, life: 0.7, size: 1.3 });
+          this.cameraRig.shake(0.5, 0.45);
+          break;
+        case 'gold':
+          this.effects.burst(x, y, radius, 0xffc93a, 0.3, 0.5);
+          this.particles.burst(point.x, point.z, 0xffe066, 14, 1.4, 2.4);
+          break;
+        case 'gold-rain':
+          this.effects.pulse(x, y, radius, 0xffc93a, 0.5, 0.8);
+          for (let index = 0; index < 24; index += 1) {
+            const angle = Math.random() * Math.PI * 2;
+            const reach = Math.sqrt(Math.random()) * radius * WORLD_SCALE;
+            this.particles.emit(point.x + Math.cos(angle) * reach, 6, point.z + Math.sin(angle) * reach, 0xffd84a, 1, { spread: 0.1, rise: -16, gravity: 20, life: 0.35, size: 1.5 });
+          }
+          this.floatAt(x, y, 'CHUVA DE OURO!', '#ffd84a');
+          break;
+        case 'eclipse':
+          this.effects.burst(x, y, radius, 0x8a4dff, 0.5, 0.6);
+          this.effects.pulse(x, y, radius, 0xd8a8ff, 0.5, 1);
+          this.particles.emit(point.x, 2, point.z, 0xb26bff, 50, { spread: 9, rise: 4, gravity: 6, life: 0.8, size: 1.5, jitter: 1.5 });
+          this.cameraRig.shake(0.35, 0.4);
+          break;
+        case 'crate':
+          this.effects.burst(x, y, radius, 0xd8a25a, 0.35, 0.5);
+          this.particles.emit(point.x, 0.6, point.z, 0x9a6a3a, 20, { spread: 5, rise: 5, gravity: 16, life: 0.7, size: 1.4, jitter: 0.5 });
+          this.particles.burst(point.x, point.z, 0xffd84a, 12, 1.4, 2.4);
+          this.cameraRig.shake(0.12, 0.15);
+          break;
+        case 'hawk':
+          this.particles.emit(point.x, 1, point.z, 0xc8ffd8, 12, { spread: 3, rise: 3, gravity: 8, life: 0.4, size: 1.1 });
+          break;
+        case 'roots':
+          this.effects.pulse(x, y, radius, 0x6fdc5a, 0.6, 0.7);
+          for (let index = 0; index < 14; index += 1) {
+            const angle = Math.random() * Math.PI * 2;
+            const reach = Math.sqrt(Math.random()) * radius * WORLD_SCALE;
+            this.particles.emit(point.x + Math.cos(angle) * reach, 0.1, point.z + Math.sin(angle) * reach, 0x4fa83a, 3, { spread: 0.2, rise: 3, gravity: 4, life: 0.7, size: 1.2 });
+          }
+          break;
+        case 'crack':
+          this.effects.pulse(x, y, radius, 0x6a5a3a, 0.5, 0.7);
+          this.particles.emit(point.x, 0.1, point.z, 0x3a3022, 8, { spread: 2.5, rise: 1, gravity: 8, life: 0.5, size: 1 });
+          break;
+        case 'anvil':
+          this.effects.pulse(x, y, radius, 0xffd070, 0.4, 0.9);
+          this.effects.burst(x, y, radius, 0xd9c7a0, 0.35, 0.4);
+          this.particles.emit(point.x, 0.3, point.z, 0xffc070, 16, { spread: 5, rise: 5, gravity: 16, life: 0.5, size: 1.1, jitter: 0.5 });
+          this.cameraRig.shake(0.2, 0.2);
+          break;
+        case 'peel-slip':
+          this.particles.burst(point.x, point.z, 0xf2d33b, 8, 0.4, 2);
+          break;
+      }
+    });
+    events.on('power-cast', ({ kind, x, y }) => {
+      switch (kind) {
+        case 'fury':
+          this.floatAboveHero('FÚRIA IMORTAL!', '#ff5a3a');
+          this.effects.pulse(x, y, 160, 0xff3a2a, 0.6, 1);
+          this.cameraRig.shake(0.35, 0.5);
+          break;
+        case 'fury-end': this.floatAboveHero('A fúria passa', '#ff9a8a'); break;
+        case 'hurricane': this.floatAboveHero('Furacão Arcano!', '#bfe9ff'); this.playerView.play('cast', this.handOf('staff')); break;
+        case 'monkey': this.floatAboveHero('Macaco Furioso!', '#f2d33b'); this.playerView.play('swing', 'R'); break;
+        case 'meteor': this.powerViews.meteor(x, y); this.playerView.play('slam', this.handOf('hammer')); break;
+        case 'crate': this.playerView.play('hurl', this.handOf('pack')); break;
+        case 'sale':
+          this.floatAboveHero('LIQUIDAÇÃO TOTAL!', '#ffc65a');
+          this.playerView.play('hurl', this.handOf('pack'));
+          break;
+        case 'eclipse': this.floatAt(x, y, 'Eclipse', '#d8a8ff'); break;
+        case 'foresight':
+          this.floatAboveHero('PREVISTO!', '#d8a8ff');
+          this.effects.pulse(x, y, 50, 0xd8a8ff, 0.4, 0.9);
+          break;
+        case 'foresight-ready': this.effects.pulse(x, y, 40, 0xb26bff, 0.35, 0.5); break;
+      }
+    });
+    events.on('power-item', ({ kind, x, y }) => {
+      const point = at(x, y);
+      this.particles.emit(point.x, 5, point.z, kind === 'pan' ? 0x9a9aa4 : kind === 'bottle' ? 0x6ad46a : 0xff6a8a, 3, { spread: 0.2, rise: -14, gravity: 20, life: 0.25, size: 1.4 });
+      if (kind === 'pan') this.effects.pulse(x, y, 55, 0xd8d8e0, 0.25, 0.7);
+      if (kind === 'bottle') this.effects.burst(x, y, 65, 0x6ad46a, 0.3, 0.45);
+      if (kind === 'potion') this.particles.burst(point.x, point.z, 0xff6a8a, 8, 1.2, 1.4);
+    });
+  }
+
   private handOf(weaponId: WeaponConfig['id']): Hand {
     return this.session.weapons.weapons.findIndex((weapon) => weapon.config.id === weaponId) === 1 ? 'L' : 'R';
   }
@@ -512,11 +932,46 @@ export class Game3D {
       if (this.inMenu) return;
       this.keys.add(event.code);
       // ESC stays blocked while a choice screen is open, like the Phaser build.
-      // ESC first closes a conversation in the tavern.
+      // ESC first closes Sergio's counter or a conversation in the tavern.
+      if (this.menu.visible) return;
+      if (this.guardianIntro.filming) {
+        if (['Escape', 'Enter', 'Space'].includes(event.code)) {
+          event.preventDefault();
+          this.guardianIntro.skip();
+        }
+        return;
+      }
+      if (this.powerBanner.open) {
+        if (['Escape', 'Enter', 'NumpadEnter', 'Space'].includes(event.code)) {
+          event.preventDefault();
+          this.powerBanner.next();
+        }
+        return;
+      }
+      if (this.tipDialog.open) {
+        if (['Escape', 'Enter', 'NumpadEnter'].includes(event.code)) {
+          event.preventDefault();
+          this.tipDialog.close();
+        }
+        return;
+      }
+      if (this.shop.open || this.tierPicker.open || this.recordBook.open) {
+        if (event.code === 'Escape') {
+          this.shop.hide();
+          this.tierPicker.hide();
+          this.recordBook.hide();
+        }
+        return;
+      }
+      if (event.code === 'KeyT' && this.session.over) this.enterHub();
       if (event.code === 'Escape' && this.session.dialogue !== null) this.session.closeDialogue();
       else if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
       if (event.code === 'KeyE') this.session.interact();
+      // Sergio's Loja Portátil.
+      if (event.code === 'KeyQ' && this.mode === 'run' && this.session.characterId === 'sergio') {
+        if (!this.session.openPortableShop()) this.floatAboveHero('A loja ainda não está pronta', '#c9b89a');
+      }
       if (event.code === 'KeyM' && (this.session.over || this.session.paused)) this.showMenu();
       if (this.options.debug) this.debugKey(event.code);
     });
@@ -545,7 +1000,7 @@ export class Game3D {
   }
 
   private readMoveInput(): void {
-    if (this.inMenu) {
+    if (this.inMenu || this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)) {
       this.session.setMoveInput(0, 0);
       return;
     }
@@ -596,14 +1051,22 @@ export class Game3D {
     this.particles.update(deltaSeconds);
     this.effects.update(deltaSeconds);
     this.sheetEffects.update(deltaSeconds);
-    this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
+    const sceneFocus = this.guardianIntro.update(frameMs / 1000, this.playerView.worldPosition);
+    if (sceneFocus) {
+      this.cameraRig.cut();
+      this.cameraRig.follow(sceneFocus, frameMs / 1000);
+    } else {
+      this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
+    }
     this.arena.setSceneryVisible(!this.session.merchant.inside);
     this.arena.followFocus(this.cameraRig.focus);
     this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
     this.bossViews.update(this.session.bosses.bosses, this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.bossEffects.update(this.session, alpha, this.session.frozen ? 0 : frameMs / 1000);
-    this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen && !this.guardianIntro.filming ? 0 : frameMs / 1000);
+    this.heroKitViews.update(this.session, alpha, simNow);
+    this.powerViews.update(this.session, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.companionViews.update(this.session.companions.companions, this.session.companions.skeletons, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossEffects.update(this.session.miniBosses, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
@@ -611,7 +1074,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;
@@ -620,7 +1083,9 @@ export class Game3D {
       this.fps.frames = 0;
       this.fps.since = now;
     }
-    this.screens.update(this.session, this.inMenu);
+    this.screens.update(this.session, this.inMenu, this.result);
+    // Station prompts hide behind the tavern's panels.
+    if (this.mode !== 'menu') this.bossUi.setVisible(!(this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)));
     this.bossUi.update(this.session, this.projectToScreen);
     this.companionBars.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {
@@ -632,7 +1097,8 @@ export class Game3D {
       textures: this.renderer.info.memory.textures
     });
     this.choices.update(this.session);
-    this.tavernDialog.update(this.session);
+    this.tavernDialog.update(this.session, this.progress);
+    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId));
   }
 }
 

@@ -1,10 +1,13 @@
 import * as THREE from 'three';
+import { SkinId } from '../core/progress/Progress';
 import { CharacterId } from '../config/characters';
 import { WeaponConfig } from '../config/weapons';
 import { HeroClipName } from './models/clips';
 import { HeroModel, attachWeapons, createHeroModel } from './models/heroes';
 
-const ATTACKS: Record<WeaponConfig['id'], HeroClipName> = { staff: 'cast', sword: 'swing', whip: 'lash', boomerang: 'throw', amulet: 'pulse' };
+/** A locked hero: one flat dark shape (shared, never disposed with a model). */
+const SILHOUETTE = new THREE.MeshBasicMaterial({ color: 0x0b0a12 });
+const ATTACKS: Record<WeaponConfig['id'], HeroClipName> = { staff: 'cast', sword: 'swing', whip: 'lash', boomerang: 'throw', amulet: 'pulse', hammer: 'slam', bow: 'shoot', coins: 'toss', crystal: 'pulse', pack: 'hurl' };
 
 /** One lazily-created preview renderer and one active hero, reused by every menu screen.
  * Uses the game's real imported meshes, rigs, clips and weapons. Driven by Game3D's existing frame loop.
@@ -19,6 +22,7 @@ export class HeroPreview {
   private model: HeroModel | null = null;
   private mixer: THREE.AnimationMixer | null = null;
   private characterId: CharacterId | null = null;
+  private skin: SkinId = 'base';
   private weaponId: WeaponConfig['id'] = 'sword';
   private host: HTMLElement | null = null;
   private elapsed = 0;
@@ -31,6 +35,8 @@ export class HeroPreview {
   private modelWidth = 2;
   private manualAnimation = 0;
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  private silhouette = false;
 
   constructor() {
     const canvas = this.renderer.domElement;
@@ -73,23 +79,25 @@ export class HeroPreview {
     canvas.addEventListener('lostpointercapture', release);
   }
 
-  mount(host: HTMLElement, characterId: CharacterId, weaponId: WeaponConfig['id']): void {
+  mount(host: HTMLElement, characterId: CharacterId, weaponId: WeaponConfig['id'], skin: SkinId = 'base', silhouette = false): void {
     this.host = host;
     host.append(this.renderer.domElement);
-    this.setCharacter(characterId, weaponId);
+    this.setCharacter(characterId, weaponId, skin, silhouette);
     this.width = 0;
   }
 
-  setCharacter(characterId: CharacterId, weaponId: WeaponConfig['id']): void {
-    if (this.characterId === characterId && this.model) {
+  /** `silhouette`: a hero not unlocked yet shows only as a dark shape. */
+  setCharacter(characterId: CharacterId, weaponId: WeaponConfig['id'], skin: SkinId = this.skin, silhouette = false): void {
+    if (this.characterId === characterId && this.model && this.skin === skin && this.silhouette === silhouette) {
       if (this.weaponId !== weaponId) {
         this.weaponId = weaponId; attachWeapons(this.model, [weaponId]); this.measure(); this.width = 0;
       }
       return;
     }
     this.clearModel();
-    this.characterId = characterId; this.weaponId = weaponId;
-    this.model = createHeroModel(characterId, weaponId);
+    this.characterId = characterId; this.weaponId = weaponId; this.skin = skin; this.silhouette = silhouette;
+    this.model = createHeroModel(characterId, weaponId, skin);
+    if (silhouette) this.model.root.traverse((child) => { if (child instanceof THREE.Mesh) child.material = SILHOUETTE; });
     this.scene.add(this.model.root);
     this.mixer = new THREE.AnimationMixer(this.model.root);
     this.mixer.clipAction(this.model.clips.idle).play();

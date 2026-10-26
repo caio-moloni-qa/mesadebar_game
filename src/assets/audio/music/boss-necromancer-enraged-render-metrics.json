@@ -1,0 +1,45 @@
+{
+  "id": "boss-necromancer-enraged",
+  "bpm": 150,
+  "bars": 80,
+  "meter": 4,
+  "key": "D minor",
+  "kind": "boss",
+  "intense": true,
+  "loop": true,
+  "seconds": 128,
+  "noteCount": 2300,
+  "hitCount": 1130,
+  "instruments": [
+    "strings",
+    "organ",
+    "drone",
+    "choir",
+    "horn",
+    "trumpet"
+  ],
+  "percussion": [
+    "frame",
+    "rattle",
+    "gong"
+  ],
+  "seed": "boss-necromancer-enraged",
+  "rate": 44100,
+  "frames": 5644800,
+  "rawSeconds": 132,
+  "rawPeak": 0.26297393441200256,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.11819896589236548,
+  "gain": 3.1942329260814413,
+  "seam": [
+    0.0020942268893122673,
+    0.0013341065496206284
+  ],
+  "end": [
+    -0.007339405827224255,
+    -0.018480824306607246
+  ],
+  "file": "boss-necromancer-enraged.wav",
+  "rawFile": "boss-necromancer-enraged-raw.wav"
+}

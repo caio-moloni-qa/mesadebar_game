@@ -142,7 +142,12 @@ export class QuestSystem {
   /** Brom's barrels still lying on the arena. */
   barrels: Vec2[] = [];
 
-  constructor(private readonly host: QuestHost) {
+  /** `startTiers`: missions already done with each regular in earlier runs — they offer the next one (or nothing). */
+  constructor(private readonly host: QuestHost, startTiers: Partial<Record<QuestNpcId, number>> = {}) {
+    this.quests.forEach((quest) => {
+      quest.tier = Math.min(quest.npc.quests.length, Math.max(0, Math.floor(startTiers[quest.npc.id] ?? 0)));
+      if (quest.tier >= quest.npc.quests.length) quest.status = 'done';
+    });
     host.events.on('enemy-defeated', () => this.advance('kills', 1));
     host.events.on('miniboss-defeated', () => this.advance('guardians', 1));
     host.events.on('player-damaged', () => {

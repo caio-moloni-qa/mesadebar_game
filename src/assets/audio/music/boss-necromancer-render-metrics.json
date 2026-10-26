@@ -1,0 +1,43 @@
+{
+  "id": "boss-necromancer",
+  "bpm": 132,
+  "bars": 80,
+  "meter": 4,
+  "key": "D minor",
+  "kind": "boss",
+  "loop": true,
+  "seconds": 145.45454545454547,
+  "noteCount": 1540,
+  "hitCount": 970,
+  "instruments": [
+    "cello",
+    "organ",
+    "drone",
+    "choir",
+    "horn"
+  ],
+  "percussion": [
+    "frame",
+    "rattle",
+    "gong"
+  ],
+  "seed": "boss-necromancer",
+  "rate": 44100,
+  "frames": 6414545,
+  "rawSeconds": 149.45453514739228,
+  "rawPeak": 0.2598780691623688,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.10716220195873678,
+  "gain": 3.2322850585563563,
+  "seam": [
+    0.00464668869972229,
+    0.0011967672035098076
+  ],
+  "end": [
+    -0.05363012105226517,
+    -0.006229292135685682
+  ],
+  "file": "boss-necromancer.wav",
+  "rawFile": "boss-necromancer-raw.wav"
+}

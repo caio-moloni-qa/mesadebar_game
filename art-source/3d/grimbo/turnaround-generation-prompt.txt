@@ -1,0 +1,11 @@
+Character turnaround concept sheet for image-to-3D conversion (Tripo3D), for a low-poly, pixelated 3D dark-fantasy
+survivors-like. Stylized, chunky, readable shapes, hand-painted flat colours, simple large forms — NOT pixel art, NOT
+photorealistic. Exactly THREE full-body views side by side on one 1536×1024 canvas: FRONT (left), RIGHT SIDE (middle),
+BACK (right). Same character, same scale, feet on one baseline, orthographic (no perspective), each view centred in
+its third with clear empty space between views. Pose: neutral A-pose, arms ~30° down and away from the body, legs
+slightly apart, clear gaps between arms and torso and between the legs. Hands EMPTY and open (weapons are made
+separately). Flat, even, shadowless lighting. Plain flat light-grey background (#d9d9d9). No text, no labels, no
+arrows, no ground plane.
+
+Grimbo Dedoleve, a small wiry goblin, bright lime-green skin, enormous pointed ears angled outward, long hooked nose, big yellow eyes, a sly grin with one gold tooth, a battered black top hat with a gold band, a magenta waistcoat over a cream shirt, short trousers, bare green feet, a few coins sewn on the waistcoat. Match grimbo-portrait.png. Ears must not touch the canvas edge.
+Exactly 3 views ONLY. Front at x256, RIGHT side profile facing RIGHT at x768, back at x1280. Each figure must stay inside its own 512px third with generous empty gutters, crown/hat/hair included. Hands EMPTY and fingers relaxed OPEN. Front/back A-pose, true orthographic side view of same pose, no 3/4 view. Solid opaque hand-painted low-poly color blocking, no pixel-art outlines, no dramatic shadows, no floor or background gradients. Plain uniform #d9d9d9 backdrop. No separate loose props, no text, letters, numbers, labels, logos or watermarks. No held weapons even if reference shows one. Split lower robe/skirt enough to show separation of legs. Match reference FACE, body build, skin tone, hair and species; translate illustration/pixel reference into low-poly concept style. No coin held or flipped in the hands. Top hat and ears completely inside own view.

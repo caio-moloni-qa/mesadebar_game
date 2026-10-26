@@ -1,0 +1,18 @@
+STYLE
+epic dark fantasy battle, relentless, heavy frame drums, cello and bass ostinato, war horns, hurdy-gurdy, wordless male choir, instrumental, 140 bpm, E minor
+
+DESCRIPTION
+The same haunted arena much later in the night: the horde is overwhelming. Same key and character as a driving
+cello-and-drums battle theme, pushed harder: double-time frame drums, a relentless low string ostinato, war horn
+calls, a wordless low male choir chanting short syllables (no words), hurdy-gurdy screaming the melody. Constant high
+intensity from the first bar, no breakdown, no intro, no ending — seamless loop. Instrumental, no lyrics.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+Only the explicitly requested WORDLESS choir is allowed as an instrumental texture; no intelligible language, sung lyrics, Latin text, or spoken syllables.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+Use the arena track as the motif/arrangement reference if the generator supports reference audio. Keep its E-minor musical identity while increasing tempo and density.
+
+TARGET DURATION
+150 seconds.

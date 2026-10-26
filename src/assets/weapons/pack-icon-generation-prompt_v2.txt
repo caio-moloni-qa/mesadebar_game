@@ -1,0 +1,7 @@
+Pixel-art game weapon icon, 64×64, transparent background (real alpha), single item centered, drawn diagonally
+(grip lower-left, business end upper-right), crisp hard-edged pixels, 1px dark outline, limited palette (6–10
+colours), soft top-left light, no text, no frame, no background shape, medieval dark-fantasy, matching
+src/assets/weapons/sword-icon.png in style and scale.
+
+A battered iron frying pan crossed with a green glass bottle and a round red potion flask, as if just pulled out of a traveller's pack.
+Design at logical 64x64, chunky pixels, 10% empty padding, real transparent alpha=0 background. No soft blurry glow or gradients. Exact 6-10 visible RGB colors; no text or symbols resembling letters. Use supplied sword icon only as STYLE reference, not subject. Make the requested object only.

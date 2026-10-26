@@ -1,10 +1,13 @@
 import * as THREE from 'three';
+import { SkinId } from '../../core/progress/Progress';
+import { applySkin } from './skins';
+import { REGULAR_FIGURES } from './regulars';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { toonMaterial } from '../materials';
 import { HeroClipName, humanoidClips } from './clips';
 import { heroMesh } from './heroMeshes';
-import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, JointSpec, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, rigImportedMesh } from './importedRig';
+import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, BROM_HIP_HEIGHT, BROM_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, GRIMBO_HIP_HEIGHT, GRIMBO_JOINTS, JointSpec, LYRA_HIP_HEIGHT, LYRA_JOINTS, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, SERGIO_HIP_HEIGHT, SERGIO_JOINTS, ZORA_HIP_HEIGHT, ZORA_JOINTS, rigImportedMesh } from './importedRig';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { RigPart, RiggedModel, buildRiggedModel, clipForBones, humanoidBones } from './rig';
 import { WeaponModelId, heldWeapon } from './weapons';
@@ -124,7 +127,13 @@ const PART_BUILDERS: Record<CharacterId, (accent: number) => RigPart[]> = {
   barbarian: barbarianParts,
   mage: mageParts,
   reliquia: reliquiaParts,
-  fabri: fabriParts
+  fabri: fabriParts,
+  // The regulars play as their tavern figures (hands free for the weapon) until their own models exist.
+  brom: () => REGULAR_FIGURES.brom(false),
+  lyra: () => REGULAR_FIGURES.lyra(false),
+  grimbo: () => REGULAR_FIGURES.grimbo(false),
+  zora: () => REGULAR_FIGURES.zora(false),
+  sergio: () => REGULAR_FIGURES.sergio(false)
 };
 
 const CLIPS = humanoidClips(HIP_HEIGHT);
@@ -135,8 +144,26 @@ const IMPORTED: Partial<Record<CharacterId, { joints: JointSpec[]; clips: Record
   barbarian: { joints: BARBARIAN_JOINTS, clips: humanoidClips(BARBARIAN_HIP_HEIGHT), extras: () => [], scale: 1 },
   fabri: { joints: FABRI_JOINTS, clips: humanoidClips(FABRI_HIP_HEIGHT), extras: (accent) => fabriTail(accent), scale: 1 },
   mage: { joints: MAGE_JOINTS, clips: humanoidClips(MAGE_HIP_HEIGHT), extras: () => [], scale: 1 },
-  reliquia: { joints: RELIQUIA_JOINTS, clips: humanoidClips(RELIQUIA_HIP_HEIGHT), extras: () => [], scale: 1 }
+  reliquia: { joints: RELIQUIA_JOINTS, clips: humanoidClips(RELIQUIA_HIP_HEIGHT), extras: () => [], scale: 1 },
+  // The regulars' meshes are processed at their real heights (Brom 1.45 m, Grimbo 1.25 m), so no modelScale.
+  brom: { joints: BROM_JOINTS, clips: humanoidClips(BROM_HIP_HEIGHT), extras: () => [], scale: 1 },
+  lyra: { joints: LYRA_JOINTS, clips: humanoidClips(LYRA_HIP_HEIGHT), extras: () => [], scale: 1 },
+  grimbo: { joints: GRIMBO_JOINTS, clips: humanoidClips(GRIMBO_HIP_HEIGHT), extras: () => [], scale: 1 },
+  zora: { joints: ZORA_JOINTS, clips: humanoidClips(ZORA_HIP_HEIGHT), extras: () => [], scale: 1 },
+  sergio: { joints: SERGIO_JOINTS, clips: humanoidClips(SERGIO_HIP_HEIGHT), extras: () => [], scale: 1 }
 };
+
+/** The imported mesh, rigged, with its clips (for figures that aren't the player, like the tavern regulars), or null
+ *  when the hero has no imported mesh loaded. */
+export function importedHeroRig(characterId: CharacterId, material: THREE.Material): { model: RiggedModel; clips: Record<HeroClipName, THREE.AnimationClip> } | null {
+  const imported = IMPORTED[characterId];
+  const geometry = imported ? heroMesh(characterId) : null;
+  if (!imported || !geometry) return null;
+  const model = rigImportedMesh(geometry, imported.joints, material);
+  model.root.scale.setScalar(imported.scale);
+  const clips = Object.fromEntries(Object.entries(imported.clips).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<HeroClipName, THREE.AnimationClip>;
+  return { model, clips };
+}
 
 export interface HeroModel extends RiggedModel {
   /** Clips filtered to bones this rig actually has (no binding warnings for, e.g., the tail on non-Fabri). */
@@ -148,7 +175,7 @@ export interface HeroModel extends RiggedModel {
 
 /** The hero model: the imported mesh auto-rigged to the humanoid skeleton when one is loaded (heroMeshes.ts),
  *  otherwise the procedural low-poly one. Same bone and clip names either way, so HeroView doesn't care. */
-export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig['id']): HeroModel {
+export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig['id'], skin: SkinId = 'base'): HeroModel {
   const character = CHARACTERS[characterId];
   const material = toonMaterial({ vertexColors: true, flatShading: true });
   const imported = IMPORTED[characterId];
@@ -163,10 +190,13 @@ export function createHeroModel(characterId: CharacterId, weaponId: WeaponConfig
   } else {
     const boneSpecs = humanoidBones({ hipHeight: HIP_HEIGHT, armLength: ARM, legLength: LEG, withTail: characterId === 'fabri' });
     model = buildRiggedModel(boneSpecs, PART_BUILDERS[characterId](character.accentColor), material);
+    if (character.modelScale) model.root.scale.setScalar(character.modelScale);
   }
 
   const clips = Object.fromEntries(Object.entries(clipSet).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<HeroClipName, THREE.AnimationClip>;
 
+  // A mastery palette recolours the body (the held weapons keep their own colours).
+  applySkin(model.mesh.geometry, skin);
   const hero: HeroModel = { ...model, clips, material, held: [] };
   attachWeapons(hero, [weaponId]);
   return hero;

@@ -42,6 +42,12 @@ export const MERCHANT_ROOM = {
   tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
   tableRadius: 34,
   npcRadius: 18,
+  /** Between runs: the heroes waiting along the north wall (roster order), and where you talk to Sergio. */
+  sergioSpot: { x: -140, y: 0 },
+  sergioReach: 110,
+  /** Between runs: the lectern with the record book, by the fireplace. */
+  records: { x: -110, y: 235 },
+  recordsReach: 70,
   /** Talk from this close (tables sit between you and them). */
   talkReach: 110
 };
@@ -91,10 +97,13 @@ export interface MerchantHost {
   affinities(): ReadonlySet<WeaponFamily>;
   /** True while the Necromancer is coming or up (no portal then). */
   encounterActive(): boolean;
+  /** Grimbo's Mão Leve makes everything cheaper. */
+  priceMultiplier(): number;
 }
 
-/** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing. */
-export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | null;
+/** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing —
+ *  and between runs, a waiting hero or Sergio himself. */
+export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | { kind: 'sergio' } | { kind: 'records' } | null;
 
 export class MerchantSystem {
   enabled = true;
@@ -102,14 +111,24 @@ export class MerchantSystem {
   portal: { x: number; y: number; remainingMs: number } | null = null;
   /** True while the hero is in the room (the arena is frozen). */
   inside = false;
+  /** The tavern between runs: no stock on the counter, Sergio and the waiting heroes to talk to, and the exit
+   *  portal starts a run instead of returning to one. */
+  hub = false;
   /** Offers on this visit's pedestals. */
   offers: MerchantOffer[] = [];
   /** The room's centre in game units (outside the arena). */
   readonly room: Vec2;
   private elapsedMs = 0;
+  /** This visit's markup (Sergio's pocket portal sells at a premium). */
+  private visitMarkup = 1;
+  /** Sergio's Liquidação: items to give away on the next visits. */
+  freeItems = 0;
   private itemsPurchased = 0;
   /** Where the hero stood when stepping into the portal. */
   private returnTo: Vec2 = { x: 0, y: 0 };
+
+  /** Regulars (QUEST_NPCS index) who joined your roster: they've left the bar — no table to talk at, nothing in the way. */
+  readonly away = new Set<number>();
 
   constructor(private readonly host: MerchantHost) {
     this.room = { x: host.arena.size * 2.5, y: host.arena.size / 2 };
@@ -128,6 +147,11 @@ export class MerchantSystem {
     const { player } = this.host;
     const near = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y)) <= MERCHANT_TUNING.reach;
     if (near(MERCHANT_ROOM.exit)) return { kind: 'exit' };
+    if (this.hub) {
+      const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
+      if (distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+      if (distance(MERCHANT_ROOM.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
+    }
     // Pedestals stand closer together than the reach: the nearest unsold one is the one you mean.
     let best = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -140,6 +164,7 @@ export class MerchantSystem {
     let npc = -1;
     bestDistance = Number.POSITIVE_INFINITY;
     MERCHANT_ROOM.npcs.forEach((spot, index) => {
+      if (this.away.has(index)) return;
       const distance = Math.hypot(player.x - (this.room.x + spot.x), player.y - (this.room.y + spot.y));
       if (distance <= MERCHANT_ROOM.talkReach && distance < bestDistance) { npc = index; bestDistance = distance; }
     });
@@ -168,8 +193,16 @@ export class MerchantSystem {
   openPortal(): void {
     this.elapsedMs = 0;
     const spot = this.pickSpot();
+    this.visitMarkup = 1;
     this.portal = { x: spot.x, y: spot.y, remainingMs: MERCHANT_TUNING.portalOpenMs };
     this.host.events.emit('merchant-portal-opened', spot);
+  }
+
+  /** Sergio's Loja Portátil: a portal right where he stands, with a markup on everything. */
+  openPortalAt(x: number, y: number, markup: number): void {
+    this.visitMarkup = markup;
+    this.portal = { x, y, remainingMs: MERCHANT_TUNING.portalOpenMs };
+    this.host.events.emit('merchant-portal-opened', { x, y });
   }
 
   /** Steps through the portal: the hero lands at the room's entrance and the offers are laid out. */
@@ -182,6 +215,17 @@ export class MerchantSystem {
     player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
     player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y;
     this.host.events.emit('merchant-entered', {});
+  }
+
+  /** Puts the hero in the tavern between runs (no portal, nothing on sale). */
+  enterHub(): void {
+    const { player } = this.host;
+    this.hub = true;
+    this.enabled = false;
+    this.inside = true;
+    this.offers = [];
+    player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
+    player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y + 60;
   }
 
   /** Back to the arena where the hero left it; that portal closes behind them. */
@@ -212,7 +256,8 @@ export class MerchantSystem {
     // Tables and the regulars standing by them.
     const circles = [
       ...MERCHANT_ROOM.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
-      ...MERCHANT_ROOM.npcs.map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius }))
+      ...MERCHANT_ROOM.npcs.filter((_, index) => !this.away.has(index)).map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
+      { ...MERCHANT_ROOM.records, radius: 16 }
     ];
     circles.forEach((circle) => {
       const cx = this.room.x + circle.x;
@@ -254,7 +299,13 @@ export class MerchantSystem {
     const randomBuff = { ...pickOne(this.host.rng, RANDOM_BUFFS), cost: MERCHANT_TUNING.randomBuffCost };
     const tome = this.host.affinities().size < MAX_AFFINITIES && this.availableFamilies().length > 0;
     const fourth = tome ? AFFINITY_TOME : VITALITY_ELIXIR;
-    return [DIVINE_BLESSING, ARCANE_CURSE, randomBuff, fourth].map((spec) => ({ ...spec, cost: Math.round(spec.cost * multiplier), purchased: false }));
+    const prices = multiplier * this.visitMarkup * this.host.priceMultiplier();
+    const offers = [DIVINE_BLESSING, ARCANE_CURSE, randomBuff, fourth].map((spec) => ({ ...spec, cost: Math.round(spec.cost * prices), purchased: false }));
+    if (this.freeItems > 0) {
+      this.freeItems -= 1;
+      pickOne(this.host.rng, offers).cost = 0;
+    }
+    return offers;
   }
 
   /** A walkable spot a short walk from the hero, inside the arena and off the water. */

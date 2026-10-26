@@ -1,0 +1,53 @@
+{
+  "method": "Original locally composed Web Audio synthesis; no recorded instruments, external music service or voice recordings.",
+  "normalization": "Peak normalized to .84; LUFS matching deferred to integration.",
+  "tracks": [
+    {
+      "id": "tavern",
+      "bpm": 104,
+      "bars": 64,
+      "meter": 4,
+      "key": "D dorian",
+      "kind": "tavern",
+      "loop": true,
+      "seconds": 147.69230769230768,
+      "noteCount": 1264,
+      "hitCount": 384,
+      "seed": "tavern",
+      "instruments": [
+        "lute",
+        "harp",
+        "box",
+        "glass",
+        "cello",
+        "strings",
+        "fiddle",
+        "hurdy",
+        "recorder",
+        "horn",
+        "trumpet",
+        "organ",
+        "drone",
+        "choir"
+      ],
+      "rate": 44100,
+      "frames": 6513231,
+      "rawSeconds": 151.69231292517006,
+      "rawPeak": 0.11640522629022598,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.09668056235375393,
+      "gain": 7.216170843615558,
+      "seam": [
+        0.00440828874707222,
+        0.006785403937101364
+      ],
+      "end": [
+        -0.05201663076877594,
+        -0.04661300405859947
+      ],
+      "file": "tavern.wav",
+      "rawFile": "tavern-raw.wav"
+    }
+  ]
+}

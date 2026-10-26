@@ -1,0 +1,44 @@
+{
+  "id": "arena-intense",
+  "bpm": 140,
+  "bars": 80,
+  "meter": 4,
+  "key": "E minor",
+  "kind": "arena",
+  "intense": true,
+  "loop": true,
+  "seconds": 137.14285714285714,
+  "noteCount": 1980,
+  "hitCount": 960,
+  "instruments": [
+    "cello",
+    "drone",
+    "horn",
+    "choir",
+    "hurdy"
+  ],
+  "percussion": [
+    "frame",
+    "stone",
+    "rattle"
+  ],
+  "seed": "arena-intense",
+  "rate": 44100,
+  "frames": 6048000,
+  "rawSeconds": 141.14285714285714,
+  "rawPeak": 0.19391052424907684,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.12449638112054914,
+  "gain": 4.331894843010302,
+  "seam": [
+    0.0033886954188346863,
+    0.0016656629741191864
+  ],
+  "end": [
+    -0.047832127660512924,
+    -0.05981149896979332
+  ],
+  "file": "arena-intense.wav",
+  "rawFile": "arena-intense-raw.wav"
+}

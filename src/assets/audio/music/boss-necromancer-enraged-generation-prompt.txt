@@ -1,0 +1,18 @@
+STYLE
+desperate final boss phase, frantic orchestral, gothic, pounding drums, screaming strings, full choir, pipe organ, dissonant brass, instrumental, 150 bpm, D minor
+
+DESCRIPTION
+The lich's second phase: he roars, his fire turns violent, the arena is crumbling. Same main motif as the first
+phase, now faster and more desperate: pounding double-time drums, frantic high string runs, the full wordless choir
+at fortissimo (no real words), dissonant brass stabs, the organ at full power. Relentless from the first bar, no
+breakdown, no fade, seamless loop. Instrumental.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+Only the explicitly requested WORDLESS choir is allowed as an instrumental texture; no intelligible language, sung lyrics, Latin text, or spoken syllables.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+Generate AFTER boss-necromancer. Use that phase-1 audio as a motif reference where supported; preserve the same recognizable D-minor main motif at the faster tempo. Do not invent an unrelated boss theme.
+
+TARGET DURATION
+120 seconds.

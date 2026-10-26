@@ -1,0 +1,15 @@
+STYLE
+ominous dark fantasy sting, deep choir swell, tolling bell, low brass, timpani roll, 6 seconds
+
+DESCRIPTION
+A 5–8 second dread sting as "a malign presence fills the air": a tolling bell, a low wordless choir swelling from
+nothing, a timpani roll and a final deep brass chord that leaves the air tense. No melody, no loop. Instrumental.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+Only the explicitly requested WORDLESS choir is allowed as an instrumental texture; no intelligible language, sung lyrics, Latin text, or spoken syllables.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+One short, complete non-looping sting; allow its natural final resonance within the target duration.
+
+TARGET DURATION
+6 seconds.

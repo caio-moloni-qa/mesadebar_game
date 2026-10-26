@@ -1,0 +1,17 @@
+STYLE
+dark fantasy battle folk, driving, tense, cello ostinato, frame drums, hurdy-gurdy, low brass, instrumental, 128 bpm, E minor
+
+DESCRIPTION
+Survival in a haunted arena at night as skeletons close in: a driving cello and viola ostinato, pounding frame drums
+and taiko-like low hits, a gritty hurdy-gurdy melody, low brass swells every few bars. Tense and propulsive but not
+yet at full force — room to grow. Constant energy from the first bar to the last, no intro build, no fade, no big
+ending, so it loops seamlessly. Medieval instruments only, no synths, no modern drum kit. Instrumental, no vocals.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+No choir, humming, singing, narration, or voices of any kind.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+Steady arrangement and consistent energy from the first bar: no intro build-up, fade-in, fade-out, breakdown, final cadence, or big ending. Last bar leads naturally to first bar. Generate 2-3 minutes; retain an even stretch for the target duration. Final loop trim and loudness matching are deferred to integration.
+
+TARGET DURATION
+150 seconds.

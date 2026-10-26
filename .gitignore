@@ -7,3 +7,20 @@ dist/
 # Raw image-to-3D exports (tens of MB, re-downloadable from Tripo/Meshy); the processed GLB in src/assets/3d is what ships.
 art-source/3d/**/tripo/
 art-source/3d/**/meshy/
+
+# Earlier drafts of the generated attack sheets (the game loads the later versions)
+src/assets/attacks/aura-tick-sheet-raw.png
+src/assets/attacks/aura-tick-sheet-raw_v2.png
+src/assets/attacks/aura-tick-sheet.png
+src/assets/attacks/aura-tick-sheet_v2.png
+src/assets/attacks/staff-bolt-sheet-raw.png
+src/assets/attacks/staff-bolt-sheet-raw_v2.png
+src/assets/attacks/staff-bolt-sheet.png
+src/assets/attacks/staff-bolt-sheet_v2.png
+src/assets/attacks/staff-impact-sheet-raw.png
+src/assets/attacks/staff-impact-sheet.png
+src/assets/attacks/sword-sweep-sheet-raw.png
+src/assets/attacks/sword-sweep-sheet.png
+# Music renders (hundreds of MB, reproducible with art-source/audio/render-music-suite.mjs); the loudness-matched MP3s ship.
+src/assets/audio/music/*.wav
+art-source/audio/__pycache__/

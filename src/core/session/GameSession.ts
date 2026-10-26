@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, ENEMY_VARIANTS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, PLAYER_CONFIG, ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
@@ -11,7 +11,10 @@ import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffle
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
-import { QuestEvents, QuestReward, QuestSystem } from '../systems/QuestSystem';
+import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
+import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
+import { FLEE_SPEED_MULTIPLIER, PULL_SPEED, PowerTierEvents, PowerTierSystem } from '../systems/PowerTierSystem';
+import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -34,6 +37,9 @@ const SPATIAL_CELL_SIZE = 96;
 /** Largest rangePadding any enemy has (the boss: 390 × 0.35) — queries widen by this, then test exactly. */
 const MAX_RANGE_PADDING = 137;
 /** Fabri's banana peels (GameScene constants). */
+/** The guardian's entrance scatters the plain horde out of sight (thinHorde). */
+const THIN_HORDE_VARIANTS: EnemyVariantId[] = ['skeleton', 'apparitionWraith'];
+const THIN_HORDE_DISTANCE = { announced: 650, risen: 250 };
 const PEEL = { spawnChance: 0.03, minRadius: 40, maxRadius: 130, lifetimeMs: 12000 } as const;
 const SLIPPERY_VARIANTS: ReadonlySet<string> = new Set(['skeleton', 'apparitionWraith', 'superSkeleton']);
 /** Soft push between overlapping enemies (fraction of the overlap resolved per step). New in 3D: without it a horde
@@ -43,6 +49,9 @@ const SEPARATION_STRENGTH = 0.25;
 const FLOW_FIELD_REFRESH_MS = 250;
 /** Boss-wave portals (Phaser: GameScene.onBossWaveCleared): spawn this far apart above the hero, used within reach. */
 const PORTAL = { spread: 110, rise: 160, reach: 70 } as const;
+/** A zone guardian slain is worth this many of the hero's current levels in experience: a jump mid-stage, where the
+ *  horde alone levels slowest. */
+export const GUARDIAN_EXPERIENCE_LEVELS = 1;
 /** Each guardian slain this cycle: the Necromancer comes in with this much less health (and one beam fewer). */
 export const GUARDIAN_WEAKENING = 0.05;
 
@@ -59,11 +68,13 @@ export type PendingChoice =
   /** The merchant's Tomo de Afinidade: unlock one weapon family's upgrade pool. */
   | { kind: 'affinity'; families: WeaponFamily[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents, PowerTierEvents {
   /** A mission's upgrade reward: what was granted. */
   'quest-gifts': { names: string[] };
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
   'enemy-defeated': { x: number; y: number; variantId: EnemyVariantId; divineRelic: boolean };
+  /** A guardian fell: its experience is on the way (a level's worth). */
+  'guardian-experience': { x: number; y: number };
   'player-damaged': { amount: number };
   /** Floating callouts above the hero (CURA -N, LENTO +20%, HP -3). */
   'player-status': { text: string; tone: 'heal-cut' | 'slow' | 'rot' | 'heal' };
@@ -75,6 +86,13 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'soul-fired': { x: number; y: number };
   'enemy-slipped': { enemy: EnemyState };
   'player-died': Record<string, never>;
+  /** Segunda chance: back on their feet once, at half health. */
+  'player-revived': Record<string, never>;
+  /** Between runs: the exit portal (start a run), a waiting hero (pick them), Sergio (his upgrades), the record
+   *  book. */
+  'hub-exit': Record<string, never>;
+  'hub-records': Record<string, never>;
+  'hub-sergio': Record<string, never>;
   /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
   'boss-wave-cleared': { cycle: number };
   'run-ended': { victory: boolean };
@@ -91,6 +109,16 @@ export interface GameSessionOptions {
   skipStartingUpgrades?: boolean;
   /** The arena to play in. Defaults to the authored map with this run's seed; tests pass ArenaMap.open(size). */
   arena?: ArenaMap;
+  /** Sergio's permanent upgrades bought between runs (none by default). */
+  meta?: MetaBonuses;
+  /** Missions already done with each regular in earlier runs: they pick up at the next one. */
+  questTiers?: Partial<Record<QuestNpcId, number>>;
+  /** Regulars already in the roster: they're no longer at the tavern. */
+  regularsAway?: QuestNpcId[];
+  /** The tavern between runs: the hero starts in the room, nothing spawns, no run clock. */
+  hub?: boolean;
+  /** Difficulty tier (1 = normal): enemy health and contact damage scale up. */
+  tier?: number;
 }
 
 /** Engine-agnostic run simulation — the GameScene replacement described in THREEJS_3D_MIGRATION_TEMP.md. Covers
@@ -128,10 +156,24 @@ export class GameSession implements WeaponHost {
   readonly companions: CompanionSystem;
   readonly merchant: MerchantSystem;
   readonly quests: QuestSystem;
+  readonly abilities: HeroAbilitySystem;
+  /** The hero's in-run power tiers (levels 5/12/20). */
+  readonly powers: PowerTierSystem;
+  /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
+  private jackpotPending = false;
+  /** Sergio's Loja Portátil can open again at this sim time. */
+  portableShopReadyAt = 0;
   /** The tavern regular you're talking to (QUEST_NPCS index), or null. */
   dialogue: number | null = null;
   /** Zone guardians slain this cycle (each weakens the Necromancer). */
   guardiansDefeated = 0;
+  /** Run totals for the results screen and the save (guardiansDefeated resets every cycle). */
+  readonly stats = { guardians: 0, bosses: 0, missions: 0, killsByVariant: {} as Record<string, number>, guardiansByKind: {} as Record<string, number> };
+  /** Segunda chance revives still to use this run. */
+  revivesLeft = 0;
+  /** The Tomo do Sábio: more experience per kill. */
+  private experienceMultiplier = 1;
+  readonly tier: DifficultyTier;
   private miniBossSlotsThisPhase = 0;
   private miniBossRotation = 0;
   /** Boss-wave cycle: cycle 1 is the base 3-minute run; each continue portal adds a minute, 1× difficulty and a boss. */
@@ -162,6 +204,7 @@ export class GameSession implements WeaponHost {
 
   constructor(private readonly options: GameSessionOptions) {
     this.rng = createRng(options.seed);
+    this.tier = difficultyTier(options.tier ?? 1);
     this.characterId = options.characterId;
     const character = CHARACTERS[options.characterId];
     this.player = new PlayerState(character);
@@ -202,15 +245,62 @@ export class GameSession implements WeaponHost {
       setLakeLevel: (level) => this.setLakeLevel(level),
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
     });
-    this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events });
+    this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events }, options.questTiers);
+    this.events.on('quest-claimed', () => { this.stats.missions += 1; });
+    // A guardian's fight is about the guardian: the plain horde scatters down to the fight's cap — out of sight when
+    // it's announced, then all but the hero's closest when it rises (the camera is on the guardian by then).
+    this.events.on('miniboss-warning', () => this.thinHorde(GUARDIAN_FIGHT_SPAWNS.enemyCap, THIN_HORDE_DISTANCE.announced));
+    this.events.on('miniboss-spawned', () => this.thinHorde(GUARDIAN_FIGHT_SPAWNS.enemyCap, THIN_HORDE_DISTANCE.risen));
+    this.abilities = new HeroAbilitySystem({
+      player: this.player,
+      clock: this.clock,
+      rng: this.rng,
+      characterId: this.characterId,
+      arena: this.arena,
+      events: this.events,
+      primaryWeapon: () => this.weapons.primary,
+      hasAffinity: (weapon) => this.hasAffinity(weapon),
+      enemiesWithin: (from, radius) => this.enemiesWithin(from, radius),
+      nearestEnemy: (from, range) => this.nearestEnemy(from, range),
+      damageEnemy: (enemy, amount, weaponId) => this.damageEnemy(enemy, amount, weaponId),
+      stunEnemy: (enemy, ms) => this.stunEnemy(enemy, ms),
+      healPlayer: (amount) => this.healPlayer(amount),
+      addFreeItem: () => { this.merchant.freeItems += 1; }
+    });
+    this.powers = new PowerTierSystem({
+      player: this.player,
+      clock: this.clock,
+      rng: this.rng,
+      characterId: this.characterId,
+      arena: this.arena,
+      events: this.events,
+      level: () => this.level,
+      signatureWeapon: () => this.weapons.weapons.find((weapon) => weapon.config.id === character.preferredWeaponId) ?? null,
+      enemiesWithin: (from, radius) => this.enemiesWithin(from, radius),
+      nearestEnemy: (from, range, exclude) => this.nearestEnemy(from, range, exclude),
+      damageEnemy: (enemy, amount, weaponId) => this.damageEnemy(enemy, amount, weaponId),
+      stunEnemy: (enemy, ms) => this.stunEnemy(enemy, ms),
+      defeatEnemy: (enemy) => this.defeatEnemy(enemy),
+      healPlayer: (amount) => this.healPlayer(amount),
+      dropPickup: (kind, x, y, value, magnet) => this.dropPickup(kind, x, y, value, magnet),
+      dropPeel: (x, y) => this.dropPeel(x, y),
+      orbitBoomerangs: (weapon, count, ms) => this.weapons.launchOrbiting(weapon, count, ms),
+      shieldCap: () => { const shield = CHARACTERS[this.characterId].hitShield; return shield ? this.player.maxHealth * shield.maxHealthFraction : 0; },
+      auraRadius: (weapon) => this.weapons.auraRadius(weapon),
+      orbs: (weapon) => this.weapons.crystalOrbs(weapon)
+    });
+    this.events.on('aura-pulse', () => this.powers.onAuraPulse());
+    this.events.on('arrow-rain', ({ x, y, radius }) => this.powers.onArrowRain(x, y, radius));
     this.merchant = new MerchantSystem({
       player: this.player,
       rng: this.rng,
       arena: this.arena,
       events: this.events,
       affinities: () => this.affinities,
+      priceMultiplier: () => (this.characterId === 'grimbo' ? HERO_ABILITY_TUNING.grimboPrices : 1),
       encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
     });
+    QUEST_NPCS.forEach((npc, index) => { if (options.regularsAway?.includes(npc.id)) this.merchant.away.add(index); });
     this.companions = new CompanionSystem({
       player: this.player,
       arena: this.arena,
@@ -227,13 +317,55 @@ export class GameSession implements WeaponHost {
       isSkeletonSpawnEnabled: () => this.skeletonSpawnEnabled,
       isVariantSpawnEnabled: () => this.variantSpawnEnabled,
       hasActiveEncounter: () => this.bosses.hasActiveEncounter(),
+      guardianFight: () => this.miniBosses.active,
+      liveEnemyCount: () => this.enemies.activeCount,
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
     }, this.rng, this.arena.size);
+    if (options.hub) {
+      this.skeletonSpawnEnabled = false;
+      this.variantSpawnEnabled = false;
+      this.merchant.enterHub();
+    }
+    const meta = options.meta ?? NO_META_BONUSES;
+    this.applyMeta(meta);
     if (!options.skipStartingUpgrades && character.preferredWeaponId === startingWeapon.id && character.startingWeaponUpgradeChoices) {
-      const total = character.startingWeaponUpgradeChoices;
+      const total = character.startingWeaponUpgradeChoices + meta.extraStartingPicks;
       this.openChoice({ kind: 'starting', upgrades: shuffled(this.rng, this.upgradeSystem.weaponUpgradePool(startingWeapon, this.player)).slice(0, total), picksRemaining: total, picksTotal: total });
     }
+  }
+
+  /** Sergio's permanent upgrades, on top of the character's own stats. */
+  private applyMeta(meta: MetaBonuses): void {
+    const { player } = this;
+    player.maxHealth += meta.maxHealth;
+    player.health = player.maxHealth;
+    player.damageMultiplier += meta.damage;
+    player.movementSpeed *= 1 + meta.speed;
+    player.pickupRange *= 1 + meta.pickupRange;
+    this.currency += meta.startingCoins;
+    this.revivesLeft = meta.revives;
+    this.experienceMultiplier = 1 + meta.experience;
+  }
+
+  /** What this run counts, for the results screen and the save. */
+  runSummary(heroId: HeroId, endedAt: number): RunSummary {
+    return {
+      heroId,
+      victory: this.victory,
+      elapsedMs: this.elapsedMs,
+      kills: this.kills,
+      guardians: this.stats.guardians,
+      bosses: this.stats.bosses,
+      missions: this.stats.missions,
+      coins: this.currency,
+      cycle: this.bossCycle,
+      killsByVariant: { ...this.stats.killsByVariant },
+      guardiansByKind: { ...this.stats.guardiansByKind },
+      questTiers: Object.fromEntries(this.quests.quests.map((quest) => [quest.npc.id, quest.tier])),
+      endedAt,
+      tier: this.tier.tier
+    };
   }
 
   // ── Control surface (renderer / UI) ───────────────────────────────────────────────────────────────────────
@@ -282,7 +414,37 @@ export class GameSession implements WeaponHost {
       if (choice.picksRemaining > 0) return;
     }
     this.closeChoice();
+    // Grimbo's Tudo ou Nada: a six on the die is a second pick at this level.
+    if (choice.kind === 'level-up' && this.jackpotPending) {
+      this.jackpotPending = false;
+      const extra = this.upgradeSystem.choices(this.weapons.primary.config, this.player, LEVEL_UPGRADE_CONFIG.defaultChoiceAmount, this.secondaryWithAffinity());
+      if (extra.length > 0) {
+        this.openChoice({ kind: 'level-up', level: this.level, upgrades: extra, extraWeapon: null });
+        return;
+      }
+    }
     this.processExperience();
+  }
+
+  /** Sergio's Loja Portátil: opens the tavern portal at his feet (on a cooldown, never during the boss). */
+  openPortableShop(): boolean {
+    if (this.characterId !== 'sergio' || this.over || this.clock.paused) return false;
+    if (this.merchant.portal || this.merchant.inside || this.bosses.hasActiveEncounter() || this.clock.now < this.portableShopReadyAt) return false;
+    this.portableShopReadyAt = this.clock.now + HERO_ABILITY_TUNING.portableShopCooldownMs;
+    this.merchant.openPortalAt(this.player.x, this.player.y, HERO_ABILITY_TUNING.portableShopMarkup);
+    return true;
+  }
+
+  /** Zora's Previsão: the next zone guardian and where it will rise, shown this long before it's announced. */
+  prophecy(): { kind: MiniBossKind; x: number; y: number } | null {
+    if (this.characterId !== 'zora' || this.miniBosses.active || this.miniBosses.pending) return null;
+    const slots = this.bossCycle >= 3 ? 3 : 2;
+    if (this.miniBossSlotsThisPhase >= slots) return null;
+    const slotMs = this.phaseDurationMs() / (slots + 1);
+    const untilNext = (this.miniBossSlotsThisPhase + 1) * slotMs - (this.elapsedMs - this.phaseStartedAtMs);
+    if (untilNext > HERO_ABILITY_TUNING.prophecyLeadMs) return null;
+    const kind = MINI_BOSS_ROTATION[this.miniBossRotation % MINI_BOSS_ROTATION.length];
+    return { kind, ...MINI_BOSSES[kind].anchor };
   }
 
   /** The Tomo de Afinidade's pick. */
@@ -317,6 +479,11 @@ export class GameSession implements WeaponHost {
   answerDialogue(): void {
     const index = this.dialogue;
     if (index === null) return;
+    // Between runs the regulars only tell you how far you've come; missions are taken during a run.
+    if (this.merchant.hub) {
+      this.dialogue = null;
+      return;
+    }
     const quest = this.quests.quests[index];
     if (quest.status === 'offer') this.quests.accept(index);
     else if (quest.status === 'ready') {
@@ -415,7 +582,8 @@ export class GameSession implements WeaponHost {
   spawnEnemy(variantId: EnemyVariantId, x: number, y: number, maxHealth: number = ALL_ENEMY_VARIANTS[variantId].maxHealth): EnemyState | null {
     const enemy = this.enemies.acquire();
     if (!enemy) return null;
-    enemy.activate(variantId, x, y, maxHealth, this.clock.now);
+    enemy.activate(variantId, x, y, maxHealth * this.tier.enemyHealth, this.clock.now);
+    enemy.contactDamage *= this.tier.enemyDamage;
     // Spawn points come from the schedule (rings around the hero, the border, anywhere for necromancers) and know
     // nothing about the map - move them to the nearest ground the enemy actually fits on.
     const spot = this.arena.nearestWalkable(enemy.x, enemy.y, enemy.radius);
@@ -462,10 +630,22 @@ export class GameSession implements WeaponHost {
     this.updatePlayerStatus(deltaMs, now);
     this.weapons.update(deltaMs);
     this.companions.update(deltaMs);
+    this.abilities.update(deltaMs);
+    this.powers.update(deltaMs);
     this.updateSouls(deltaMs, now);
     this.updatePeels(now);
     this.updatePickups(deltaMs);
     if (!this.player.alive && !this.over) {
+      // Fúria Imortal: the Bárbaro won't go down (once a stage).
+      if (this.powers.cheatDeath()) return;
+      if (this.revivesLeft > 0) {
+        // Segunda chance: half health and a moment of grace.
+        this.revivesLeft -= 1;
+        this.player.health = this.player.maxHealth * 0.5;
+        this.player.invulnerableUntil = now + 2500;
+        this.events.emit('player-revived', {});
+        return;
+      }
       this.events.emit('player-died', {});
       this.finish(false);
     }
@@ -521,17 +701,27 @@ export class GameSession implements WeaponHost {
         if (now >= enemy.phaseEndsAt) finished.push(enemy);
         return;
       }
-      if (!enemy.isStatic && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy)) {
+      const held = now < enemy.heldUntil || now < enemy.liftedUntil;
+      if (now < enemy.pullUntil && !enemy.isStatic) {
+        // Zora's Eclipse drags it in, stunned or not.
+        this.chase(enemy, { x: enemy.pullX, y: enemy.pullY }, deltaMs, PULL_SPEED);
+      } else if (!enemy.isStatic && !held && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy)) {
         // The golem companion pulls nearby enemies off the hero (bosses ignore it).
         const taunt = enemy.isCommon ? this.companions.tauntTarget(enemy) : null;
-        if (taunt) this.chase(enemy, taunt, deltaMs);
-        else this.pursuePlayer(enemy, deltaMs);
+        if (now < enemy.fleeUntil) this.flee(enemy, deltaMs, now);
+        else if (taunt) this.chase(enemy, taunt, deltaMs);
+        else this.pursuePlayer(enemy, deltaMs, now);
       }
       if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss' && !this.miniBosses.controls(enemy)) this.separate(enemy);
       // Every walker - floating wraiths included - slides along walls and stays out of the lake.
       // Mini-bosses resolve their own collisions (a lake spirit in the water, a Coveiro tunnelling under walls).
       if (!enemy.isStatic && !this.miniBosses.controls(enemy)) this.arena.resolve(enemy);
-      if (enemy.contactDamage > 0 && circlesOverlap(enemy, this.player)) this.hurtPlayer(enemy.contactDamage, now);
+      // Lifted off the ground (the Mago's hurricane), it can't reach the hero.
+      if (enemy.contactDamage > 0 && now >= enemy.liftedUntil && circlesOverlap(enemy, this.player)) {
+        const shielded = this.player.damageBuffer > 0;
+        const dealt = this.hurtPlayer(enemy.contactDamage, now);
+        if (dealt > 0) this.powers.onContactHit(enemy, dealt, shielded);
+      }
       if (enemy.variantId === 'necromancerWraith' && now >= enemy.nextSoulAt) {
         enemy.nextSoulAt = now + ENEMY_VARIANTS.necromancerWraith.soulCooldownMs;
         this.fireSoul(enemy, now);
@@ -541,13 +731,29 @@ export class GameSession implements WeaponHost {
     finished.forEach((enemy) => this.enemies.release(enemy));
   }
 
-  /** Straight at a nearby target (a taunting companion). */
-  private chase(enemy: EnemyState, target: Vec2, deltaMs: number): void {
+  /** Removes plain skeletons and wraiths beyond `minDistance` of the hero, farthest first, until at most `cap` enemies
+   *  are left. Elites, bosses and anything closer stay. */
+  private thinHorde(cap: number, minDistance: number): void {
+    const far: Array<{ enemy: EnemyState; distance: number }> = [];
+    this.enemies.forEachActive((enemy) => {
+      if (!enemy.alive || !THIN_HORDE_VARIANTS.includes(enemy.variantId)) return;
+      const distance = Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y);
+      if (distance > minDistance) far.push({ enemy, distance });
+    });
+    far.sort((a, b) => b.distance - a.distance);
+    for (const { enemy } of far) {
+      if (this.enemies.activeCount <= cap) break;
+      this.enemies.release(enemy);
+    }
+  }
+
+  /** Straight at a nearby target (a taunting companion, the eclipse's pull at `speed`). */
+  private chase(enemy: EnemyState, target: Vec2, deltaMs: number, speed = enemy.effectiveMovementSpeed(this.clock.now)): void {
     const dx = target.x - enemy.x;
     const dy = target.y - enemy.y;
     const length = Math.hypot(dx, dy);
     if (length === 0) return;
-    const step = Math.min(length, (enemy.effectiveMovementSpeed() * deltaMs) / 1000);
+    const step = Math.min(length, (speed * deltaMs) / 1000);
     enemy.facingX = dx / length;
     enemy.facingY = dy / length;
     enemy.x += enemy.facingX * step;
@@ -556,13 +762,25 @@ export class GameSession implements WeaponHost {
 
   /** Follow the flow field downhill (routes around walls, through doorways), or walk straight at the hero on an
    *  open map / once close enough that the field has nothing better to say. */
-  private pursuePlayer(enemy: EnemyState, deltaMs: number): void {
+  /** Running from the hero (the Bárbaro's war cry). */
+  private flee(enemy: EnemyState, deltaMs: number, now: number): void {
+    const dx = enemy.x - this.player.x;
+    const dy = enemy.y - this.player.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const step = (enemy.effectiveMovementSpeed(now) * FLEE_SPEED_MULTIPLIER * deltaMs) / 1000;
+    enemy.facingX = dx / length;
+    enemy.facingY = dy / length;
+    enemy.x += enemy.facingX * step;
+    enemy.y += enemy.facingY * step;
+  }
+
+  private pursuePlayer(enemy: EnemyState, deltaMs: number, now: number): void {
     const dx = this.player.x - enemy.x;
     const dy = this.player.y - enemy.y;
     const length = Math.hypot(dx, dy);
     if (length === 0) return;
     const route = this.flowField?.direction(enemy.x, enemy.y) ?? null;
-    const step = Math.min(length, (enemy.effectiveMovementSpeed() * deltaMs) / 1000);
+    const step = Math.min(length, (enemy.effectiveMovementSpeed(now) * deltaMs) / 1000);
     enemy.facingX = route ? route.x : dx / length;
     enemy.facingY = route ? route.y : dy / length;
     enemy.x += enemy.facingX * step;
@@ -590,9 +808,16 @@ export class GameSession implements WeaponHost {
     }
   }
 
-  private hurtPlayer(amount: number, now: number, unavoidable = false): void {
-    const dealt = this.player.damage(amount, now, unavoidable);
+  private hurtPlayer(amount: number, now: number, unavoidable = false): number {
+    const { player } = this;
+    // Zora's Visão do Futuro: a hit that would land is foreseen, and the moment of grace after it still follows.
+    if (!player.invincible && (unavoidable || now >= player.invulnerableUntil) && this.powers.foresee()) {
+      player.invulnerableUntil = now + PLAYER_CONFIG.invulnerabilityMs;
+      return 0;
+    }
+    const dealt = player.damage(amount, now, unavoidable);
     if (dealt > 0) this.events.emit('player-damaged', { amount: dealt });
+    return dealt;
   }
 
   private updatePlayerStatus(deltaMs: number, now: number): void {
@@ -701,6 +926,14 @@ export class GameSession implements WeaponHost {
         return;
       }
       const spot = this.merchant.roomSpot;
+      if (this.merchant.hub) {
+        // Between runs the room's stations are the renderer's to answer; the regulars still talk.
+        if (spot?.kind === 'exit') this.events.emit('hub-exit', {});
+        if (spot?.kind === 'sergio') this.events.emit('hub-sergio', {});
+        if (spot?.kind === 'records') this.events.emit('hub-records', {});
+        if (spot?.kind === 'npc') this.dialogue = spot.index;
+        return;
+      }
       if (spot?.kind === 'exit') this.merchant.leave();
       if (spot?.kind === 'slot') this.buyFromMerchant(spot.index);
       if (spot?.kind === 'npc') this.dialogue = spot.index;
@@ -770,6 +1003,7 @@ export class GameSession implements WeaponHost {
     this.phaseBossTriggered = false;
     this.difficulty.setCycleMultiplier(this.bossCycle);
     this.bosses.rearm();
+    this.powers.newStage();
   }
 
   private finish(victory: boolean): void {
@@ -801,6 +1035,9 @@ export class GameSession implements WeaponHost {
     // A roaring boss shrugs hits off and a staggered one takes extra; then a channelling boss's shield soaks hits
     // first and only the overflow reaches its health.
     amount *= this.bosses.damageTakenMultiplier(enemy) * this.miniBosses.damageTakenMultiplier(enemy);
+    // Zora's Destino Selado: a marked enemy takes double; the Bárbaro's Fúria hits twice as hard.
+    if (this.abilities.isMarked(enemy)) amount *= 2;
+    if (weaponId) amount *= this.powers.damageDealtMultiplier();
     if (amount <= 0) {
       enemy.lastHitAt = now;
       return;
@@ -819,20 +1056,28 @@ export class GameSession implements WeaponHost {
     enemy.hitStunUntil = now + ENEMY_HIT_STUN_MS;
     enemy.lastHitAt = now;
     this.events.emit('enemy-hit', { enemy, amount, critical, weaponId });
-    if (enemy.health <= 0) this.defeatEnemy(enemy);
+    this.powers.onHit(enemy, amount, weaponId);
+    if (enemy.health <= 0 && enemy.alive) {
+      this.defeatEnemy(enemy);
+      this.powers.onKill(enemy, weaponId);
+    }
   }
 
-  private healPlayer(amount: number): void {
+  healPlayer(amount: number): void {
     const prevented = this.player.heal(amount, this.clock.now);
     if (Math.round(prevented) > 0) this.events.emit('player-status', { text: `CURA -${Math.round(prevented)}`, tone: 'heal-cut' });
   }
 
+  /** Dead: counted, credited and dropping its loot (bosses and guardians have their own ends). */
   private defeatEnemy(enemy: EnemyState): void {
     enemy.phase = 'dying';
     enemy.phaseEndsAt = this.clock.now + ENEMY_DYING_MS;
     this.kills += 1;
+    this.abilities.onDefeated(enemy);
+    this.stats.killsByVariant[enemy.variantId] = (this.stats.killsByVariant[enemy.variantId] ?? 0) + 1;
     if (this.miniBosses.bossFor(enemy)) {
-      // A zone guardian: a chest and a burst of crystals, a companion to pick, and the Necromancer weakens.
+      // A zone guardian: a chest and a burst of crystals, a level's worth of experience, a companion to pick, and the
+      // Necromancer weakens.
       this.dropPickup('chest', enemy.x, enemy.y, 0);
       for (let index = 0; index < 6; index += 1) {
         const point = randomPointAround(this.rng, enemy, 20, 60);
@@ -841,16 +1086,25 @@ export class GameSession implements WeaponHost {
       this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });
       const kind = this.miniBosses.defeat(enemy)!;
       this.guardiansDefeated += 1;
+      this.stats.guardians += 1;
+      this.stats.guardiansByKind[kind] = (this.stats.guardiansByKind[kind] ?? 0) + 1;
+      this.experience += this.experienceNeeded * GUARDIAN_EXPERIENCE_LEVELS * this.experienceMultiplier;
+      this.events.emit('guardian-experience', { x: enemy.x, y: enemy.y });
       this.offerCompanion(kind);
+      // The level-up waits for the companion card (chooseCompanion picks it up); with none on offer it comes now.
+      this.processExperience();
       return;
     }
     if (this.bosses.bossFor(enemy)) {
       // Bosses give no XP or drops; the last wave boss opens the portals.
       this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });
-      if (this.bosses.defeat(enemy) && !this.bosses.hasActiveWaveBosses()) this.onBossWaveCleared();
+      if (this.bosses.defeat(enemy)) {
+        this.stats.bosses += 1;
+        if (!this.bosses.hasActiveWaveBosses()) this.onBossWaveCleared();
+      }
       return;
     }
-    this.experience += enemy.reward;
+    this.experience += enemy.reward * this.experienceMultiplier;
     for (let index = 0; index < enemy.currencyDrops; index += 1) {
       const point = index === 0 ? enemy : randomPointAround(this.rng, enemy, 12, 28);
       this.dropPickup('gem', point.x, point.y, enemy.reward);
@@ -861,11 +1115,12 @@ export class GameSession implements WeaponHost {
     this.processExperience();
   }
 
-  private dropPickup(kind: PickupKind, x: number, y: number, value: number): void {
+  private dropPickup(kind: PickupKind, x: number, y: number, value: number, magnet = false): void {
     const pickup = this.pickups.acquire();
     if (!pickup) return;
     pickup.kind = kind;
     pickup.value = value;
+    pickup.magnet = magnet;
     pickup.radius = kind === 'gem' ? BODY_RADIUS.gem : kind === 'chest' ? BODY_RADIUS.chest : BODY_RADIUS.potion;
     // Never inside a wall or the lake (a burst of gems from a kill next to a wall would otherwise be unreachable).
     const spot = this.arena.nearestWalkable(x, y, pickup.radius);
@@ -881,7 +1136,7 @@ export class GameSession implements WeaponHost {
       const dx = this.player.x - pickup.x;
       const dy = this.player.y - pickup.y;
       const distSq = dx * dx + dy * dy;
-      if (distSq <= rangeSq && distSq > 0) {
+      if ((distSq <= rangeSq || pickup.magnet) && distSq > 0) {
         const length = Math.sqrt(distSq);
         const step = Math.min(length, (PICKUP_ATTRACT_SPEED * deltaMs) / 1000);
         pickup.x += (dx / length) * step;
@@ -896,7 +1151,8 @@ export class GameSession implements WeaponHost {
   }
 
   private collect(pickup: PickupState): void {
-    if (pickup.kind === 'gem') this.currency += pickup.value;
+    // Grimbo's Mão Leve: half as many coins again.
+    if (pickup.kind === 'gem') this.currency += this.characterId === 'grimbo' ? Math.round(pickup.value * HERO_ABILITY_TUNING.grimboCoins) : pickup.value;
     if (pickup.kind === 'potion') this.healPlayer(pickup.value);
     if (pickup.kind === 'chest') {
       // Baú: one random upgrade from the same 5-option pool the bonus level-up screen offers, applied on pickup.
@@ -956,11 +1212,16 @@ export class GameSession implements WeaponHost {
     enemy.slowStackPercent = Math.min(WEAPON_TUNING.bananaSlowCap, enemy.slowStackPercent + transform.slowPercentPerHit);
     if (enemy.alive && this.rng() < transform.slipChancePerHit) this.slipEnemy(enemy, this.clock.now);
     if (this.rng() >= PEEL.spawnChance) return;
-    const peel = this.peels.acquire();
-    if (!peel) return;
     const angle = floatBetween(this.rng, 0, Math.PI * 2);
     const distance = floatBetween(this.rng, PEEL.minRadius, PEEL.maxRadius);
-    const spot = this.arena.nearestWalkable(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance, peel.radius);
+    this.dropPeel(this.player.x + Math.cos(angle) * distance, this.player.y + Math.sin(angle) * distance);
+  }
+
+  /** A banana peel on the ground near (x, y). */
+  private dropPeel(x: number, y: number): void {
+    const peel = this.peels.acquire();
+    if (!peel) return;
+    const spot = this.arena.nearestWalkable(x, y, peel.radius);
     peel.x = spot.x;
     peel.y = spot.y;
     snapPrevious(peel);
@@ -968,10 +1229,15 @@ export class GameSession implements WeaponHost {
   }
 
   /** Down on the ground for ENEMY_SLIP_MS. Only the horde slips: bosses (and anything else) keep their footing. */
-  private slipEnemy(enemy: EnemyState, now: number): void {
+  private slipEnemy(enemy: EnemyState, now: number, ms = ENEMY_SLIP_MS): void {
     if (!SLIPPERY_VARIANTS.has(enemy.variantId)) return;
-    enemy.slipUntil = now + ENEMY_SLIP_MS;
+    enemy.slipUntil = Math.max(enemy.slipUntil, now + ms);
     this.events.emit('enemy-slipped', { enemy });
+  }
+
+  /** Knocks an enemy down for `ms` (the Mochila's frying pan, Brom's barrel foam). */
+  stunEnemy(enemy: EnemyState, ms: number): void {
+    this.slipEnemy(enemy, this.clock.now, ms);
   }
 
   private updatePeels(now: number): void {
@@ -981,6 +1247,7 @@ export class GameSession implements WeaponHost {
       const victim = this.enemiesOverlapping(peel.x, peel.y, peel.radius)[0];
       if (!victim) return;
       this.slipEnemy(victim, now);
+      this.powers.onPeelSlip(victim);
       spent.push(peel);
     });
     spent.forEach((peel) => this.peels.release(peel));
@@ -1011,7 +1278,9 @@ export class GameSession implements WeaponHost {
     this.level += 1;
     this.experienceNeeded = requiredExperience(this.level);
     const bonusLevel = this.level % LEVEL_UPGRADE_CONFIG.bonusChoiceInterval === 0;
-    const amount = bonusLevel ? LEVEL_UPGRADE_CONFIG.bonusChoiceAmount : LEVEL_UPGRADE_CONFIG.defaultChoiceAmount;
+    // Zora's Previsão: one more card on every choice.
+    const amount = (bonusLevel ? LEVEL_UPGRADE_CONFIG.bonusChoiceAmount : LEVEL_UPGRADE_CONFIG.defaultChoiceAmount) + (this.characterId === 'zora' ? 1 : 0);
+    if (this.abilities.rollJackpot()) this.jackpotPending = true;
     const extraWeapon = this.rollExtraWeaponOffer(bonusLevel);
     const upgrades = this.upgradeSystem.choices(this.weapons.primary.config, this.player, extraWeapon ? amount - 1 : amount, this.secondaryWithAffinity());
     this.openChoice({ kind: 'level-up', level: this.level, upgrades, extraWeapon });

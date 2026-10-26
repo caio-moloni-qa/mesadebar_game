@@ -1,0 +1,40 @@
+{
+  "method": "Original locally composed Web Audio synthesis; no recorded instruments, external music service or voice recordings.",
+  "normalization": "Peak normalized to .84; LUFS matching deferred to integration.",
+  "tracks": [
+    {
+      "id": "sting-guardian",
+      "seconds": 4,
+      "kind": "warning",
+      "loop": false,
+      "noteCount": 9,
+      "hitCount": 1,
+      "seed": "sting-guardian",
+      "instruments": [
+        "horn",
+        "strings"
+      ],
+      "percussion": [
+        "frame"
+      ],
+      "rate": 44100,
+      "frames": 176400,
+      "rawSeconds": 8,
+      "rawPeak": 0.16170108318328857,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.07728234460618197,
+      "gain": 5.194770396484344,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-guardian.wav",
+      "rawFile": "sting-guardian-raw.wav"
+    }
+  ]
+}

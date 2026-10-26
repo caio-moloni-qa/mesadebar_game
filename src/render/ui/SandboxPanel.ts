@@ -66,6 +66,13 @@ export interface SandboxHost {
   setFogVisible(visible: boolean): void;
   /** "Sandbox: <upgrade>!" over the hero. */
   announce(text: string): void;
+  /** Every hero playable (the tavern regulars and Sergio), without touching the save. */
+  unlockAllHeroes(): void;
+  /** The save, for testing: Fichas to spend, a mastery level for the hero in play, or a clean slate (every tip, unlock
+   *  and welcome plays again). */
+  addFichas(amount: number): void;
+  addMasteryLevel(): void;
+  resetProgress(): void;
 }
 
 interface Control {
@@ -119,7 +126,7 @@ export class SandboxPanel {
     this.render();
   }
 
-  /** Only usable during a run (not on the character menu). */
+  /** Only usable in a run or the tavern (not on the title or character menus). */
   setAllowed(allowed: boolean): void {
     this.allowed = allowed;
     this.render();
@@ -164,6 +171,10 @@ export class SandboxPanel {
       toggle('Spawn variantes', 'variants', (value) => { run().variantSpawnEnabled = value; }),
       toggle('Mercador', 'merchant', (value) => { run().merchant.enabled = value; }),
       { label: () => 'Abrir portal do mercador', run: () => run().openMerchantPortal() },
+      { label: () => 'Liberar todos os heróis', run: () => this.host.unlockAllHeroes() },
+      { label: () => 'Progresso: +500 Fichas', run: () => this.host.addFichas(500) },
+      { label: () => 'Progresso: +1 nível de maestria', run: () => this.host.addMasteryLevel() },
+      { label: () => 'Progresso: apagar tudo', run: () => this.host.resetProgress() },
       { label: () => 'Concluir missões ativas', run: () => run().quests.completeActive() },
       toggle('Invencível', 'invincible', (value) => { run().player.invincible = value; }),
       { label: () => '+500 Buffer de Dano', run: () => { run().player.damageBuffer += 500; } },

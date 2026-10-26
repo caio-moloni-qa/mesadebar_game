@@ -20,7 +20,7 @@ export function snapPrevious(body: Body): void {
 }
 
 /** Collision radii in game units, matching the Arcade bodies they replace (display-space radii). */
-export const BODY_RADIUS = { player: 18, enemy: 18, bolt: 7, boomerang: 17, thrownSword: 20, soul: 13, gem: 8, peel: 19, chest: 21, potion: 14 } as const;
+export const BODY_RADIUS = { player: 18, enemy: 18, bolt: 7, boomerang: 17, thrownSword: 20, soul: 13, gem: 8, peel: 19, chest: 21, potion: 14, arrow: 9, coin: 10, pan: 14, bottle: 12, flask: 12 } as const;
 
 /** Relíquia Divina's banked "risk/reward" bonus on the next hit taken is capped (GameScene AURA_DAMAGE_TAKEN_BONUS_CAP). */
 export const AURA_DAMAGE_TAKEN_BONUS_CAP = 15;
@@ -249,6 +249,21 @@ export class EnemyState implements Body {
   slowStackPercent = 0;
   /** Fabri's banana peel: no movement until this time. */
   slipUntil = 0;
+  /** Zora's Destino Selado: double damage taken, and a burst on death, until this sim time. */
+  markedUntil = 0;
+  // The heroes' power tiers (core/systems/PowerTierSystem): a bleed, a timed slow, held in place (roots), lifted
+  // into the air (no moving, no hitting), fleeing the hero, pulled toward a point, turned to gold on death.
+  bleedUntil = 0;
+  bleedPerSecond = 0;
+  slowUntil = 0;
+  slowPercent = 0;
+  heldUntil = 0;
+  liftedUntil = 0;
+  fleeUntil = 0;
+  pullUntil = 0;
+  pullX = 0;
+  pullY = 0;
+  gilded = false;
   nextSoulAt = 0;
   /** Sim time it appeared (the renderer plays a rise-from-the-ground). */
   spawnedAt = -Infinity;
@@ -275,6 +290,10 @@ export class EnemyState implements Body {
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
     this.slipUntil = 0;
+    this.markedUntil = 0;
+    this.bleedUntil = this.bleedPerSecond = this.slowUntil = this.slowPercent = 0;
+    this.heldUntil = this.liftedUntil = this.fleeUntil = this.pullUntil = 0;
+    this.gilded = false;
     this.nextSoulAt = now + ('soulCooldownMs' in base ? base.soulCooldownMs : 0);
     this.spawnedAt = now;
   }
@@ -298,8 +317,16 @@ export class EnemyState implements Body {
     return this.displaySize / 2;
   }
 
-  effectiveMovementSpeed(): number {
-    return this.movementSpeed * (1 - this.slowStackPercent);
+  /** The banana stack, then any timed slow still running at `now`. */
+  effectiveMovementSpeed(now = 0): number {
+    const timed = now < this.slowUntil ? this.slowPercent : 0;
+    return this.movementSpeed * (1 - this.slowStackPercent) * (1 - timed);
+  }
+
+  /** A timed slow; a stronger or longer one replaces it. */
+  applySlow(percent: number, ms: number, now: number): void {
+    if (now >= this.slowUntil || percent >= this.slowPercent) this.slowPercent = percent;
+    this.slowUntil = Math.max(this.slowUntil, now + ms);
   }
 }
 
@@ -316,7 +343,13 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   lakeSpirit: 80
 };
 
-export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword';
+export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword' | 'arrow' | 'coin' | 'pan' | 'bottle' | 'potion';
+
+/** Kinds that fly out and come back to the hero (the boomerang family and the Espada's thrown swords); every
+ *  other kind flies straight and is spent on its last hit. */
+export function isReturningKind(kind: ProjectileKind): boolean {
+  return kind === 'boomerang' || kind === 'banana' || kind === 'thrownSword';
+}
 
 /** One pooled player projectile — covers the Cajado bolt, the (banana) boomerang and the Espada's thrown swords,
  *  with entities/Projectile's out-and-back, per-leg hit sets, ricochet and execute behaviour. */
@@ -340,6 +373,8 @@ export class ProjectileState implements Body {
   expiresAt = 0;
   remainingPierces = 0;
   remainingRicochets = 0;
+  /** The weapon's own guaranteed ricochets (the Moedas'), spent before the upgrade's chance-based ones. */
+  innateRicochets = 0;
   executeToken = 0;
   criticalChance = 0;
   sizeMultiplier = 1;
@@ -348,11 +383,17 @@ export class ProjectileState implements Body {
   launchAngle = 0;
   /** Visual spin, advanced by the sim so it stays deterministic and freezes with pause. */
   spin = 0;
+  /** Grimbo's Moeda de Ouro: this coin bursts on its first hit. */
+  golden = false;
+  /** Fabri's Macaco Furioso: circling the hero until this sim time (0 = flying normally). */
+  orbitUntil = 0;
+  orbitAngle = 0;
+  orbitHitsResetAt = 0;
   readonly outboundHits = new Set<EnemyState>();
   readonly returnHits = new Set<EnemyState>();
 
   get isReturning(): boolean {
-    return this.kind !== 'bolt' && this.returning;
+    return isReturningKind(this.kind) && this.returning;
   }
 
   /** Each enemy can be hit once per leg (outbound / return) — false if this leg already struck it. */
@@ -398,6 +439,8 @@ export class PickupState implements Body {
   radius: number = BODY_RADIUS.gem;
   kind: PickupKind = 'gem';
   value = 0;
+  /** Flies to the hero from anywhere (Grimbo's Lucro Rápido). */
+  magnet = false;
 }
 
 /** Fabri's banana peel hazard. */

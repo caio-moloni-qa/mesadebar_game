@@ -94,8 +94,8 @@ function additiveClip(name: string, duration: number, keys: Key[], hipsRest: Vec
 }
 
 /** Attacks authored for the right hand; each also exists as a left-hand mirror (`swingL`, ...) for the second weapon. */
-export type HandAttack = 'swing' | 'lash' | 'cast' | 'throw' | 'pulse';
-export const HAND_ATTACKS: HandAttack[] = ['swing', 'lash', 'cast', 'throw', 'pulse'];
+export type HandAttack = 'swing' | 'lash' | 'cast' | 'throw' | 'pulse' | 'slam' | 'shoot' | 'toss' | 'hurl';
+export const HAND_ATTACKS: HandAttack[] = ['swing', 'lash', 'cast', 'throw', 'pulse', 'slam', 'shoot', 'toss', 'hurl'];
 export type HeroClipName = 'idle' | 'run' | HandAttack | `${HandAttack}L` | 'hit' | 'death';
 
 /** The full humanoid clip set. One set is shared by every mixer (threejs-animation: share clips, not copies). */
@@ -188,6 +188,40 @@ function rightHandedClips(hipHeight: number): Record<'idle' | 'run' | HandAttack
       { t: 0.12, pose: { upperArmR: [-40, 0, 28], foreArmR: [-95, 0, 0], handR: [0, 0, 0], chest: [6, 0, 0], head: [6, 0, 0] } },
       { t: 0.32, pose: { upperArmR: [-42, 0, 30], foreArmR: [-100, 0, 0], handR: [15, 0, 0], chest: [9, -6, 0], head: [9, 0, 0] } },
       { t: 0.55, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] } }
+    ], hips),
+    // Martelo de Forja: the hammer goes up over the head with the body leaning back, then comes down into the ground
+    // in front — chest folding over it, knees giving — and is held there a beat for the quake.
+    slam: additiveClip('slam', 0.58, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0], thighL: [0, 0, 0], thighR: [0, 0, 0], shinL: [0, 0, 0], shinR: [0, 0, 0] }, hips: [0, 0, 0] },
+      { t: 0.15, pose: { upperArmR: [-165, 0, 8], foreArmR: [-45, 0, 0], chest: [-16, 0, 0], head: [-10, 0, 0], thighL: [0, 0, 0], thighR: [0, 0, 0], shinL: [0, 0, 0], shinR: [0, 0, 0] }, hips: [0, 0.03, 0] },
+      { t: 0.25, pose: { upperArmR: [-35, 0, 4], foreArmR: [-5, 0, 0], chest: [30, 0, 0], head: [12, 0, 0], thighL: [-28, 0, 0], thighR: [-28, 0, 0], shinL: [45, 0, 0], shinR: [45, 0, 0] }, hips: [0, -0.1, 0] },
+      { t: 0.38, pose: { upperArmR: [-32, 0, 4], foreArmR: [-5, 0, 0], chest: [28, 0, 0], head: [10, 0, 0], thighL: [-24, 0, 0], thighR: [-24, 0, 0], shinL: [40, 0, 0], shinR: [40, 0, 0] }, hips: [0, -0.09, 0] },
+      { t: 0.58, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0], thighL: [0, 0, 0], thighR: [0, 0, 0], shinL: [0, 0, 0], shinR: [0, 0, 0] }, hips: [0, 0, 0] }
+    ], hips),
+    // Arco Élfico: the bow arm comes up level at the target with the body turned side-on, the other hand reaches the
+    // string and draws it back to the cheek, holds, and lets go — the drawing hand flies back and out.
+    shoot: additiveClip('shoot', 0.52, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], upperArmL: [0, 0, 0], foreArmL: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] } },
+      { t: 0.1, pose: { upperArmR: [-88, 0, -6], foreArmR: [-4, 0, 0], upperArmL: [-85, 0, -35], foreArmL: [-20, 0, 0], chest: [0, 30, 0], head: [0, -25, 0] } },
+      { t: 0.24, pose: { upperArmR: [-90, 0, -6], foreArmR: [-2, 0, 0], upperArmL: [-82, 0, 25], foreArmL: [-125, 0, 0], chest: [0, 34, 0], head: [0, -28, 0] } },
+      { t: 0.32, pose: { upperArmR: [-90, 0, -6], foreArmR: [-2, 0, 0], upperArmL: [-82, 0, 28], foreArmL: [-130, 0, 0], chest: [0, 34, 0], head: [0, -28, 0] } },
+      { t: 0.37, pose: { upperArmR: [-86, 0, -6], foreArmR: [-4, 0, 0], upperArmL: [-55, 0, 70], foreArmL: [-35, 0, 0], chest: [0, 30, 0], head: [0, -25, 0] } },
+      { t: 0.52, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], upperArmL: [0, 0, 0], foreArmL: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] } }
+    ], hips),
+    // Moedas Viciadas: an underhand flip — the hand dips back past the hip, then swings up and forward with the wrist
+    // flicking the coin off the thumb.
+    toss: additiveClip('toss', 0.36, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } },
+      { t: 0.1, pose: { upperArmR: [38, 0, -8], foreArmR: [-25, 0, 0], handR: [35, 0, 0], chest: [4, -12, 0] } },
+      { t: 0.2, pose: { upperArmR: [-115, 0, -4], foreArmR: [-15, 0, 0], handR: [-45, 0, 0], chest: [-4, 14, 0] } },
+      { t: 0.36, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], handR: [0, 0, 0], chest: [0, 0, 0] } }
+    ], hips),
+    // Mochila de Tralhas: reaches back over the shoulder into the pack, then lobs whatever came out overarm.
+    hurl: additiveClip('hurl', 0.5, [
+      { t: 0, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] } },
+      { t: 0.15, pose: { upperArmR: [-160, 0, -12], foreArmR: [-115, 0, 0], chest: [-12, -22, 0], head: [-6, 10, 0] } },
+      { t: 0.27, pose: { upperArmR: [-62, 0, -4], foreArmR: [-10, 0, 0], chest: [16, 16, 0], head: [6, -6, 0] } },
+      { t: 0.5, pose: { upperArmR: [0, 0, 0], foreArmR: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] } }
     ], hips),
     hit: additiveClip('hit', 0.24, [
       { t: 0, pose: { chest: [0, 0, 0], head: [0, 0, 0] } },

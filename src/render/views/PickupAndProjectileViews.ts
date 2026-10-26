@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { SHEETS, sheetFrameTexture, showFrame } from '../vfx/SheetEffects';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PeelState, PickupKind, PickupState, ProjectileKind, ProjectileState, SoulState } from '../../core/session/entities';
+import { PeelState, PickupKind, PickupState, ProjectileKind, ProjectileState, SoulState, isReturningKind } from '../../core/session/entities';
 import { Pool } from '../../core/Pool';
 import { PALETTE, toonMaterial } from '../materials';
 import { nonIndexed } from '../models/rig';
-import { WeaponModelId, weaponGeometry } from '../models/weapons';
+import { WeaponModelId, thrownGeometry, weaponGeometry } from '../models/weapons';
 import { WORLD_SCALE } from '../space';
 
 /** Builds one InstancedMesh per kind and fills them from a pool each frame (count = instances used this frame). */
@@ -65,6 +65,7 @@ export class ProjectileView {
   readonly batch: InstancedBatch<ProjectileKind>;
   private readonly matrix = new THREE.Matrix4();
   private readonly rotation = new THREE.Matrix4();
+  private readonly tumble = new THREE.Matrix4();
   private readonly boltTexture = sheetFrameTexture(SHEETS.staffBolt);
   private readonly facing = new THREE.Quaternion();
   private readonly spinZ = new THREE.Quaternion();
@@ -83,7 +84,12 @@ export class ProjectileView {
       bolt: { geometry: new THREE.PlaneGeometry(1.6, 1.6).translate(-0.24, 0, 0), material: new THREE.MeshBasicMaterial({ map: this.boltTexture, transparent: true, depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.02 }) },
       boomerang: { geometry: flying('boomerang'), material: weaponMaterial, castShadow: true },
       banana: { geometry: flying('banana'), material: weaponMaterial, castShadow: true },
-      thrownSword: { geometry: flying('sword'), material: weaponMaterial, castShadow: true }
+      thrownSword: { geometry: flying('sword'), material: weaponMaterial, castShadow: true },
+      arrow: { geometry: thrownGeometry('arrow'), material: weaponMaterial, castShadow: true },
+      coin: { geometry: thrownGeometry('coin'), material: weaponMaterial, castShadow: true },
+      pan: { geometry: thrownGeometry('pan'), material: weaponMaterial, castShadow: true },
+      bottle: { geometry: thrownGeometry('bottle'), material: weaponMaterial, castShadow: true },
+      potion: { geometry: thrownGeometry('potion'), material: weaponMaterial, castShadow: true }
     }, capacity);
   }
 
@@ -109,6 +115,12 @@ export class ProjectileView {
         this.facing.copy(camera.quaternion).multiply(this.spinZ);
         const size = projectile.sizeMultiplier;
         this.matrix.compose(this.position.set(x, 1.1, z), this.facing, this.scale.set(size, size, size));
+      } else if (!isReturningKind(projectile.kind)) {
+        // Straight shots point along their flight; everything but the arrow tumbles end over end.
+        const size = projectile.sizeMultiplier;
+        this.rotation.makeRotationY(-Math.atan2(projectile.velocityY, projectile.velocityX));
+        if (projectile.kind !== 'arrow') this.rotation.multiply(this.tumble.makeRotationZ(nowMs / 90));
+        this.matrix.makeScale(size, size, size).premultiply(this.rotation).setPosition(x, 1.0, z);
       } else {
         const size = projectile.sizeMultiplier;
         this.rotation.makeRotationY(projectile.spin);

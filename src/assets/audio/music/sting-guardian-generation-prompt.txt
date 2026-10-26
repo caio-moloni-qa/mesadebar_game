@@ -1,0 +1,15 @@
+STYLE
+short ominous fantasy sting, low horn call, single drum hit, rising string swell, 4 seconds
+
+DESCRIPTION
+A 3–5 second warning that a zone guardian is waking up: a distant low horn call, a single deep drum hit, a short
+rising string swell that ends on a held suspended chord. No melody development, no loop. Instrumental.
+
+PRODUCTION CONSTRAINTS
+Instrumental only. No vocals, no lyrics, no spoken words.
+No choir, humming, singing, narration, or voices of any kind.
+Acoustic/orchestral medieval dark-fantasy instrument palette; no synth leads, EDM drops, or modern drum kits.
+One short, complete non-looping sting; allow its natural final resonance within the target duration.
+
+TARGET DURATION
+4 seconds.
