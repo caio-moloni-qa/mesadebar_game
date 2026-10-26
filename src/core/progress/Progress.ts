@@ -10,6 +10,29 @@ export type HeroId = CharacterId | QuestNpcId | 'sergio';
 
 export const STARTING_HEROES: HeroId[] = ['barbarian', 'mage', 'reliquia', 'fabri'];
 
+// ── Difficulty tiers ────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Winning a run on a tier opens the next. Enemies get tougher; Fichas and mastery XP grow with them. */
+export interface DifficultyTier {
+  tier: number;
+  name: string;
+  enemyHealth: number;
+  enemyDamage: number;
+  reward: number;
+}
+
+export const DIFFICULTY_TIERS: DifficultyTier[] = [
+  { tier: 1, name: 'Normal', enemyHealth: 1, enemyDamage: 1, reward: 1 },
+  { tier: 2, name: 'Difícil', enemyHealth: 1.4, enemyDamage: 1.2, reward: 1.3 },
+  { tier: 3, name: 'Cruel', enemyHealth: 1.9, enemyDamage: 1.4, reward: 1.6 },
+  { tier: 4, name: 'Pesadelo', enemyHealth: 2.5, enemyDamage: 1.65, reward: 2 },
+  { tier: 5, name: 'Lenda', enemyHealth: 3.2, enemyDamage: 1.9, reward: 2.5 }
+];
+
+export function difficultyTier(tier: number): DifficultyTier {
+  return DIFFICULTY_TIERS[Math.min(DIFFICULTY_TIERS.length, Math.max(1, Math.floor(tier))) - 1];
+}
+
 // ── Fichas ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** What a finished run counts, for the payout and the records. */
@@ -31,6 +54,8 @@ export interface RunSummary {
   questTiers: Partial<Record<QuestNpcId, number>>;
   /** When it ended (ms since epoch), for the run history. */
   endedAt: number;
+  /** The difficulty tier it was played on. */
+  tier: number;
 }
 
 export const FICHAS_RATES = {
@@ -72,6 +97,13 @@ export function runPayout(run: RunSummary): RunPayout {
   ];
   const subtotal = fichas.reduce((sum, line) => sum + line.amount, 0);
   if (run.victory) fichas.push({ label: 'Vitória', detail: `+${R.victoryBonus * 100}%`, amount: Math.round(subtotal * R.victoryBonus) });
+  const tier = difficultyTier(run.tier);
+  const tierLine = (lines: PayoutLine[]): PayoutLine => ({
+    label: `Dificuldade ${tier.name}`,
+    detail: `+${Math.round((tier.reward - 1) * 100)}%`,
+    amount: Math.round(lines.reduce((sum, line) => sum + line.amount, 0) * (tier.reward - 1))
+  });
+  if (tier.reward > 1) fichas.push(tierLine(fichas));
   const X = XP_RATES;
   const xp: PayoutLine[] = [
     { label: 'Tempo sobrevivido', detail: `${Math.floor(run.elapsedMs / 1000)} s`, amount: Math.floor(run.elapsedMs / 1000) * X.perSecond },
@@ -80,6 +112,7 @@ export function runPayout(run: RunSummary): RunPayout {
     { label: 'Necromantes', detail: `${run.bosses}`, amount: run.bosses * X.perBoss }
   ];
   if (run.victory) xp.push({ label: 'Vitória', detail: '', amount: X.victory });
+  if (tier.reward > 1) xp.push(tierLine(xp));
   return {
     fichas: fichas.filter((line) => line.amount > 0),
     fichasTotal: fichas.reduce((sum, line) => sum + line.amount, 0),
@@ -251,6 +284,7 @@ const HISTORY_LENGTH = 10;
 
 export interface RunRecord {
   heroId: HeroId;
+  tier?: number;
   victory: boolean;
   elapsedMs: number;
   kills: number;
@@ -280,6 +314,8 @@ export interface SaveData {
     guardians: Record<string, number>;
   };
   history: RunRecord[];
+  /** The highest difficulty tier open (a win on the top open tier opens the next). */
+  tierUnlocked: number;
   /** Heroes seen as unlocked when the last run ended (to announce newcomers once). */
   announced: HeroId[];
   tutorialSeen: boolean;
@@ -296,6 +332,7 @@ export function emptySave(): SaveData {
     regularMissions: {},
     records: { runs: 0, wins: 0, bestTimeMs: 0, deepestCycle: 0, kills: {}, guardians: {} },
     history: [],
+    tierUnlocked: 1,
     announced: [...STARTING_HEROES],
     tutorialSeen: false
   };
@@ -332,6 +369,7 @@ export function parseSave(text: string | null | undefined): SaveData {
       guardians: numbersOnly<string>(records.guardians) as Record<string, number>
     },
     history: Array.isArray(raw.history) ? (raw.history.filter(isRecord) as unknown as RunRecord[]).slice(0, HISTORY_LENGTH) : [],
+    tierUnlocked: Math.min(DIFFICULTY_TIERS.length, Math.max(1, Math.floor(number(raw.tierUnlocked, 1)))),
     announced: Array.isArray(raw.announced) ? raw.announced.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES],
     tutorialSeen: raw.tutorialSeen === true
   };
@@ -351,6 +389,8 @@ export interface RunOutcome {
   rewards: MasteryReward[];
   /** Heroes who joined the roster with this run. */
   joined: HeroId[];
+  /** The difficulty tier this win opened, if any. */
+  newTier: DifficultyTier | null;
 }
 
 /** Banks a finished run: Fichas, mastery XP, mission progress with the regulars, records, history, unlocks. */
@@ -381,7 +421,7 @@ export function applyRun(save: SaveData, run: RunSummary): RunOutcome {
       kills: add(save.records.kills, run.killsByVariant),
       guardians: add(save.records.guardians, run.guardiansByKind)
     },
-    history: [{ heroId: run.heroId, victory: run.victory, elapsedMs: run.elapsedMs, kills: run.kills, cycle: run.cycle, fichas: payout.fichasTotal, endedAt: run.endedAt }, ...save.history].slice(0, HISTORY_LENGTH)
+    history: [{ heroId: run.heroId, tier: run.tier, victory: run.victory, elapsedMs: run.elapsedMs, kills: run.kills, cycle: run.cycle, fichas: payout.fichasTotal, endedAt: run.endedAt }, ...save.history].slice(0, HISTORY_LENGTH)
   };
   const levelBefore = masteryLevel(xpBefore);
   const levelAfter = masteryLevel(xpAfter);
@@ -389,5 +429,10 @@ export function applyRun(save: SaveData, run: RunSummary): RunOutcome {
   const roster = rosterFor(next);
   const joined = roster.filter((hero) => !save.announced.includes(hero));
   next.announced = [...new Set([...save.announced, ...roster])];
-  return { save: next, payout, heroId: run.heroId, xpBefore, xpAfter, rewards, joined };
+  let newTier: DifficultyTier | null = null;
+  if (run.victory && run.tier >= save.tierUnlocked && save.tierUnlocked < DIFFICULTY_TIERS.length) {
+    next.tierUnlocked = save.tierUnlocked + 1;
+    newTier = difficultyTier(next.tierUnlocked);
+  }
+  return { save: next, payout, heroId: run.heroId, xpBefore, xpAfter, rewards, joined, newTier };
 }

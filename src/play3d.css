@@ -468,3 +468,24 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .tavern-fichas { font: 500 16px/1.5 var(--display); color: var(--cream); }
 .tavern-fichas b { color: var(--gold); }
 .tavern-hints { color: var(--muted); font-size: 12px; }
+
+/* The tier picker at the portal and the record book. */
+.tier-picker, .record-book { top: 50%; bottom: auto; transform: translate(-50%, -50%); max-height: calc(100% - 32px); overflow: auto; }
+.tier-list { display: grid; gap: 6px; margin-bottom: 14px; }
+.tier-option { display: grid; gap: 2px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; background: #0d1719b3; color: var(--cream); text-align: left; cursor: pointer; }
+.tier-option strong { font: 600 15px var(--display); }
+.tier-option span { color: var(--muted); font-size: 13px; }
+.tier-option[aria-pressed="true"] { border-color: var(--gold); }
+.tier-option:hover:not(:disabled) { border-color: var(--gold); background: #23312c; }
+.tier-option:disabled { opacity: .45; cursor: default; }
+.record-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0 16px; }
+.record-totals div { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: #0d1719b3; }
+.record-totals dt { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.record-totals dd { margin: 2px 0 0; font: 600 18px var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.bestiary, .run-history { list-style: none; margin: 6px 0 16px; padding: 0; display: grid; gap: 3px; font-size: 13px; }
+.bestiary li { display: grid; grid-template-columns: 1fr auto 60px; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.bestiary small { color: var(--muted); font-size: 11px; }
+.bestiary b { text-align: right; font-variant-numeric: tabular-nums; color: var(--cream); }
+.bestiary li.unseen span, .bestiary li.unseen b { color: var(--muted); }
+.run-history li { color: var(--muted); }
+.run-history li.won { color: #8dffa8; }

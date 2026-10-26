@@ -47,6 +47,9 @@ export const MERCHANT_ROOM = {
   heroReach: 70,
   sergioSpot: { x: -140, y: 0 },
   sergioReach: 110,
+  /** Between runs: the lectern with the record book, by the fireplace. */
+  records: { x: -110, y: 235 },
+  recordsReach: 70,
   /** Talk from this close (tables sit between you and them). */
   talkReach: 110
 };
@@ -100,7 +103,7 @@ export interface MerchantHost {
 
 /** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing —
  *  and between runs, a waiting hero or Sergio himself. */
-export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | { kind: 'hero'; index: number } | { kind: 'sergio' } | null;
+export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | { kind: 'hero'; index: number } | { kind: 'sergio' } | { kind: 'records' } | null;
 
 export class MerchantSystem {
   enabled = true;
@@ -142,6 +145,7 @@ export class MerchantSystem {
       const stand = MERCHANT_ROOM.heroStands.findIndex((spot) => distance(spot) <= MERCHANT_ROOM.heroReach);
       if (stand >= 0) return { kind: 'hero', index: stand };
       if (distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+      if (distance(MERCHANT_ROOM.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
     }
     // Pedestals stand closer together than the reach: the nearest unsold one is the one you mean.
     let best = -1;
@@ -239,7 +243,8 @@ export class MerchantSystem {
     const circles = [
       ...MERCHANT_ROOM.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
       ...MERCHANT_ROOM.npcs.map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
-      ...(this.hub ? MERCHANT_ROOM.heroStands.map((stand) => ({ ...stand, radius: MERCHANT_ROOM.npcRadius })) : [])
+      ...(this.hub ? MERCHANT_ROOM.heroStands.map((stand) => ({ ...stand, radius: MERCHANT_ROOM.npcRadius })) : []),
+      { ...MERCHANT_ROOM.records, radius: 16 }
     ];
     circles.forEach((circle) => {
       const cx = this.room.x + circle.x;

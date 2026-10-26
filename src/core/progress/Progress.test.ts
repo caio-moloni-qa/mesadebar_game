@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MASTERY_THRESHOLDS, MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, RunSummary, SERGIO_TOTAL_MASTERY, applyRun, buyUpgrade, emptySave,
+  DIFFICULTY_TIERS, MASTERY_THRESHOLDS, MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, RunSummary, SERGIO_TOTAL_MASTERY, applyRun, buyUpgrade, emptySave,
   masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockedSkins
 } from './Progress';
 
 function run(overrides: Partial<RunSummary> = {}): RunSummary {
   return {
     heroId: 'barbarian', victory: false, elapsedMs: 8 * 60_000, kills: 600, guardians: 2, bosses: 1, missions: 1, coins: 500, cycle: 1,
-    killsByVariant: { skeleton: 600 }, guardiansByKind: { gravedigger: 1, lakeSpirit: 1 }, questTiers: {}, endedAt: 0, ...overrides
+    killsByVariant: { skeleton: 600 }, guardiansByKind: { gravedigger: 1, lakeSpirit: 1 }, questTiers: {}, endedAt: 0, tier: 1, ...overrides
   };
 }
 
@@ -75,6 +75,21 @@ describe('progress', () => {
     const outcome = applyRun(save, run({ questTiers: { brom: 3 } }));
     expect(outcome.joined).toEqual(['brom']);
     expect(applyRun(outcome.save, run()).joined).toEqual([]);
+  });
+
+  it('a win on the top open tier opens the next; tiers pay more and are capped', () => {
+    const first = applyRun(emptySave(), run({ victory: true }));
+    expect(first.newTier?.tier).toBe(2);
+    expect(first.save.tierUnlocked).toBe(2);
+    // A win on an easier tier than the top open one opens nothing.
+    expect(applyRun(first.save, run({ victory: true, tier: 1 })).newTier).toBeNull();
+    // Harder tiers pay more of both.
+    const normal = runPayout(run());
+    const cruel = runPayout(run({ tier: 3 }));
+    expect(cruel.fichasTotal).toBe(normal.fichasTotal + Math.round(normal.fichasTotal * (DIFFICULTY_TIERS[2].reward - 1)));
+    expect(cruel.xpTotal).toBeGreaterThan(normal.xpTotal);
+    const top = { ...emptySave(), tierUnlocked: DIFFICULTY_TIERS.length };
+    expect(applyRun(top, run({ victory: true, tier: DIFFICULTY_TIERS.length })).newTier).toBeNull();
   });
 
   it('round-trips the save, and survives garbage', () => {

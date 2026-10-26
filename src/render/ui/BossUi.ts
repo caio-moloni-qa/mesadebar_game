@@ -160,6 +160,9 @@ export class BossUi {
       const text = hero === session.characterId ? `Você está jogando com ${heroName(hero)}` : `Pressione E para jogar com ${heroName(hero)}`;
       return { x: merchant.room.x + stand.x, y: merchant.room.y + stand.y, text, poor: false };
     }
+    if (spot.kind === 'records') {
+      return { x: merchant.room.x + MERCHANT_ROOM.records.x, y: merchant.room.y + MERCHANT_ROOM.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
+    }
     if (spot.kind === 'sergio') {
       if (session.dialogue !== null) return null;
       return { x: merchant.room.x + MERCHANT_ROOM.merchant.x, y: merchant.room.y + MERCHANT_ROOM.merchant.y, text: 'Pressione E para falar com o Sergio (melhorias permanentes)', poor: false };

@@ -28,7 +28,7 @@ import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
 import { STARTING_HEROES, SaveData, applyRun, buyUpgrade, metaBonuses } from '../core/progress/Progress';
-import { SergioShop, TavernHeader } from './ui/TavernHub';
+import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
 import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
@@ -109,6 +109,10 @@ export class Game3D {
   private mode: 'menu' | 'hub' | 'run' = 'menu';
   private readonly shop: SergioShop;
   private readonly tavernHeader: TavernHeader;
+  private readonly tierPicker: TierPicker;
+  private readonly recordBook: RecordBook;
+  /** Difficulty tier for the next run (kept for "Tentar novamente"). */
+  private tier = 1;
   private inMenu = false;
   private session!: GameSession;
   private playerView!: HeroView;
@@ -207,6 +211,12 @@ export class Game3D {
       close: () => this.shop.hide()
     });
     this.tavernHeader = new TavernHeader(container);
+    this.tierPicker = new TierPicker(container, (tier) => {
+      this.tier = tier;
+      this.tierPicker.hide();
+      this.startRun(this.run);
+    }, () => this.tierPicker.hide());
+    this.recordBook = new RecordBook(container, () => this.recordBook.hide());
     // From the title "Jogar" enters the tavern; there, picking a hero (and weapon) makes them yours in the room.
     this.menu = new StartMenu(container, (choice) => (this.mode === 'hub' ? this.pickHero(choice) : this.startRun(choice)), {
       save: () => this.progress,
@@ -231,6 +241,8 @@ export class Game3D {
     this.keys.clear();
     this.mode = 'run';
     this.shop.hide();
+    this.tierPicker.hide();
+    this.recordBook.hide();
     this.run = choice;
     this.inMenu = false;
     this.menu.hide();
@@ -313,7 +325,8 @@ export class Game3D {
       // Sergio's permanent upgrades and the regulars' mission progress carry into every real run.
       meta: attract || hub ? undefined : metaBonuses(this.progress),
       questTiers: attract ? undefined : this.progress.regularMissions,
-      hub
+      hub,
+      tier: attract || hub ? 1 : this.tier
     });
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
@@ -357,7 +370,15 @@ export class Game3D {
   private bindSessionEffects(): void {
     const { events } = this.session;
     events.on('run-ended', () => this.bankRun());
-    events.on('hub-exit', () => this.startRun(this.run));
+    // The portal starts the run, after picking the difficulty once a harder one is open.
+    events.on('hub-exit', () => {
+      if (this.progress.tierUnlocked > 1) this.tierPicker.show(this.progress, Math.min(this.tier, this.progress.tierUnlocked));
+      else {
+        this.tier = 1;
+        this.startRun(this.run);
+      }
+    });
+    events.on('hub-records', () => this.recordBook.show(this.progress));
     events.on('hub-sergio', () => this.shop.show());
     events.on('hub-hero', ({ index }) => {
       const hero = STARTING_HEROES[index];
@@ -633,8 +654,12 @@ export class Game3D {
       // ESC stays blocked while a choice screen is open, like the Phaser build.
       // ESC first closes Sergio's counter or a conversation in the tavern.
       if (this.menu.visible) return;
-      if (this.shop.open) {
-        if (event.code === 'Escape') this.shop.hide();
+      if (this.shop.open || this.tierPicker.open || this.recordBook.open) {
+        if (event.code === 'Escape') {
+          this.shop.hide();
+          this.tierPicker.hide();
+          this.recordBook.hide();
+        }
         return;
       }
       if (event.code === 'KeyT' && this.session.over) this.enterHub();
@@ -670,7 +695,7 @@ export class Game3D {
   }
 
   private readMoveInput(): void {
-    if (this.inMenu || this.shop.open || (this.mode === 'hub' && this.menu.visible)) {
+    if (this.inMenu || this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)) {
       this.session.setMoveInput(0, 0);
       return;
     }
@@ -746,6 +771,8 @@ export class Game3D {
       this.fps.since = now;
     }
     this.screens.update(this.session, this.inMenu, this.result);
+    // Station prompts hide behind the tavern's panels.
+    if (this.mode !== 'menu') this.bossUi.setVisible(!(this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)));
     this.bossUi.update(this.session, this.projectToScreen);
     this.companionBars.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {
@@ -758,7 +785,7 @@ export class Game3D {
     });
     this.choices.update(this.session);
     this.tavernDialog.update(this.session, this.progress);
-    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open, this.progress, heroName(this.run.characterId));
+    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId));
   }
 }
 

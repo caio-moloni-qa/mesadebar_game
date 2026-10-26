@@ -12,7 +12,7 @@ import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
 import { QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
-import { HeroId, MetaBonuses, NO_META_BONUSES, RunSummary } from '../progress/Progress';
+import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -77,8 +77,10 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'player-died': Record<string, never>;
   /** Segunda chance: back on their feet once, at half health. */
   'player-revived': Record<string, never>;
-  /** Between runs: the exit portal (start a run), a waiting hero (pick them), Sergio (his upgrades). */
+  /** Between runs: the exit portal (start a run), a waiting hero (pick them), Sergio (his upgrades), the record
+   *  book. */
   'hub-exit': Record<string, never>;
+  'hub-records': Record<string, never>;
   'hub-hero': { index: number };
   'hub-sergio': Record<string, never>;
   /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
@@ -103,6 +105,8 @@ export interface GameSessionOptions {
   questTiers?: Partial<Record<QuestNpcId, number>>;
   /** The tavern between runs: the hero starts in the room, nothing spawns, no run clock. */
   hub?: boolean;
+  /** Difficulty tier (1 = normal): enemy health and contact damage scale up. */
+  tier?: number;
 }
 
 /** Engine-agnostic run simulation — the GameScene replacement described in THREEJS_3D_MIGRATION_TEMP.md. Covers
@@ -148,6 +152,7 @@ export class GameSession implements WeaponHost {
   readonly stats = { guardians: 0, bosses: 0, missions: 0, killsByVariant: {} as Record<string, number>, guardiansByKind: {} as Record<string, number> };
   /** Segunda chance revives still to use this run. */
   revivesLeft = 0;
+  readonly tier: DifficultyTier;
   private miniBossSlotsThisPhase = 0;
   private miniBossRotation = 0;
   /** Boss-wave cycle: cycle 1 is the base 3-minute run; each continue portal adds a minute, 1× difficulty and a boss. */
@@ -178,6 +183,7 @@ export class GameSession implements WeaponHost {
 
   constructor(private readonly options: GameSessionOptions) {
     this.rng = createRng(options.seed);
+    this.tier = difficultyTier(options.tier ?? 1);
     this.characterId = options.characterId;
     const character = CHARACTERS[options.characterId];
     this.player = new PlayerState(character);
@@ -287,7 +293,8 @@ export class GameSession implements WeaponHost {
       killsByVariant: { ...this.stats.killsByVariant },
       guardiansByKind: { ...this.stats.guardiansByKind },
       questTiers: Object.fromEntries(this.quests.quests.map((quest) => [quest.npc.id, quest.tier])),
-      endedAt
+      endedAt,
+      tier: this.tier.tier
     };
   }
 
@@ -475,7 +482,8 @@ export class GameSession implements WeaponHost {
   spawnEnemy(variantId: EnemyVariantId, x: number, y: number, maxHealth: number = ALL_ENEMY_VARIANTS[variantId].maxHealth): EnemyState | null {
     const enemy = this.enemies.acquire();
     if (!enemy) return null;
-    enemy.activate(variantId, x, y, maxHealth, this.clock.now);
+    enemy.activate(variantId, x, y, maxHealth * this.tier.enemyHealth, this.clock.now);
+    enemy.contactDamage *= this.tier.enemyDamage;
     // Spawn points come from the schedule (rings around the hero, the border, anywhere for necromancers) and know
     // nothing about the map - move them to the nearest ground the enemy actually fits on.
     const spot = this.arena.nearestWalkable(enemy.x, enemy.y, enemy.radius);
@@ -774,6 +782,7 @@ export class GameSession implements WeaponHost {
         if (spot?.kind === 'exit') this.events.emit('hub-exit', {});
         if (spot?.kind === 'hero') this.events.emit('hub-hero', { index: spot.index });
         if (spot?.kind === 'sergio') this.events.emit('hub-sergio', {});
+        if (spot?.kind === 'records') this.events.emit('hub-records', {});
         if (spot?.kind === 'npc') this.dialogue = spot.index;
         return;
       }

@@ -287,6 +287,13 @@ export class MerchantRoom {
     this.fireLight.position.copy(hearth).add(new THREE.Vector3(0, 1, -1.2));
     room.add(this.fireLight);
 
+    // The record book on its lectern, by the fireplace.
+    const lectern = MERCHANT_ROOM.records;
+    solid(cylinder(0.08, 0.12, 1.0, 6), 0x5a3a22, at(lectern.x, lectern.y, 0.5));
+    solid(new THREE.BoxGeometry(0.62, 0.06, 0.46), 0x6b4a2e, at(lectern.x, lectern.y, 1.02));
+    solid(new THREE.BoxGeometry(0.56, 0.07, 0.4), 0x5a1f22, at(lectern.x, lectern.y, 1.08));
+    glow(new THREE.BoxGeometry(0.5, 0.02, 0.34), 0xf3e6c4, at(lectern.x, lectern.y, 1.12));
+
     // Lanterns over the bar and over the tables.
     [[counter.x, -100], [counter.x, 120], [130, -90], [130, 190]].forEach(([x, y]) => {
       const light = new THREE.PointLight(0xffc27a, 14, 9, 2);

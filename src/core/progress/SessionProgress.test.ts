@@ -55,6 +55,13 @@ describe('a run with progress', () => {
     expect(zora.status).toBe('done');
   });
 
+  it('a harder tier spawns tougher enemies', () => {
+    const run = session({ tier: 3 });
+    const enemy = run.spawnEnemy('skeleton', run.player.x + 300, run.player.y, 100)!;
+    expect(enemy.maxHealth).toBeCloseTo(190);
+    expect(run.runSummary('barbarian', 0).tier).toBe(3);
+  });
+
   it('summarises the run: kills by enemy, guardians by kind, missions and the regulars’ tiers', () => {
     const run = session({ questTiers: { lyra: 1 } });
     const enemy = run.spawnEnemy('skeleton', run.player.x + 300, run.player.y, 1)!;

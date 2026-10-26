@@ -129,6 +129,7 @@ export class RunScreens {
 
     this.endProgress.append(fichas, mastery);
     outcome.joined.forEach((hero) => this.endProgress.append(textNode('p', `${heroName(hero)} agora é jogável!`, 'run-end-joined')));
+    if (outcome.newTier) this.endProgress.append(textNode('p', `Nova dificuldade liberada: ${outcome.newTier.name}!`, 'run-end-joined'));
   }
 }
 
