@@ -188,7 +188,6 @@ export class StartMenu {
     const showcase = document.createElement('div');
     showcase.className = 'hero-showcase';
     const details = locked ? this.lockedDetails(character) : this.heroDetails(character);
-    showcase.append(this.previewStage(character, character.preferredWeaponId ?? 'staff', locked), details);
     const roster = document.createElement('div');
     roster.className = 'hero-roster'; roster.setAttribute('role', 'group'); roster.setAttribute('aria-label', 'Heróis');
     Object.values(CHARACTERS).forEach((hero, index) => {
@@ -222,7 +221,12 @@ export class StartMenu {
     }
     const hint = document.createElement('p'); hint.className = 'selection-keyboard-hint'; hint.innerHTML = '<kbd>←</kbd><kbd>→</kbd> Trocar herói';
     footer.append(hint);
-    step.append(showcase, roster, footer);
+    // The roster sits under the 3D stage, in the column beside the (taller) details.
+    const side = document.createElement('div');
+    side.className = 'hero-side';
+    side.append(this.previewStage(character, character.preferredWeaponId ?? 'staff', locked), roster);
+    showcase.append(side, details);
+    step.append(showcase, footer);
     return step;
   }
 
