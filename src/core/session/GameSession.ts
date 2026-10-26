@@ -61,7 +61,7 @@ export type PendingChoice =
 export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents {
   /** A mission's upgrade reward: what was granted. */
   'quest-gifts': { names: string[] };
-  'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean };
+  'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
   'enemy-defeated': { x: number; y: number; variantId: EnemyVariantId; divineRelic: boolean };
   'player-damaged': { amount: number };
   /** Floating callouts above the hero (CURA -N, LENTO +20%, HP -3). */
@@ -817,7 +817,7 @@ export class GameSession implements WeaponHost {
     enemy.health -= amount;
     enemy.hitStunUntil = now + ENEMY_HIT_STUN_MS;
     enemy.lastHitAt = now;
-    this.events.emit('enemy-hit', { enemy, amount, critical });
+    this.events.emit('enemy-hit', { enemy, amount, critical, weaponId });
     if (enemy.health <= 0) this.defeatEnemy(enemy);
   }
 

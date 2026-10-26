@@ -25,6 +25,7 @@ import { MerchantRoom } from './world/MerchantRoom';
 import { QuestBarrels } from './world/QuestBarrels';
 import { TavernDialog } from './ui/TavernDialog';
 import { rewardText } from './ui/questText';
+import { SheetEffects } from './vfx/SheetEffects';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
@@ -101,6 +102,7 @@ export class Game3D {
   private readonly hazardView = new HazardView(80);
   private readonly particles = new ParticleView(2000);
   private readonly effects = new CombatEffects();
+  private readonly sheetEffects: SheetEffects;
   private readonly keys = new Set<string>();
   private accumulator = 0;
   private lastFrameAt = 0;
@@ -130,6 +132,8 @@ export class Game3D {
     if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
     this.bossEffects = new BossEffects(this.particles, this.bossViews);
     this.scene.add(this.bossEffects.root, this.bossViews.root);
+    this.sheetEffects = new SheetEffects(this.cameraRig.camera);
+    this.scene.add(this.sheetEffects.root);
     this.miniBossEffects = new MiniBossEffects(this.particles, this.miniBossViews);
     this.scene.add(this.miniBossEffects.root, this.miniBossViews.root, this.companionViews.root);
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
@@ -197,6 +201,7 @@ export class Game3D {
     this.miniBossViews.clear();
     this.companionViews.clear();
     this.miniBossEffects.clear();
+    this.sheetEffects.clear();
     if (this.merchantRoom) this.scene.remove(this.merchantRoom.root, this.merchantRoom.characters);
     this.floating.clear();
     this.chestRoll.stop();
@@ -245,7 +250,8 @@ export class Game3D {
         this.floating.spawn(simToWorld(x, y, 1.6, this.scratch), '▲', { color: '#4dff7a', size: 26, rise: 46, durationMs: 620 }, performance.now());
       }
     });
-    events.on('enemy-hit', ({ enemy, amount, critical }) => {
+    events.on('enemy-hit', ({ enemy, amount, critical, weaponId }) => {
+      if (weaponId === 'staff') this.sheetEffects.impact(enemy.x, enemy.y);
       const point = at(enemy.x, enemy.y);
       this.particles.burst(point.x, point.z, critical ? 0xffe45c : PALETTE.boltCore, critical ? 8 : 3, 1.1, 2);
       // Same callouts as the Phaser build: CRIT! then the number 150 ms later; Relíquia Divina adds "DANO +" on the hero.
@@ -260,7 +266,9 @@ export class Game3D {
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, color, kind === 'gem' ? 3 : 14, 0.8, 1.8);
     });
     events.on('melee-swing', ({ x, y, dirX, dirY, range, coneAngle, weaponId }) => {
-      this.effects.swing(x, y, dirX, dirY, range, coneAngle, weaponId);
+      // The sword's own swing is the generated sweep sheet; the whip keeps its flat lash arc.
+      if (weaponId === 'sword') this.sheetEffects.sweep(x, y, dirX, dirY, range);
+      else this.effects.swing(x, y, dirX, dirY, range, coneAngle, weaponId);
       // Whip chain links also emit swings, centred on the enemy they jump to — only the hero's own swing animates.
       if (x === this.session.player.x && y === this.session.player.y) {
         this.playerView.aim(dirX, dirY);
@@ -281,7 +289,9 @@ export class Game3D {
     events.on('player-died', () => this.playerView.die());
     events.on('aura-pulse', ({ radius, multiStrike, buffUnlocked }) => {
       const { player } = this.session;
-      this.effects.pulse(player.x, player.y, radius, multiStrike ? 0xfff2a0 : buffUnlocked ? 0xffc94d : 0xe8b04a, 0.35, multiStrike ? 0.8 : 0.5);
+      this.sheetEffects.ring(player.x, player.y, radius);
+      // Multi-strike and the unlocked buff still flash their tinted ring over it.
+      if (multiStrike || buffUnlocked) this.effects.pulse(player.x, player.y, radius, multiStrike ? 0xfff2a0 : 0xffc94d, 0.35, multiStrike ? 0.6 : 0.35);
       this.playerView.play('pulse', this.handOf('amulet'));
     });
     events.on('whip-burst', ({ radius }) => this.effects.burst(this.session.player.x, this.session.player.y, radius, 0xff6a3d, 0.3, 0.3));
@@ -555,11 +565,12 @@ export class Game3D {
     this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.syncHeldWeapons();
     this.enemyView.update(this.session.enemies, alpha, simNow, deltaSeconds);
-    this.projectileView.update(this.session.projectiles, alpha, simNow);
+    this.projectileView.update(this.session.projectiles, alpha, simNow, this.cameraRig.camera);
     this.pickupView.update(this.session.pickups, alpha, simNow);
     this.hazardView.update(this.session.souls, this.session.peels, alpha, simNow);
     this.particles.update(deltaSeconds);
     this.effects.update(deltaSeconds);
+    this.sheetEffects.update(deltaSeconds);
     this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
     this.arena.setSceneryVisible(!this.session.merchant.inside);
     this.arena.followFocus(this.cameraRig.focus);
@@ -575,7 +586,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;
