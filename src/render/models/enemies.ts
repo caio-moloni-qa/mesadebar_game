@@ -188,6 +188,7 @@ export function createEnemyModels(): Record<EnemyVariantId, BakedEnemyModel> {
     finalBoss: superSkeleton,
     // Drawn by their own rigged views; never instanced.
     gravedigger: superSkeleton,
-    templeGuardian: superSkeleton
+    templeGuardian: superSkeleton,
+    lakeSpirit: superSkeleton
   };
 }

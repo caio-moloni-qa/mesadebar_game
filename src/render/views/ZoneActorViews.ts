@@ -3,7 +3,7 @@ import { CompanionState } from '../../core/systems/CompanionSystem';
 import { MINI_BOSS_TUNING, MiniBossState } from '../../core/systems/MiniBossSystem';
 import { EnemyState } from '../../core/session/entities';
 import { ActorClipName } from '../models/clips';
-import { ActorModel, createGravediggerModel, createSkeletonArcherModel, createStoneGolemModel } from '../models/zoneActors';
+import { ActorModel, createGravediggerModel, createLakeSpiritModel, createSkeletonArcherModel, createStoneGolemModel } from '../models/zoneActors';
 import { simToWorld, yawFromSimDirection } from '../space';
 
 const FADE = 0.18;
@@ -11,7 +11,7 @@ const HIT_FLASH_MS = 70;
 const DEATH_SECONDS = 2.6;
 const ONE_SHOTS: ActorClipName[] = ['raise', 'slamHit', 'emerge', 'shockSlam', 'shoot', 'death'];
 /** Companion display sizes (game units, like an enemy's displaySize): archer hero-sized, golem a head taller. */
-const COMPANION_SIZE = { skeletonArcher: 62, stoneGolem: 105 };
+const COMPANION_SIZE = { skeletonArcher: 62, stoneGolem: 105, waterFairy: 30 };
 
 /** One rigged actor: model + mixer, crossfading between named clips; one-shots play once and hold. */
 class RiggedActor {
@@ -86,7 +86,7 @@ class MiniBossView {
   private readonly head = new THREE.Vector3();
 
   constructor(readonly state: MiniBossState) {
-    this.actor = new RiggedActor(state.kind === 'gravedigger' ? createGravediggerModel() : createStoneGolemModel());
+    this.actor = new RiggedActor(state.kind === 'gravedigger' ? createGravediggerModel() : state.kind === 'lakeSpirit' ? createLakeSpiritModel() : createStoneGolemModel());
     this.yaw = yawFromSimDirection(Math.cos(state.facing), Math.sin(state.facing));
   }
 
@@ -147,6 +147,20 @@ class MiniBossView {
       } else {
         actor.set(moved ? 'walk' : 'idle');
       }
+    } else if (state.kind === 'lakeSpirit') {
+      if (attack?.type === 'drain' || attack?.type === 'whirlpool') {
+        // Arms to the sky as it drinks the lake; the whirlpool turns it round and round.
+        actor.set('channel');
+        if (attack.type === 'whirlpool') this.yaw += deltaSeconds * 5;
+      } else if (attack?.type === 'wave') {
+        if (attack.phase === 'telegraph') actor.set('slamWindup');
+        else if (actor.clip !== 'slamHit') actor.restart('slamHit');
+      } else if (attack?.type === 'geyser') {
+        if (actor.clip !== 'raise') actor.restart('raise');
+      } else if (!actor.busy) {
+        actor.set(moved ? 'walk' : 'idle');
+      }
+      actor.root.rotation.y = this.yaw;
     } else if (state.stunnedMs > 0) {
       actor.set('stagger');
     } else if (attack?.type === 'charge') {
@@ -159,6 +173,7 @@ class MiniBossView {
     }
     actor.update(deltaSeconds);
     if (nowMs - enemy.lastHitAt < HIT_FLASH_MS) actor.tint(0.1, 0.09, 0.08);
+    else if (state.kind === 'lakeSpirit') actor.tint(0, 0.035 + Math.sin(nowMs / 200) * 0.01, 0.07);
     else if (state.stunnedMs > 0) actor.tint(0.03, 0.025, 0);
     else if (state.leashing) actor.tint(0, 0.02, 0.04);
     else actor.tint(0, 0, 0);
@@ -202,15 +217,66 @@ export class MiniBossViews {
   }
 }
 
+/** The water fairy: no rig — a small glowing body and head, two pairs of translucent wings beating fast, a soft halo,
+ *  bobbing at the hero's shoulder; it flares when it heals. */
+class FairyView {
+  readonly root = new THREE.Group();
+  private readonly body = new THREE.Group();
+  private readonly wings: THREE.Mesh[] = [];
+  private readonly halo: THREE.Mesh;
+  private time = Math.random() * 10;
+  private flare = 0;
+
+  constructor() {
+    const glow = (color: number, opacity: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const torso = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 1), new THREE.MeshBasicMaterial({ color: 0x6fd3ff }));
+    torso.scale.set(0.8, 1.4, 0.8);
+    const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 1), new THREE.MeshBasicMaterial({ color: 0xe6f6ff }));
+    head.position.y = 0.2;
+    this.halo = new THREE.Mesh(new THREE.IcosahedronGeometry(0.38, 1), glow(0x9fe8ff, 0.25));
+    this.body.add(torso, head, this.halo);
+    [[1, 0.06], [-1, 0.06], [1, -0.08], [-1, -0.08]].forEach(([side, height], index) => {
+      const wing = new THREE.Mesh(new THREE.PlaneGeometry(index < 2 ? 0.32 : 0.24, index < 2 ? 0.2 : 0.15).translate((index < 2 ? 0.16 : 0.12) * side, 0, 0), glow(0xbff0ff, 0.55));
+      wing.position.set(0.03 * side, height, -0.05);
+      this.wings.push(wing);
+      this.body.add(wing);
+    });
+    this.root.add(this.body);
+  }
+
+  update(companion: CompanionState, alpha: number, deltaSeconds: number, healed: boolean): void {
+    this.time += deltaSeconds;
+    if (healed) this.flare = 1;
+    this.flare = Math.max(0, this.flare - deltaSeconds * 1.6);
+    simToWorld(companion.prevX + (companion.x - companion.prevX) * alpha, companion.prevY + (companion.y - companion.prevY) * alpha, 1.7 + Math.sin(this.time * 2.4) * 0.15, this.root.position);
+    this.root.rotation.y = yawFromSimDirection(companion.facingX, companion.facingY);
+    const beat = Math.sin(this.time * 32) * 0.9;
+    this.wings.forEach((wing, index) => { wing.rotation.y = (index % 2 === 0 ? 1 : -1) * (0.3 + beat * 0.5); });
+    this.halo.scale.setScalar(1 + this.flare * 2.2 + Math.sin(this.time * 5) * 0.08);
+    (this.halo.material as THREE.MeshBasicMaterial).opacity = 0.22 + this.flare * 0.5;
+  }
+
+  dispose(): void {
+    this.root.removeFromParent();
+    this.root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      child.geometry.dispose();
+      (child.material as THREE.Material).dispose();
+    });
+  }
+}
+
 /** One view per companion: the archer draws and looses on every shot, the golem pounds on every slam and is gone
  *  (rubble) while it reforms. */
 export class CompanionViews {
   readonly root = new THREE.Group();
   private readonly views = new Map<CompanionState, { actor: RiggedActor; lastAttack: number; yaw: number; last: THREE.Vector3 }>();
+  private readonly fairies = new Map<CompanionState, { view: FairyView; lastHeal: number }>();
 
   update(companions: CompanionState[], alpha: number, deltaSeconds: number): void {
+    this.updateFairies(companions, alpha, deltaSeconds);
     companions.forEach((companion) => {
-      if (this.views.has(companion)) return;
+      if (companion.kind === 'waterFairy' || this.views.has(companion)) return;
       const actor = new RiggedActor(companion.kind === 'skeletonArcher' ? createSkeletonArcherModel() : createStoneGolemModel(0xffd36a));
       actor.setDisplaySize(COMPANION_SIZE[companion.kind]);
       this.root.add(actor.root);
@@ -241,8 +307,29 @@ export class CompanionViews {
     });
   }
 
+  private updateFairies(companions: CompanionState[], alpha: number, deltaSeconds: number): void {
+    companions.forEach((companion) => {
+      if (companion.kind !== 'waterFairy' || this.fairies.has(companion)) return;
+      const view = new FairyView();
+      this.root.add(view.root);
+      this.fairies.set(companion, { view, lastHeal: companion.attackedAt });
+    });
+    this.fairies.forEach((entry, companion) => {
+      if (!companions.includes(companion)) {
+        entry.view.dispose();
+        this.fairies.delete(companion);
+        return;
+      }
+      const healed = companion.attackedAt !== entry.lastHeal;
+      entry.lastHeal = companion.attackedAt;
+      entry.view.update(companion, alpha, deltaSeconds, healed);
+    });
+  }
+
   clear(): void {
     this.views.forEach((view) => view.actor.dispose());
     this.views.clear();
+    this.fairies.forEach((entry) => entry.view.dispose());
+    this.fairies.clear();
   }
 }

@@ -12,6 +12,9 @@ import { environmentUniforms, withEnvironment } from './environmentShader';
  *  glints and the shared cloud shadows. Plus reeds (instanced, swaying) along the waterline. */
 export class Water {
   readonly root = new THREE.Group();
+  private readonly surface: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  /** The level on screen, easing towards the map's (the core refills the lake in one step; the water rises back). */
+  private shownLevel = 1;
 
   constructor(map: ArenaMap) {
     const outline = lakeOutline(96);
@@ -19,6 +22,8 @@ export class Water {
     const shape = new THREE.Shape(outline.map((point) => new THREE.Vector2(point.x * WORLD_SCALE, -point.y * WORLD_SCALE)));
     const geometry = new THREE.ShapeGeometry(shape, 1);
     geometry.rotateX(-Math.PI / 2);
+    // Pivot on the lake's centre so draining can shrink the surface towards it.
+    geometry.translate(-LAKE.center.x * WORLD_SCALE, 0, -LAKE.center.y * WORLD_SCALE);
     const harmonics = LAKE.harmonics.map(([amplitude, frequency, phase]) => new THREE.Vector3(amplitude * WORLD_SCALE, frequency, phase));
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -29,7 +34,8 @@ export class Water {
         uHarmonics: { value: harmonics },
         uShallow: { value: new THREE.Color(0x72bbaa) },
         uDeep: { value: new THREE.Color(0x244f69) },
-        uFoam: { value: new THREE.Color(0xe6f2ec) }
+        uFoam: { value: new THREE.Color(0xe6f2ec) },
+        uLevel: { value: 1 }
       },
       vertexShader: /* glsl */ `
         varying vec2 vWorld;
@@ -48,6 +54,7 @@ export class Water {
         uniform vec3 uShallow;
         uniform vec3 uDeep;
         uniform vec3 uFoam;
+        uniform float uLevel;
         varying vec2 vWorld;
 
         float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -63,6 +70,7 @@ export class Water {
           float angle = atan(offset.y, offset.x);
           float radius = uRadius;
           for (int i = 0; i < 3; i++) radius += uHarmonics[i].x * sin(angle * uHarmonics[i].y + uHarmonics[i].z);
+          radius *= uLevel; // the shoreline shrinks with the water as the lake drains
           float depth = radius - length(offset); // meters from the shoreline, inward
 
           vec3 color = mix(uShallow, uDeep, smoothstep(0.3, 5.0, depth));
@@ -90,10 +98,22 @@ export class Water {
       `
     });
     const surface = new THREE.Mesh(geometry, material);
-    surface.position.y = 0.02;
+    surface.position.set(LAKE.center.x * WORLD_SCALE, 0.02, LAKE.center.y * WORLD_SCALE);
+    this.surface = surface;
     surface.receiveShadow = false;
     this.root.add(surface);
     this.root.add(this.createReeds(map));
+  }
+
+  /** Follows the map's lake level: the surface (and its shoreline) shrinks to the centre as it drains. */
+  update(level: number, deltaSeconds: number): void {
+    const rate = level > this.shownLevel ? 0.9 : 6;
+    this.shownLevel += (level - this.shownLevel) * Math.min(1, deltaSeconds * rate);
+    if (Math.abs(level - this.shownLevel) < 0.002) this.shownLevel = level;
+    const scale = Math.max(0.001, this.shownLevel);
+    this.surface.scale.set(scale, 1, scale);
+    this.surface.material.uniforms.uLevel.value = scale;
+    this.surface.visible = this.shownLevel > 0.02;
   }
 
   /** Reed clumps at the waterline: a few tall blades each, instanced so the wind shader phases them individually. */

@@ -18,7 +18,8 @@ export interface CompanionSpec {
 
 export const COMPANIONS: Record<CompanionKind, CompanionSpec> = {
   skeletonArcher: { name: 'Arqueiro Esqueleto', description: 'Segue você e dispara flechas no inimigo mais próximo.' },
-  stoneGolem: { name: 'Golem de Pedra', description: 'Avança na horda com socos que atingem em área e atrai os inimigos próximos para si.' }
+  stoneGolem: { name: 'Golem de Pedra', description: 'Avança na horda com socos que atingem em área e atrai os inimigos próximos para si.' },
+  waterFairy: { name: 'Fada da Água', description: 'Paira ao seu lado e cura você em pulsos, limpando lentidões. Também cura seus outros companheiros.' }
 };
 
 export const COMPANION_TUNING = {
@@ -46,6 +47,13 @@ export const COMPANION_TUNING = {
   /** Enemies touching the golem chip it every this often. */
   golemHurtTickMs: 700,
   golemRespawnMs: 15000,
+  /** Water fairy: a healing pulse every this long (faster with level), only when someone needs it. */
+  fairyCooldownMs: 6000,
+  fairyHealRatio: 0.05,
+  fairyHealPerLevel: 0.015,
+  /** Heals the other companions (the golem) by this fraction of their max health. */
+  fairyCompanionHeal: 0.2,
+  fairyFollowDistance: 45,
   bodyRadius: 18
 };
 
@@ -85,6 +93,7 @@ export interface CompanionEvents extends Record<string, unknown> {
   'companion-joined': { kind: CompanionKind; level: number };
   'companion-attack': { kind: CompanionKind; x: number; y: number; radius: number };
   'companion-down': { kind: CompanionKind; x: number; y: number };
+  'companion-heal': { x: number; y: number; amount: number };
 }
 
 export interface CompanionHost {
@@ -96,6 +105,8 @@ export interface CompanionHost {
   nearestEnemy(from: Vec2, range: number): EnemyState | null;
   enemiesNear(from: Vec2, radius: number): EnemyState[];
   damageEnemy(enemy: EnemyState, amount: number): void;
+  /** Heals the hero (through the normal path: the Aura Podre still cuts it). */
+  healPlayer(amount: number): void;
 }
 
 export class CompanionSystem {
@@ -146,7 +157,8 @@ export class CompanionSystem {
       companion.prevY = companion.y;
       companion.cooldownMs += delta;
       if (companion.kind === 'skeletonArcher') this.updateArcher(companion, delta);
-      else this.updateGolem(companion, delta);
+      else if (companion.kind === 'stoneGolem') this.updateGolem(companion, delta);
+      else this.updateFairy(companion, delta);
     });
     this.updateArrows(delta);
   }
@@ -226,6 +238,25 @@ export class CompanionSystem {
       if (hit) this.host.damageEnemy(hit, arrow.damage);
       if (hit || arrow.lifeMs <= 0 || this.host.arena.blocksProjectile(arrow.x, arrow.y, 4)) this.arrows.splice(index, 1);
     }
+  }
+
+  /** Hovers at the hero's shoulder; when the hero (or a companion) is hurt, a healing pulse that also washes slows off. */
+  private updateFairy(companion: CompanionState, delta: number): void {
+    const T = COMPANION_TUNING;
+    const { player } = this.host;
+    const angle = Math.atan2(-player.facingY, -player.facingX) + 0.8;
+    this.move(companion, { x: player.x + Math.cos(angle) * T.fairyFollowDistance, y: player.y + Math.sin(angle) * T.fairyFollowDistance }, T.followSpeed * 1.3, delta, 3);
+    const cooldown = T.fairyCooldownMs / (1 + 0.12 * (companion.level - 1));
+    if (companion.cooldownMs < cooldown) return;
+    const hurtCompanions = this.companions.filter((other) => other !== companion && other.downUntil === 0 && other.health < other.maxHealth);
+    if (player.health >= player.maxHealth && hurtCompanions.length === 0) return;
+    companion.cooldownMs = 0;
+    companion.attackedAt = this.host.now();
+    const amount = player.maxHealth * (T.fairyHealRatio + T.fairyHealPerLevel * (companion.level - 1));
+    if (player.health < player.maxHealth) this.host.healPlayer(amount);
+    player.clearSlows();
+    hurtCompanions.forEach((other) => { other.health = Math.min(other.maxHealth, other.health + other.maxHealth * T.fairyCompanionHeal); });
+    this.host.events.emit('companion-heal', { x: player.x, y: player.y, amount: Math.round(amount) });
   }
 
   private updateGolem(companion: CompanionState, delta: number): void {

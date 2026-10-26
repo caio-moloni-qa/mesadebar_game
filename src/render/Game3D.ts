@@ -331,6 +331,19 @@ export class Game3D {
     });
     events.on('miniboss-impact', ({ attack, x, y, radius }) => {
       const point = at(x, y);
+      if (attack === 'geyser') {
+        // A column of water bursting up.
+        this.effects.pulse(x, y, radius, 0xe6f6ff, 0.35, 0.9);
+        this.particles.emit(point.x, 0.2, point.z, 0x6fd3ff, 26, { spread: 1.6, rise: 10, gravity: 18, life: 0.9, size: 1.3, jitter: 0.6 });
+        this.particles.emit(point.x, 0.2, point.z, 0xe6f6ff, 14, { spread: 3.5, rise: 5, gravity: 16, life: 0.6, size: 1 });
+        this.cameraRig.shake(0.15, 0.2);
+        return;
+      }
+      if (attack === 'wave') {
+        this.particles.emit(point.x, 1, point.z, 0xe6f6ff, 30, { spread: 5, rise: 5, gravity: 12, life: 0.6, size: 1.2, jitter: 1.5 });
+        this.cameraRig.shake(0.25, 0.35);
+        return;
+      }
       this.effects.burst(x, y, radius, 0xff7a3a, 0.35, 0.35);
       this.effects.pulse(x, y, radius, 0xffc890, 0.35, 0.9);
       this.particles.emit(point.x, 0.3, point.z, 0x6b5a46, attack === 'shockwave' ? 30 : 16, { spread: attack === 'shockwave' ? 8 : 5, rise: 4, gravity: 14, life: 0.6, size: 1.3, jitter: 0.5 });
@@ -341,7 +354,7 @@ export class Game3D {
     });
     events.on('miniboss-defeated', ({ kind, x, y }) => {
       const point = at(x, y);
-      this.particles.emit(point.x, 2, point.z, kind === 'gravedigger' ? 0x6dff9a : 0x9a8f7c, 50, { spread: 6, rise: 5, gravity: 12, life: 0.9, size: 1.4, jitter: 2 });
+      this.particles.emit(point.x, 2, point.z, kind === 'gravedigger' ? 0x6dff9a : kind === 'lakeSpirit' ? 0x6fd3ff : 0x9a8f7c, 50, { spread: 6, rise: 5, gravity: 12, life: 0.9, size: 1.4, jitter: 2 });
       this.floating.spawn(simToWorld(x, y, 7, this.scratch), `${MINI_BOSSES[kind].name} caiu!`, { color: '#ffe29a', size: 28, rise: 40, durationMs: 1600 }, performance.now());
       this.cameraRig.shake(0.25, 0.5);
     });
@@ -354,6 +367,11 @@ export class Game3D {
         const point = at(x, y);
         this.particles.emit(point.x, 0.2, point.z, 0x8f8574, 8, { spread: 3, rise: 3, gravity: 12, life: 0.45, size: 1.1 });
       }
+    });
+    events.on('companion-heal', ({ x, y, amount }) => {
+      this.effects.pulse(x, y, 60, 0x9fe8ff, 0.5, 0.8);
+      this.effects.burst(x, y, 50, 0x6fd3ff, 0.45, 0.25);
+      this.floatAboveHero(`+${amount}`, '#8effc8');
     });
     events.on('companion-down', ({ x, y }) => {
       const point = at(x, y);

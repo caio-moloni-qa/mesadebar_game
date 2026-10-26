@@ -161,3 +161,43 @@ export function createSkeletonArcherModel(): ActorModel {
   ];
   return finish(bones, parts, hip, 1.9);
 }
+
+// ── O Espírito do Lago ───────────────────────────────────────────────────────────────────────────────────────
+
+/** A water creature: a body of light-blue water rising from a swirling column with a foam hem, a ridge of water
+ *  spikes down its back, glowing white eyes. No legs — it rises out of the water and glides. */
+export function createLakeSpiritModel(): ActorModel {
+  const hip = 0.95;
+  const arm = 0.4;
+  const light = 0x8fdcff;
+  const mid = 0x4fb3e0;
+  const deep = 0x2a7fb0;
+  const foam = 0xe6f6ff;
+  const bones = humanoidBones({ hipHeight: hip, shoulderWidth: 0.46, armLength: arm, legLength: 0.45 });
+  const limb = (s: 'L' | 'R'): RigPart[] => [
+    { bone: `upperArm${s}`, geometry: part(cylinder(0.12, 0.16, arm + 0.06, 7), mid, [0, -arm / 2, 0]) },
+    { bone: `foreArm${s}`, geometry: part(cylinder(0.09, 0.12, arm, 7), light, [0, -arm / 2, 0]) },
+    { bone: `hand${s}`, geometry: part(ball(0.14, 1), foam, [0, -0.08, 0]) }
+  ];
+  const parts: RigPart[] = [
+    ...limb('L'),
+    ...limb('R'),
+    // The water column it rises from, and the foam where it meets the ground.
+    { bone: 'hips', geometry: part(cylinder(0.34, 0.78, 0.98, 9), deep, [0, -0.47, 0]) },
+    { bone: 'hips', geometry: part(cylinder(0.3, 0.5, 0.5, 9), mid, [0, -0.1, 0.04]) },
+    { bone: 'hips', geometry: part(cylinder(0.82, 0.88, 0.08, 12), foam, [0, -0.93, 0]) },
+    { bone: 'spine', geometry: part(cylinder(0.34, 0.36, 0.34, 9), mid, [0, 0.14, 0]) },
+    { bone: 'chest', geometry: part(ball(0.44, 1), light, [0, 0.12, 0], [0, 0, 0], [1.2, 0.9, 0.9]) },
+    { bone: 'chest', geometry: part(ball(0.2, 1), foam, [0, 0.16, 0.3], [0, 0, 0], [1.4, 0.7, 0.6]) },
+    ...[0, 1, 2, 3].map((index) => ({ bone: 'chest', geometry: part(cone(0.09, 0.38 - index * 0.05, 5), mid, [0, 0.42 - index * 0.16, -0.32], [-0.9, 0, 0]) })),
+    { bone: 'head', geometry: part(ball(0.27, 1), light, [0, 0.24, 0.04]) },
+    { bone: 'head', geometry: part(box(0.09, 0.05, 0.03), 0xffffff, [0.08, 0.27, 0.29]) },
+    { bone: 'head', geometry: part(box(0.09, 0.05, 0.03), 0xffffff, [-0.08, 0.27, 0.29]) },
+    // A crown of curling water spikes.
+    ...[0, 1, 2, 3, 4].map((index) => {
+      const angle = (index / 5) * Math.PI - Math.PI / 2;
+      return { bone: 'head', geometry: part(cone(0.06, 0.32, 5), foam, [Math.sin(angle) * 0.18, 0.5, -0.04 + Math.cos(angle) * 0.06], [-0.35, 0, -Math.sin(angle) * 0.4]) };
+    })
+  ];
+  return finish(bones, parts, hip, 2.4);
+}

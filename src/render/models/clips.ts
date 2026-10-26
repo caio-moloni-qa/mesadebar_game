@@ -313,7 +313,7 @@ export function bossClips(hipHeight: number): Record<BossClipName, THREE.Animati
   };
 }
 
-export type ActorClipName = 'idle' | 'walk' | 'death' | 'raise' | 'slamWindup' | 'slamHit' | 'dig' | 'emerge' | 'chargeWindup' | 'charge' | 'stagger' | 'shockWindup' | 'shockSlam' | 'shoot';
+export type ActorClipName = 'idle' | 'walk' | 'death' | 'channel' | 'raise' | 'slamWindup' | 'slamHit' | 'dig' | 'emerge' | 'chargeWindup' | 'charge' | 'stagger' | 'shockWindup' | 'shockSlam' | 'shoot';
 
 /** Clips for the zone mini-bosses and companions. The heavy walk, idle, collapse, raised-arms summon, crouch, leap and
  *  kneel come from the boss set (tracks for bones a rig lacks are filtered by clipForBones); the rest are new: a
@@ -334,6 +334,7 @@ export function actorClips(hipHeight: number): Record<ActorClipName, THREE.Anima
     idle: boss.idle,
     walk: boss.walk,
     death: boss.death,
+    channel: boss.channel,
     raise: boss.summon,
     chargeWindup: boss.crouch,
     charge: boss.leap,

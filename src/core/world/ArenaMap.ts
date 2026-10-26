@@ -42,8 +42,17 @@ export class ArenaMap {
   private readonly hash = new SpatialHash<Obstacle>(128);
   private readonly scratch: Obstacle[] = [];
 
+  /** How full the lake is, 0..1 (O Espírito do Lago drains it for its fight). Deep water only blocks while the lake
+   *  is mostly full; the renderer lowers the water to match. The map is shared across runs, so each run resets it. */
+  lakeLevel = 1;
+
   /** `authored` = built from the layout (zones, lake, trails); an open test field has none of them. */
   private constructor(readonly size: number, readonly authored: boolean) {}
+
+  /** Whether the lake's deep water currently blocks movement. */
+  get lakeBlocks(): boolean {
+    return this.authored && this.lakeLevel > 0.5;
+  }
 
   /** The authored arena, with seeded detail. */
   static generate(seed: number): ArenaMap {
@@ -102,7 +111,7 @@ export class ArenaMap {
         body.y += push.y;
         moved = true;
       }
-      if (this.authored) {
+      if (this.lakeBlocks) {
         const shore = lakeShoreDistance(body.x, body.y);
         if (shore < body.radius) {
           const dx = body.x - LAKE.center.x;
@@ -143,7 +152,7 @@ export class ArenaMap {
 
   isWalkable(x: number, y: number, radius: number): boolean {
     if (x < radius || y < radius || x > this.size - radius || y > this.size - radius) return false;
-    if (this.authored && lakeShoreDistance(x, y) < radius) return false;
+    if (this.lakeBlocks && lakeShoreDistance(x, y) < radius) return false;
     this.scratch.length = 0;
     const probe = { x, y, radius };
     return !this.hash.queryRadius(probe, radius, this.scratch).some((obstacle) => pushOut(probe, obstacle) !== null);

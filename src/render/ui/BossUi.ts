@@ -2,14 +2,16 @@ import * as THREE from 'three';
 import { BOSS_TUNING } from '../../core/systems/BossSystem';
 import { MINI_BOSSES } from '../../core/systems/MiniBossSystem';
 import { GameSession, PortalKind } from '../../core/session/GameSession';
-import { simToWorld } from '../space';
+import { WORLD_SCALE, simToWorld } from '../space';
+import { MarkerKind, markerFace } from './icons';
 import { Projector } from './FloatingTexts';
 
 const MAX_BARS = 3;
 const MAX_ARROWS = 6;
 const FINAL_WARNING = 'O sobrevivente sente uma presença maligna no ar!';
-/** Arrows sit this far in from the screen edge (CSS px at 720 px tall, like the Phaser 48). */
-const ARROW_MARGIN = 48;
+/** Markers stay this far in from the screen edges (CSS px at 720 px tall), clear of the HUD: the vitals and timer
+ *  along the top, the build tray and XP rail along the bottom. */
+const MARKER_MARGIN = { side: 70, top: 140, bottom: 120 };
 
 /** The boss fight's DOM layer (Phaser: BossSystem.warn / countdownText / updateArrows, GameScene portal prompts):
  *  the warning banner, a health + shield bar per boss with the main boss's arena countdown, arrows pointing at
@@ -36,11 +38,13 @@ export class BossUi {
     this.prompt = this.root.querySelector('.portal-prompt')!;
     this.prompt.addEventListener('click', onInteract);
     for (let index = 0; index < MAX_ARROWS; index += 1) {
-      const arrow = document.createElement('div');
-      arrow.className = 'offscreen-arrow';
-      arrow.hidden = true;
-      this.root.appendChild(arrow);
-      this.arrows.push(arrow);
+      // A portrait of whoever it points to, in a ring, with the arrow riding the ring's rim, and the distance.
+      const marker = document.createElement('div');
+      marker.className = 'offscreen-marker';
+      marker.hidden = true;
+      marker.innerHTML = '<div class="marker-pointer"><span></span></div><div class="marker-ring"><img alt=""></div><b class="marker-distance"></b>';
+      this.root.appendChild(marker);
+      this.arrows.push(marker);
     }
     container.appendChild(this.root);
   }
@@ -118,17 +122,19 @@ export class BossUi {
     return `Pressione E para continuar — Ciclo ${next} (${Math.round(session.phaseDurationMs(next) / 60000)}min, dificuldade ${next}x, ${next} bosses)`;
   }
 
-  /** Arrow at the screen edge towards every boss (white) and portal (its colour) that's off screen. */
+  /** A marker at the screen edge for every boss, guardian (or the zone of one being announced) and portal that's
+   *  off screen: their face in a ring, an arrow on the rim pointing the way, and how far it is. */
   private updateArrows(session: GameSession, project: Projector): void {
-    const targets: Array<{ x: number; y: number; kind: string }> = session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' }));
-    session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: 'miniboss' }));
+    const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' as const, tier: 'boss' }));
+    session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.kind, tier: 'miniboss' }));
     // While a guardian is announced, point at its zone.
-    if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor, kind: 'miniboss' });
-    if (session.portals) targets.push({ ...session.portals.end, kind: 'end' }, { ...session.portals.continue, kind: 'continue' });
+    if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor, kind: session.miniBosses.pending.kind, tier: 'miniboss' });
+    if (session.portals) targets.push({ ...session.portals.end, kind: 'end', tier: 'end' }, { ...session.portals.continue, kind: 'continue', tier: 'continue' });
+    const { player } = session;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
     const unit = Math.min(width / 1280, height / 720);
-    const margin = ARROW_MARGIN * unit;
+    const margin = { side: MARKER_MARGIN.side * unit, top: MARKER_MARGIN.top * unit, bottom: MARKER_MARGIN.bottom * unit };
     this.arrows.forEach((arrow, index) => {
       const target = targets[index];
       if (!target) { arrow.hidden = true; return; }
@@ -136,11 +142,19 @@ export class BossUi {
       const onScreen = this.screen.x >= 0 && this.screen.x <= width && this.screen.y >= 0 && this.screen.y <= height;
       arrow.hidden = onScreen;
       if (onScreen) return;
-      const x = Math.min(width - margin, Math.max(margin, this.screen.x));
-      const y = Math.min(height - margin, Math.max(margin, this.screen.y));
+      const x = Math.min(width - margin.side, Math.max(margin.side, this.screen.x));
+      const y = Math.min(height - margin.bottom, Math.max(margin.top, this.screen.y));
       const angle = Math.atan2(this.screen.y - height / 2, this.screen.x - width / 2);
-      arrow.dataset.kind = target.kind;
-      arrow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${angle}rad)`;
+      if (arrow.dataset.kind !== target.kind) {
+        arrow.dataset.kind = target.kind;
+        arrow.dataset.tier = target.tier;
+        arrow.querySelector('img')!.src = markerFace(target.kind);
+      }
+      const meters = `${Math.round(Math.hypot(target.x - player.x, target.y - player.y) * WORLD_SCALE)} m`;
+      const distance = arrow.querySelector<HTMLElement>('.marker-distance')!;
+      if (distance.textContent !== meters) distance.textContent = meters;
+      arrow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+      arrow.querySelector<HTMLElement>('.marker-pointer')!.style.transform = `rotate(${angle}rad)`;
     });
   }
 

@@ -180,8 +180,10 @@ export class SandboxPanel {
       { label: () => 'Boss da onda agora', run: () => run().triggerBossWave() },
       { label: () => 'Mini-boss: O Coveiro', run: () => { run().spawnMiniBoss('gravedigger'); } },
       { label: () => 'Mini-boss: Guardião do Templo', run: () => { run().spawnMiniBoss('templeGuardian'); } },
+      { label: () => 'Mini-boss: Espírito do Lago', run: () => { run().spawnMiniBoss('lakeSpirit'); } },
       { label: () => '+ Arqueiro Esqueleto', run: () => { run().addCompanion('skeletonArcher'); } },
       { label: () => '+ Golem de Pedra', run: () => { run().addCompanion('stoneGolem'); } },
+      { label: () => '+ Fada da Água', run: () => { run().addCompanion('waterFairy'); } },
       {
         label: () => `Limite spawn: ${SANDBOX_SPAWN_CAPS[s.capIndex]}`,
         run: () => {

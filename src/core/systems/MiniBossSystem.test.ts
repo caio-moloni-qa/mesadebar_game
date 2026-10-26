@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GRAVEYARD, TEMPLE } from '../../config/arenaLayout';
+import { GRAVEYARD, LAKE, TEMPLE } from '../../config/arenaLayout';
 import { ENEMY_VARIANTS } from '../../config/balance';
 import { GameSession, GUARDIAN_WEAKENING, STEP_MS } from '../session/GameSession';
 import { ArenaMap } from '../world/ArenaMap';
@@ -80,14 +80,14 @@ describe('zone mini-bosses', () => {
     const stuns: string[] = [];
     run.events.on('miniboss-stunned', ({ kind }) => stuns.push(kind));
     // Park it facing straight into the temple's west wall, right in front of it, mid-charge.
-    boss.attack = { type: 'charge', phase: 'active', elapsedMs: 0, x: 0, y: 0, dirX: -1, dirY: 0, hit: false };
+    boss.attack = { type: 'charge', phase: 'active', elapsedMs: 0, x: 0, y: 0, dirX: -1, dirY: 0, hit: false, count: 0 };
     boss.facing = Math.PI;
     let stunned = false;
     for (let step = 0; step < 60 && !stunned; step += 1) {
       advance(run, STEP_MS);
       stunned = boss.stunnedMs > 0;
       if (!boss.attack && !stunned) {
-        boss.attack = { type: 'charge', phase: 'active', elapsedMs: 0, x: 0, y: 0, dirX: -1, dirY: 0, hit: false };
+        boss.attack = { type: 'charge', phase: 'active', elapsedMs: 0, x: 0, y: 0, dirX: -1, dirY: 0, hit: false, count: 0 };
         boss.facing = Math.PI;
       }
     }
@@ -135,7 +135,99 @@ describe('zone mini-bosses', () => {
   });
 });
 
+describe('O Espírito do Lago', () => {
+  /** Called with the hero on the shore; `drained` waits out the drink. */
+  function withSpirit(drained = true) {
+    const run = session();
+    const shore = ARENA.nearestWalkable(LAKE.center.x, LAKE.center.y + LAKE.radius + 120, 20);
+    run.player.x = run.player.prevX = shore.x;
+    run.player.y = run.player.prevY = shore.y;
+    run.spawnMiniBoss('lakeSpirit');
+    advance(run, MINI_BOSS_TUNING.warningMs + 50);
+    const boss = run.miniBosses.bosses[0];
+    // Nothing fires on its own: each test arms the attack it's about.
+    (['wave', 'geyser', 'whirlpool'] as const).forEach((key) => { boss.cooldowns[key] = -1e9; });
+    if (drained) advance(run, MINI_BOSS_TUNING.drainMs + 50);
+    return { run, boss };
+  }
+
+  it('rises in the middle of the lake and drinks it dry, growing and untouchable meanwhile', () => {
+    const { run, boss } = withSpirit(false);
+    expect(Math.hypot(boss.enemy.x - LAKE.center.x, boss.enemy.y - LAKE.center.y)).toBeLessThan(1);
+    expect(boss.attack?.type).toBe('drain');
+    expect(run.miniBosses.damageTakenMultiplier(boss.enemy)).toBe(0);
+    expect(ARENA.isWalkable(LAKE.center.x, LAKE.center.y, 20)).toBe(false);
+    advance(run, MINI_BOSS_TUNING.drainMs + 50);
+    expect(ARENA.lakeLevel).toBe(0);
+    expect(ARENA.isWalkable(LAKE.center.x + 100, LAKE.center.y, 20)).toBe(true);
+    expect(boss.enemy.displaySize).toBeCloseTo(MINI_BOSS_TUNING.spiritBigSize);
+    expect(run.miniBosses.damageTakenMultiplier(boss.enemy)).toBe(1);
+  });
+
+  it('geysers erupt one after another where the player stands', () => {
+    const { run, boss } = withSpirit();
+    const impacts: string[] = [];
+    run.events.on('miniboss-impact', ({ attack }) => impacts.push(attack));
+    boss.cooldowns.wave = -1e9;
+    boss.cooldowns.whirlpool = -1e9;
+    boss.cooldowns.geyser = MINI_BOSS_TUNING.geyserCooldownMs;
+    advance(run, MINI_BOSS_TUNING.geyserGapMs * MINI_BOSS_TUNING.geyserCount + MINI_BOSS_TUNING.geyserTelegraphMs + 100);
+    expect(impacts.filter((attack) => attack === 'geyser')).toHaveLength(MINI_BOSS_TUNING.geyserCount);
+  });
+
+  it('the tidal wave hits once as it passes and shoves the player along it', () => {
+    const { run, boss } = withSpirit();
+    run.player.invincible = false;
+    boss.cooldowns.geyser = -1e9;
+    boss.cooldowns.whirlpool = -1e9;
+    boss.enemy.x = boss.enemy.prevX = run.player.x;
+    boss.enemy.y = boss.enemy.prevY = run.player.y - 400;
+    boss.cooldowns.wave = MINI_BOSS_TUNING.waveCooldownMs;
+    const health = run.player.health;
+    const before = run.player.y;
+    advance(run, MINI_BOSS_TUNING.waveTelegraphMs + 1000);
+    expect(run.player.health).toBeLessThan(health);
+    expect(run.player.y).toBeGreaterThan(before + 50);
+  });
+
+  it('the whirlpool drags the player in', () => {
+    const { run, boss } = withSpirit();
+    boss.cooldowns.wave = -1e9;
+    boss.cooldowns.geyser = -1e9;
+    boss.enemy.x = boss.enemy.prevX = run.player.x + 400;
+    boss.enemy.y = boss.enemy.prevY = run.player.y;
+    boss.cooldowns.whirlpool = MINI_BOSS_TUNING.whirlCooldownMs;
+    const start = Math.hypot(boss.enemy.x - run.player.x, boss.enemy.y - run.player.y);
+    advance(run, 1500);
+    expect(boss.attack?.type).toBe('whirlpool');
+    expect(Math.hypot(boss.enemy.x - run.player.x, boss.enemy.y - run.player.y)).toBeLessThan(start - 100);
+  });
+
+  it('when it falls the lake refills and washes the player back to shore; the fairy joins', () => {
+    const { run, boss } = withSpirit();
+    run.player.x = run.player.prevX = LAKE.center.x + 150;
+    run.player.y = run.player.prevY = LAKE.center.y;
+    run.damageEnemy(boss.enemy, boss.enemy.health + 1, 'sword');
+    expect(ARENA.lakeLevel).toBe(1);
+    // Washed up exactly onto the shoreline.
+    expect(ARENA.shoreDistance(run.player.x, run.player.y)).toBeGreaterThanOrEqual(run.player.radius - 0.5);
+    const choice = run.pendingChoice as Extract<typeof run.pendingChoice, { kind: 'companion' }>;
+    expect(choice.offers[0]).toEqual({ companion: 'waterFairy', level: 1 });
+  });
+});
+
 describe('companions', () => {
+  it('the water fairy heals the hero in pulses and washes slows off', () => {
+    const run = session();
+    run.player.invincible = false;
+    run.addCompanion('waterFairy');
+    run.player.health = run.player.maxHealth * 0.5;
+    run.player.applySlow(0.4, 10_000, run.clock.now);
+    advance(run, 6500);
+    expect(run.player.health).toBeGreaterThan(run.player.maxHealth * 0.5);
+    expect(run.player.isSlowed(run.clock.now)).toBe(false);
+  });
+
   it('the archer shoots the nearest enemy until it dies', () => {
     const run = session();
     run.addCompanion('skeletonArcher');

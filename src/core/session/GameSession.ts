@@ -157,6 +157,7 @@ export class GameSession implements WeaponHost {
     const character = CHARACTERS[options.characterId];
     this.player = new PlayerState(character);
     this.arena = options.arena ?? ArenaMap.generate(options.seed);
+    this.arena.lakeLevel = 1;
     this.player.x = this.arena.center.x;
     this.player.y = this.arena.center.y;
     snapPrevious(this.player);
@@ -188,7 +189,9 @@ export class GameSession implements WeaponHost {
       spawnEnemy: (variantId, x, y, maxHealth) => this.spawnEnemy(variantId, x, y, maxHealth),
       hurtPlayer: (amount) => this.hurtPlayer(amount, this.clock.now),
       queueRising: (x, y) => { this.bosses.risings.push({ x, y, elapsedMs: 0 }); },
-      healthMultiplier: () => this.difficulty.stageFor(this.elapsedMs).healthMultiplier
+      healthMultiplier: () => this.difficulty.stageFor(this.elapsedMs).healthMultiplier,
+      setLakeLevel: (level) => this.setLakeLevel(level),
+      pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
     });
     this.companions = new CompanionSystem({
       player: this.player,
@@ -198,7 +201,8 @@ export class GameSession implements WeaponHost {
       heroLevel: () => this.level,
       nearestEnemy: (from, range) => this.nearestEnemy(from, range),
       enemiesNear: (from, radius) => this.enemiesWithin(from, radius + BODY_RADIUS.enemy),
-      damageEnemy: (enemy, amount) => this.damageEnemy(enemy, amount, null)
+      damageEnemy: (enemy, amount) => this.damageEnemy(enemy, amount, null),
+      healPlayer: (amount) => this.healPlayer(amount)
     });
     this.scheduler = new EnemySpawnScheduler({
       getPlayerPosition: () => this.player,
@@ -413,7 +417,8 @@ export class GameSession implements WeaponHost {
       }
       if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss' && !this.miniBosses.controls(enemy)) this.separate(enemy);
       // Every walker - floating wraiths included - slides along walls and stays out of the lake.
-      if (!enemy.isStatic) this.arena.resolve(enemy);
+      // Mini-bosses resolve their own collisions (a lake spirit in the water, a Coveiro tunnelling under walls).
+      if (!enemy.isStatic && !this.miniBosses.controls(enemy)) this.arena.resolve(enemy);
       if (enemy.contactDamage > 0 && circlesOverlap(enemy, this.player)) this.hurtPlayer(enemy.contactDamage, now);
       if (enemy.variantId === 'necromancerWraith' && now >= enemy.nextSoulAt) {
         enemy.nextSoulAt = now + ENEMY_VARIANTS.necromancerWraith.soulCooldownMs;
@@ -531,6 +536,16 @@ export class GameSession implements WeaponHost {
     const upgrade = pickOne(this.rng, pool);
     this.applyUpgrade(upgrade);
     return upgrade;
+  }
+
+  /** The lake drains (O Espírito do Lago) and refills; the horde's routes follow when it crosses half full. Refilling
+   *  washes anyone on the lake bed up to the shore on their next move (the water blocks again). */
+  private setLakeLevel(level: number): void {
+    const blocked = this.arena.lakeBlocks;
+    this.arena.lakeLevel = Math.max(0, Math.min(1, level));
+    if (this.arena.lakeBlocks === blocked) return;
+    this.flowField?.refreshPassable();
+    this.arena.resolve(this.player);
   }
 
   /** Shoves the hero (boss shockwave), sliding along walls and staying in the arena. */

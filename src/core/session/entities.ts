@@ -111,6 +111,11 @@ export class PlayerState implements Body, UpgradeTarget {
     return amount - effective;
   }
 
+  /** The water fairy's cleanse. */
+  clearSlows(): void {
+    this.slows.length = 0;
+  }
+
   applySlow(percent: number, durationMs: number, now: number): void {
     this.slows.push({ expiresAt: now + durationMs, percent });
   }
@@ -304,7 +309,9 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   superSkeleton: 92,
   finalBoss: 390,
   gravedigger: 160,
-  templeGuardian: 190
+  templeGuardian: 190,
+  /** Grows to 230 as it drinks the lake (MiniBossSystem). */
+  lakeSpirit: 80
 };
 
 export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword';

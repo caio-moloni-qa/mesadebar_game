@@ -1,3 +1,4 @@
+import { MINI_BOSS_VARIANTS } from '../../config/balance';
 import * as THREE from 'three';
 import { ENEMY_DYING_MS, EnemyState } from '../../core/session/entities';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
@@ -14,7 +15,7 @@ const HIT_FLASH_MS = 110;
 const WALK_REFERENCE_SPEED = 120;
 const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith'];
 /** finalBoss is drawn by BossView (its mesh entry here is never used). */
-const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton' };
+const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton', lakeSpirit: 'superSkeleton' };
 
 interface VariantBatch {
   model: BakedEnemyModel;
@@ -79,7 +80,7 @@ export class EnemyHordeView {
     let blobIndex = 0;
     let auraIndex = 0;
     enemies.forEachActive((enemy) => {
-      if (enemy.variantId === 'finalBoss' || enemy.variantId === 'gravedigger' || enemy.variantId === 'templeGuardian') {
+      if (enemy.variantId === 'finalBoss' || enemy.variantId in MINI_BOSS_VARIANTS) {
         // Drawn by their own rigged views (BossView, MiniBossView); only the boss's Rotten Aura ring lives here.
         if (enemy.hasRottenAura && !enemy.rottenAuraSuppressed && enemy.alive) {
           this.position.set((enemy.prevX + (enemy.x - enemy.prevX) * alpha) * WORLD_SCALE, 0.04, (enemy.prevY + (enemy.y - enemy.prevY) * alpha) * WORLD_SCALE);
