@@ -3,6 +3,7 @@ import { WEAPONS, WeaponConfig } from './config/weapons';
 import { ZoneKind } from './config/arenaLayout';
 import { Game3D } from './render/Game3D';
 import { loadHeroMeshes } from './render/models/heroMeshes';
+import { loadBossMeshes } from './render/models/importedBosses';
 import './play3d.css';
 
 // Three.js page (play3d.html). Opens on the character/weapon menu. Query params, all optional:
@@ -19,7 +20,7 @@ const weaponId = weapon && weapon in WEAPONS ? (weapon as WeaponConfig['id']) : 
 const initialRun = characterId ? { characterId, weaponId: weaponId ?? CHARACTERS[characterId].preferredWeaponId ?? 'staff' } : undefined;
 
 // Imported hero meshes load first (a failed one falls back to the procedural model), then the game starts.
-void loadHeroMeshes().then(() => {
+void Promise.all([loadHeroMeshes(), loadBossMeshes()]).then(() => {
   const game = new Game3D(document.getElementById('app')!, { initialRun, seed, stressEnemyCount: stress, invincible: params.get('god') === '1', debug: params.get('debug') === '1', showCollision: params.get('debug') === 'collision', zoom: Number(params.get('zoom')) || undefined, startZone: (params.get('at') as ZoneKind | null) ?? undefined, touch: params.get('touch') === '1' });
   // ?debug=1: the running game on window for poking at it from the console / test drivers.
   if (params.get('debug') === '1') Object.assign(window, { __game: game });
