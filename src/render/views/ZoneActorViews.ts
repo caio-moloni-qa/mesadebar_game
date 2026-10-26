@@ -1,17 +1,19 @@
 import * as THREE from 'three';
-import { CompanionState } from '../../core/systems/CompanionSystem';
+import { AllySkeletonState, CompanionState } from '../../core/systems/CompanionSystem';
 import { MINI_BOSS_TUNING, MiniBossState } from '../../core/systems/MiniBossSystem';
 import { EnemyState } from '../../core/session/entities';
 import { ActorClipName } from '../models/clips';
-import { ActorModel, createGravediggerModel, createLakeSpiritModel, createSkeletonArcherModel, createStoneGolemModel } from '../models/zoneActors';
+import { ActorModel, createAllySkeletonModel, createGravediggerModel, createLakeSpiritModel, createStoneGolemModel } from '../models/zoneActors';
 import { simToWorld, yawFromSimDirection } from '../space';
 
 const FADE = 0.18;
 const HIT_FLASH_MS = 70;
 const DEATH_SECONDS = 2.6;
 const ONE_SHOTS: ActorClipName[] = ['raise', 'slamHit', 'emerge', 'shockSlam', 'shoot', 'death'];
-/** Companion display sizes (game units, like an enemy's displaySize): archer hero-sized, golem a head taller. */
-const COMPANION_SIZE = { skeletonArcher: 62, stoneGolem: 105, waterFairy: 30 };
+/** Companion display sizes (game units, like an enemy's displaySize): the Coveiro hero-sized, golem a head taller;
+ *  the skeletons he raises a little smaller than the horde's. */
+export const COMPANION_SIZE = { gravedigger: 66, stoneGolem: 105, waterFairy: 30 };
+export const ALLY_SKELETON_SIZE = 52;
 
 /** One rigged actor: model + mixer, crossfading between named clips; one-shots play once and hold. */
 class RiggedActor {
@@ -266,18 +268,20 @@ class FairyView {
   }
 }
 
-/** One view per companion: the archer draws and looses on every shot, the golem pounds on every slam and is gone
- *  (rubble) while it reforms. */
+/** One view per companion: the Coveiro swings his shovel or raises the dead, the golem pounds on every slam; a
+ *  fallen companion is gone until it reforms. Plus one per skeleton the Coveiro raised. */
 export class CompanionViews {
   readonly root = new THREE.Group();
   private readonly views = new Map<CompanionState, { actor: RiggedActor; lastAttack: number; yaw: number; last: THREE.Vector3 }>();
   private readonly fairies = new Map<CompanionState, { view: FairyView; lastHeal: number }>();
+  private readonly skeletons = new Map<AllySkeletonState, { actor: RiggedActor; lastAttack: number; yaw: number }>();
 
-  update(companions: CompanionState[], alpha: number, deltaSeconds: number): void {
+  update(companions: CompanionState[], skeletons: AllySkeletonState[], alpha: number, deltaSeconds: number): void {
     this.updateFairies(companions, alpha, deltaSeconds);
+    this.updateSkeletons(skeletons, alpha, deltaSeconds);
     companions.forEach((companion) => {
       if (companion.kind === 'waterFairy' || this.views.has(companion)) return;
-      const actor = new RiggedActor(companion.kind === 'skeletonArcher' ? createSkeletonArcherModel() : createStoneGolemModel(0xffd36a));
+      const actor = new RiggedActor(companion.kind === 'gravedigger' ? createGravediggerModel() : createStoneGolemModel(0xffd36a));
       actor.setDisplaySize(COMPANION_SIZE[companion.kind]);
       this.root.add(actor.root);
       this.views.set(companion, { actor, lastAttack: companion.attackedAt, yaw: 0, last: new THREE.Vector3() });
@@ -299,7 +303,40 @@ export class CompanionViews {
       actor.root.rotation.y = view.yaw;
       if (companion.attackedAt !== view.lastAttack) {
         view.lastAttack = companion.attackedAt;
-        actor.restart(companion.kind === 'skeletonArcher' ? 'shoot' : 'shockSlam');
+        // The Coveiro's raise resets its raise timer; anything else from him is a shovel swipe.
+        actor.restart(companion.kind === 'gravedigger' ? (companion.raiseMs === 0 ? 'raise' : 'slamHit') : 'shockSlam');
+      } else if (!actor.busy) {
+        actor.set(moved ? 'walk' : 'idle');
+      }
+      actor.update(deltaSeconds);
+    });
+  }
+
+  /** Raised skeletons climb out of the ground, chase and hack at the horde; gone when they crumble. */
+  private updateSkeletons(skeletons: AllySkeletonState[], alpha: number, deltaSeconds: number): void {
+    skeletons.forEach((skeleton) => {
+      if (this.skeletons.has(skeleton)) return;
+      const actor = new RiggedActor(createAllySkeletonModel());
+      actor.setDisplaySize(ALLY_SKELETON_SIZE);
+      actor.restart('emerge', 0);
+      this.root.add(actor.root);
+      this.skeletons.set(skeleton, { actor, lastAttack: skeleton.attackedAt, yaw: yawFromSimDirection(skeleton.facingX, skeleton.facingY) });
+    });
+    this.skeletons.forEach((view, skeleton) => {
+      if (!skeletons.includes(skeleton)) {
+        view.actor.dispose();
+        this.skeletons.delete(skeleton);
+        return;
+      }
+      const { actor } = view;
+      simToWorld(skeleton.prevX + (skeleton.x - skeleton.prevX) * alpha, skeleton.prevY + (skeleton.y - skeleton.prevY) * alpha, 0, actor.root.position);
+      const target = yawFromSimDirection(skeleton.facingX, skeleton.facingY);
+      view.yaw += Math.atan2(Math.sin(target - view.yaw), Math.cos(target - view.yaw)) * (1 - Math.exp(-14 * deltaSeconds));
+      actor.root.rotation.y = view.yaw;
+      const moved = Math.hypot(skeleton.x - skeleton.prevX, skeleton.y - skeleton.prevY) > 0.01;
+      if (skeleton.attackedAt !== view.lastAttack) {
+        view.lastAttack = skeleton.attackedAt;
+        actor.restart('slamHit');
       } else if (!actor.busy) {
         actor.set(moved ? 'walk' : 'idle');
       }
@@ -322,6 +359,7 @@ export class CompanionViews {
       }
       const healed = companion.attackedAt !== entry.lastHeal;
       entry.lastHeal = companion.attackedAt;
+      entry.view.root.visible = companion.downUntil === 0;
       entry.view.update(companion, alpha, deltaSeconds, healed);
     });
   }
@@ -331,5 +369,7 @@ export class CompanionViews {
     this.views.clear();
     this.fairies.forEach((entry) => entry.view.dispose());
     this.fairies.clear();
+    this.skeletons.forEach((view) => view.actor.dispose());
+    this.skeletons.clear();
   }
 }

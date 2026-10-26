@@ -12,7 +12,7 @@ import { MiniBossVariantId } from './EnemySpawnScheduler';
 // which the horde's flow-field pursuit can't do).
 
 export type MiniBossKind = MiniBossVariantId;
-export type CompanionKind = 'skeletonArcher' | 'stoneGolem' | 'waterFairy';
+export type CompanionKind = 'gravedigger' | 'stoneGolem' | 'waterFairy';
 
 export interface MiniBossSpec {
   name: string;
@@ -28,7 +28,7 @@ export interface MiniBossSpec {
 }
 
 export const MINI_BOSSES: Record<MiniBossKind, MiniBossSpec> = {
-  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', anchor: GRAVEYARD.center, leashRadius: 700, companion: 'skeletonArcher' },
+  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', anchor: GRAVEYARD.center, leashRadius: 700, companion: 'gravedigger' },
   templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', anchor: TEMPLE.center, leashRadius: 720, companion: 'stoneGolem' },
   lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', anchor: LAKE.center, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true }
 };

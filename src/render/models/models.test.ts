@@ -6,7 +6,7 @@ import { CLIP_SAMPLE_RATE, humanoidClips, mirrorClip, smoothCurve } from './clip
 import { createEnemyModels } from './enemies';
 import { attachWeapons, createHeroModel } from './heroes';
 import { createBossModel } from './boss';
-import { createGravediggerModel, createLakeSpiritModel, createSkeletonArcherModel, createStoneGolemModel } from './zoneActors';
+import { createGravediggerModel, createLakeSpiritModel, createAllySkeletonModel, createStoneGolemModel } from './zoneActors';
 import { box, part } from './parts';
 import { buildRiggedModel, humanoidBones } from './rig';
 import { weaponGeometry } from './weapons';
@@ -143,7 +143,7 @@ describe('zone actors', () => {
   it.each([
     ['gravedigger', createGravediggerModel],
     ['stone golem', () => createStoneGolemModel()],
-    ['skeleton archer', createSkeletonArcherModel],
+    ['ally skeleton', createAllySkeletonModel],
     ['lake spirit', createLakeSpiritModel]
   ] as const)('%s builds with every actor clip bound to bones it has', (_name, create) => {
     const model = create();

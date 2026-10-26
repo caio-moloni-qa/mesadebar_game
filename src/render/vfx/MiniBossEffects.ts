@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { CompanionSystem } from '../../core/systems/CompanionSystem';
 import { MINI_BOSS_TUNING, MiniBossState, MiniBossSystem } from '../../core/systems/MiniBossSystem';
 import { LAKE } from '../../config/arenaLayout';
 import { WORLD_SCALE, simToWorld } from '../space';
@@ -13,7 +12,6 @@ const DANGER_LIGHT = 0xffc890;
 const WATER = 0x6fd3ff;
 const FOAM = 0xe6f6ff;
 const MAX_GEYSERS = 16;
-const MAX_ARROWS = 64;
 
 const additive = (color: number, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
 
@@ -86,12 +84,11 @@ class Telegraphs {
 }
 
 /** World effects for the zone mini-bosses and companions: telegraph circles (shovel slam, burrow exit), the burrow's
- *  dust trail, the Guardião's charge lane and shockwave ring, stun stars, and the archer's arrows in flight. */
+ *  dust trail, the Guardião's charge lane and shockwave ring, stun stars and the lake spirit's geysers. */
 export class MiniBossEffects {
   readonly root = new THREE.Group();
   private readonly telegraphs = new Map<MiniBossState, Telegraphs>();
   private readonly starGeometry = new THREE.OctahedronGeometry(0.3, 0);
-  private readonly arrows: THREE.InstancedMesh;
   /** Geyser warnings: a pale disc with a ring closing onto the eruption point. */
   private readonly geyserDiscs: THREE.InstancedMesh;
   private readonly geyserRings: THREE.InstancedMesh;
@@ -103,17 +100,13 @@ export class MiniBossEffects {
   private time = 0;
 
   constructor(private readonly particles: ParticleView, private readonly views: MiniBossViews) {
-    const arrow = new THREE.BoxGeometry(0.05, 0.05, 0.9);
-    this.arrows = new THREE.InstancedMesh(arrow, new THREE.MeshBasicMaterial({ color: 0xe9dfc4 }), MAX_ARROWS);
-    this.arrows.count = 0;
-    this.arrows.frustumCulled = false;
     this.geyserDiscs = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 28).rotateX(-Math.PI / 2), additive(WATER, 0.25), MAX_GEYSERS);
     this.geyserRings = new THREE.InstancedMesh(new THREE.RingGeometry(0.88, 1, 36).rotateX(-Math.PI / 2), additive(FOAM, 0.9), MAX_GEYSERS);
     [this.geyserDiscs, this.geyserRings].forEach((mesh) => { mesh.count = 0; mesh.frustumCulled = false; });
-    this.root.add(this.arrows, this.geyserDiscs, this.geyserRings);
+    this.root.add(this.geyserDiscs, this.geyserRings);
   }
 
-  update(miniBosses: MiniBossSystem, companions: CompanionSystem, alpha: number, deltaSeconds: number): void {
+  update(miniBosses: MiniBossSystem, alpha: number, deltaSeconds: number): void {
     this.time += deltaSeconds;
     this.telegraphs.forEach((pieces, boss) => {
       if (miniBosses.bosses.includes(boss)) return;
@@ -129,7 +122,6 @@ export class MiniBossEffects {
       }
       this.updateBoss(boss, pieces, alpha, deltaSeconds);
     });
-    this.updateArrows(companions, alpha);
     this.updateGeysers(miniBosses, deltaSeconds);
   }
 
@@ -270,19 +262,6 @@ export class MiniBossEffects {
       }
       pieces.circle(boss.enemy.x, boss.enemy.y, T.whirlCoreRadius, 1);
     }
-  }
-
-  private updateArrows(companions: CompanionSystem, alpha: number): void {
-    const count = Math.min(MAX_ARROWS, companions.arrows.length);
-    for (let index = 0; index < count; index += 1) {
-      const arrow = companions.arrows[index];
-      simToWorld(arrow.prevX + (arrow.x - arrow.prevX) * alpha, arrow.prevY + (arrow.y - arrow.prevY) * alpha, 1.3, this.position);
-      this.direction.set(arrow.vx, 0, arrow.vy).normalize();
-      this.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), this.direction);
-      this.arrows.setMatrixAt(index, this.matrix.compose(this.position, this.quaternion, this.scale));
-    }
-    this.arrows.count = count;
-    this.arrows.instanceMatrix.needsUpdate = true;
   }
 
   clear(): void {

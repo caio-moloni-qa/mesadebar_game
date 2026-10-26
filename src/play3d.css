@@ -396,3 +396,12 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .boss-banner.merchant { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .boss-banner[hidden] { display: none; }
 .banner-portrait { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--gold); background: radial-gradient(circle, #3a2a22 55%, #1a120e); image-rendering: pixelated; flex: none; }
+
+/* Companion health bars (and the Coveiro's skeletons once hurt), floating over their heads. */
+.companion-bars { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.companion-bars[hidden] { display: none; }
+.companion-bar { position: absolute; top: 0; left: 0; width: calc(46 * var(--ui-unit)); height: calc(6 * var(--ui-unit)); box-sizing: border-box; border: 1px solid #0b1210; border-radius: 2px; background: #1a2420cc; overflow: hidden; }
+.companion-bar[hidden] { display: none; }
+.companion-bar > div { height: 100%; background: linear-gradient(90deg, #4fd07a, #a6ffbf); }
+.companion-bar.ally { width: calc(28 * var(--ui-unit)); height: calc(4 * var(--ui-unit)); }
+.companion-bar.ally > div { background: linear-gradient(90deg, #3aa8c0, #9fe8ff); }

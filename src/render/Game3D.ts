@@ -24,6 +24,7 @@ import { CompanionViews, MiniBossViews } from './views/ZoneActorViews';
 import { MerchantRoom } from './world/MerchantRoom';
 import { QuestBarrels } from './world/QuestBarrels';
 import { TavernDialog } from './ui/TavernDialog';
+import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
@@ -88,6 +89,7 @@ export class Game3D {
   private readonly showJoystick: boolean;
   private readonly choices: ChoiceOverlay;
   private readonly tavernDialog: TavernDialog;
+  private readonly companionBars: CompanionBars;
   private readonly questBarrels = new QuestBarrels();
   private readonly menu: StartMenu;
   private readonly audio: GameAudio;
@@ -150,6 +152,7 @@ export class Game3D {
     this.screens = new RunScreens(container, { resume: () => { this.session.paused = false; }, restart: () => this.restart(), menu: () => this.showMenu() });
     this.choices = new ChoiceOverlay(container);
     this.tavernDialog = new TavernDialog(container);
+    this.companionBars = new CompanionBars(container);
     this.scene.add(this.questBarrels.root);
     this.chestRoll = new ChestRoll(container);
     this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
@@ -173,6 +176,7 @@ export class Game3D {
     this.menu.hide();
     this.hud.setVisible(true);
     this.bossUi.setVisible(true);
+    this.companionBars.setVisible(true);
     this.sandbox.setAllowed(true);
     this.joystick.setVisible(this.showJoystick);
     this.restart();
@@ -185,6 +189,7 @@ export class Game3D {
     this.inMenu = true;
     this.hud.setVisible(false);
     this.bossUi.setVisible(false);
+    this.companionBars.setVisible(false);
     this.sandbox.setAllowed(false);
     this.joystick.setVisible(false);
     this.createSession({ skipStartingUpgrades: true, attract: true });
@@ -395,9 +400,20 @@ export class Game3D {
       this.effects.burst(x, y, 50, 0x6fd3ff, 0.45, 0.25);
       this.floatAboveHero(`+${amount}`, '#8effc8');
     });
-    events.on('companion-down', ({ x, y }) => {
+    events.on('companion-down', ({ kind, x, y }) => {
       const point = at(x, y);
-      this.particles.emit(point.x, 1, point.z, 0x9a8f7c, 30, { spread: 4, rise: 3, gravity: 14, life: 0.8, size: 1.5, jitter: 1 });
+      const color = kind === 'gravedigger' ? PALETTE.bone : kind === 'waterFairy' ? 0x9fe8ff : 0x9a8f7c;
+      this.particles.emit(point.x, 1, point.z, color, 30, { spread: 4, rise: 3, gravity: 14, life: 0.8, size: 1.5, jitter: 1 });
+      this.floatAt(x, y, 'Caiu!', '#ff9a8a');
+    });
+    // The Coveiro Aliado's skeletons climb out in a puff of grave-green and crumble into bones.
+    events.on('ally-raised', ({ x, y }) => {
+      const point = at(x, y);
+      this.particles.emit(point.x, 0.2, point.z, 0x6dff9a, 14, { spread: 1.6, rise: 3, gravity: 3, life: 0.7, size: 1.1, jitter: 0.6 });
+    });
+    events.on('ally-down', ({ x, y }) => {
+      const point = at(x, y);
+      this.particles.emit(point.x, 0.8, point.z, PALETTE.bone, 12, { spread: 2.5, rise: 2, gravity: 12, life: 0.6, size: 1.1, jitter: 0.8 });
     });
     events.on('boss-enraged', ({ enemy, healthGained }) => {
       this.effects.pulse(enemy.x, enemy.y, 900, 0xff5a3a, 0.8, 0.6);
@@ -470,6 +486,10 @@ export class Game3D {
   private floatAboveHero(text: string, color: string): void {
     const { player } = this.session;
     this.floating.spawn(simToWorld(player.x, player.y, 2.4, this.scratch), text, { color }, performance.now());
+  }
+
+  private floatAt(x: number, y: number, text: string, color: string): void {
+    this.floating.spawn(simToWorld(x, y, 2.2, this.scratch), text, { color }, performance.now());
   }
 
   /** World point → CSS px over the canvas, matching the pixelated image (see ndcToCanvas). */
@@ -579,8 +599,8 @@ export class Game3D {
     this.bossViews.update(this.session.bosses.bosses, this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.bossEffects.update(this.session, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
-    this.companionViews.update(this.session.companions.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
-    this.miniBossEffects.update(this.session.miniBosses, this.session.companions, alpha, this.session.frozen ? 0 : frameMs / 1000);
+    this.companionViews.update(this.session.companions.companions, this.session.companions.skeletons, alpha, this.session.frozen ? 0 : frameMs / 1000);
+    this.miniBossEffects.update(this.session.miniBosses, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
     this.questBarrels.update(this.session.quests, this.session.frozen ? 0 : frameMs / 1000);
     this.floating.update(now, this.projectToScreen);
@@ -597,6 +617,7 @@ export class Game3D {
     }
     this.screens.update(this.session, this.inMenu);
     this.bossUi.update(this.session, this.projectToScreen);
+    this.companionBars.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {
       fps: this.fps.value,
       drawCalls: this.renderer.info.render.calls,

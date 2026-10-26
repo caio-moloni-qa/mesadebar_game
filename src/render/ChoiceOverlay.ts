@@ -109,7 +109,7 @@ export class ChoiceOverlay {
       const card = upgradeCard({
         icon: companionIcon(offer.companion),
         name: offer.level > 1 ? `${spec.name} — nível ${offer.level}` : spec.name,
-        description: offer.level > 1 ? `Fortalece seu companheiro: mais dano${offer.companion === 'stoneGolem' ? ' e vida' : ' e cadência'}.` : spec.description,
+        description: offer.level > 1 ? `Fortalece seu companheiro: mais vida e dano${offer.companion === 'gravedigger' ? ', e mais esqueletos por vez' : offer.companion === 'waterFairy' ? ', e cura mais e mais rápido' : ''}.` : spec.description,
         variant: offer.level > 1 ? '' : 'rare',
         hotkey: index + 1
       }, () => this.session?.chooseCompanion(index));
