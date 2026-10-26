@@ -19,7 +19,7 @@ import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponEvents, WeaponHost, WeaponSystem, WEAPON_TUNING } from '../systems/WeaponSystem';
 import { ArenaMap } from '../world/ArenaMap';
 import { FlowField } from '../world/FlowField';
-import { BODY_RADIUS, ENEMY_DYING_MS, ENEMY_HIT_STUN_MS, EnemyState, PeelState, PickupKind, PickupState, PlayerState, ProjectileState, SOUL_CONFIG, SoulState, snapPrevious } from './entities';
+import { BODY_RADIUS, ENEMY_DYING_MS, ENEMY_HIT_STUN_MS, ENEMY_SLIP_MS, EnemyState, PeelState, PickupKind, PickupState, PlayerState, ProjectileState, SOUL_CONFIG, SoulState, snapPrevious } from './entities';
 
 /** Fixed simulation step. The renderer accumulates frame time and calls step() this many ms at a time. */
 export const STEP_MS = 1000 / 60;
@@ -34,7 +34,8 @@ const SPATIAL_CELL_SIZE = 96;
 /** Largest rangePadding any enemy has (the boss: 390 × 0.35) — queries widen by this, then test exactly. */
 const MAX_RANGE_PADDING = 137;
 /** Fabri's banana peels (GameScene constants). */
-const PEEL = { spawnChance: 0.03, minRadius: 40, maxRadius: 130, lifetimeMs: 12000, slipMs: 900 } as const;
+const PEEL = { spawnChance: 0.03, minRadius: 40, maxRadius: 130, lifetimeMs: 12000 } as const;
+const SLIPPERY_VARIANTS: ReadonlySet<string> = new Set(['skeleton', 'apparitionWraith', 'superSkeleton']);
 /** Soft push between overlapping enemies (fraction of the overlap resolved per step). New in 3D: without it a horde
  *  converging on the hero collapses into one solid block of models. Static enemies and bosses are never pushed. */
 const SEPARATION_STRENGTH = 0.25;
@@ -815,6 +816,7 @@ export class GameSession implements WeaponHost {
     // Roubo de Vida applies to any cone (melee-family) weapon, not just the Espada.
     if (weaponId && WEAPONS[weaponId].type === 'cone' && this.player.lifeStealPercent > 0) this.healPlayer(dealt * this.player.lifeStealPercent);
     enemy.health -= amount;
+    this.gainHitShield();
     enemy.hitStunUntil = now + ENEMY_HIT_STUN_MS;
     enemy.lastHitAt = now;
     this.events.emit('enemy-hit', { enemy, amount, critical, weaponId });
@@ -940,10 +942,20 @@ export class GameSession implements WeaponHost {
     spent.forEach((soul) => this.souls.release(soul));
   }
 
+  /** Relíquia: each landed hit banks shield on top of health (the sandbox's buffer can sit above the cap). */
+  private gainHitShield(): void {
+    const shield = CHARACTERS[this.characterId].hitShield;
+    if (!shield) return;
+    const { player } = this;
+    const cap = player.maxHealth * shield.maxHealthFraction;
+    if (player.damageBuffer < cap) player.damageBuffer = Math.min(cap, player.damageBuffer + shield.perHit);
+  }
+
   onBananaHit(enemy: EnemyState): void {
     const transform = CHARACTERS[this.characterId].boomerangBananaTransform;
     if (!transform) return;
     enemy.slowStackPercent = Math.min(WEAPON_TUNING.bananaSlowCap, enemy.slowStackPercent + transform.slowPercentPerHit);
+    if (enemy.alive && this.rng() < transform.slipChancePerHit) this.slipEnemy(enemy, this.clock.now);
     if (this.rng() >= PEEL.spawnChance) return;
     const peel = this.peels.acquire();
     if (!peel) return;
@@ -956,14 +968,20 @@ export class GameSession implements WeaponHost {
     peel.expiresAt = this.clock.now + PEEL.lifetimeMs;
   }
 
+  /** Down on the ground for ENEMY_SLIP_MS. Only the horde slips: bosses (and anything else) keep their footing. */
+  private slipEnemy(enemy: EnemyState, now: number): void {
+    if (!SLIPPERY_VARIANTS.has(enemy.variantId)) return;
+    enemy.slipUntil = now + ENEMY_SLIP_MS;
+    this.events.emit('enemy-slipped', { enemy });
+  }
+
   private updatePeels(now: number): void {
     const spent: PeelState[] = [];
     this.peels.forEachActive((peel) => {
       if (now >= peel.expiresAt) { spent.push(peel); return; }
       const victim = this.enemiesOverlapping(peel.x, peel.y, peel.radius)[0];
       if (!victim) return;
-      victim.slipUntil = now + PEEL.slipMs;
-      this.events.emit('enemy-slipped', { enemy: victim });
+      this.slipEnemy(victim, now);
       spent.push(peel);
     });
     spent.forEach((peel) => this.peels.release(peel));
