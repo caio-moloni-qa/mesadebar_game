@@ -9,7 +9,7 @@ import { simToWorld, yawFromSimDirection } from '../space';
 const MODEL_SCALE = 2 / 2.4;
 const FADE = 0.2;
 const TURN_SHARPNESS = 6;
-const HIT_FLASH_MS = 120;
+const HIT_FLASH_MS = 70;
 /** A defeated boss keeps its view this long: the collapse plays, then it sinks away. */
 const DEATH_SECONDS = 3.2;
 const ONE_SHOTS = new Set<BossClipName>(['summon', 'roar', 'spin', 'spinBack', 'death']);
@@ -120,11 +120,12 @@ export class BossView {
   /** Hit flash, enrage (red pulse), phase 2 (green smoulder), stagger (dim). */
   private applyTint(boss: BossState, nowMs: number): void {
     this.emissive.setRGB(0, 0, 0);
-    if (boss.phaseTwo) this.emissive.setRGB(0.02, 0.09 + Math.sin(nowMs / 160) * 0.03, 0.04);
-    if (boss.enraged) this.emissive.r += 0.12 + Math.sin(nowMs / 120) * 0.06;
-    if (boss.staggerMs > 0) this.emissive.setRGB(0.12, 0.1, 0.02);
-    if (boss.transitionMs > 0) this.emissive.setRGB(0.1, 0.3, 0.12);
-    if (nowMs - this.enemy.lastHitAt < HIT_FLASH_MS) this.emissive.setRGB(0.45, 0.4, 0.35);
+    // Accents only: the toon material adds emissive straight on top, so anything past ~0.1 washes the model out.
+    if (boss.phaseTwo) this.emissive.setRGB(0, 0.025 + Math.sin(nowMs / 160) * 0.01, 0.01);
+    if (boss.enraged) this.emissive.r += 0.04 + Math.sin(nowMs / 120) * 0.02;
+    if (boss.staggerMs > 0) this.emissive.setRGB(0.03, 0.025, 0);
+    if (boss.transitionMs > 0) this.emissive.setRGB(0.02, 0.07, 0.03);
+    if (nowMs - this.enemy.lastHitAt < HIT_FLASH_MS) this.emissive.setRGB(0.1, 0.09, 0.08);
     this.model.material.emissive.copy(this.emissive);
   }
 
@@ -138,7 +139,7 @@ export class BossView {
     // After the collapse, sink into the ground.
     const sink = Math.max(0, this.dyingFor - 1.9) / (DEATH_SECONDS - 1.9);
     this.root.position.y = -sink * 2.5;
-    this.model.material.emissive.setRGB(0.05 * (1 - sink), 0.25 * (1 - sink), 0.1 * (1 - sink));
+    this.model.material.emissive.setRGB(0.01 * (1 - sink), 0.05 * (1 - sink), 0.02 * (1 - sink));
   }
 
   dispose(): void {
