@@ -1,40 +1,87 @@
-const SHOW_MS = 3600;
+/** How long the card holds before the run resumes on its own. */
+const HOLD_MS = 3200;
 
-/** "Nível 10 · Tempestade": the announcement when a power tier switches on mid-run — a banner across the top of the
- *  screen that slides in, holds, and fades (a newer one replaces it). */
+export interface PowerUnlock {
+  level: number;
+  tier: number;
+  name: string;
+  text: string;
+}
+
+/** "Novo poder!": a power tier switching on mid-run. The run holds while a card rises in the middle of the screen
+ *  (light rays behind it, a short fanfare); it closes by itself or on Enter / Space / Esc / a click. Several at once
+ *  (a sandbox jump of levels) play one after another. `onShow` fires as each card appears, `onDone` once the last
+ *  one is gone. */
 export class PowerBanner {
   private readonly root = document.createElement('div');
-  private hideTimer = 0;
+  private readonly queue: PowerUnlock[] = [];
+  private closeTimer = 0;
+  private onDone: () => void = () => {};
 
-  constructor(container: HTMLElement) {
-    this.root.className = 'power-banner';
-    this.root.setAttribute('role', 'status');
+  constructor(container: HTMLElement, private readonly onShow: () => void) {
+    this.root.className = 'power-fanfare';
+    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('aria-live', 'assertive');
     this.root.hidden = true;
+    this.root.addEventListener('click', () => this.next());
     container.appendChild(this.root);
   }
 
-  show(level: number, tier: number, name: string, text: string): void {
+  get open(): boolean {
+    return !this.root.hidden;
+  }
+
+  show(unlock: PowerUnlock, onDone: () => void): void {
+    this.onDone = onDone;
+    this.queue.push(unlock);
+    if (!this.open) this.next();
+  }
+
+  /** Closes the current card (and shows the next one queued, if any). */
+  next(): void {
+    window.clearTimeout(this.closeTimer);
+    const unlock = this.queue.shift();
+    if (!unlock) {
+      this.root.hidden = true;
+      this.root.classList.remove('showing');
+      this.onDone();
+      return;
+    }
     this.root.replaceChildren();
-    const eyebrow = document.createElement('span');
-    eyebrow.className = 'power-banner-eyebrow';
-    eyebrow.textContent = `Nível ${level} · Poder ${'I'.repeat(tier)}`;
-    const title = document.createElement('strong');
-    title.textContent = name;
-    const body = document.createElement('p');
-    body.textContent = text;
-    this.root.append(eyebrow, title, body);
+    const rays = document.createElement('div');
+    rays.className = 'power-fanfare-rays';
+    const card = document.createElement('div');
+    card.className = 'power-fanfare-card';
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'power-fanfare-eyebrow';
+    eyebrow.textContent = 'Novo poder!';
+    const level = document.createElement('p');
+    level.className = 'power-fanfare-level';
+    level.textContent = `Nível ${unlock.level} · Poder ${'I'.repeat(unlock.tier)}`;
+    const name = document.createElement('h2');
+    name.textContent = unlock.name;
+    const text = document.createElement('p');
+    text.className = 'power-fanfare-text';
+    text.textContent = unlock.text;
+    const hint = document.createElement('p');
+    hint.className = 'power-fanfare-hint';
+    hint.textContent = 'Enter para continuar';
+    card.append(eyebrow, level, name, text, hint);
+    this.root.append(rays, card);
     this.root.hidden = false;
     // Restart the entrance animation.
     this.root.classList.remove('showing');
     void this.root.offsetWidth;
     this.root.classList.add('showing');
-    window.clearTimeout(this.hideTimer);
-    this.hideTimer = window.setTimeout(() => this.hide(), SHOW_MS);
+    this.onShow();
+    this.closeTimer = window.setTimeout(() => this.next(), HOLD_MS);
   }
 
-  hide(): void {
-    window.clearTimeout(this.hideTimer);
-    this.root.classList.remove('showing');
+  /** Drops everything without resuming anything (the run is being thrown away). */
+  reset(): void {
+    window.clearTimeout(this.closeTimer);
+    this.queue.length = 0;
     this.root.hidden = true;
+    this.root.classList.remove('showing');
   }
 }

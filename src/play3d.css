@@ -521,15 +521,24 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .hero-confirm:disabled, .preview-attack:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(1); }
 .tavern-area { margin: 2px 0 0; color: var(--muted); font-size: 13px; } .tavern-area b { color: var(--gold); }
 
-/* A power tier switching on mid-run (PowerBanner). */
-.power-banner { position: absolute; top: 96px; left: 50%; z-index: 6; width: min(460px, calc(100% - 32px)); padding: 12px 20px 14px; transform: translateX(-50%); border: 1px solid #dec28a70; border-radius: 6px; background: linear-gradient(180deg, #1a2627f2, #101b1df2); box-shadow: 0 8px 30px #0009, inset 0 0 24px #dec28a14; text-align: center; pointer-events: none; }
-.power-banner.showing { animation: power-banner 3.6s ease forwards; }
-.power-banner-eyebrow { display: block; color: var(--gold); font: 600 10px/1.5 var(--sans); letter-spacing: .23em; text-transform: uppercase; }
-.power-banner strong { display: block; margin: 2px 0 4px; color: var(--cream); font: 700 24px/1.2 var(--display); text-shadow: 0 0 18px #dec28a66; }
-.power-banner p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
-@keyframes power-banner { 0% { opacity: 0; transform: translate(-50%, -14px) scale(.96); } 9% { opacity: 1; transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .power-banner.showing { animation: none; } }
-@media (max-width: 520px) { .power-banner { top: 84px; } .power-banner strong { font-size: 20px; } }
+/* A power tier switching on mid-run (PowerBanner): the run holds, a card rises with light behind it. */
+.power-fanfare { position: absolute; inset: 0; z-index: 7; display: grid; place-items: center; padding: 16px; background: radial-gradient(circle at 50% 46%, #00000000 0, #0000005c 70%); cursor: pointer; overflow: hidden; }
+.power-fanfare-rays { position: absolute; left: 50%; top: 46%; width: 900px; height: 900px; margin: -450px 0 0 -450px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, #ffe29a30 0deg 9deg, #ffe29a00 9deg 24deg); -webkit-mask: radial-gradient(circle, #000 0, #000 18%, transparent 62%); mask: radial-gradient(circle, #000 0, #000 18%, transparent 62%); pointer-events: none; }
+.power-fanfare-card { position: relative; width: min(440px, 100%); padding: 22px 26px 18px; border: 1px solid #dec28a90; border-radius: 8px; background: linear-gradient(180deg, #1c2a2bf5, #101b1df5); box-shadow: 0 0 0 1px #00000060, 0 14px 50px #000b, 0 0 60px #ffd36a33, inset 0 0 30px #dec28a18; text-align: center; }
+.power-fanfare-eyebrow { margin: 0; color: #ffe29a; font: 700 12px/1.5 var(--sans); letter-spacing: .32em; text-transform: uppercase; text-shadow: 0 0 12px #ffd36a99; }
+.power-fanfare-level { margin: 2px 0 0; color: var(--muted); font: 600 11px/1.5 var(--sans); letter-spacing: .18em; text-transform: uppercase; }
+.power-fanfare-card h2 { margin: 6px 0 8px; color: var(--cream); font: 700 32px/1.15 var(--display); text-shadow: 0 0 22px #ffd36a80; }
+.power-fanfare-text { margin: 0; color: #d8dccf; font-size: 14px; line-height: 1.5; }
+.power-fanfare-hint { margin: 14px 0 0; color: var(--muted); font-size: 11px; letter-spacing: .08em; opacity: .75; }
+.power-fanfare.showing .power-fanfare-rays { animation: fanfare-rays-in .5s ease-out both, fanfare-rays-spin 12s linear infinite; }
+.power-fanfare.showing .power-fanfare-card { animation: fanfare-card-in .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+.power-fanfare.showing .power-fanfare-card h2 { animation: fanfare-glow 1.6s ease-in-out .5s infinite alternate; }
+@keyframes fanfare-rays-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes fanfare-rays-spin { to { rotate: 360deg; } }
+@keyframes fanfare-card-in { 0% { opacity: 0; transform: translateY(26px) scale(.82); } 100% { opacity: 1; transform: none; } }
+@keyframes fanfare-glow { from { text-shadow: 0 0 14px #ffd36a60; } to { text-shadow: 0 0 30px #ffd36acc; } }
+@media (prefers-reduced-motion: reduce) { .power-fanfare.showing .power-fanfare-rays, .power-fanfare.showing .power-fanfare-card, .power-fanfare.showing .power-fanfare-card h2 { animation: none; } }
+@media (max-width: 520px) { .power-fanfare-card h2 { font-size: 26px; } .power-fanfare-rays { width: 600px; height: 600px; margin: -300px 0 0 -300px; } }
 .hero-powers { display: grid; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
 .hero-powers li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: baseline; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .hero-powers b { grid-row: span 2; min-width: 42px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--gold); font: 600 11px/1.5 var(--sans); text-align: center; }

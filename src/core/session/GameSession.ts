@@ -152,7 +152,7 @@ export class GameSession implements WeaponHost {
   readonly merchant: MerchantSystem;
   readonly quests: QuestSystem;
   readonly abilities: HeroAbilitySystem;
-  /** The hero's in-run power tiers (levels 5/10/15). */
+  /** The hero's in-run power tiers (levels 5/12/20). */
   readonly powers: PowerTierSystem;
   /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
   private jackpotPending = false;

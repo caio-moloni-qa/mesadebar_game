@@ -311,7 +311,6 @@ export class GameAudio {
       on('quest-completed', () => this.play('upgrade', undefined, .9, true)),
       on('quest-claimed', () => this.play('victory', undefined, .5, true)),
       on('barrel-collected', () => this.play('pickup', undefined, .8)),
-      on('power-unlocked', () => this.play('victory', undefined, .55, true)),
       on('power-arc', ({ points }) => this.play('bolt', points[0], .3)),
       on('power-blast', ({ kind, x, y }) => this.play(kind === 'hawk' || kind === 'peel-slip' || kind === 'crack' ? 'impact' : kind === 'roots' ? 'dash' : kind === 'warcry' ? 'roar' : 'explosion', { x, y }, kind === 'meteor' || kind === 'eclipse' || kind === 'sanctuary' ? .9 : kind === 'warcry' ? .7 : .45)),
       on('power-cast', ({ kind }) => { if (kind === 'fury') this.play('roar'); else if (kind === 'foresight') this.play('shield-break', undefined, .6); else if (kind !== 'fury-end' && kind !== 'foresight-ready') this.play('dash', undefined, .5, true); }),
@@ -344,6 +343,34 @@ export class GameAudio {
       this.bossStates.set(boss.enemy, state);
     });
     for (const enemy of this.bossStates.keys()) if (!live.has(enemy)) this.bossStates.delete(enemy);
+  }
+
+  /** A power tier switching on: a short, bright fanfare of our own (a quick rising run, then a held chord with a bell
+   *  on top), synthesized on the spot. The paused game already muffles the music under it. */
+  fanfare(): void {
+    const ctx = this.context;
+    if (!ctx || ctx.state !== 'running' || this.settings.muted || this.settings.effects <= 0) return;
+    const out = ctx.createGain(); out.gain.value = .5; out.connect(this.effects!);
+    const start = ctx.currentTime + .03;
+    const note = (frequency: number, at: number, length: number, type: OscillatorType, level: number) => {
+      const osc = ctx.createOscillator(); osc.type = type; osc.frequency.value = frequency;
+      const envelope = ctx.createGain();
+      const t = start + at;
+      envelope.gain.setValueAtTime(0, t); envelope.gain.linearRampToValueAtTime(level, t + .012);
+      envelope.gain.exponentialRampToValueAtTime(level * .45, t + length * .45); envelope.gain.exponentialRampToValueAtTime(.0001, t + length);
+      osc.connect(envelope).connect(out); osc.start(t); osc.stop(t + length + .02);
+      osc.onended = () => { osc.disconnect(); envelope.disconnect(); };
+    };
+    // G4 · C5 · E5 · G5 in quick steps, a breath, then C6 over a C-major chord.
+    [392, 523.25, 659.25, 783.99].forEach((frequency, index) => {
+      note(frequency, index * .085, .15, 'square', .13);
+      note(frequency * 2, index * .085, .1, 'triangle', .05);
+    });
+    [261.63, 523.25, 659.25, 783.99].forEach((frequency) => note(frequency, .42, 1.15, 'triangle', .12));
+    note(1046.5, .42, 1.1, 'square', .07);
+    note(2093, .42, .9, 'sine', .07);
+    note(3135.96, .6, .7, 'sine', .04);
+    window.setTimeout(() => out.disconnect(), 2200);
   }
 
   private play(name: SoundName, position?: Position, volume = 1, allowOutsideRun = false): void {

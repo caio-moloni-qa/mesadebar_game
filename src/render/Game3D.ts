@@ -230,7 +230,7 @@ export class Game3D {
     this.scene.add(this.questBarrels.root, this.heroKitViews.root, this.powerViews.root);
     this.chestRoll = new ChestRoll(container);
     this.tipDialog = new TipDialog(container);
-    this.powerBanner = new PowerBanner(container);
+    this.powerBanner = new PowerBanner(container, () => this.audio.fanfare());
     // After a guardian's entrance: Sergio explains guardians the first time, otherwise play resumes.
     this.guardianIntro = new GuardianIntro(container, () => {
       if (this.progress.guardianTipSeen) this.session.revealing = false;
@@ -399,7 +399,7 @@ export class Game3D {
     this.miniBossEffects.clear();
     this.sheetEffects.clear();
     this.powerViews.clear();
-    this.powerBanner.hide();
+    this.powerBanner.reset();
     if (this.merchantRoom) this.scene.remove(this.merchantRoom.root, this.merchantRoom.characters);
     this.floating.clear();
     this.chestRoll.stop();
@@ -745,7 +745,9 @@ export class Game3D {
     const at = (x: number, y: number) => simToWorld(x, y, 0, this.scratch);
     events.on('power-unlocked', ({ tier, level, name, text }) => {
       if (this.attract) return;
-      this.powerBanner.show(level, tier, name, text);
+      // The run holds while the card is up (like any reveal), and goes on once the last one closes.
+      this.session.revealing = true;
+      this.powerBanner.show({ level, tier, name, text }, () => { this.session.revealing = false; });
       const { player } = this.session;
       this.effects.pulse(player.x, player.y, 90, 0xffe29a, 0.6, 0.8);
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, 0xffe29a, 24, 2, 2);
@@ -927,6 +929,13 @@ export class Game3D {
         if (['Escape', 'Enter', 'Space'].includes(event.code)) {
           event.preventDefault();
           this.guardianIntro.skip();
+        }
+        return;
+      }
+      if (this.powerBanner.open) {
+        if (['Escape', 'Enter', 'NumpadEnter', 'Space'].includes(event.code)) {
+          event.preventDefault();
+          this.powerBanner.next();
         }
         return;
       }

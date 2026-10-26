@@ -1,9 +1,9 @@
 import { CharacterId } from './characters';
 
-/** In-run power tiers: every hero grows three powers stronger during a run, at these hero levels. (Proposed at
- *  5/12/20; a simulated run reaches level 10 at about four minutes and 12 only past eight, so 20 never came — the
- *  thresholds follow a real run's pace instead.) */
-export const POWER_TIER_LEVELS = [5, 10, 15] as const;
+/** In-run power tiers: every hero grows three powers stronger during a run, at these hero levels. In a simulated run
+ *  level 5 comes in under a minute and 12 around the first boss; 20 only in the second or third stage — a reason to
+ *  take the continue portal. */
+export const POWER_TIER_LEVELS = [5, 12, 20] as const;
 
 export interface PowerTierInfo {
   name: string;
