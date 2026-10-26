@@ -321,6 +321,8 @@ export interface SaveData {
   /** Heroes seen as unlocked when the last run ended (to announce newcomers once). */
   announced: HeroId[];
   tutorialSeen: boolean;
+  /** Sergio has explained zone guardians (the first time one rises). */
+  guardianTipSeen: boolean;
 }
 
 export function emptySave(): SaveData {
@@ -336,7 +338,8 @@ export function emptySave(): SaveData {
     history: [],
     tierUnlocked: 1,
     announced: [...STARTING_HEROES],
-    tutorialSeen: false
+    tutorialSeen: false,
+    guardianTipSeen: false
   };
 }
 
@@ -373,7 +376,8 @@ export function parseSave(text: string | null | undefined): SaveData {
     history: Array.isArray(raw.history) ? (raw.history.filter(isRecord) as unknown as RunRecord[]).slice(0, HISTORY_LENGTH) : [],
     tierUnlocked: Math.min(DIFFICULTY_TIERS.length, Math.max(1, Math.floor(number(raw.tierUnlocked, 1)))),
     announced: Array.isArray(raw.announced) ? raw.announced.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES],
-    tutorialSeen: raw.tutorialSeen === true
+    tutorialSeen: raw.tutorialSeen === true,
+    guardianTipSeen: raw.guardianTipSeen === true
   };
 }
 

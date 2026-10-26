@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, ENEMY_VARIANTS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
@@ -36,6 +36,9 @@ const SPATIAL_CELL_SIZE = 96;
 /** Largest rangePadding any enemy has (the boss: 390 × 0.35) — queries widen by this, then test exactly. */
 const MAX_RANGE_PADDING = 137;
 /** Fabri's banana peels (GameScene constants). */
+/** The guardian's entrance scatters the plain horde out of sight (thinHorde). */
+const THIN_HORDE_VARIANTS: EnemyVariantId[] = ['skeleton', 'apparitionWraith'];
+const THIN_HORDE_DISTANCE = { announced: 650, risen: 250 };
 const PEEL = { spawnChance: 0.03, minRadius: 40, maxRadius: 130, lifetimeMs: 12000 } as const;
 const SLIPPERY_VARIANTS: ReadonlySet<string> = new Set(['skeleton', 'apparitionWraith', 'superSkeleton']);
 /** Soft push between overlapping enemies (fraction of the overlap resolved per step). New in 3D: without it a horde
@@ -233,6 +236,10 @@ export class GameSession implements WeaponHost {
     });
     this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events }, options.questTiers);
     this.events.on('quest-claimed', () => { this.stats.missions += 1; });
+    // A guardian's fight is about the guardian: the plain horde scatters down to the fight's cap — out of sight when
+    // it's announced, then all but the hero's closest when it rises (the camera is on the guardian by then).
+    this.events.on('miniboss-warning', () => this.thinHorde(GUARDIAN_FIGHT_SPAWNS.enemyCap, THIN_HORDE_DISTANCE.announced));
+    this.events.on('miniboss-spawned', () => this.thinHorde(GUARDIAN_FIGHT_SPAWNS.enemyCap, THIN_HORDE_DISTANCE.risen));
     this.abilities = new HeroAbilitySystem({
       player: this.player,
       clock: this.clock,
@@ -274,6 +281,8 @@ export class GameSession implements WeaponHost {
       isSkeletonSpawnEnabled: () => this.skeletonSpawnEnabled,
       isVariantSpawnEnabled: () => this.variantSpawnEnabled,
       hasActiveEncounter: () => this.bosses.hasActiveEncounter(),
+      guardianFight: () => this.miniBosses.active,
+      liveEnemyCount: () => this.enemies.activeCount,
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
     }, this.rng, this.arena.size);
@@ -670,6 +679,22 @@ export class GameSession implements WeaponHost {
       if (enemy.hasRottenAura && !enemy.rottenAuraSuppressed && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= enemy.rottenAuraRadius) this.player.refreshRottenAura(now);
     });
     finished.forEach((enemy) => this.enemies.release(enemy));
+  }
+
+  /** Removes plain skeletons and wraiths beyond `minDistance` of the hero, farthest first, until at most `cap` enemies
+   *  are left. Elites, bosses and anything closer stay. */
+  private thinHorde(cap: number, minDistance: number): void {
+    const far: Array<{ enemy: EnemyState; distance: number }> = [];
+    this.enemies.forEachActive((enemy) => {
+      if (!enemy.alive || !THIN_HORDE_VARIANTS.includes(enemy.variantId)) return;
+      const distance = Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y);
+      if (distance > minDistance) far.push({ enemy, distance });
+    });
+    far.sort((a, b) => b.distance - a.distance);
+    for (const { enemy } of far) {
+      if (this.enemies.activeCount <= cap) break;
+      this.enemies.release(enemy);
+    }
   }
 
   /** Straight at a nearby target (a taunting companion). */

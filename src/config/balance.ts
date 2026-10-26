@@ -42,4 +42,8 @@ export const DIFFICULTY_STAGES = [
   { startMs: 60_000, spawnInterval: 750, count: 2, healthMultiplier: 1.75 },
   { startMs: 120_000, spawnInterval: 500, count: 3, healthMultiplier: 2.25 }
 ];
+/** While a zone guardian is announced or up the fight is about it: the skeleton drip slows right down (one at a time,
+ *  this many times further apart, none while the field already holds `enemyCap` enemies) and the timed hordes
+ *  (Necromantes, Aparições, Super Esqueletos) hold their timers until it's over. */
+export const GUARDIAN_FIGHT_SPAWNS = { intervalMultiplier: 4, maxPerTick: 1, enemyCap: 25 };
 export const requiredExperience = (level: number): number => Math.floor(10 + level * level * 2.5);

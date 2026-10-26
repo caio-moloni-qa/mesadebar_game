@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GRAVEYARD, LAKE, TEMPLE } from '../../config/arenaLayout';
-import { ENEMY_VARIANTS } from '../../config/balance';
+import { ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS } from '../../config/balance';
 import { GameSession, GUARDIAN_WEAKENING, STEP_MS } from '../session/GameSession';
 import { ArenaMap } from '../world/ArenaMap';
 import { BOSS_TUNING } from './BossSystem';
@@ -307,5 +307,24 @@ describe('companions', () => {
     expect(run.addCompanion('stoneGolem')).toBe(true);
     expect(run.companions.companions).toHaveLength(1);
     expect(run.companions.companions[0].level).toBe(2);
+  });
+});
+
+describe('the horde around a guardian fight', () => {
+  it('scatters plain enemies out of sight down to the cap, keeping the near ones and the elites', () => {
+    const run = session();
+    const { x, y } = run.player;
+    const near = Array.from({ length: 10 }, (_, index) => run.spawnEnemy('skeleton', x + 100 + index, y)!);
+    const far = Array.from({ length: GUARDIAN_FIGHT_SPAWNS.enemyCap + 20 }, (_, index) => run.spawnEnemy('skeleton', x + 900 + index * 4, y)!);
+    const elite = run.spawnEnemy('superSkeleton', x + 1500, y)!;
+    run.spawnMiniBoss('gravedigger');
+    const onField = new Set<unknown>();
+    run.enemies.forEachActive((enemy) => onField.add(enemy));
+    expect(run.enemies.activeCount).toBe(GUARDIAN_FIGHT_SPAWNS.enemyCap);
+    near.forEach((enemy) => expect(onField.has(enemy)).toBe(true));
+    expect(onField.has(elite)).toBe(true);
+    // The farthest went first.
+    expect(onField.has(far[far.length - 1])).toBe(false);
+    expect(onField.has(far[0])).toBe(true);
   });
 });

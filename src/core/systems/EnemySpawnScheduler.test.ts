@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTY_STAGES, ENEMY_VARIANTS } from '../../config/balance';
+import { DIFFICULTY_STAGES, ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, GUARDIAN_FIGHT_SPAWNS } from '../../config/balance';
 import { WORLD_SIZE } from '../../config/world';
 import { createRng, distanceSq } from '../math';
 import { DifficultySystem } from './DifficultySystem';
@@ -7,7 +7,7 @@ import { EnemySpawnScheduler, SpawnRequest } from './EnemySpawnScheduler';
 
 const PLAYER = { x: WORLD_SIZE / 2, y: WORLD_SIZE / 2 };
 
-function setup(options: { skeletons?: boolean; variants?: boolean; encounter?: boolean } = {}) {
+function setup(options: { skeletons?: boolean; variants?: boolean; encounter?: boolean; guardian?: () => boolean; live?: () => number } = {}) {
   const requests: SpawnRequest[] = [];
   const difficulty = new DifficultySystem();
   const scheduler = new EnemySpawnScheduler({
@@ -15,6 +15,8 @@ function setup(options: { skeletons?: boolean; variants?: boolean; encounter?: b
     isSkeletonSpawnEnabled: () => options.skeletons ?? true,
     isVariantSpawnEnabled: () => options.variants ?? true,
     hasActiveEncounter: () => options.encounter ?? false,
+    guardianFight: options.guardian,
+    liveEnemyCount: options.live,
     difficultyStageFor: (elapsedMs) => difficulty.stageFor(elapsedMs),
     spawn: (request) => requests.push(request)
   }, createRng(2024));
@@ -93,5 +95,34 @@ describe('EnemySpawnScheduler — scheduled variants', () => {
     scheduler.update(1, 40_000);
     expect(ofVariant('superSkeleton')).toHaveLength(1);
     expect(ofVariant('apparitionWraith')).toHaveLength(10);
+  });
+});
+
+describe('EnemySpawnScheduler — guardian fights', () => {
+  const lateStage = DIFFICULTY_STAGES[2];
+
+  it('drips one skeleton at a time, much further apart', () => {
+    const { requests, scheduler } = setup({ variants: false, guardian: () => true, live: () => 0 });
+    scheduler.update(lateStage.spawnInterval * GUARDIAN_FIGHT_SPAWNS.intervalMultiplier - 1, lateStage.startMs);
+    expect(requests).toHaveLength(0);
+    scheduler.update(1, lateStage.startMs);
+    expect(requests).toHaveLength(GUARDIAN_FIGHT_SPAWNS.maxPerTick);
+  });
+
+  it('spawns nothing while the field is at the cap', () => {
+    const { requests, scheduler } = setup({ variants: false, guardian: () => true, live: () => GUARDIAN_FIGHT_SPAWNS.enemyCap });
+    scheduler.update(60_000, lateStage.startMs);
+    expect(requests).toHaveLength(0);
+  });
+
+  it('holds the hordes until the fight is over, without bunching them up', () => {
+    let fight = true;
+    const { requests, scheduler } = setup({ skeletons: false, guardian: () => fight });
+    const longest = Math.max(...ENEMY_VARIANT_SCHEDULE.map((entry) => entry.intervalMs));
+    scheduler.update(longest * 3, 0);
+    expect(requests).toHaveLength(0);
+    fight = false;
+    scheduler.update(1, 0);
+    expect(requests).toHaveLength(0);
   });
 });

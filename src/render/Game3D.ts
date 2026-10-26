@@ -32,6 +32,7 @@ import { HeroKitViews } from './views/HeroKitViews';
 import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
 import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
+import { GuardianIntro } from './GuardianIntro';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
@@ -89,6 +90,7 @@ export class Game3D {
   private readonly bossViews = new BossViews();
   private readonly bossEffects: BossEffects;
   private readonly miniBossViews = new MiniBossViews();
+  private readonly guardianIntro: GuardianIntro;
   private readonly companionViews = new CompanionViews();
   private readonly heroKitViews = new HeroKitViews();
   /** Sandbox: every hero playable, without touching the save. */
@@ -196,6 +198,13 @@ export class Game3D {
     this.companionBars = new CompanionBars(container);
     this.scene.add(this.questBarrels.root, this.heroKitViews.root);
     this.chestRoll = new ChestRoll(container);
+    this.guardianIntro = new GuardianIntro(container, (tipRead) => {
+      this.session.revealing = false;
+      if (tipRead) {
+        this.progress = { ...this.progress, guardianTipSeen: true };
+        SaveStore.save(this.progress);
+      }
+    });
     this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
     this.showJoystick = Boolean(options.touch) || isTouchDevice();
     this.joystick.setVisible(false);
@@ -331,6 +340,7 @@ export class Game3D {
     if (this.merchantRoom) this.scene.remove(this.merchantRoom.root, this.merchantRoom.characters);
     this.floating.clear();
     this.chestRoll.stop();
+    this.guardianIntro.reset();
     const { characterId, weaponId } = this.run;
     this.attract = attract || hub;
     this.result = { outcome: null };
@@ -540,6 +550,13 @@ export class Game3D {
       this.particles.emit(point.x, 0.3, point.z, 0x6b5a46, attack === 'shockwave' ? 30 : 16, { spread: attack === 'shockwave' ? 8 : 5, rise: 4, gravity: 14, life: 0.6, size: 1.3, jitter: 0.5 });
       this.cameraRig.shake(attack === 'shockwave' || attack === 'charge' ? 0.35 : 0.2, 0.3);
     });
+    // A guardian's entrance: the game holds while the camera goes to watch it rise (not from inside the tavern).
+    events.on('miniboss-spawned', ({ kind, enemy }) => {
+      if (this.mode !== 'run' || this.attract || this.session.merchant.inside || this.session.over) return;
+      this.miniBossViews.playEntrance(enemy);
+      this.guardianIntro.start(kind, enemy);
+      this.session.revealing = true;
+    });
     events.on('miniboss-stunned', ({ enemy }) => {
       this.floating.spawn(simToWorld(enemy.x, enemy.y, 6, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 28, rise: 40, durationMs: 1100 }, performance.now());
     });
@@ -713,6 +730,14 @@ export class Game3D {
       // ESC stays blocked while a choice screen is open, like the Phaser build.
       // ESC first closes Sergio's counter or a conversation in the tavern.
       if (this.menu.visible) return;
+      if (this.guardianIntro.active) {
+        if (['Escape', 'Enter', 'Space'].includes(event.code)) {
+          event.preventDefault();
+          this.guardianIntro.skip();
+          if (event.code !== 'Space') this.guardianIntro.closeTip();
+        }
+        return;
+      }
       if (this.shop.open || this.tierPicker.open || this.recordBook.open) {
         if (event.code === 'Escape') {
           this.shop.hide();
@@ -809,14 +834,20 @@ export class Game3D {
     this.particles.update(deltaSeconds);
     this.effects.update(deltaSeconds);
     this.sheetEffects.update(deltaSeconds);
-    this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
+    const sceneFocus = this.guardianIntro.update(frameMs / 1000, this.playerView.worldPosition, !this.progress.guardianTipSeen);
+    if (sceneFocus) {
+      this.cameraRig.cut();
+      this.cameraRig.follow(sceneFocus, frameMs / 1000);
+    } else {
+      this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
+    }
     this.arena.setSceneryVisible(!this.session.merchant.inside);
     this.arena.followFocus(this.cameraRig.focus);
     this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
     this.bossViews.update(this.session.bosses.bosses, this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.bossEffects.update(this.session, alpha, this.session.frozen ? 0 : frameMs / 1000);
-    this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.miniBossViews.update(this.session.miniBosses.bosses, alpha, simNow, this.session.frozen && !this.guardianIntro.filming ? 0 : frameMs / 1000);
     this.heroKitViews.update(this.session, alpha, simNow);
     this.companionViews.update(this.session.companions.companions, this.session.companions.skeletons, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.miniBossEffects.update(this.session.miniBosses, alpha, this.session.frozen ? 0 : frameMs / 1000);
