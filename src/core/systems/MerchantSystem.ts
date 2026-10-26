@@ -42,6 +42,11 @@ export const MERCHANT_ROOM = {
   tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
   tableRadius: 34,
   npcRadius: 18,
+  /** Between runs: the heroes waiting along the north wall (roster order), and where you talk to Sergio. */
+  heroStands: [{ x: -120, y: -245 }, { x: 100, y: -245 }, { x: 180, y: -245 }, { x: 260, y: -245 }],
+  heroReach: 70,
+  sergioSpot: { x: -140, y: 0 },
+  sergioReach: 110,
   /** Talk from this close (tables sit between you and them). */
   talkReach: 110
 };
@@ -93,8 +98,9 @@ export interface MerchantHost {
   encounterActive(): boolean;
 }
 
-/** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing. */
-export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | null;
+/** What the hero is at in the tavern: the exit portal, an item on the counter, one of the regulars, or nothing —
+ *  and between runs, a waiting hero or Sergio himself. */
+export type RoomSpot = { kind: 'exit' } | { kind: 'slot'; index: number } | { kind: 'npc'; index: number } | { kind: 'hero'; index: number } | { kind: 'sergio' } | null;
 
 export class MerchantSystem {
   enabled = true;
@@ -102,6 +108,9 @@ export class MerchantSystem {
   portal: { x: number; y: number; remainingMs: number } | null = null;
   /** True while the hero is in the room (the arena is frozen). */
   inside = false;
+  /** The tavern between runs: no stock on the counter, Sergio and the waiting heroes to talk to, and the exit
+   *  portal starts a run instead of returning to one. */
+  hub = false;
   /** Offers on this visit's pedestals. */
   offers: MerchantOffer[] = [];
   /** The room's centre in game units (outside the arena). */
@@ -128,6 +137,12 @@ export class MerchantSystem {
     const { player } = this.host;
     const near = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y)) <= MERCHANT_TUNING.reach;
     if (near(MERCHANT_ROOM.exit)) return { kind: 'exit' };
+    if (this.hub) {
+      const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
+      const stand = MERCHANT_ROOM.heroStands.findIndex((spot) => distance(spot) <= MERCHANT_ROOM.heroReach);
+      if (stand >= 0) return { kind: 'hero', index: stand };
+      if (distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+    }
     // Pedestals stand closer together than the reach: the nearest unsold one is the one you mean.
     let best = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -184,6 +199,17 @@ export class MerchantSystem {
     this.host.events.emit('merchant-entered', {});
   }
 
+  /** Puts the hero in the tavern between runs (no portal, nothing on sale). */
+  enterHub(): void {
+    const { player } = this.host;
+    this.hub = true;
+    this.enabled = false;
+    this.inside = true;
+    this.offers = [];
+    player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
+    player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y + 60;
+  }
+
   /** Back to the arena where the hero left it; that portal closes behind them. */
   leave(): void {
     if (!this.inside) return;
@@ -212,7 +238,8 @@ export class MerchantSystem {
     // Tables and the regulars standing by them.
     const circles = [
       ...MERCHANT_ROOM.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
-      ...MERCHANT_ROOM.npcs.map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius }))
+      ...MERCHANT_ROOM.npcs.map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
+      ...(this.hub ? MERCHANT_ROOM.heroStands.map((stand) => ({ ...stand, radius: MERCHANT_ROOM.npcRadius })) : [])
     ];
     circles.forEach((circle) => {
       const cx = this.room.x + circle.x;

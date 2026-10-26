@@ -447,3 +447,24 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .hero-choice-level { margin-left: auto; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 600 11px/1.5 var(--sans); white-space: nowrap; }
 .hero-choice[data-frame="bronze"] { box-shadow: inset 0 0 0 2px #b0763f; }
 .hero-choice[data-frame="ouro"] { box-shadow: inset 0 0 0 2px #e2b24a, 0 0 14px #e2b24a40; }
+
+/* The tavern between runs: Sergio's shop and the header. */
+.sergio-shop { top: 50%; bottom: auto; transform: translate(-50%, -50%); max-height: calc(100% - 32px); overflow: auto; }
+.shop-balance { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.shop-balance b { color: var(--gold); font-size: 18px; }
+.shop-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; }
+.shop-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: #0d1719b3; }
+.shop-info { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline; min-width: 0; }
+.shop-info strong { font: 600 14px var(--display); color: var(--cream); }
+.shop-info > span:not(.shop-pips) { color: var(--muted); font-size: 13px; }
+.shop-pips { grid-column: 1 / -1; display: flex; gap: 4px; }
+.shop-pips i { width: 18px; height: 5px; border-radius: 2px; background: #2a3a3a; }
+.shop-pips i.on { background: var(--gold); }
+.shop-buy { min-width: 120px; padding: 6px 12px; font-size: 13px; }
+.shop-buy:disabled { opacity: .5; cursor: default; }
+.tavern-header { position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 3; width: min(640px, calc(100% - 32px)); padding: 10px 18px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); text-align: center; pointer-events: none; }
+.tavern-header[hidden] { display: none; }
+.tavern-header p { margin: 0; }
+.tavern-fichas { font: 500 16px/1.5 var(--display); color: var(--cream); }
+.tavern-fichas b { color: var(--gold); }
+.tavern-hints { color: var(--muted); font-size: 12px; }

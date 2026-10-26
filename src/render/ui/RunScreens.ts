@@ -14,6 +14,7 @@ export interface RunScreenActions {
   menu: () => void;
   exportSave: () => void;
   importSave: () => void;
+  tavern: () => void;
 }
 
 type Screen = 'none' | 'pause' | 'defeat' | 'victory';
@@ -50,7 +51,8 @@ export class RunScreens {
       <p class="eyebrow">O FIM DE UMA RODADA</p><h2></h2>
       <p class="run-end-stats"></p>
       <div class="run-end-progress"></div>
-      <button type="button" class="ui-button primary" data-action="restart">Tentar novamente <kbd>R</kbd></button>
+      <button type="button" class="ui-button primary" data-action="tavern">Ir para a taverna <kbd>T</kbd></button>
+      <button type="button" class="ui-button" data-action="restart">Tentar novamente <kbd>R</kbd></button>
       <button type="button" class="ui-button" data-action="menu">Voltar ao menu <kbd>M</kbd></button>`;
     this.endStats = this.end.querySelector('.run-end-stats')!;
     this.endProgress = this.end.querySelector('.run-end-progress')!;
@@ -81,7 +83,7 @@ export class RunScreens {
       const seconds = Math.floor(session.elapsedMs / 1000);
       this.endStats.textContent = `Tempo ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} · Nível ${session.level} · ${session.kills} eliminações`;
       this.renderProgress(result);
-      this.end.querySelector<HTMLButtonElement>('[data-action="restart"]')!.focus();
+      this.end.querySelector<HTMLButtonElement>('[data-action="tavern"]')!.focus();
     }
     if (screen === 'pause') this.pause.querySelector<HTMLButtonElement>('[data-action="resume"]')!.focus();
   }

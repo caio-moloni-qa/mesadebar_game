@@ -1,4 +1,6 @@
 import { GameSession } from '../../core/session/GameSession';
+import { MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, SaveData, masteryLevel, rosterFor } from '../../core/progress/Progress';
+import { heroName } from '../progress/heroNames';
 import { npcFace } from './icons';
 import { goalText, progressText, rewardText } from './questText';
 
@@ -18,17 +20,24 @@ export class TavernDialog {
     container.appendChild(this.root);
   }
 
-  update(session: GameSession): void {
+  /** `save`: between runs the regulars talk about your progress with them (missions done over all runs, and what
+   *  it takes for them to join you) instead of handing out a mission. */
+  update(session: GameSession, save?: SaveData): void {
     this.session = session;
     const index = session.dialogue;
     const quest = index === null ? null : session.quests.quests[index];
-    const key = quest ? `${index}:${quest.tier}:${quest.status}:${progressText(session.quests, quest)}` : '';
+    const hub = session.merchant.hub && save ? save : null;
+    const key = quest ? `${hub ? 'hub:' : ''}${index}:${quest.tier}:${quest.status}:${progressText(session.quests, quest)}` : '';
     if (key === this.renderedKey) return;
     this.renderedKey = key;
     this.root.hidden = !quest;
     if (!quest) return;
     const spec = session.quests.spec(quest);
     const { npc } = quest;
+    if (hub) {
+      this.renderProgress(quest.npc.id, hub);
+      return;
+    }
     const said = quest.status === 'offer' ? spec.pitch
       : quest.status === 'active' ? 'E então? Ainda estou esperando. Volte quando terminar.'
       : quest.status === 'ready' ? npc.thanks
@@ -57,6 +66,41 @@ export class TavernDialog {
     const actions = this.root.querySelector('.dialog-actions')!;
     if (primary) actions.appendChild(this.button(`${primary} (E)`, 'primary', () => this.session?.answerDialogue()));
     actions.appendChild(this.button('Até mais (Esc)', '', () => this.session?.closeDialogue()));
+    actions.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  }
+
+  /** Between runs: missions done with this regular over all runs, the next one, and the road to playing them. */
+  private renderProgress(id: keyof typeof REGULAR_UNLOCKS, save: SaveData): void {
+    const quest = this.session!.quests.quests.find((candidate) => candidate.npc.id === id)!;
+    const { npc } = quest;
+    const done = Math.min(MISSIONS_PER_REGULAR, save.regularMissions[id] ?? 0);
+    const rule = REGULAR_UNLOCKS[id];
+    const level = masteryLevel(save.mastery[rule.hero] ?? 0);
+    const joined = rosterFor(save).includes(id);
+    const said = joined ? 'Estou pronto para lutar ao seu lado. É só me chamar para a próxima partida!'
+      : done >= MISSIONS_PER_REGULAR ? `Você fez tudo o que eu pedi. Agora me mostre do que é capaz com ${heroName(rule.hero)}, e eu vou com você.`
+      : done === 0 ? 'Tenho um trabalho para você, mas só lá fora, na arena. Me procure quando o portal da taverna abrir durante a partida.'
+      : 'Bom trabalho até aqui. Ainda tenho mais para você, lá na arena.';
+    this.root.innerHTML = `
+      <div class="dialog-portrait"><img alt=""></div>
+      <div class="dialog-body">
+        <p class="dialog-name"></p>
+        <p class="eyebrow dialog-title"></p>
+        <p class="dialog-text"></p>
+        <ul class="dialog-details"></ul>
+        <div class="dialog-actions"></div>
+      </div>`;
+    this.root.querySelector('img')!.src = npcFace(npc.id);
+    this.root.querySelector('.dialog-name')!.innerHTML = `${npc.name} <span>${npc.epithet}</span>`;
+    this.root.querySelector('.dialog-title')!.textContent = `MISSÕES COMPLETAS: ${done}/${MISSIONS_PER_REGULAR}`;
+    this.root.querySelector('.dialog-text')!.textContent = `“${said}”`;
+    const details = this.root.querySelector('.dialog-details')!;
+    const next = done < MISSIONS_PER_REGULAR ? npc.quests[done].title : 'todas completas';
+    details.innerHTML = '<li><b>Próxima missão:</b> </li><li><b>Para jogar com ' + npc.name + ':</b> </li>';
+    details.children[0].append(next);
+    details.children[1].append(joined ? 'liberado!' : `as ${MISSIONS_PER_REGULAR} missões (${done}/${MISSIONS_PER_REGULAR}) e maestria ${rule.level} com ${heroName(rule.hero)} (nível ${level})`);
+    const actions = this.root.querySelector('.dialog-actions')!;
+    actions.appendChild(this.button('Até mais (Esc)', 'primary', () => this.session?.closeDialogue()));
     actions.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
   }
 

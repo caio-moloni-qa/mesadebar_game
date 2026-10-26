@@ -32,12 +32,18 @@ type MenuScreen = 'title' | 'characters' | 'weapons' | 'controls' | 'credits';
 export interface MenuProgress {
   save(): SaveData;
   setSkin(hero: CharacterId, skin: SkinId): void;
+  /** "Jogar": into the tavern. */
+  play(): void;
+  /** Hero selection opened from the tavern was closed without choosing. */
+  closeToTavern(): void;
 }
 
 export class StartMenu {
   private readonly root: HTMLDivElement;
   private readonly content: HTMLDivElement;
   private screen: MenuScreen = 'title';
+  /** Hero selection opened from the tavern: backing out returns there instead of to the title. */
+  private fromTavern = false;
   private selected: CharacterConfig | null = null;
   private preview: HeroPreview | null = null;
 
@@ -53,7 +59,8 @@ export class StartMenu {
       if (this.root.hidden || event.repeat) return;
       if (event.code === 'Escape' && this.screen !== 'title') {
         event.preventDefault();
-        this.navigate(this.screen === 'weapons' ? 'characters' : 'title');
+        if (this.fromTavern && this.screen === 'characters') this.progress.closeToTavern();
+        else this.navigate(this.screen === 'weapons' ? 'characters' : 'title');
       }
       if (this.screen === 'characters' && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.code)) {
         event.preventDefault();
@@ -67,7 +74,17 @@ export class StartMenu {
 
   show(): void {
     this.selected = null;
+    this.fromTavern = false;
     this.screen = 'title';
+    this.root.hidden = false;
+    this.render();
+  }
+
+  /** From the tavern: straight to hero selection with `hero` picked. */
+  showCharacters(hero: CharacterId): void {
+    this.selected = CHARACTERS[hero];
+    this.fromTavern = true;
+    this.screen = 'characters';
     this.root.hidden = false;
     this.render();
   }
@@ -120,7 +137,8 @@ export class StartMenu {
       </nav>
       <footer class="title-footer"><span>FANTASIA MEDIEVAL · SOBREVIVÊNCIA</span><span>v0.2 <i>◆</i> Feito para sobreviver</span></footer>`;
     step.querySelectorAll<HTMLButtonElement>('[data-screen]').forEach((button) => {
-      button.addEventListener('click', () => this.navigate(button.dataset.screen as MenuScreen));
+      // "Jogar" goes into the tavern, where heroes are picked and runs start.
+      button.addEventListener('click', () => (button.classList.contains('title-play') ? this.progress.play() : this.navigate(button.dataset.screen as MenuScreen)));
     });
     return step;
   }
@@ -145,9 +163,10 @@ export class StartMenu {
       <p class="eyebrow">ANTES DA PRIMEIRA RODADA</p><h1>Como jogar</h1>
       <div class="info-panel"><div class="control-row"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / setas</span><strong>Mover o herói</strong></div>
       <div class="control-row"><span><kbd>Esc</kbd> / <kbd>P</kbd></span><strong>Pausar a aventura</strong></div>
-      <div class="control-row"><span><kbd>E</kbd></span><strong>Usar portais</strong></div>
+      <div class="control-row"><span><kbd>E</kbd></span><strong>Usar portais e falar na taverna</strong></div>
       <div class="control-row"><span><kbd>1</kbd> a <kbd>5</kbd></span><strong>Escolher melhorias</strong></div>
-      <div class="info-divider"></div><p>Suas armas atacam automaticamente. Derrote inimigos para ganhar experiência, escolha melhorias e enfrente o chefe após três minutos.</p>
+      <div class="info-divider"></div><p>Suas armas atacam automaticamente. Derrote inimigos para ganhar experiência, escolha melhorias e enfrente o chefe após cinco minutos.</p>
+      <p>Entre as partidas você fica na taverna: gaste Fichas com o Sergio, troque de herói e saia pelo portal para jogar.</p>
       <p>No celular, use o joystick para mover e toque nas opções para escolher.</p></div>`;
     step.append(this.backButton('title', 'Menu principal'));
     return step;
@@ -196,7 +215,16 @@ export class StartMenu {
       roster.append(button);
     });
     const footer = document.createElement('div'); footer.className = 'selection-footer';
-    footer.append(this.backButton('title', 'Menu principal'));
+    if (this.fromTavern) {
+      const toTavern = document.createElement('button');
+      toTavern.type = 'button';
+      toTavern.className = 'start-back';
+      toTavern.innerHTML = '<span aria-hidden="true">←</span> Voltar à taverna <kbd>Esc</kbd>';
+      toTavern.addEventListener('click', () => this.progress.closeToTavern());
+      footer.append(toTavern);
+    } else {
+      footer.append(this.backButton('title', 'Menu principal'));
+    }
     const hint = document.createElement('p'); hint.className = 'selection-keyboard-hint'; hint.innerHTML = '<kbd>←</kbd><kbd>→</kbd> Trocar herói';
     footer.append(hint);
     step.append(showcase, roster, footer);

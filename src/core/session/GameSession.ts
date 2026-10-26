@@ -77,6 +77,10 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'player-died': Record<string, never>;
   /** Segunda chance: back on their feet once, at half health. */
   'player-revived': Record<string, never>;
+  /** Between runs: the exit portal (start a run), a waiting hero (pick them), Sergio (his upgrades). */
+  'hub-exit': Record<string, never>;
+  'hub-hero': { index: number };
+  'hub-sergio': Record<string, never>;
   /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
   'boss-wave-cleared': { cycle: number };
   'run-ended': { victory: boolean };
@@ -97,6 +101,8 @@ export interface GameSessionOptions {
   meta?: MetaBonuses;
   /** Missions already done with each regular in earlier runs: they pick up at the next one. */
   questTiers?: Partial<Record<QuestNpcId, number>>;
+  /** The tavern between runs: the hero starts in the room, nothing spawns, no run clock. */
+  hub?: boolean;
 }
 
 /** Engine-agnostic run simulation — the GameScene replacement described in THREEJS_3D_MIGRATION_TEMP.md. Covers
@@ -241,6 +247,11 @@ export class GameSession implements WeaponHost {
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
     }, this.rng, this.arena.size);
+    if (options.hub) {
+      this.skeletonSpawnEnabled = false;
+      this.variantSpawnEnabled = false;
+      this.merchant.enterHub();
+    }
     const meta = options.meta ?? NO_META_BONUSES;
     this.applyMeta(meta);
     if (!options.skipStartingUpgrades && character.preferredWeaponId === startingWeapon.id && character.startingWeaponUpgradeChoices) {
@@ -361,6 +372,11 @@ export class GameSession implements WeaponHost {
   answerDialogue(): void {
     const index = this.dialogue;
     if (index === null) return;
+    // Between runs the regulars only tell you how far you've come; missions are taken during a run.
+    if (this.merchant.hub) {
+      this.dialogue = null;
+      return;
+    }
     const quest = this.quests.quests[index];
     if (quest.status === 'offer') this.quests.accept(index);
     else if (quest.status === 'ready') {
@@ -753,6 +769,14 @@ export class GameSession implements WeaponHost {
         return;
       }
       const spot = this.merchant.roomSpot;
+      if (this.merchant.hub) {
+        // Between runs the room's stations are the renderer's to answer; the regulars still talk.
+        if (spot?.kind === 'exit') this.events.emit('hub-exit', {});
+        if (spot?.kind === 'hero') this.events.emit('hub-hero', { index: spot.index });
+        if (spot?.kind === 'sergio') this.events.emit('hub-sergio', {});
+        if (spot?.kind === 'npc') this.dialogue = spot.index;
+        return;
+      }
       if (spot?.kind === 'exit') this.merchant.leave();
       if (spot?.kind === 'slot') this.buyFromMerchant(spot.index);
       if (spot?.kind === 'npc') this.dialogue = spot.index;

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GameAudio } from '../audio/GameAudio';
 import { SANDBOX_SPAWN_CAPS } from '../config/balance';
-import { CHARACTERS } from '../config/characters';
+import { CHARACTERS, CharacterId } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { ArenaMap } from '../core/world/ArenaMap';
@@ -27,7 +27,9 @@ import { TavernDialog } from './ui/TavernDialog';
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
-import { SaveData, applyRun, metaBonuses } from '../core/progress/Progress';
+import { STARTING_HEROES, SaveData, applyRun, buyUpgrade, metaBonuses } from '../core/progress/Progress';
+import { SergioShop, TavernHeader } from './ui/TavernHub';
+import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
 import { MINI_BOSSES } from '../core/systems/MiniBossSystem';
@@ -103,6 +105,10 @@ export class Game3D {
   private progress: SaveData = SaveStore.load();
   private result: RunResult = { outcome: null };
   private attract = false;
+  /** The title menu, the tavern between runs, or a run. */
+  private mode: 'menu' | 'hub' | 'run' = 'menu';
+  private readonly shop: SergioShop;
+  private readonly tavernHeader: TavernHeader;
   private inMenu = false;
   private session!: GameSession;
   private playerView!: HeroView;
@@ -162,6 +168,7 @@ export class Game3D {
       resume: () => { this.session.paused = false; },
       restart: () => this.restart(),
       menu: () => this.showMenu(),
+      tavern: () => this.enterHub(),
       exportSave: () => SaveStore.export(this.progress),
       importSave: () => {
         void SaveStore.import().then((save) => {
@@ -180,12 +187,35 @@ export class Game3D {
     this.joystick = new Joystick(container, () => !this.session.frozen && !this.session.over);
     this.showJoystick = Boolean(options.touch) || isTouchDevice();
     this.joystick.setVisible(false);
-    this.menu = new StartMenu(container, (choice) => this.startRun(choice), {
+    this.shop = new SergioShop(container, {
+      save: () => this.progress,
+      buy: (id) => {
+        const bought = buyUpgrade(this.progress, id);
+        if (!bought) return;
+        this.progress = bought;
+        SaveStore.save(this.progress);
+      },
+      exportSave: () => SaveStore.export(this.progress),
+      importSave: () => {
+        void SaveStore.import().then((save) => {
+          if (!save) return;
+          this.progress = save;
+          SaveStore.save(save);
+          this.shop.render();
+        });
+      },
+      close: () => this.shop.hide()
+    });
+    this.tavernHeader = new TavernHeader(container);
+    // From the title "Jogar" enters the tavern; there, picking a hero (and weapon) makes them yours in the room.
+    this.menu = new StartMenu(container, (choice) => (this.mode === 'hub' ? this.pickHero(choice) : this.startRun(choice)), {
       save: () => this.progress,
       setSkin: (hero, skin) => {
         this.progress = { ...this.progress, skins: { ...this.progress.skins, [hero]: skin } };
         SaveStore.save(this.progress);
-      }
+      },
+      play: () => this.enterHub(),
+      closeToTavern: () => this.menu.hide()
     });
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
@@ -199,6 +229,8 @@ export class Game3D {
 
   startRun(choice: RunChoice): void {
     this.keys.clear();
+    this.mode = 'run';
+    this.shop.hide();
     this.run = choice;
     this.inMenu = false;
     this.menu.hide();
@@ -214,6 +246,8 @@ export class Game3D {
    *  empty, spawn-free session. */
   showMenu(): void {
     this.keys.clear();
+    this.mode = 'menu';
+    this.shop.hide();
     this.inMenu = true;
     this.hud.setVisible(false);
     this.bossUi.setVisible(false);
@@ -228,7 +262,35 @@ export class Game3D {
     this.createSession({ skipStartingUpgrades: false, attract: false });
   }
 
-  private createSession({ skipStartingUpgrades, attract }: { skipStartingUpgrades: boolean; attract: boolean }): void {
+  /** The tavern between runs: walk the room, spend Fichas with Sergio, pick a hero, leave by the portal to play. */
+  enterHub(): void {
+    this.keys.clear();
+    this.mode = 'hub';
+    this.inMenu = false;
+    this.menu.hide();
+    this.hud.setVisible(false);
+    this.bossUi.setVisible(true);
+    this.companionBars.setVisible(false);
+    this.sandbox.setAllowed(false);
+    this.joystick.setVisible(this.showJoystick);
+    this.createSession({ skipStartingUpgrades: true, attract: false, hub: true });
+    this.cameraRig.cut();
+    if (!this.progress.tutorialSeen) {
+      this.progress = { ...this.progress, tutorialSeen: true };
+      SaveStore.save(this.progress);
+      this.shop.show(true);
+    }
+  }
+
+  /** In the tavern: become this hero (the room rebuilds with you in their place). */
+  private pickHero(choice: RunChoice): void {
+    this.run = choice;
+    this.menu.hide();
+    this.createSession({ skipStartingUpgrades: true, attract: false, hub: true });
+    this.cameraRig.cut();
+  }
+
+  private createSession({ skipStartingUpgrades, attract, hub = false }: { skipStartingUpgrades: boolean; attract: boolean; hub?: boolean }): void {
     this.playerView?.dispose();
     this.bossViews.clear();
     this.miniBossViews.clear();
@@ -239,7 +301,7 @@ export class Game3D {
     this.floating.clear();
     this.chestRoll.stop();
     const { characterId, weaponId } = this.run;
-    this.attract = attract;
+    this.attract = attract || hub;
     this.result = { outcome: null };
     this.session = new GameSession({
       characterId,
@@ -249,12 +311,14 @@ export class Game3D {
       skipStartingUpgrades,
       arena: this.arenaMap,
       // Sergio's permanent upgrades and the regulars' mission progress carry into every real run.
-      meta: attract ? undefined : metaBonuses(this.progress),
-      questTiers: attract ? undefined : this.progress.regularMissions
+      meta: attract || hub ? undefined : metaBonuses(this.progress),
+      questTiers: attract ? undefined : this.progress.regularMissions,
+      hub
     });
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
     this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);
+    if (hub) this.merchantRoom.setHubHeroes(STARTING_HEROES.map((id) => (id === characterId || !(id in CHARACTERS) ? null : { id: id as CharacterId, skin: this.progress.skins[id] ?? 'base' })));
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
       this.session.variantSpawnEnabled = false;
@@ -293,6 +357,12 @@ export class Game3D {
   private bindSessionEffects(): void {
     const { events } = this.session;
     events.on('run-ended', () => this.bankRun());
+    events.on('hub-exit', () => this.startRun(this.run));
+    events.on('hub-sergio', () => this.shop.show());
+    events.on('hub-hero', ({ index }) => {
+      const hero = STARTING_HEROES[index];
+      if (hero && hero !== this.run.characterId && hero in CHARACTERS) this.menu.showCharacters(hero as CharacterId);
+    });
     events.on('player-revived', () => {
       this.floatAboveHero('SEGUNDA CHANCE!', '#ffe29a');
       this.effects.pulse(this.session.player.x, this.session.player.y, 140, 0xffe29a, 0.6, 0.8);
@@ -561,7 +631,13 @@ export class Game3D {
       if (this.inMenu) return;
       this.keys.add(event.code);
       // ESC stays blocked while a choice screen is open, like the Phaser build.
-      // ESC first closes a conversation in the tavern.
+      // ESC first closes Sergio's counter or a conversation in the tavern.
+      if (this.menu.visible) return;
+      if (this.shop.open) {
+        if (event.code === 'Escape') this.shop.hide();
+        return;
+      }
+      if (event.code === 'KeyT' && this.session.over) this.enterHub();
       if (event.code === 'Escape' && this.session.dialogue !== null) this.session.closeDialogue();
       else if ((event.code === 'Escape' || event.code === 'KeyP') && !this.session.pendingChoice && !this.session.revealing) this.session.paused = !this.session.paused;
       if (event.code === 'KeyR' && this.session.over) this.restart();
@@ -594,7 +670,7 @@ export class Game3D {
   }
 
   private readMoveInput(): void {
-    if (this.inMenu) {
+    if (this.inMenu || this.shop.open || (this.mode === 'hub' && this.menu.visible)) {
       this.session.setMoveInput(0, 0);
       return;
     }
@@ -681,7 +757,8 @@ export class Game3D {
       textures: this.renderer.info.memory.textures
     });
     this.choices.update(this.session);
-    this.tavernDialog.update(this.session);
+    this.tavernDialog.update(this.session, this.progress);
+    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open, this.progress, heroName(this.run.characterId));
   }
 }
 

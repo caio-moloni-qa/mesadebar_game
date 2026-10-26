@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { MERCHANT_ROOM, MERCHANT_TUNING, MerchantItemId, MerchantSystem } from '../../core/systems/MerchantSystem';
 import { QuestStatus, QuestSystem } from '../../core/systems/QuestSystem';
+import { CHARACTERS, CharacterId } from '../../config/characters';
+import { SkinId } from '../../core/progress/Progress';
+import { createHeroModel } from '../models/heroes';
 import { toonMaterial } from '../materials';
 import { humanoidClips } from '../models/clips';
 import { ball, box, cone, cylinder, mergeParts, part } from '../models/parts';
@@ -214,6 +217,8 @@ export class MerchantRoom {
   private readonly textures = new Map<MerchantItemId, THREE.Texture>();
   private shownOffers = '';
   private time = 0;
+  /** Between runs: the heroes waiting at their stands (idling, in their chosen skins). */
+  private readonly standing: Character[] = [];
 
   constructor(private readonly system: MerchantSystem, private readonly quests: QuestSystem) {
     const center = simToWorld(system.room.x, system.room.y, 0, new THREE.Vector3());
@@ -342,6 +347,25 @@ export class MerchantRoom {
     this.root.add(room, this.arenaPortal);
   }
 
+  /** Between runs: puts each hero at their stand (null leaves it empty — that's the one you're playing). */
+  setHubHeroes(heroes: Array<{ id: CharacterId; skin: SkinId } | null>): void {
+    this.standing.forEach((hero) => hero.root.removeFromParent());
+    this.standing.length = 0;
+    const center = simToWorld(this.system.room.x, this.system.room.y, 0, new THREE.Vector3());
+    heroes.forEach((hero, index) => {
+      const spot = MERCHANT_ROOM.heroStands[index];
+      if (!hero || !spot) return;
+      const model = createHeroModel(hero.id, CHARACTERS[hero.id].preferredWeaponId ?? 'staff', hero.skin);
+      const mixer = new THREE.AnimationMixer(model.root);
+      const idle = mixer.clipAction(model.clips.idle);
+      idle.time = index * 0.37;
+      idle.play();
+      model.root.position.set(center.x + spot.x * WORLD_SCALE, 0, center.z + spot.y * WORLD_SCALE);
+      this.characters.add(model.root);
+      this.standing.push({ root: model.root, mixer });
+    });
+  }
+
   update(deltaSeconds: number): void {
     this.time += deltaSeconds;
     const { system } = this;
@@ -362,6 +386,7 @@ export class MerchantRoom {
     if (!system.inside) return;
     this.sergio.mixer.update(deltaSeconds);
     this.regulars.forEach((regular) => regular.mixer.update(deltaSeconds));
+    this.standing.forEach((hero) => hero.mixer.update(deltaSeconds));
     // The fire breathes.
     this.fireLight.intensity = 18 + Math.sin(this.time * 9) * 3 + Math.sin(this.time * 23) * 2;
     this.flames.forEach((flame, index) => flame.scale.set(1, 0.85 + 0.25 * Math.abs(Math.sin(this.time * (7 + index * 2) + index)), 1));
@@ -389,6 +414,8 @@ export class MerchantRoom {
       });
     }
     this.icons.forEach((icon, index) => {
+      // Between runs the counter is bare (Sergio sells his permanent upgrades by talking to him).
+      icon.visible = !!system.offers[index];
       const sold = system.offers[index]?.purchased;
       icon.position.y = sold ? 1.45 : 1.9 + Math.sin(this.time * 2 + index) * 0.1;
     });
