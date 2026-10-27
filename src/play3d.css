@@ -132,6 +132,9 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .area-guardians li.done { border-color: #8dffa866; color: #8dffa8; }
 .area-guardians li.done::before { content: '✔ '; }
 .area-card .ui-button { margin-top: auto; align-self: stretch; }
+.area-card.in-development > :not(.area-badge):not(h2):not(.eyebrow) { opacity: .45; }
+.area-card .ui-button:disabled { cursor: not-allowed; filter: grayscale(1); transform: none; }
+.area-card .area-badge { align-self: flex-start; margin: 0; padding: 4px 10px; border: 1px solid var(--gold); border-radius: 999px; color: var(--gold); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
 .control-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 0; border-bottom: 1px solid #ffffff09; font-size: 12px; }
 .control-row strong { font-weight: 500; }
 

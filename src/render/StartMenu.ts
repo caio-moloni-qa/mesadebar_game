@@ -33,6 +33,9 @@ const AREA_TEXT: Record<string, string> = {
   snowfield: 'Neve e ruínas medievais: o castelo, o lago congelado e a capela.'
 };
 
+/** Arenas still being built: listed in the area picker, but they can't be played yet. */
+const AREAS_IN_DEVELOPMENT = new Set(['snowfield']);
+
 type MenuScreen = 'title' | 'areas' | 'characters' | 'weapons' | 'controls' | 'credits';
 
 /** Title and loadout screens over the idle 3D arena. */
@@ -228,8 +231,18 @@ export class StartMenu {
       const play = document.createElement('button');
       play.type = 'button';
       play.className = 'ui-button primary';
-      play.textContent = `Jogar em ${layout.name}  →`;
-      play.addEventListener('click', () => this.progress.play(layout.id));
+      if (AREAS_IN_DEVELOPMENT.has(layout.id)) {
+        card.classList.add('in-development');
+        const badge = document.createElement('p');
+        badge.className = 'area-badge';
+        badge.textContent = 'Em desenvolvimento';
+        card.querySelector('h2')!.after(badge);
+        play.disabled = true;
+        play.textContent = 'Em desenvolvimento';
+      } else {
+        play.textContent = `Jogar em ${layout.name}  →`;
+        play.addEventListener('click', () => this.progress.play(layout.id));
+      }
       card.append(play);
       list.append(card);
     });
