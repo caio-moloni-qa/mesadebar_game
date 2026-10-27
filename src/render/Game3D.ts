@@ -991,6 +991,11 @@ export class Game3D {
     });
     window.addEventListener('keyup', (event) => this.keys.delete(event.code));
     window.addEventListener('blur', () => this.keys.clear());
+    // The game has no right-click action; the browser menu would swallow keyup and leave the hero walking.
+    window.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      this.keys.clear();
+    });
   }
 
   private debugKey(code: string): void {
