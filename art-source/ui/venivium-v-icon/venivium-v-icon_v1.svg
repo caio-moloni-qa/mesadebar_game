@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Venivium — V em Cinzel 900">
+<defs>
+  <linearGradient id="title-gold" x1="0" y1="0" x2="0" y2="1" objectBoundingBox="true">
+    <stop offset="7%" stop-color="#f4d599"/><stop offset="38%" stop-color="#e5a05d"/><stop offset="75%" stop-color="#ba5441"/>
+  </linearGradient>
+  <path id="letter" d="M369 -24 24 694H264L457 232ZM369 -24V132L615 697H696L435 125Q431 116 422.0 96.5Q413 77 403.5 54.0Q394 31 387.0 10.0Q380 -11 378 -24ZM584 627Q598 657 582.0 673.5Q566 690 546 690H537V700H760V690Q760 690 755.5 690.0Q751 690 751 690Q729 690 704.5 675.5Q680 661 664 627ZM292 627H56Q40 661 15.5 675.5Q-9 690 -32 690Q-32 690 -36.0 690.0Q-40 690 -40 690V700H339V690H330Q311 690 296.5 673.5Q282 657 292 627Z" transform="translate(156.5 828.7750000000001) scale(0.9875 -0.9875)"/>
+</defs>
+<use href="#letter" transform="translate(0 22)" fill="#291c23" stroke="#291c23" stroke-width="8" stroke-linejoin="round"/>
+<use href="#letter" transform="translate(0 15)" fill="#4b2426" stroke="#4b2426" stroke-width="6" stroke-linejoin="round"/>
+<use href="#letter" transform="translate(0 8)" fill="#773831" stroke="#773831" stroke-width="5" stroke-linejoin="round"/>
+<use href="#letter" fill="url(#title-gold)" stroke="#f1cc80" stroke-width="4" stroke-linejoin="round"/>
+</svg>
