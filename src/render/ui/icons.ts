@@ -115,13 +115,15 @@ export function upgradeIcon(id: string): string {
 export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
 
 /** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
-export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'end' | 'continue' | 'merchant' | 'barrel';
+export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'frostKnight' | 'end' | 'continue' | 'merchant' | 'barrel';
 const MARKER_FACES: Record<MarkerKind, string> = {
   // The Necromancer and the zone guardians: their heads, cut from the concept art (art-source/3d/<boss>/views/front.png).
   boss: new URL('../../assets/ui/markers/boss-head.png', import.meta.url).href,
   gravedigger: new URL('../../assets/ui/markers/gravedigger-head.png', import.meta.url).href,
   templeGuardian: new URL('../../assets/ui/markers/templeGuardian-head.png', import.meta.url).href,
   lakeSpirit: new URL('../../assets/ui/markers/lakeSpirit-head.png', import.meta.url).href,
+  // O Cavaleiro Congelado: a frosted great helm, a cyan visor slit, a crest of ice.
+  frostKnight: svg('<path d="M32 4 L38 14 L32 12 L26 14 Z" fill="#e8f3fb"/><path d="M14 22 Q14 10 32 10 Q50 10 50 22 L50 46 Q50 56 32 58 Q14 56 14 46 Z" fill="#9fc3dc"/><path d="M14 30 L50 30 L50 34 L14 34 Z" fill="#5f7d96"/><rect x="20" y="30" width="24" height="5" fill="#7fe3ff"/><path d="M31 38 L33 38 L33 54 L31 54 Z" fill="#5f7d96"/><path d="M14 22 Q14 10 32 10 L32 14 Q18 14 18 24 Z" fill="#e8f3fb" opacity=".8"/>'),
   end: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#9fb4ff" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#9fb4ff" opacity=".6"/><path d="M26 32 h12 m-5 -5 l5 5 l-5 5" stroke="#ffffff" stroke-width="3" fill="none"/>'),
   // Sergio, the merchant: a wide hat over a grey beard, a gold coin at the brim.
   merchant: svg('<rect x="8" y="22" width="48" height="5" rx="2" fill="#3a2a1e"/><path d="M20 22 L32 6 L44 22 Z" fill="#3a2a1e"/><circle cx="32" cy="34" r="11" fill="#d9a77e"/><rect x="26" y="31" width="4" height="4" fill="#1a1410"/><rect x="34" y="31" width="4" height="4" fill="#1a1410"/><path d="M21 38 L43 38 L32 58 Z" fill="#cfc8bb"/><circle cx="46" cy="18" r="5" fill="#ffc65a" stroke="#b8923a" stroke-width="2"/>'),

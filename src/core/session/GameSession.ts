@@ -15,7 +15,7 @@ import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '.
 import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
 import { FLEE_SPEED_MULTIPLIER, PULL_SPEED, PowerTierEvents, PowerTierSystem } from '../systems/PowerTierSystem';
 import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
-import { CompanionKind, MINI_BOSSES, MINI_BOSS_ROTATION, MiniBossEvents, MiniBossKind, MiniBossSystem } from '../systems/MiniBossSystem';
+import { CompanionKind, MINI_BOSSES, MiniBossEvents, MiniBossKind, MiniBossSystem, guardianRotation } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
@@ -245,7 +245,11 @@ export class GameSession implements WeaponHost {
       queueRising: (x, y) => { this.bosses.risings.push({ x, y, elapsedMs: 0 }); },
       healthMultiplier: () => this.difficulty.stageFor(this.elapsedMs).healthMultiplier,
       setLakeLevel: (level) => this.setLakeLevel(level),
-      pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
+      pushPlayer: (dx, dy) => this.pushPlayer(dx, dy),
+      slowPlayer: (percent, ms) => {
+        this.player.applySlow(percent, ms, this.clock.now);
+        this.events.emit('player-status', { text: `LENTO +${Math.round(percent * 100)}%`, tone: 'slow' });
+      }
     });
     this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events }, options.questTiers);
     this.events.on('quest-claimed', () => { this.stats.missions += 1; });
@@ -445,7 +449,8 @@ export class GameSession implements WeaponHost {
     const slotMs = this.phaseDurationMs() / (slots + 1);
     const untilNext = (this.miniBossSlotsThisPhase + 1) * slotMs - (this.elapsedMs - this.phaseStartedAtMs);
     if (untilNext > HERO_ABILITY_TUNING.prophecyLeadMs) return null;
-    const kind = MINI_BOSS_ROTATION[this.miniBossRotation % MINI_BOSS_ROTATION.length];
+    const rotation = guardianRotation();
+    const kind = rotation[this.miniBossRotation % rotation.length];
     return { kind, ...MINI_BOSSES[kind].anchor };
   }
 
@@ -982,7 +987,8 @@ export class GameSession implements WeaponHost {
     if (due <= this.miniBossSlotsThisPhase) return;
     this.miniBossSlotsThisPhase = due;
     if (this.bosses.hasActiveEncounter() || this.miniBosses.active) return;
-    this.miniBosses.announce(MINI_BOSS_ROTATION[this.miniBossRotation % MINI_BOSS_ROTATION.length]);
+    const rotation = guardianRotation();
+    this.miniBosses.announce(rotation[this.miniBossRotation % rotation.length]);
     this.miniBossRotation += 1;
   }
 

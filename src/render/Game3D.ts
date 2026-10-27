@@ -648,6 +648,14 @@ export class Game3D {
         this.cameraRig.shake(0.15, 0.2);
         return;
       }
+      if (attack === 'iceSlash' || attack === 'iceWall') {
+        // Shards of ice: a frozen arc where the blade lands, a burst of frost as the wall breaks through.
+        this.effects.burst(x, y, radius, 0x9fe0ff, 0.35, 0.35);
+        this.effects.pulse(x, y, radius, 0xe8f6ff, 0.4, 0.9);
+        this.particles.emit(point.x, 0.4, point.z, 0xe8f6ff, attack === 'iceWall' ? 30 : 16, { spread: attack === 'iceWall' ? 6 : 4, rise: 4, gravity: 12, life: 0.6, size: 1.2, jitter: 0.6 });
+        this.cameraRig.shake(attack === 'iceWall' ? 0.2 : 0.12, 0.25);
+        return;
+      }
       if (attack === 'wave') {
         this.particles.emit(point.x, 1, point.z, 0xe6f6ff, 30, { spread: 5, rise: 5, gravity: 12, life: 0.6, size: 1.2, jitter: 1.5 });
         this.cameraRig.shake(0.25, 0.35);
@@ -664,6 +672,13 @@ export class Game3D {
       this.miniBossViews.playEntrance(enemy);
       this.guardianIntro.start(kind, enemy);
       this.session.revealing = true;
+    });
+    events.on('miniboss-enraged', ({ enemy }) => {
+      const point = at(enemy.x, enemy.y);
+      this.particles.emit(point.x, 2, point.z, 0x9fe0ff, 50, { spread: 7, rise: 5, gravity: 14, life: 0.9, size: 1.4, jitter: 1.5 });
+      this.effects.pulse(enemy.x, enemy.y, 200, 0xe8f6ff, 0.6, 0.9);
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 8, this.scratch), 'A ARMADURA SE PARTE!', { color: '#9fe0ff', size: 30, rise: 40, durationMs: 1600 }, performance.now());
+      this.cameraRig.shake(0.3, 0.4);
     });
     events.on('miniboss-stunned', ({ enemy }) => {
       this.floating.spawn(simToWorld(enemy.x, enemy.y, 6, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 28, rise: 40, durationMs: 1100 }, performance.now());

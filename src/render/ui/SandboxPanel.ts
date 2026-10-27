@@ -195,6 +195,7 @@ export class SandboxPanel {
       { label: () => 'Boss da onda agora', run: () => run().triggerBossWave() },
       { label: () => 'Mini-boss: O Coveiro', run: () => { run().spawnMiniBoss('gravedigger'); } },
       { label: () => 'Mini-boss: Guardião do Templo', run: () => { run().spawnMiniBoss('templeGuardian'); } },
+      { label: () => 'Mini-boss: Cavaleiro Congelado', run: () => { run().spawnMiniBoss('frostKnight'); } },
       { label: () => 'Mini-boss: Espírito do Lago', run: () => { run().spawnMiniBoss('lakeSpirit'); } },
       { label: () => '+ Coveiro Aliado', run: () => { run().addCompanion('gravedigger'); } },
       { label: () => '+ Golem de Pedra', run: () => { run().addCompanion('stoneGolem'); } },

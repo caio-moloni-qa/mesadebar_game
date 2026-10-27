@@ -3,7 +3,7 @@ import { AllySkeletonState, CompanionState } from '../../core/systems/CompanionS
 import { MINI_BOSS_TUNING, MiniBossState } from '../../core/systems/MiniBossSystem';
 import { EnemyState } from '../../core/session/entities';
 import { ActorClipName } from '../models/clips';
-import { ActorModel, createAllySkeletonModel, createGravediggerModel, createLakeSpiritModel, createStoneGolemModel } from '../models/zoneActors';
+import { ActorModel, createAllySkeletonModel, createFrostKnightModel, createGravediggerModel, createLakeSpiritModel, createStoneGolemModel } from '../models/zoneActors';
 import { simToWorld, yawFromSimDirection } from '../space';
 
 const FADE = 0.18;
@@ -92,7 +92,7 @@ class MiniBossView {
   entrance = -1;
 
   constructor(readonly state: MiniBossState) {
-    this.actor = new RiggedActor(state.kind === 'gravedigger' ? createGravediggerModel() : state.kind === 'lakeSpirit' ? createLakeSpiritModel() : createStoneGolemModel());
+    this.actor = new RiggedActor(state.kind === 'gravedigger' ? createGravediggerModel() : state.kind === 'lakeSpirit' ? createLakeSpiritModel() : state.kind === 'frostKnight' ? createFrostKnightModel() : createStoneGolemModel());
     this.yaw = yawFromSimDirection(Math.cos(state.facing), Math.sin(state.facing));
   }
 
@@ -173,6 +173,11 @@ class MiniBossView {
       actor.root.rotation.y = this.yaw;
     } else if (state.stunnedMs > 0) {
       actor.set('stagger');
+    } else if (attack?.type === 'iceSlash') {
+      if (attack.phase === 'telegraph') actor.set('slamWindup');
+      else if (actor.clip !== 'slamHit') actor.restart('slamHit');
+    } else if (attack?.type === 'iceWall') {
+      if (actor.clip !== 'raise') actor.restart('raise');
     } else if (attack?.type === 'charge') {
       actor.set(attack.phase === 'telegraph' ? 'chargeWindup' : attack.phase === 'active' ? 'charge' : 'idle');
     } else if (attack?.type === 'shockwave') {
@@ -185,6 +190,7 @@ class MiniBossView {
     if (nowMs - enemy.lastHitAt < HIT_FLASH_MS) actor.tint(0.1, 0.09, 0.08);
     else if (state.kind === 'lakeSpirit') actor.tint(0, 0.035 + Math.sin(nowMs / 200) * 0.01, 0.07);
     else if (state.stunnedMs > 0) actor.tint(0.03, 0.025, 0);
+    else if (state.enraged) actor.tint(0, 0.03 + Math.sin(nowMs / 160) * 0.01, 0.06);
     else if (state.leashing) actor.tint(0, 0.02, 0.04);
     else actor.tint(0, 0, 0);
   }

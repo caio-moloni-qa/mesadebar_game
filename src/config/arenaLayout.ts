@@ -74,6 +74,8 @@ export interface ArenaLayout {
   /** Clear of every trail and outside the spawn clearing. */
   stoneCircle: { center: Point; radius: number; stones: number };
   shrine: Point;
+  /** The zone guardians that rise here, in the order the stage's slots call them (MiniBossKind ids). */
+  guardians: string[];
 }
 
 /** 110 m across. Grown from the 2D build's 2800 so every zone fits with grassland between them. */
@@ -129,7 +131,8 @@ export const GREENFIELD: ArenaLayout = {
   camp: { center: { x: 1720, y: 2940 }, fire: { x: 1720, y: 2930 } },
   // In the meadow's south-west quarter.
   stoneCircle: { center: { x: 1450, y: 2160 }, radius: 150, stones: 8 },
-  shrine: { x: 2520, y: 1440 }
+  shrine: { x: 2520, y: 1440 },
+  guardians: ['gravedigger', 'lakeSpirit', 'templeGuardian']
 };
 
 /** Campo Nevado: a snow field of medieval ruins worn down by time, from the approved concept
@@ -197,7 +200,9 @@ export const SNOWFIELD: ArenaLayout = {
   camp: { center: { x: 1680, y: 2720 }, fire: { x: 1680, y: 2720 } },
   // Frost-covered stones south-west of the clearing.
   stoneCircle: { center: { x: 1380, y: 2060 }, radius: 130, stones: 7 },
-  shrine: { x: 2560, y: 1060 }
+  shrine: { x: 2560, y: 1060 },
+  // The castle's Cavaleiro Congelado first; the lake and the chapel keep Greenfield's guardians until theirs arrive.
+  guardians: ['frostKnight', 'lakeSpirit', 'gravedigger']
 };
 
 export const ARENA_LAYOUTS: Record<string, ArenaLayout> = { greenfield: GREENFIELD, snowfield: SNOWFIELD };

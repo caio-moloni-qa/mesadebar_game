@@ -19,7 +19,7 @@ const HIT_FLASH_MS = 110;
 const WALK_REFERENCE_SPEED = 120;
 const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith'];
 /** finalBoss is drawn by BossView (its mesh entry here is never used). */
-const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton', lakeSpirit: 'superSkeleton' };
+const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton', frostKnight: 'superSkeleton', lakeSpirit: 'superSkeleton' };
 
 interface VariantBatch {
   model: BakedEnemyModel;
