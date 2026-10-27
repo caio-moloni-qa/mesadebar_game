@@ -50,7 +50,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     ];
     for (const [target, content] of targets) {
       const current = existsSync(target) ? readFileSync(target, 'utf8') : null;
-      if (current === content) continue;
+      // Line endings don't count (git turns them into CRLF on Windows checkouts).
+      if (current !== null && current.replace(/\r\n/g, '\n') === content.replace(/\r\n/g, '\n')) continue;
       stale.push(target);
       if (check) continue;
       mkdirSync(dirname(target), { recursive: true });
