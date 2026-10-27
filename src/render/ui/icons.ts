@@ -68,12 +68,11 @@ const UPGRADE_ICONS: Record<string, string> = {
   'aura-tick-speed': UPGRADE_ART.auraTickSpeed
 };
 
-/** Placeholder companion portraits (inline SVG) until there's art: a bow over a skull, a stone face with glowing eyes. */
+/** Generated companion portraits shared by joining and strengthening reward cards. */
 const COMPANION_ICONS: Record<CompanionKind, string> = {
-  // Coveiro Aliado: a hooded skull with friendly cyan eyes over a crossed shovel.
-  gravedigger: svg('<line x1="10" y1="58" x2="50" y2="14" stroke="#8a5a32" stroke-width="5"/><path d="M4 50 l12 -4 l4 12 l-12 4 z" fill="#8f8a80"/><path d="M32 6 L52 40 L12 40 Z" fill="#2c4a4f"/><circle cx="32" cy="34" r="11" fill="#e2d8bd"/><rect x="26" y="31" width="5" height="5" fill="#7fe3ff"/><rect x="34" y="31" width="5" height="5" fill="#7fe3ff"/><rect x="27" y="42" width="10" height="4" fill="#b3a685"/>'),
-  waterFairy: svg('<ellipse cx="20" cy="26" rx="14" ry="9" fill="#9fe8ff" opacity=".75" transform="rotate(-30 20 26)"/><ellipse cx="44" cy="26" rx="14" ry="9" fill="#9fe8ff" opacity=".75" transform="rotate(30 44 26)"/><ellipse cx="32" cy="36" rx="7" ry="11" fill="#6fd3ff"/><circle cx="32" cy="22" r="7" fill="#e6f6ff"/><circle cx="32" cy="22" r="11" fill="none" stroke="#e6f6ff" stroke-opacity=".5" stroke-width="1.5"/><path d="M28 52 q4 6 8 0" stroke="#6fd3ff" stroke-width="2" fill="none"/>'),
-  stoneGolem: svg('<rect x="12" y="10" width="40" height="44" rx="6" fill="#8f8574"/><rect x="12" y="10" width="40" height="12" fill="#a99f8c"/><rect x="20" y="28" width="9" height="7" fill="#6dff9a"/><rect x="35" y="28" width="9" height="7" fill="#6dff9a"/><rect x="22" y="42" width="20" height="5" fill="#5a5246"/><path d="M12 22 l8 6 M52 20 l-6 9" stroke="#5a5246" stroke-width="2.5"/>')
+  gravedigger: new URL('../../assets/ui/companions/gravedigger-portrait.png', import.meta.url).href,
+  waterFairy: new URL('../../assets/ui/companions/water-fairy-portrait.png', import.meta.url).href,
+  stoneGolem: new URL('../../assets/ui/companions/stone-golem-portrait.png', import.meta.url).href
 };
 
 /** The tavern regulars' portraits (dialogue panel). */
