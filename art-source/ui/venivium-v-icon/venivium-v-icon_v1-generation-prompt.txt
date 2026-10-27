@@ -1,0 +1,7 @@
+Pedido do dono: "pode gerar uma novo icone, quero um V estilizado com a mesma fonte do titulo do game"
+Método: vetor determinístico, sem geração por IA. Cinzel original, eixo wght=900, glifo V convertido em curvas.
+Referência: src/play3d.css, .game-wordmark e .game-wordmark span.
+Estilo: V centralizado, transparente, degradê dourado/cobre (#f4d599, #e5a05d, #ba5441), contorno #f1cc80 e relevo vinho escuro do título.
+SVG escalável e PNG RGBA 1024x1024. Sem texto adicional ou moldura. Preservar fonte e silhueta do título.
+Fonte: https://github.com/google/fonts/tree/main/ofl/cinzel — licença OFL.txt ao lado.
+Não aplicado ao jogo. Arquivo atual src/assets/icons/game-icon.svg preservado.
