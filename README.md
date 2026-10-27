@@ -1,6 +1,6 @@
 # Mesa de Bar: Sobrevivência
 
-MVP survivors-like de fantasia medieval feito com Phaser, TypeScript e Vite.
+Survivors-like de fantasia medieval em 3D low-poly feito com Three.js, TypeScript e Vite.
 
 ## Executar
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Abra o endereço exibido pelo Vite (normalmente `http://localhost:5173`).
+Abra o endereço exibido pelo Vite (normalmente `http://localhost:5173/mesadebar_game/`).
 
 ## Controles
 

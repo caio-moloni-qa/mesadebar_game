@@ -91,7 +91,7 @@ export interface ActiveWeapon {
 }
 
 export function createActiveWeapon(config: WeaponConfig): ActiveWeapon {
-  // -Infinity: the first attack is available immediately (Phaser's scene clock is already far from 0 at run start).
+  // -Infinity: the first attack is available immediately.
   return { config, upgradeCount: 0, lastAttackAt: -Infinity, lastWhirlwindAt: -Infinity, thrownSwordReadyAt: -Infinity, thrownSwordVolleyActive: false, staffAttacksSinceExecute: 0, staffExecuteToken: 0, auraRampPercent: 0, auraTotalDamageDealt: 0, auraRampSyncedAt: -Infinity, orbAngle: 0, orbHits: new Map() };
 }
 

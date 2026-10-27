@@ -6,7 +6,7 @@ import { loadHeroMeshes } from './render/models/heroMeshes';
 import { loadBossMeshes } from './render/models/importedBosses';
 import './play3d.css';
 
-// Three.js page (play3d.html). Opens on the character/weapon menu. Query params, all optional:
+// The game's entry point (index.html). Opens on the character/weapon menu. Query params, all optional:
 //   ?hero=barbarian|mage|reliquia|fabri (skips the menu)   ?weapon=staff|sword|whip|boomerang|amulet   ?seed=123
 //   ?stress=240 (keep N skeletons alive)   ?god=1 (invincible)   ?debug=1 (U/I/O/T/V test keys, see Game3DOptions)
 //   F9 in a run: sandbox panel   ?touch=1 (show the joystick off a touch screen)   ?debug=collision (draw collision shapes)   ?zoom=3 (close-up camera for reviewing models)   ?at=ruins|lake|forest|graveyard|camp|meadow (debug start zone)

@@ -1,6 +1,6 @@
 ---
 name: generate-pixel-weapon
-description: Create pixel-art bitmap weapon assets from user descriptions, including swords, staffs, wands, axes, bows, daggers, shields, spell focuses, weapon icons, pickups, inventory items, and equipment art. Use when the user asks to generate, design, or export a pixel-art weapon with a described type, style, size such as 32x32, 64x64, 96x96, transparency, game UI use, pickup use, or Phaser asset constraints.
+description: Create pixel-art bitmap weapon assets from user descriptions, including swords, staffs, wands, axes, bows, daggers, shields, spell focuses, weapon icons, pickups, inventory items, and equipment art. Use when the user asks to generate, design, or export a pixel-art weapon with a described type, style, size such as 32x32, 64x64, 96x96, transparency, game UI use, pickup use, or game asset constraints.
 ---
 
 # Generate Pixel Weapon

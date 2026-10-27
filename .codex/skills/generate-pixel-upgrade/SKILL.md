@@ -1,6 +1,6 @@
 ---
 name: generate-pixel-upgrade
-description: Create pixel-art bitmap upgrade and perk assets from user descriptions, including upgrade icons, level-up choice cards, passive ability icons, stat boost symbols, cooldown, damage, speed, armor, healing, pickup range, magic, and survivor-like upgrade UI art. Use when the user asks to generate, design, or export pixel-art art for game improvements/upgrades with sizes such as 32x32, 48x48, 64x64, transparent background, medieval fantasy styling, or Phaser UI constraints.
+description: Create pixel-art bitmap upgrade and perk assets from user descriptions, including upgrade icons, level-up choice cards, passive ability icons, stat boost symbols, cooldown, damage, speed, armor, healing, pickup range, magic, and survivor-like upgrade UI art. Use when the user asks to generate, design, or export pixel-art art for game improvements/upgrades with sizes such as 32x32, 48x48, 64x64, transparent background, medieval fantasy styling, or game UI constraints.
 ---
 
 # Generate Pixel Upgrade

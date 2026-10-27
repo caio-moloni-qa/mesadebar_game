@@ -29,7 +29,7 @@ describe('src/core architecture', () => {
   });
 
   it.each(Object.entries(coreSources))('%s imports no rendering engine', (_path, source) => {
-    expect(source).not.toMatch(/from\s+['"](phaser|three)(\/[^'"]*)?['"]/);
+    expect(source).not.toMatch(/from\s+['"]three(\/[^'"]*)?['"]/);
   });
 
   it.each(Object.entries(coreSources))('%s never calls Math.random (use the injected Rng)', (_path, source) => {

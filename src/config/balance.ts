@@ -9,7 +9,7 @@ export const ENEMY_VARIANTS = {
   superSkeleton: { maxHealth: 500, movementSpeed: 35, contactDamage: 50, reward: 25 },
   finalBoss: { maxHealth: 10000, movementSpeed: 35, contactDamage: 0, reward: 0 }
 };
-/** 3D-only zone mini-bosses (kept out of ENEMY_VARIANTS so the Phaser build's per-variant tables stay complete).
+/** 3D-only zone mini-bosses (kept out of ENEMY_VARIANTS).
  *  Health is multiplied by the difficulty stage when they spawn. */
 export const MINI_BOSS_VARIANTS = {
   gravedigger: { maxHealth: 1200, movementSpeed: 70, contactDamage: 10, reward: 0 },

@@ -3,8 +3,7 @@ import { Rng, Vec2, floatBetween } from '../math';
 import { EnemyState, PlayerState } from '../session/entities';
 import { EnemyVariantId } from './EnemySpawnScheduler';
 
-// Port of the Phaser build's src/systems/BossSystem.ts (BOSS_REWORK_TEMP.md) onto the sim clock, plus the 3D rework
-// agreed after the port: fewer, deliberate summons; a visible enrage instead of the hidden clear-out health gain; the
+// The boss fight on the sim clock (BOSS_REWORK_TEMP.md), with the 3D rework: fewer, deliberate summons; a visible enrage instead of the hidden clear-out health gain; the
 // shield explosion as heavy damage that cover blocks; a stagger as the reward for breaking the shield; telegraphed
 // undead risings; a phase-2 roar; a reverse sweep plus centre blast in phase 2; a lunge against kiting; and a
 // coordinator so several bosses never beam or channel together. Every timer lives in the boss's own state, advanced
@@ -14,7 +13,7 @@ import { EnemyVariantId } from './EnemySpawnScheduler';
 /** Live tuning: a plain mutable object so the sandbox panel can change any value mid-fight. */
 export const BOSS_TUNING = {
   messageMs: 2600,
-  /** Apparitions per summon, every summonIntervalMs (Phaser: 30 every 5 s, which flooded the 240-enemy cap). */
+  /** Apparitions per summon, every summonIntervalMs (30 every 5 s used to flood the 240-enemy cap). */
   summonIntervalMs: 10000,
   apparitionCount: 8,
   meleeCooldownMs: 7000,
@@ -24,7 +23,7 @@ export const BOSS_TUNING = {
   channelDurationMs: 15000,
   shieldDeadlineMs: 20000,
   shieldMaxHealthScaling: 0.15,
-  /** Unbroken-shield explosion: this fraction of the player's max health (1 = lethal, the Phaser behaviour). Tall
+  /** Unbroken-shield explosion: this fraction of the player's max health (1 = lethal). Tall
    *  obstacles between boss and player block it entirely. */
   explosionRadius: 700,
   explosionDamageRatio: 0.6,
@@ -739,7 +738,7 @@ export class BossSystem {
       dash.fromY = boss.enemy.y;
     }
     const t = Math.min(1, dash.elapsedMs / travelMs);
-    const eased = t * t * t; // Cubic.In, like the Phaser tween
+    const eased = t * t * t; // Cubic.In
     boss.enemy.x = dash.fromX + (dash.targetX - dash.fromX) * eased;
     boss.enemy.y = dash.fromY + (dash.targetY - dash.fromY) * eased;
     if (t < 1) return;
@@ -756,7 +755,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-/** Phaser.Math.Angle.RotateTo: step `angle` toward `target` by at most `maxStep`, the short way round. */
+/** Steps `angle` toward `target` by at most `maxStep`, the short way round. */
 function rotateTowards(angle: number, target: number, maxStep: number): number {
   const difference = Math.atan2(Math.sin(target - angle), Math.cos(target - angle));
   return Math.abs(difference) <= maxStep ? target : angle + Math.sign(difference) * maxStep;

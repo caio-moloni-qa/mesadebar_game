@@ -4,7 +4,7 @@ import { CompanionKind } from '../../core/systems/MiniBossSystem';
 import { MerchantItemId } from '../../core/systems/MerchantSystem';
 
 // One static URL literal per file so Vite rewrites each with the base path.
-// Upgrade art is the 3D UI's regenerated faceted set; other art is shared with Phaser.
+// Upgrade art is the 3D UI's regenerated faceted set.
 
 export const HUD_ART = {
   hpIcon: new URL('../../assets/ui/hud/hp-icon.png', import.meta.url).href,
@@ -50,7 +50,7 @@ const UPGRADE_ART = {
   auraTickSpeed: new URL('../../assets/upgrades/modern/aura-tick-speed-icon.webp', import.meta.url).href
 };
 
-/** Upgrade id → icon (Phaser: GameScene UPGRADE_ICON_KEYS). Unknown ids fall back to the damage icon, like there. */
+/** Upgrade id → icon. Unknown ids fall back to the damage icon. */
 const UPGRADE_ICONS: Record<string, string> = {
   damage: UPGRADE_ART.damage,
   cooldown: UPGRADE_ART.cooldown,
@@ -111,7 +111,7 @@ export function upgradeIcon(id: string): string {
   return UPGRADE_ICONS[id] ?? UPGRADE_ART.damage;
 }
 
-/** The life-steal art doubles as the Aura Podre "healing cut" status icon (Phaser: GameHud.rottenHealIcon). */
+/** The life-steal art doubles as the Aura Podre "healing cut" status icon. */
 export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
 
 /** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
@@ -155,7 +155,7 @@ export function storeIcon(id: string): string {
   return STORE_ICONS[id] ?? UPGRADE_ART.damage;
 }
 
-/** The merchant's item art (the Phaser shop's icons), one static URL per file for Vite. */
+/** The merchant's item art, one static URL per file for Vite. */
 const ITEM_ICONS: Record<MerchantItemId, string> = {
   'divine-blessing': new URL('../../assets/upgrades/merchant/merchant-divine-blessing-icon.png', import.meta.url).href,
   'arcane-curse': new URL('../../assets/upgrades/merchant/merchant-arcane-curse-icon.png', import.meta.url).href,

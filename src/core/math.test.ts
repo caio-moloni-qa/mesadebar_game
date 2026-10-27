@@ -20,7 +20,7 @@ describe('createRng', () => {
 });
 
 describe('range helpers', () => {
-  it('intBetween is inclusive on both ends, like Phaser.Math.Between', () => {
+  it('intBetween is inclusive on both ends', () => {
     const rng = createRng(7);
     const seen = new Set(Array.from({ length: 2000 }, () => intBetween(rng, 0, 3)));
     expect([...seen].sort()).toEqual([0, 1, 2, 3]);

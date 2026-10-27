@@ -6,7 +6,7 @@ import { WORLD_SCALE, simToWorld } from '../space';
 import { BossViews } from '../views/BossView';
 import { ParticleView } from '../views/PickupAndProjectileViews';
 
-/** Necro-green palette (Phaser BossSystem colours) plus the new effects' accents. */
+/** Necro-green palette plus the effects' accents. */
 const GREEN = { base: 0x45ff90, blink: 0xd6ffd0, ring: 0x8cff8c, beamCore: 0xd6ffd0, beamGlow: 0x35c96b, meteor: 0x2fe86a, shield: 0x48ff52, reticle: 0x8cffb0, flame: 0x6dff9a, deep: 0x1f8a46 };
 const PORTAL_COLORS: Record<PortalKind, number> = { end: 0x9fb4ff, continue: 0x7dffa0 };
 const MAX_BEAMS = 20;

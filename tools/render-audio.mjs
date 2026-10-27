@@ -9,7 +9,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage();
   await page.routeWebSocket('**', () => {});
-  await page.goto('http://127.0.0.1:5173/mesadebar_game/play3d.html');
+  await page.goto('http://127.0.0.1:5173/mesadebar_game/');
   const files = await page.evaluate(async () => {
     const { composeScore, SCORE_SECONDS } = await import('/mesadebar_game/src/audio/score.ts');
     const { SOUND_NAMES, synthesizeSound } = await import('/mesadebar_game/src/audio/soundbank.ts');
