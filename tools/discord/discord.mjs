@@ -8,6 +8,7 @@
 //   node tools/discord/discord.mjs <agent> wait [seconds]       blocks until new messages arrive (default 240 s)
 //   node tools/discord/discord.mjs <agent> send <text...>       posts a message (long ones are split)
 //   node tools/discord/discord.mjs <agent> send --file <path>   posts a file's text
+//   node tools/discord/discord.mjs <agent> send --attach <image> [text...]   posts files (repeatable) with an optional text
 //
 // <agent> is `claude` or `codex`. Settings come from the environment or the repo's .env (never committed):
 //   DISCORD_GUILD_ID, DISCORD_CHANNEL_ID   the server and the text channel to work in
@@ -18,8 +19,8 @@
 // Output is JSON, one object per line, for the agent to read. `wait` remembers the last message it showed (per agent,
 // in tools/discord/.state/, ignored by git), so each call returns only what's new; the first call starts from now.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,8 @@ const ROOT = resolve(HERE, '..', '..');
 // DISCORD_API_BASE only points the script at a stand-in for testing; it defaults to Discord's own API.
 const API = process.env.DISCORD_API_BASE || 'https://discord.com/api/v10';
 const MAX_MESSAGE = 2000;
+/** A bot's upload limit on a server without boosts. */
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const POLL_MS = 2500;
 const STOP_WORDS = ['!parar', '!stop'];
 
@@ -93,11 +96,23 @@ async function wait([seconds = '240']) {
 
 async function send(args) {
   await guardChannel();
-  let text = args[0] === '--file' ? readFileSync(resolve(args[1]), 'utf8') : args.join(' ');
+  const attachments = [];
+  const rest = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === '--attach') attachments.push(resolve(args[(index += 1)] ?? ''));
+    else rest.push(args[index]);
+  }
+  let text = rest[0] === '--file' ? readFileSync(resolve(rest[1]), 'utf8') : rest.join(' ');
   text = text.trim();
-  if (!text) fail('Mensagem vazia.');
+  if (!text && attachments.length === 0) fail('Mensagem vazia.');
   const sent = [];
-  for (const part of split(text)) {
+  if (attachments.length > 0) {
+    // The files go with the first part of the text (or alone).
+    const parts = split(text);
+    sent.push((await upload(attachments, parts.shift() ?? '')).id);
+    text = parts.join('\n');
+  }
+  for (const part of text ? split(text) : []) {
     // Mentions only reach people the message names on purpose; never @everyone/@here.
     const message = await api(`/channels/${channelId}/messages`, { method: 'POST', body: { content: part, allowed_mentions: { parse: ['users'] } } });
     sent.push(message.id);
@@ -105,6 +120,20 @@ async function send(args) {
   // What we just said shouldn't come back from the next wait.
   saveState({ after: maxId(loadState().after, sent[sent.length - 1]) });
   out({ sent: sent.length, ids: sent });
+}
+
+/** One message carrying `files` (multipart/form-data, Discord's upload format). */
+async function upload(files, content) {
+  if (files.length > 10) throw new Error('No máximo 10 anexos por mensagem.');
+  const form = new FormData();
+  form.append('payload_json', JSON.stringify({ content, allowed_mentions: { parse: ['users'] }, attachments: files.map((file, id) => ({ id, filename: basename(file) })) }));
+  files.forEach((file, id) => {
+    if (!existsSync(file)) throw new Error(`Anexo não encontrado: ${file}`);
+    const size = statSync(file).size;
+    if (size > MAX_ATTACHMENT_BYTES) throw new Error(`Anexo grande demais (${(size / 1048576).toFixed(1)} MB; o limite é 10 MB): ${file}. Reduza (ex.: salve uma cópia em JPG ou menor).`);
+    form.append(`files[${id}]`, new Blob([readFileSync(file)]), basename(file));
+  });
+  return api(`/channels/${channelId}/messages`, { method: 'POST', form });
 }
 
 // ── Discord ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -123,13 +152,11 @@ async function guardChannel() {
   return channel;
 }
 
-async function api(path, { method = 'GET', body } = {}) {
+async function api(path, { method = 'GET', body, form } = {}) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const response = await fetch(API + path, {
-      method,
-      headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json', 'User-Agent': 'DiscordBot (mesadebar-agents, 1.0)' },
-      body: body ? JSON.stringify(body) : undefined
-    });
+    // A form sets its own multipart Content-Type (with the boundary).
+    const headers = { Authorization: `Bot ${token}`, 'User-Agent': 'DiscordBot (mesadebar-agents, 1.0)', ...(form ? {} : { 'Content-Type': 'application/json' }) };
+    const response = await fetch(API + path, { method, headers, body: form ?? (body ? JSON.stringify(body) : undefined) });
     if (response.status === 429) {
       const { retry_after: retryAfter = 1 } = await response.json().catch(() => ({}));
       await sleep(Math.ceil(retryAfter * 1000) + 100);
@@ -137,7 +164,7 @@ async function api(path, { method = 'GET', body } = {}) {
     }
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      const hint = response.status === 401 ? ' (token inválido?)' : response.status === 403 ? ' (o bot não tem acesso a esse canal?)' : '';
+      const hint = response.status === 401 ? ' (token inválido?)' : response.status === 403 ? (form ? ' (o bot tem a permissão "Anexar arquivos" neste canal?)' : ' (o bot não tem acesso a esse canal?)') : '';
       throw new Error(`Discord ${response.status}${hint}: ${detail.slice(0, 300)}`);
     }
     return response.status === 204 ? null : response.json();
