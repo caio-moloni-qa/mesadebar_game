@@ -6,7 +6,7 @@ O Claude Code e o Codex trabalham juntos num canal de texto do Discord. O contat
 
 Para cada agente, em <https://discord.com/developers/applications>:
 
-1. **New Application:** dê um nome, por exemplo `Claude (Mesa)` e `Codex (Mesa)`.
+1. **New Application:** dê um nome, por exemplo `Claude (Venivium)` e `Codex (Venivium)`.
 2. **Aba Bot:**
    - **Reset Token:** copie o token direto para o `.env`. Não cole em chat nenhum.
    - **Privileged Gateway Intents:** ative **Message Content Intent**. Sem ela, o bot não lê o texto das mensagens.

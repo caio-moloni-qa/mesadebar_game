@@ -1,9 +1,9 @@
 ---
-name: mesa-architecture
-description: "How the Mesa de Bar 3D game is built and where things go: the engine-free simulation in src/core, the Three.js renderer in src/render, config, events, the Host pattern, tests. Use before any gameplay, UI or rendering change in this repo, or when you need to find where something lives."
+name: venivium-architecture
+description: "How the Venivium 3D game is built and where things go: the engine-free simulation in src/core, the Three.js renderer in src/render, config, events, the Host pattern, tests. Use before any gameplay, UI or rendering change in this repo, or when you need to find where something lives."
 ---
 
-# Mesa de Bar: architecture
+# Venivium: architecture
 
 A survivors-like in Three.js (`play3d.html`, entry `src/main3d.ts`). TypeScript, Vite, Vitest. The game logic is a
 deterministic simulation with no rendering in it; the renderer only reads it and reacts to its events.
@@ -39,14 +39,14 @@ deterministic simulation with no rendering in it; the renderer only reads it and
 |---|---|
 | Change a number (damage, cooldown, health) | `src/config/balance.ts`, or the system's `*_TUNING` block |
 | Add a hero ability / power | `src/core/systems/HeroAbilitySystem.ts` or `PowerTierSystem.ts`, its view/effects in `src/render/views/` + `Game3D` |
-| Add or change a zone guardian | use the **mesa-guardian** skill |
-| Add or change an arena | use the **mesa-arena** skill |
+| Add or change a zone guardian | use the **venivium-guardian** skill |
+| Add or change an arena | use the **venivium-arena** skill |
 | Add a menu/panel | `src/render/ui/` + styles in `src/play3d.css` (CSS tokens in `:root`) |
-| Bring in 3D or 2D art | use the **mesa-art-pipeline** skill |
+| Bring in 3D or 2D art | use the **venivium-art-pipeline** skill |
 
 ## Checks
 
-- `npx tsc --noEmit -p .`, `npx vitest run`, `npm run build`. Then look at it: the **mesa-verify** skill.
+- `npx tsc --noEmit -p .`, `npx vitest run`, `npm run build`. Then look at it: the **venivium-verify** skill.
 - Tests live next to the code (`*.test.ts`) and drive a real `GameSession` with
   `skipStartingUpgrades: true`, an open arena (`ArenaMap.open(WORLD_SIZE)`) and spawns off — see
   `src/core/systems/PowerTiers.test.ts` for the shape.

@@ -1,4 +1,4 @@
-# Mesa de Bar - locally composed music suite
+# Venivium - locally composed music suite
 
 Completed all 12 tracks using the same Web Audio approach as The Last Watch. This supersedes the earlier pending external-generator status. No external provider or plugin was used. These sounds are synthesized acoustic-inspired approximations, not real instrument recordings. No lyrics, spoken words or voice recordings. Wordless choir-like synthesis is restricted to the tracks permitting it.
 

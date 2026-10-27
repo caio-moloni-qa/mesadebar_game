@@ -1,6 +1,6 @@
 ---
-name: mesa-guardian
-description: "Add or change a zone guardian (mini-boss) in Mesa de Bar: its stats, behaviour and attacks in MiniBossSystem, the arena it belongs to, its 3D model, animations, telegraphs and effects, marker, music, bestiary, sandbox button and tests. Use whenever a new mini-boss is asked for or an existing one changes."
+name: venivium-guardian
+description: "Add or change a zone guardian (mini-boss) in Venivium: its stats, behaviour and attacks in MiniBossSystem, the arena it belongs to, its 3D model, animations, telegraphs and effects, marker, music, bestiary, sandbox button and tests. Use whenever a new mini-boss is asked for or an existing one changes."
 ---
 
 # Add or change a zone guardian
@@ -33,7 +33,7 @@ is the most recent complete example: follow its trail through the files below.
 
 **Render**
 6. Model: a `create<Name>Model()` in `src/render/models/zoneActors.ts` (procedural parts on `humanoidBones`, or an
-   imported GLB via `imported(...)` once there is art — see **mesa-art-pipeline**). Pick it in `MiniBossView`'s
+   imported GLB via `imported(...)` once there is art — see **venivium-art-pipeline**). Pick it in `MiniBossView`'s
    constructor.
 7. Animations per attack in `MiniBossView.update` (`slamWindup`/`slamHit`, `chargeWindup`/`charge`, `raise`,
    `stagger`...), and a tint for special states.
@@ -52,5 +52,5 @@ belongs to a non-default arena, build that arena (`ArenaMap.generate(seed, SNOWF
 `useArenaLayout(...)` in `beforeAll` (the renderer-side painters still read the active layout); restore `GREENFIELD`
 in `afterAll`.
 
-Then **mesa-verify**: call it from the sandbox or with a `--drive` snippet, force each attack by setting its cooldown,
+Then **venivium-verify**: call it from the sandbox or with a `--drive` snippet, force each attack by setting its cooldown,
 and screenshot it close up (`zoom=2`).

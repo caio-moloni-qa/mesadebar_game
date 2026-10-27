@@ -1,6 +1,6 @@
 ---
-name: mesa-verify
-description: "Verify a Mesa de Bar change for real: typecheck, tests, build, then open the game in headless Chrome with tools/probe/probe.mjs to drive it, read its state and take screenshots. Use after any change to gameplay, UI, visuals or audio wiring, and before saying something works or posting screenshots."
+name: venivium-verify
+description: "Verify a Venivium change for real: typecheck, tests, build, then open the game in headless Chrome with tools/probe/probe.mjs to drive it, read its state and take screenshots. Use after any change to gameplay, UI, visuals or audio wiring, and before saying something works or posting screenshots."
 ---
 
 # Verify a change

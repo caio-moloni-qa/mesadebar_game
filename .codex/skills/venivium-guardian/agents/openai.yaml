@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add or change a zone guardian"
+  short_description: "Add or change a zone guardian (mini-boss) in Venivium: its stats, behaviour and attacks in MiniBossSystem, the arena it belongs to, its 3D model, animations, telegraphs and effects, marker, music, bestiary, sandbox button and tests."
+  default_prompt: "Use $venivium-guardian for this task."

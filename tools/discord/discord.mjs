@@ -188,7 +188,7 @@ async function guardChannel() {
 async function api(path, { method = 'GET', body, form } = {}) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     // A form sets its own multipart Content-Type (with the boundary).
-    const headers = { Authorization: `Bot ${token}`, 'User-Agent': 'DiscordBot (mesadebar-agents, 1.0)', ...(form ? {} : { 'Content-Type': 'application/json' }) };
+    const headers = { Authorization: `Bot ${token}`, 'User-Agent': 'DiscordBot (venivium-agents, 1.0)', ...(form ? {} : { 'Content-Type': 'application/json' }) };
     const response = await fetch(API + path, { method, headers, body: form ?? (body ? JSON.stringify(body) : undefined) });
     if (response.status === 429) {
       const { retry_after: retryAfter = 1 } = await response.json().catch(() => ({}));

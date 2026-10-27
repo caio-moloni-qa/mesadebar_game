@@ -1,6 +1,6 @@
 ---
-name: mesa-arena
-description: "Add or change an arena in Mesa de Bar: its layout (zones, lake, trails, ruins, graveyard, camp, guardians) in arenaLayout.ts, its look (ArenaTheme), the arena picker, and how to check the layout against approved concept art. Use for new arenas, map changes or arena visuals."
+name: venivium-arena
+description: "Add or change an arena in Venivium: its layout (zones, lake, trails, ruins, graveyard, camp, guardians) in arenaLayout.ts, its look (ArenaTheme), the arena picker, and how to check the layout against approved concept art. Use for new arenas, map changes or arena visuals."
 ---
 
 # Add or change an arena
@@ -46,5 +46,5 @@ the measurements until it matches, then delete the throwaway test. Post the over
 
 ## Check the look
 
-**mesa-verify** with `arena=<id>&at=<zone>` for each region (`meadow`, `ruins`, `forest`, `lake`, `graveyard`,
+**venivium-verify** with `arena=<id>&at=<zone>` for each region (`meadow`, `ruins`, `forest`, `lake`, `graveyard`,
 `camp`), and once through the area picker both ways, so the other arena still looks unchanged.

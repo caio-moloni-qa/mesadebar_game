@@ -50,7 +50,7 @@ const chromePath = process.env.CHROME || 'C:/Program Files/Google/Chrome/Applica
 const debugPort = 9300 + Math.floor(Math.random() * 500);
 
 const chrome = spawn(chromePath, [
-  `--remote-debugging-port=${debugPort}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'mesa-probe-'))}`, '--no-first-run',
+  `--remote-debugging-port=${debugPort}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'venivium-probe-'))}`, '--no-first-run',
   '--no-default-browser-check', `--window-size=${width},${height}`, '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required',
   '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
   ...(headful ? [] : ['--headless=new', '--use-angle=d3d11', '--enable-gpu']), url

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Art pipeline"
+  short_description: "Bring art into Venivium: concept and turnaround prompts, image-to-3D exports processed into game-ready low-poly GLBs (tools/asset-pipeline), rigging, icons and marker heads, and the never-overwrite rule."
+  default_prompt: "Use $venivium-art-pipeline for this task."

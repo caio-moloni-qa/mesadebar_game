@@ -1,6 +1,6 @@
 ---
-name: mesa-ship
-description: "Ship work in Mesa de Bar: branch per change, conventional commits, worktrees when another agent shares the repo, PR title and description, patch notes, and reporting the result in the team channel with screenshots. Use when the owner asks to commit, push, open a PR, write patch notes or report a delivery."
+name: venivium-ship
+description: "Ship work in Venivium: branch per change, conventional commits, worktrees when another agent shares the repo, PR title and description, patch notes, and reporting the result in the team channel with screenshots. Use when the owner asks to commit, push, open a PR, write patch notes or report a delivery."
 ---
 
 # Ship a change
@@ -47,5 +47,5 @@ Take every number from the code, not from memory, and list only what is merged o
 ## Reporting in the team channel
 
 - One short message: what was done, how it was checked (test count, build), what's left, the PR link.
-- Attach screenshots from **mesa-verify** (`node tools/discord/discord.mjs <agent> send --attach a.png --attach b.png "..."`).
+- Attach screenshots from **venivium-verify** (`node tools/discord/discord.mjs <agent> send --attach a.png --attach b.png "..."`).
 - Say plainly what was *not* checked or what looks off.

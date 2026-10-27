@@ -1,5 +1,5 @@
 {
-  "name": "mesadebar-asset-pipeline",
+  "name": "venivium-asset-pipeline",
   "private": true,
   "description": "Offline tools that turn image-to-3D exports into game-ready low-poly character GLBs. Not a game dependency.",
   "type": "module",

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ship a change"
+  short_description: "Ship work in Venivium: branch per change, conventional commits, worktrees when another agent shares the repo, PR title and description, patch notes, and reporting the result in the team channel with screenshots."
+  default_prompt: "Use $venivium-ship for this task."

@@ -1,6 +1,6 @@
 ---
-name: mesa-art-pipeline
-description: "Bring art into Mesa de Bar: concept and turnaround prompts, image-to-3D exports processed into game-ready low-poly GLBs (tools/asset-pipeline), rigging, icons and marker heads, and the never-overwrite rule. Use when generating, converting or wiring any 2D or 3D asset."
+name: venivium-art-pipeline
+description: "Bring art into Venivium: concept and turnaround prompts, image-to-3D exports processed into game-ready low-poly GLBs (tools/asset-pipeline), rigging, icons and marker heads, and the never-overwrite rule. Use when generating, converting or wiring any 2D or 3D asset."
 ---
 
 # Art pipeline
@@ -33,7 +33,7 @@ Per character, `art-source/3d/<id>/` (see `art-source/3d/README.md`):
 6. Rig: joint positions (`JointSpec` lists with side, minY, maxY, minAbsX, rest) and the hip height go in
    `src/render/models/importedRig.ts` (heroes) or `importedBosses.ts` (bosses); register the URL; the model builder
    (`heroes.ts`, `zoneActors.ts`) uses the GLB when loaded and falls back to its procedural model.
-7. **mesa-verify**: the character select (`__game.menu.showCharacters('<id>')`) and in a run, from several angles.
+7. **venivium-verify**: the character select (`__game.menu.showCharacters('<id>')`) and in a run, from several angles.
 
 ## 2D: icons, markers, portraits
 

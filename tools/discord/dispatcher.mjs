@@ -136,7 +136,7 @@ function skillsIndex() {
 function buildPrompt(batch, history, notes) {
   const line = (message) => `[${message.at?.slice(11, 16) ?? ''}] ${message.author} (${message.from}): ${message.content}${message.attachments?.length ? ` [anexos: ${message.attachments.join(' ')}]` : ''}`;
   const send = `node "${DISCORD}" ${agent} send`;
-  return `Você é o agente **${agent}** (${NAME[agent]}) no canal do Discord #${me.channel}, trabalhando no projeto Mesa de Bar (repo em ${workDir}).
+  return `Você é o agente **${agent}** (${NAME[agent]}) no canal do Discord #${me.channel}, trabalhando no projeto Venivium (repo em ${workDir}).
 Esta é uma sessão curta e sob demanda: um script te acordou por causa das mensagens abaixo. Faça o que pedem e encerre.
 
 Regras (resumo de tools/discord/PROTOCOL.md; leia o arquivo se precisar de detalhe):
