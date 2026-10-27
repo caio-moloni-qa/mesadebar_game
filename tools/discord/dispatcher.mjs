@@ -22,7 +22,7 @@
 //   DISCORD_CLAUDE_CMD / DISCORD_CODEX_CMD   test hook: a whole command line to run instead (the prompt comes on stdin)
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,6 +45,8 @@ const other = agent === 'claude' ? 'codex' : 'claude';
 const lead = (process.env.DISCORD_LEAD || 'claude').toLowerCase();
 const workDir = resolve(process.env[`DISCORD_${agent.toUpperCase()}_DIR`] || ROOT);
 const notesFile = join(HERE, '.state', `${agent}-notes.md`);
+/** The "⏳ working on it" message the agent's first reply replaces (see discord.mjs). */
+const placeholderFile = join(HERE, '.state', `${agent}-placeholder.json`);
 const NAME = { claude: 'Claude', codex: 'Codex' };
 // The agent writes its notes here (a git-ignored folder).
 mkdirSync(dirname(notesFile), { recursive: true });
@@ -106,13 +108,20 @@ async function runAgent(batch) {
   const history = (await discord('read', String(HISTORY))).filter((message) => !message.error);
   const notes = existsSync(notesFile) ? readFileSync(notesFile, 'utf8').slice(-NOTES_MAX_CHARS) : '(sem notas ainda)';
   const prompt = buildPrompt(batch, history, notes);
-  await discord('send', `⏳ ${NAME[agent]} trabalhando nisso…`);
+  const [posted] = await discord('send', `⏳ ${NAME[agent]} trabalhando nisso…`);
+  const placeholder = posted?.ids?.[0] ?? null;
+  if (placeholder) writeFileSync(placeholderFile, JSON.stringify({ id: placeholder }));
   log(`acordando ${agent} para ${batch.length} mensagem(ns)`);
   const started = Date.now();
   const { code, output } = await launch(prompt);
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
   log(`${agent} terminou (código ${code}) em ${minutes} min`);
-  if (code !== 0) await discord('send', `⚠️ ${NAME[agent]} parou com erro (código ${code}). ${output.trim().split('\n').slice(-3).join(' ').slice(0, 300)}`);
+  // The agent's first reply replaced the placeholder; if it's still there, say how it ended in its place.
+  const unanswered = existsSync(placeholderFile);
+  if (unanswered) unlinkSync(placeholderFile);
+  const problem = code !== 0 ? `⚠️ ${NAME[agent]} parou com erro (código ${code}). ${output.trim().split('\n').slice(-3).join(' ').slice(0, 300)}` : null;
+  if (unanswered && placeholder) await discord('edit', placeholder, problem ?? `✅ ${NAME[agent]} terminou sem resposta no canal.`);
+  else if (problem) await discord('send', problem);
 }
 
 function buildPrompt(batch, history, notes) {
@@ -161,7 +170,7 @@ function launch(prompt) {
   }
   if (!command || (!custom && !existsSync(command))) fail(`Não achei o executável do ${agent}. Defina DISCORD_${agent.toUpperCase()}_BIN no .env.`);
   return new Promise((done) => {
-    const child = spawn(command, args, { cwd: workDir, stdio: ['pipe', 'pipe', 'pipe'], env: process.env });
+    const child = spawn(command, args, { cwd: workDir, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, DISCORD_PLACEHOLDER_FILE: placeholderFile } });
     let output = '';
     child.stdout.on('data', (chunk) => { output += chunk; process.stdout.write(chunk); });
     child.stderr.on('data', (chunk) => { output += chunk; process.stderr.write(chunk); });
