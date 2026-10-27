@@ -1,0 +1,4 @@
+interface:
+  display_name: "Trabalho no Discord"
+  short_description: "Trabalhe com o Claude no canal do Discord."
+  default_prompt: "Use $discord-work para iniciar seu trabalho no Discord."
