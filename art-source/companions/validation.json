@@ -1,0 +1,38 @@
+[
+  {
+    "id": "gravedigger",
+    "dimensions": [
+      256,
+      256
+    ],
+    "alphaExtrema": [
+      0,
+      255
+    ],
+    "bytes": 112329
+  },
+  {
+    "id": "stone-golem",
+    "dimensions": [
+      256,
+      256
+    ],
+    "alphaExtrema": [
+      0,
+      255
+    ],
+    "bytes": 106887
+  },
+  {
+    "id": "water-fairy",
+    "dimensions": [
+      256,
+      256
+    ],
+    "alphaExtrema": [
+      0,
+      255
+    ],
+    "bytes": 132946
+  }
+]
