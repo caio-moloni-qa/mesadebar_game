@@ -46,6 +46,42 @@ O resultado de cada um precisa ser `{"ok":true,...}`, com o nome do bot e do can
 2. Diga em cada uma: **"inicie seu trabalho no Discord"**.
 3. Para parar, escreva **`!parar`** no canal, ou interrompa as sessões.
 
+## 5. Modo sob demanda (recomendado: economiza tokens)
+
+Em vez de deixar uma sessão do agente aberta em ciclo, um "porteiro" sem IA fica ouvindo o canal. Ele só abre uma sessão **nova e curta** do agente (`claude -p` / `codex exec`, com o seu login normal) quando chega uma mensagem para ele. Ocioso, não gasta nada.
+
+```
+node tools/discord/dispatcher.mjs claude   # numa aba do terminal
+node tools/discord/dispatcher.mjs codex    # noutra
+```
+
+**Quem acorda:**
+
+| Mensagem | Quem acorda |
+|---|---|
+| Sua, mencionando o agente ou com o nome dele no texto | Esse agente |
+| Sua, sem nomear agente nenhum | Só o líder (`DISCORD_LEAD`) |
+| Do outro agente, mencionando este | Este agente, até 3 rodadas seguidas sem você |
+| De qualquer outra pessoa | Ninguém |
+
+`!parar` encerra os dois.
+
+**Como cada sessão funciona:**
+- Mensagens que chegam em sequência, até 12 s depois da primeira, vão juntas numa sessão só.
+- O agente recebe só o necessário: as mensagens novas, as últimas 20 do canal e as notas dele (`tools/discord/.state/<agente>-notes.md`). Ao terminar, ele reescreve essas notas, que são a memória dele entre sessões.
+- O porteiro avisa no canal quando o agente começa (`⏳`) e se der erro (`⚠️`).
+
+**Permissões, já que ninguém aprova nada no meio do caminho:**
+- **Claude:** edita arquivos e roda só `node`, `npm`, `npx`, `git` e `python`.
+- **Codex:** roda no sandbox `workspace-write`, com rede liberada para falar com o Discord.
+
+**Ajustes opcionais no `.env`:**
+- `DISCORD_CLAUDE_DIR` / `DISCORD_CODEX_DIR`: a pasta (worktree) de cada um. O padrão é a raiz do repo.
+- `DISCORD_CLAUDE_MODEL` / `DISCORD_CODEX_MODEL`: o modelo. O Codex usa por padrão o primeiro modelo que o cache dele lista para a sua conta, porque o `~/.codex/config.toml` pode estar desatualizado.
+- `DISCORD_CLAUDE_BIN` / `DISCORD_CODEX_BIN`: o executável, se não estiver na extensão do VS Code.
+
+O uso continua contando no limite do seu plano do Claude e do ChatGPT. Se o limite acabar, o porteiro avisa o erro no canal.
+
 ## Comandos do script
 
 | Comando | O que faz |
@@ -54,6 +90,7 @@ O resultado de cada um precisa ser `{"ok":true,...}`, com o nome do bot e do can
 | `read [n]` | Mostra as últimas n mensagens (padrão 20), da mais antiga para a mais nova |
 | `wait [s]` | Espera até chegar mensagem nova (padrão 240 s) e devolve só o que é novo |
 | `send <texto>` / `send --file <arq>` | Posta no canal; textos longos são divididos em partes |
+| `send --attach <img> [texto]` | Posta arquivos (até 10, 10 MB cada; repita `--attach`), com texto opcional. O bot precisa da permissão *Anexar arquivos* |
 
 **Formato da saída:** é JSON, uma mensagem por linha, com estes campos:
 
