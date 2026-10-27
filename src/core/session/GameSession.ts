@@ -47,7 +47,7 @@ const SLIPPERY_VARIANTS: ReadonlySet<string> = new Set(['skeleton', 'apparitionW
 const SEPARATION_STRENGTH = 0.25;
 /** How often the enemy flow field is rebuilt from the hero's position (only when the hero changed grid cell). */
 const FLOW_FIELD_REFRESH_MS = 250;
-/** Boss-wave portals (Phaser: GameScene.onBossWaveCleared): spawn this far apart above the hero, used within reach. */
+/** Boss-wave portals: spawn this far apart above the hero, used within reach. */
 const PORTAL = { spread: 110, rise: 160, reach: 70 } as const;
 /** A zone guardian slain is worth this many of the hero's current levels in experience: a jump mid-stage, where the
  *  horde alone levels slowest. */
@@ -186,7 +186,7 @@ export class GameSession implements WeaponHost {
   portals: Record<PortalKind, { x: number; y: number }> | null = null;
   private phaseStartedAtMs = 0;
   private phaseBossTriggered = false;
-  /** Sandbox toggles (same switches the F9 panel has in the Phaser build). */
+  /** Sandbox toggles (the F9 panel's switches). */
   skeletonSpawnEnabled = true;
   variantSpawnEnabled = true;
   enemySeparation = true;
@@ -381,8 +381,8 @@ export class GameSession implements WeaponHost {
     this.syncClockPause();
   }
 
-  /** Set by the renderer while a reveal plays (the chest roll): the simulation holds still, like the Phaser build's
-   *  pauseGameplay() during it, without counting as the pause menu. */
+  /** Set by the renderer while a reveal plays (the chest roll): the simulation holds still
+   *  without counting as the pause menu. */
   get revealing(): boolean {
     return this.revealHold;
   }
@@ -457,7 +457,7 @@ export class GameSession implements WeaponHost {
     this.closeChoice();
   }
 
-  /** Buys this visit's offer `index` from Sergio's store and applies it (Phaser MerchantSystem item effects). The
+  /** Buys this visit's offer `index` from Sergio's store and applies it. The
    *  Tomo de Afinidade opens its family choice. Returns false if it couldn't be bought. */
   buyMerchantItem(index: number): boolean {
     const offer = this.merchant.buy(index, this.currency);
@@ -831,7 +831,7 @@ export class GameSession implements WeaponHost {
     if (rot > 0) this.events.emit('player-status', { text: `HP -${Math.round(rot)}`, tone: 'rot' });
   }
 
-  // ── Sandbox (the F9 panel, Phaser: SandboxDebugPanel) ───────────────────────────────────────────────────────
+  // ── Sandbox (the F9 panel) ──────────────────────────────────────────────────────────────────────────────────
 
   addCurrency(amount: number): void {
     this.currency += amount;
@@ -911,7 +911,7 @@ export class GameSession implements WeaponHost {
     this.bosses.warn(this.bossCycle);
   }
 
-  /** The portal the hero stands at, if any (the end portal wins a tie, like the Phaser build). */
+  /** The portal the hero stands at, if any (the end portal wins a tie). */
   get portalInReach(): PortalKind | null {
     if (!this.portals) return null;
     const near = (portal: { x: number; y: number }) => Math.hypot(this.player.x - portal.x, this.player.y - portal.y) <= PORTAL.reach;

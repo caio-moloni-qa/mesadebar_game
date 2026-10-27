@@ -1,6 +1,6 @@
 ﻿---
 name: audit-game-balance
-description: Audit a Phaser/TypeScript game's balance values against patch notes or design specs. Use when checking enemy, weapon, boss, spawn, scaling, cooldown, damage, experience, or timing values; default to a read-only evidence-backed report unless implementation is explicitly requested.
+description: Audit a Three.js/TypeScript game's balance values against patch notes or design specs. Use when checking enemy, weapon, boss, spawn, scaling, cooldown, damage, experience, or timing values; default to a read-only evidence-backed report unless implementation is explicitly requested.
 ---
 
 # Audit Game Balance

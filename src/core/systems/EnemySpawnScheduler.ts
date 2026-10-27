@@ -3,7 +3,7 @@ import { WORLD_SIZE } from '../../config/world';
 import { Rng, Vec2, intBetween, randomPointAround } from '../math';
 import { DifficultyStage } from './DifficultySystem';
 
-/** The variants the timed schedule spawns (shared with the Phaser build). */
+/** The variants the timed schedule spawns. */
 export type ScheduledVariantId = keyof typeof ENEMY_VARIANTS;
 export type MiniBossVariantId = keyof typeof MINI_BOSS_VARIANTS;
 /** Everything the 3D core can spawn: the schedule's variants plus the zone mini-bosses. */
@@ -37,8 +37,7 @@ const BORDER_SPAWN_EDGE = 40;
 
 /** Engine-agnostic "who/when/where/how strong" spawn decisions: the regular skeleton drip and the three scheduled
  *  variants (Necromante every 15s, Aparição hordes every 30s, Super Esqueleto waves every 40s — see
- *  ENEMY_VARIANT_SCHEDULE). Emits SpawnRequests through the host; systems/EnemySpawnSystem turns them into pooled
- *  Phaser enemies today, and the Three.js session will consume the same requests later. */
+ *  ENEMY_VARIANT_SCHEDULE). Emits SpawnRequests through the host, which the session turns into enemies. */
 export class EnemySpawnScheduler {
   private skeletonSpawnElapsed = 0;
   private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.variantId, 0]));

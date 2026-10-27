@@ -1,13 +1,13 @@
 ﻿---
 name: integrate-pixel-assets
-description: Generate, prepare, and integrate pixel-art UI assets into a Phaser TypeScript repository. Use when an icon, sprite, projectile, upgrade art, weapon art, or other raster asset must be added to the project with consistent dimensions, transparency, naming, preload registration, and UI mapping.
+description: Generate, prepare, and integrate pixel-art UI assets into a Three.js TypeScript repository. Use when an icon, sprite, projectile, upgrade art, weapon art, or other raster asset must be added to the project with consistent dimensions, transparency, naming, preload registration, and UI mapping.
 ---
 
 # Integrate Pixel Assets
 
 ## Workflow
 
-1. Inspect neighboring assets and their runtime use: directory, dimensions, alpha treatment, Phaser loader type, texture key, animation metadata, and UI display size.
+1. Inspect neighboring assets and their runtime use: directory, dimensions, alpha treatment, how it is loaded (static URL literal for Vite), animation metadata, and UI display size.
 2. Use the applicable image-generation skill for new bitmap art. Specify subject, dimensions, pixel density, transparent final background, no text, and the project palette.
 3. Produce one file per runtime asset. If a chroma-key source is necessary, remove only the flat key color and preserve antialiased subject pixels. The raw/uncropped generation almost never has the requested canvas size or a tight crop — measure its actual dimensions and content bounding box (alpha-threshold scan, not eyeballing a viewer render) before deciding the final crop.
 4. Save under the repository's established asset category with a descriptive kebab-case filename. Keep the raw/uncropped source alongside the cropped derivative that actually gets loaded (e.g. `thing.png` + `thing-cropped.png`) rather than overwriting it — re-cropping later (tighter padding, a fixed-window fix for an animated sheet, a different aspect) is far cheaper with the source still on disk.

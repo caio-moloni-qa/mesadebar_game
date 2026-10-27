@@ -80,10 +80,9 @@ interface Control {
   run: () => void;
 }
 
-/** The F9 sandbox panel (Phaser: SandboxDebugPanel + SandboxState): run-time toggles, spawn/kill shortcuts, clock and
+/** The F9 sandbox panel: run-time toggles, spawn/kill shortcuts, clock and
  *  difficulty overrides, and the "SANDBOX ATIVO (F9)" indicator. Settings stick across runs; applyTo() puts them on
- *  each new session. Same controls as the Phaser panel,
- *  plus "Boss agora" and "Próxima arma". */
+ *  each new session. Includes "Boss agora" and "Próxima arma". */
 export class SandboxPanel {
   private readonly root: HTMLDivElement;
   private readonly list: HTMLDivElement;
@@ -136,7 +135,7 @@ export class SandboxPanel {
     return this.settings.enabled;
   }
 
-  /** Puts the sticky toggles on a fresh run (only while sandbox mode is on, like the Phaser build). */
+  /** Puts the sticky toggles on a fresh run (only while sandbox mode is on). */
   applyTo(session: GameSession, forceInvincible: boolean): void {
     const on = this.settings.enabled;
     session.skeletonSpawnEnabled = !on || this.settings.skeletons;

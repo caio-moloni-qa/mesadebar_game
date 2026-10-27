@@ -1,6 +1,6 @@
 ﻿---
 name: apply-game-patch-notes
-description: Transform game patch notes into scoped, verified implementation work. Use when a user provides patch notes, a balance document, a feature list, or asks to implement, reconcile, or review game changes against an existing Phaser/TypeScript project.
+description: Transform game patch notes into scoped, verified implementation work. Use when a user provides patch notes, a balance document, a feature list, or asks to implement, reconcile, or review game changes against an existing Three.js/TypeScript project.
 ---
 
 # Apply Game Patch Notes

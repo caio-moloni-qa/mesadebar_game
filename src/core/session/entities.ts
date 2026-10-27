@@ -330,7 +330,7 @@ export class EnemyState implements Body {
   }
 }
 
-/** Same display sizes the Phaser build uses (EnemySpawnSystem VARIANT_DISPLAY_OVERRIDES / BossSystem). */
+/** Enemy display sizes (sprite height in world units). */
 export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   skeleton: 62,
   necromancerWraith: 68,

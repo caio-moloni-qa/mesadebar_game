@@ -4,7 +4,7 @@ export interface FloatingTextStyle {
   color: string;
   /** CSS px at a 720 px tall viewport; scaled with the viewport like the rest of the HUD. */
   size?: number;
-  /** How far it rises (CSS px at 720 px tall) and how long it lives — Phaser's combat text: 34 px over 520 ms. */
+  /** How far it rises (CSS px at 720 px tall) and how long it lives. */
   rise?: number;
   durationMs?: number;
   delayMs?: number;
@@ -72,7 +72,7 @@ export class FloatingTexts {
         entry.element.hidden = true;
         continue;
       }
-      // Quad.Out on both the rise and the fade, like the Phaser tween.
+      // Quad.Out on both the rise and the fade.
       const t = age / entry.durationMs;
       const eased = 1 - (1 - t) * (1 - t);
       entry.element.hidden = false;

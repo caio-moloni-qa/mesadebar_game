@@ -24,7 +24,7 @@ export interface PipelineLayout {
   originY: number;
 }
 
-/** "Envelope" fit, like the Phaser build's Scale.ENVELOP: the smallest whole scale that covers the canvas, with the
+/** "Envelope" fit: the smallest whole scale that covers the canvas, with the
  *  internal resolution shrunk to match. The image always fills the screen (no letterbox bars) and no aspect ratio
  *  ever sees more than the nominal 640×360 texels (40 × 22.5 m) — wide or tall screens crop instead. */
 export function envelopeLayout(width: number, height: number): PipelineLayout {

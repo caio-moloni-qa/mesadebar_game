@@ -10,4 +10,4 @@ The 3D renderer's `src/render/ui/icons.ts` maps these images to the existing upg
 
 Art direction: faceted fantasy equipment and crystals, aged brass, cream edge highlights,
 warm red melee/power accents, cyan projectile accents, and jade aura accents. No baked-in text,
-frames, or backgrounds. The Phaser assets in `src/assets/upgrades/core/` remain separate.
+frames, or backgrounds.

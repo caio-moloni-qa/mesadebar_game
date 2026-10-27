@@ -3,12 +3,12 @@ import { Upgrade } from '../../core/systems/UpgradeSystem';
 import { fillUpgradeCard, upgradeCard } from '../ChoiceOverlay';
 import { upgradeIcon } from './icons';
 
-/** Slowing steps of the slot-machine reveal (Phaser: GameScene.playChestRollAnimation), then a short hold. */
+/** Slowing steps of the slot-machine reveal, then a short hold. */
 export const CHEST_ROLL_STEPS_MS = [70, 70, 80, 90, 100, 120, 140, 170, 210, 260, 320, 400, 500];
 const LANDED_HOLD_MS = 700;
 
 /** "Baú Encontrado!": cycles one card through the rolled pool, slowing down, and lands on the upgrade the session
- *  already applied. The run holds still meanwhile (session.revealing), like the Phaser build. The shuffle order is
+ *  already applied. The run holds still meanwhile (session.revealing). The shuffle order is
  *  cosmetic, so it uses Math.random — the outcome comes from the session's seeded RNG. */
 export class ChestRoll {
   private readonly root: HTMLDivElement;

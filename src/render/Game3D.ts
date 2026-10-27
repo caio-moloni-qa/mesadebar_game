@@ -75,7 +75,7 @@ export interface Game3DOptions {
   debug?: boolean;
 }
 
-/** Floating callout colours per player-status tone (Phaser: Player.spawnFloatingStatusText call sites). */
+/** Floating callout colours per player-status tone. */
 /** The hero's attack for each projectile: the bolt is cast, an arrow drawn and loosed, a coin flipped, whatever comes
  *  out of Sergio's pack lobbed overarm; boomerangs and the thrown sword go sidearm. */
 const PROJECTILE_ATTACKS: Record<ProjectileKind, HandAttack> = { bolt: 'cast', arrow: 'shoot', coin: 'toss', pan: 'hurl', bottle: 'hurl', potion: 'hurl', boomerang: 'throw', banana: 'throw', thrownSword: 'throw' };
@@ -506,7 +506,7 @@ export class Game3D {
       if (weaponId === 'staff') this.sheetEffects.impact(enemy.x, enemy.y);
       const point = at(enemy.x, enemy.y);
       this.particles.burst(point.x, point.z, critical ? 0xffe45c : PALETTE.boltCore, critical ? 8 : 3, 1.1, 2);
-      // Same callouts as the Phaser build: CRIT! then the number 150 ms later; Relíquia Divina adds "DANO +" on the hero.
+      // CRIT! first, then the number 150 ms later; Relíquia Divina adds "DANO +" on the hero.
       const head = simToWorld(enemy.x, enemy.y, 2.1 * (enemy.displaySize / 62), this.scratch);
       const now = performance.now();
       if (critical) this.floating.spawn(head, 'CRIT!', { color: '#ffe45c' }, now);
@@ -535,7 +535,7 @@ export class Game3D {
     });
     events.on('player-damaged', ({ amount }) => {
       this.playerView.play('hit');
-      // With the Relíquia Divina equipped the hero's own damage reads green ("DANO -N"), like the Phaser build.
+      // With the Relíquia Divina equipped the hero's own damage reads green ("DANO -N").
       if (this.session.weapons.has('amulet')) this.floatAboveHero(`DANO -${Math.round(amount)}`, '#8effa0');
       else this.floatAboveHero(`- ${Math.round(amount)}`, '#ff5c5c');
     });
@@ -945,7 +945,7 @@ export class Game3D {
     window.addEventListener('keydown', (event) => {
       if (this.inMenu) return;
       this.keys.add(event.code);
-      // ESC stays blocked while a choice screen is open, like the Phaser build.
+      // ESC stays blocked while a choice screen is open.
       // ESC first closes Sergio's counter or a conversation in the tavern.
       if (this.menu.visible) return;
       if (this.guardianIntro.filming) {
@@ -1025,7 +1025,7 @@ export class Game3D {
     }
     let right = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
     let up = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
-    // The stick takes over while it's held (like Phaser's mobileDirection overriding the keys).
+    // The stick takes over while it's held.
     if (this.joystick.direction.x !== 0 || this.joystick.direction.y !== 0) ({ x: right, y: up } = this.joystick.direction);
     const ground = this.cameraRig.screenToGround(right, up);
     this.session.setMoveInput(ground.x, ground.y);

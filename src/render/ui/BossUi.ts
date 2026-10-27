@@ -15,7 +15,7 @@ const MERCHANT_NEWS = 'Um portal para a taverna surgiu na arena!';
  *  along the top, the build tray and XP rail along the bottom. */
 const MARKER_MARGIN = { side: 70, top: 140, bottom: 120 };
 
-/** The boss fight's DOM layer (Phaser: BossSystem.warn / countdownText / updateArrows, GameScene portal prompts):
+/** The boss fight's DOM layer:
  *  the warning banner, a health + shield bar per boss with the main boss's arena countdown, arrows pointing at
  *  off-screen bosses and portals, and the "Pressione E" portal prompt (also tappable). */
 export class BossUi {

@@ -4,11 +4,10 @@ import { Rng, Vec2, floatBetween, pickOne } from '../math';
 import { PlayerState } from '../session/entities';
 import { ArenaMap } from '../world/ArenaMap';
 
-// The merchant (port of the Phaser MerchantSystem): every so often a portal opens somewhere on the arena for a short
+// The merchant: every so often a portal opens somewhere on the arena for a short
 // while; stepping through it leaves the horde behind — the arena freezes — for the tavern, a pocket realm outside the
 // map. Sergio tends the bar and sells his four items (talk to him: his store opens); the regulars at the tables hand
-// out missions (QuestSystem). The exit portal takes you back to where you entered. Same offers,
-// prices and run-wide price inflation as the Phaser build.
+// out missions (QuestSystem). The exit portal takes you back to where you entered.
 
 export const MERCHANT_TUNING = {
   /** Time between portals (counted only while none is open, you're not inside, and no boss is coming or up). */
@@ -265,7 +264,7 @@ export class MerchantSystem {
     if (!this.inside || !offer || offer.purchased || currency < offer.cost) return null;
     offer.purchased = true;
     this.itemsPurchased += 1;
-    // Run-wide inflation: what's still on the table re-prices at once (Phaser priced each visit on entry).
+    // Run-wide inflation: what's still on the table re-prices at once.
     this.offers.forEach((other) => {
       if (!other.purchased) other.cost = Math.round(other.cost * MERCHANT_TUNING.priceInflation);
     });

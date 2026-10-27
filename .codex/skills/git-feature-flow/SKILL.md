@@ -128,7 +128,7 @@ feature/experience-system
 fix/projectile-collision
 fix/player-damage-cooldown
 refactor/weapon-system
-chore/update-phaser
+chore/update-three
 docs/update-readme
 ```
 
@@ -482,7 +482,7 @@ Makefile
 README.md
 ```
 
-Para projetos Phaser com TypeScript e Vite, procurar inicialmente por:
+Para projetos Three.js com TypeScript e Vite, procurar inicialmente por:
 
 ```bash
 npm run lint
@@ -958,7 +958,7 @@ cat > /tmp/pr-body.md <<'EOF'
 
 - add player movement with WASD and arrow keys
 - normalize diagonal movement
-- connect movement logic to the Phaser player entity
+- connect movement logic to the player entity
 
 ## Validation
 
@@ -1343,7 +1343,7 @@ Adaptar os comandos às ferramentas e scripts reais do projeto.
 
 # Integração com a skill de implementação
 
-Quando utilizada junto com outra skill, como uma skill de desenvolvimento Phaser:
+Quando utilizada junto com outra skill, como uma skill de desenvolvimento do jogo:
 
 ## Antes da implementação
 
@@ -1392,7 +1392,7 @@ A skill de Git não deve:
 * criar armas;
 * modificar regras de negócio sem solicitação.
 
-A skill de Phaser não deve:
+A skill de desenvolvimento não deve:
 
 * fazer push direto na `main`;
 * criar branches sem seguir esta skill;

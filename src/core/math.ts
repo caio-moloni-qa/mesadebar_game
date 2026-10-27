@@ -1,5 +1,5 @@
-/** Engine-agnostic math primitives for src/core — replaces Phaser.Math so gameplay code can run without Phaser
- *  (unit tests today, the Three.js renderer later). Every random roll in core goes through an injected `Rng` so a
+/** Engine-agnostic math primitives for src/core, so gameplay code runs without a renderer
+ *  (unit tests and the Three.js build). Every random roll in core goes through an injected `Rng` so a
  *  seeded generator makes runs reproducible; never call Math.random inside src/core (enforced by architecture.test.ts). */
 
 export interface Vec2 { x: number; y: number; }
@@ -19,12 +19,12 @@ export function createRng(seed: number): Rng {
   };
 }
 
-/** Float in [min, max) — same as Phaser.Math.FloatBetween. */
+/** Float in [min, max). */
 export function floatBetween(rng: Rng, min: number, max: number): number {
   return min + rng() * (max - min);
 }
 
-/** Integer in [min, max], both inclusive — same as Phaser.Math.Between. */
+/** Integer in [min, max], both inclusive. */
 export function intBetween(rng: Rng, min: number, max: number): number {
   return Math.floor(rng() * (max - min + 1)) + min;
 }
@@ -53,8 +53,7 @@ export function degToRad(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
-/** Random point on a ring around `center`: uniform angle, distance in [minDistance, maxDistance] (integer, like the
- *  Phaser.Math.Between-based spawn code this replaces). */
+/** Random point on a ring around `center`: uniform angle, distance in [minDistance, maxDistance] (integer). */
 export function randomPointAround(rng: Rng, center: Vec2, minDistance: number, maxDistance: number): Vec2 {
   const angle = floatBetween(rng, 0, Math.PI * 2);
   const distance = intBetween(rng, minDistance, maxDistance);

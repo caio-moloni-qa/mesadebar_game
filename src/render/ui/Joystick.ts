@@ -1,14 +1,14 @@
-/** Phaser layout (1280×720 units): base centred 120 in from the bottom-left corner, knob travel 70, 12 dead zone. */
+/** Layout in 1280×720 units: base centred 120 in from the bottom-left corner, knob travel 70, 12 dead zone. */
 const TRAVEL = 70;
 const DEAD_ZONE = 12;
 
-/** Same condition the Phaser build uses to show its joystick: a compact or coarse-pointer touch screen. */
+/** Shown on a compact or coarse-pointer touch screen. */
 export function isTouchDevice(): boolean {
   const compactScreen = window.matchMedia('(max-width: 900px)').matches || window.matchMedia('(max-height: 900px) and (pointer: coarse)').matches;
   return compactScreen && (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
 }
 
-/** On-screen movement stick (Phaser: GameScene.createMobileControls) with pointer events, so it tracks one finger
+/** On-screen movement stick with pointer events, so it tracks one finger
  *  while others tap cards or buttons. `direction` is screen-relative: x right, y up, length ≤ 1. */
 export class Joystick {
   readonly direction = { x: 0, y: 0 };
@@ -49,7 +49,7 @@ export class Joystick {
 
   private track(event: PointerEvent, zone: HTMLElement): void {
     const rect = zone.getBoundingClientRect();
-    // Base is drawn 176 units wide; convert the pointer offset into those units so travel matches Phaser at any size.
+    // Base is drawn 176 units wide; convert the pointer offset into those units so travel is the same at any size.
     const unit = rect.width / 176;
     let dx = (event.clientX - (rect.left + rect.width / 2)) / unit;
     let dy = (event.clientY - (rect.top + rect.height / 2)) / unit;

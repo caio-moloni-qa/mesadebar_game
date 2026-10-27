@@ -29,10 +29,6 @@ export interface CharacterConfig {
   /** Relíquia's exclusive: every hit that lands (any weapon) adds `perHit` points of shield, which soaks damage
    *  before health, up to `maxHealthFraction` of max health on top of it. */
   hitShield?: { perHit: number; maxHealthFraction: number };
-  /** Full-bleed character-select card art (see MenuScene.renderCharacterCard) — replaces the plain wood
-   *  badge/turning-sprite roundel with a unique illustrated scene per character, texture-swapped on hover.
-   *  Optional: characters without a pair here keep the badge/roundel presentation. */
-  cardArt?: { idle: string; hover: string };
   /** The tavern regulars (and Sergio): their always-on passive and the exclusive that switches on at
    *  `exclusiveThreshold` upgrades with affinity (see HeroAbilitySystem). */
   kit?: { exclusiveThreshold: number };
@@ -63,7 +59,6 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     preferredWeaponId: 'sword',
     startingWeaponUpgradeChoices: 3,
     lowHealthAttackSpeedBonus: 0.4,
-    cardArt: { idle: 'barbarian-card-idle', hover: 'barbarian-card-hover' },
     accentColor: 0x8a3324
   },
   mage: {
@@ -86,7 +81,6 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     startingWeaponUpgradeChoices: 3,
     passiveHealAmount: 3,
     passiveHealIntervalMs: 1000,
-    cardArt: { idle: 'mage-card-idle', hover: 'mage-card-hover' },
     accentColor: 0x2c4f8c
   },
   reliquia: {
@@ -110,7 +104,6 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     startingWeaponUpgradeChoices: 3,
     auraWeaponOverrides: { baseDamage: 9.45, cooldown: 1000, range: 80 },
     hitShield: { perHit: 1, maxHealthFraction: 1 },
-    cardArt: { idle: 'reliquia-card-idle', hover: 'reliquia-card-hover' },
     accentColor: 0xa8541a
   },
   fabri: {
@@ -132,7 +125,6 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     preferredWeaponId: 'boomerang',
     startingWeaponUpgradeChoices: 3,
     boomerangBananaTransform: { upgradeThreshold: 10, slowPercentPerHit: 0.01, slipChancePerHit: 0.1 },
-    cardArt: { idle: 'fabri-card-idle', hover: 'fabri-card-hover' },
     accentColor: 0x9c7a1e
   },
   brom: {
