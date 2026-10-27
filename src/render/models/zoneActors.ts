@@ -154,6 +154,63 @@ export function createStoneGolemModel(runes = 0x7fe3ff): ActorModel {
   return finish(bones, parts, hip, 2.3);
 }
 
+// ── O Cavaleiro Congelado (Campo Nevado) ─────────────────────────────────────────────────────────────────────
+
+/** A dead knight in a shell of ice: frosted plate, a tower shield on the left arm, a long blade of ice in the right
+ *  hand, a great helm with a cyan visor slit, icicles hanging off the pauldrons and a tattered blue cloak. */
+export function createFrostKnightModel(): ActorModel {
+  const hip = 0.95;
+  const arm = 0.36;
+  const leg = 0.42;
+  const plate = 0x9fc3dc;
+  const plateDark = 0x5f7d96;
+  const frost = 0xe8f3fb;
+  const glow = 0x7fe3ff;
+  const cloak = 0x2b3f63;
+  const bones = humanoidBones({ hipHeight: hip, shoulderWidth: 0.44, armLength: arm, legLength: leg });
+  const limb = (s: 'L' | 'R'): RigPart[] => [
+    { bone: `upperArm${s}`, geometry: part(box(0.17, arm + 0.04, 0.17), plate, [0, -arm / 2, 0]) },
+    // Pauldron with icicles hanging off its rim.
+    { bone: `upperArm${s}`, geometry: part(box(0.3, 0.16, 0.3), plateDark, [0, 0.02, 0]) },
+    { bone: `upperArm${s}`, geometry: part(box(0.32, 0.04, 0.32), frost, [0, 0.11, 0]) },
+    { bone: `upperArm${s}`, geometry: part(cone(0.035, 0.16, 4), frost, [0.1, -0.13, 0.08], [Math.PI, 0, 0]) },
+    { bone: `upperArm${s}`, geometry: part(cone(0.03, 0.12, 4), frost, [-0.08, -0.11, 0.1], [Math.PI, 0, 0]) },
+    { bone: `foreArm${s}`, geometry: part(box(0.15, arm, 0.15), plate, [0, -arm / 2, 0]) },
+    { bone: `foreArm${s}`, geometry: part(box(0.19, 0.08, 0.19), plateDark, [0, -arm * 0.8, 0]) },
+    { bone: `hand${s}`, geometry: part(box(0.14, 0.14, 0.12), plateDark, [0, -0.06, 0]) },
+    { bone: `thigh${s}`, geometry: part(box(0.19, leg + 0.04, 0.19), plate, [0, -leg / 2, 0]) },
+    { bone: `shin${s}`, geometry: part(box(0.17, leg, 0.17), plate, [0, -leg / 2, 0]) },
+    { bone: `shin${s}`, geometry: part(box(0.19, 0.1, 0.06), frost, [0, -leg * 0.1, 0.09]) },
+    { bone: `foot${s}`, geometry: part(box(0.2, 0.1, 0.32), plateDark, [0, 0.05, 0.06]) }
+  ];
+  const parts: RigPart[] = [
+    ...limb('L'),
+    ...limb('R'),
+    { bone: 'hips', geometry: part(box(0.46, 0.2, 0.3), plateDark, [0, 0, 0]) },
+    { bone: 'hips', geometry: part(box(0.5, 0.36, 0.06), cloak, [0, -0.18, -0.17]) },
+    { bone: 'spine', geometry: part(box(0.44, 0.3, 0.3), plate, [0, 0.14, 0]) },
+    { bone: 'chest', geometry: part(box(0.6, 0.46, 0.38), plate, [0, 0.14, 0]) },
+    { bone: 'chest', geometry: part(box(0.62, 0.06, 0.4), frost, [0, 0.38, 0]) }, // frost on the shoulders
+    { bone: 'chest', geometry: part(gem(0.08), glow, [0, 0.16, 0.2]) }, // a frozen heart
+    { bone: 'chest', geometry: part(box(0.58, 0.9, 0.05), cloak, [0, -0.12, -0.21]) }, // the cloak hangs down the back
+    // Great helm: a crest of ice, a glowing visor slit, a nasal bar.
+    { bone: 'head', geometry: part(box(0.3, 0.34, 0.3), plate, [0, 0.14, 0.02]) },
+    { bone: 'head', geometry: part(box(0.32, 0.05, 0.32), frost, [0, 0.31, 0.02]) },
+    { bone: 'head', geometry: part(box(0.22, 0.04, 0.02), glow, [0, 0.17, 0.175]) },
+    { bone: 'head', geometry: part(box(0.04, 0.12, 0.02), plateDark, [0, 0.1, 0.18]) },
+    { bone: 'head', geometry: part(cone(0.06, 0.24, 4), frost, [0, 0.44, 0]) },
+    // Tower shield on the left forearm, a blade of ice in the right hand.
+    { bone: 'foreArmL', geometry: part(box(0.06, 0.66, 0.46), plateDark, [-0.1, -arm * 0.5, 0.06]) },
+    { bone: 'foreArmL', geometry: part(box(0.07, 0.58, 0.38), plate, [-0.12, -arm * 0.5, 0.06]) },
+    { bone: 'foreArmL', geometry: part(gem(0.07), glow, [-0.16, -arm * 0.5, 0.06]) },
+    { bone: 'handR', geometry: part(box(0.04, 0.18, 0.04), plateDark, [0, -0.06, 0.04]) }, // grip
+    { bone: 'handR', geometry: part(box(0.22, 0.04, 0.06), plateDark, [0, -0.16, 0.04]) }, // crossguard
+    { bone: 'handR', geometry: part(box(0.06, 0.95, 0.02), glow, [0, -0.66, 0.04]) }, // the blade
+    { bone: 'handR', geometry: part(box(0.1, 0.9, 0.03), frost, [0, -0.64, 0.04]) }
+  ];
+  return finish(bones, parts, hip, 2.2);
+}
+
 // ── Esqueleto aliado (raised by the Coveiro Aliado) ────────────────────────────────────────────────────────────
 
 /** A friendly skeleton: teal hood and mantle, a short rusty sword in the right hand, cyan eyes so it never reads as

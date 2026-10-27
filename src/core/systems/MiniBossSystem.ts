@@ -1,4 +1,4 @@
-import { GRAVEYARD, LAKE, TEMPLE, ZoneKind } from '../../config/arenaLayout';
+import { ArenaLayout, ZoneKind } from '../../config/arenaLayout';
 import { MINI_BOSS_VARIANTS } from '../../config/balance';
 import { EventBus } from '../EventBus';
 import { Rng, Vec2, floatBetween, pickOne } from '../math';
@@ -19,7 +19,8 @@ export interface MiniBossSpec {
   /** Where it's announced: "O Coveiro desperta no cemitério!" */
   where: string;
   zone: ZoneKind;
-  anchor: Vec2;
+  /** Its home in an arena (read from the map's own layout, never the active one: the two can differ). */
+  anchor: (layout: ArenaLayout) => Vec2;
   /** Leaves its zone only this far: beyond it, it walks home and regenerates. */
   leashRadius: number;
   companion: CompanionKind;
@@ -28,12 +29,17 @@ export interface MiniBossSpec {
 }
 
 export const MINI_BOSSES: Record<MiniBossKind, MiniBossSpec> = {
-  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', anchor: GRAVEYARD.center, leashRadius: 700, companion: 'gravedigger' },
-  templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', anchor: TEMPLE.center, leashRadius: 720, companion: 'stoneGolem' },
-  lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', anchor: LAKE.center, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true }
+  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', anchor: ({ graveyard }) => graveyard.center, leashRadius: 700, companion: 'gravedigger' },
+  templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', anchor: ({ temple }) => temple.center, leashRadius: 720, companion: 'stoneGolem' },
+  lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', anchor: ({ lake }) => lake.center, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true },
+  // In the open courtyard south of the keep's inner sanctum (the sanctum itself is too tight to fight in).
+  frostKnight: { name: 'O Cavaleiro Congelado', where: 'na fortaleza', zone: 'ruins', anchor: ({ temple }) => ({ x: temple.center.x, y: temple.center.y + temple.halfHeight * 0.5 }), leashRadius: 760, companion: 'stoneGolem' }
 };
-/** Rotation order of the per-cycle mini-boss slots. */
-export const MINI_BOSS_ROTATION: MiniBossKind[] = ['gravedigger', 'lakeSpirit', 'templeGuardian'];
+
+/** Rotation order of the per-cycle mini-boss slots: the arena's guardians. */
+export function guardianRotation(layout: ArenaLayout): MiniBossKind[] {
+  return layout.guardians.filter((kind): kind is MiniBossKind => kind in MINI_BOSSES);
+}
 
 export const MINI_BOSS_TUNING = {
   warningMs: 2200,
@@ -111,10 +117,42 @@ export const MINI_BOSS_TUNING = {
   whirlPull: 120,
   whirlCoreRadius: 130,
   whirlDamage: 8,
-  whirlTickMs: 500
+  whirlTickMs: 500,
+  // ── O Cavaleiro Congelado ──
+  /** Golpe gélido: a sweep just ahead that slows the hero. */
+  iceSlashRange: 150,
+  iceSlashCooldownMs: 3500,
+  iceSlashTelegraphMs: 650,
+  iceSlashReach: 80,
+  iceSlashRadius: 105,
+  iceSlashDamage: 18,
+  iceSlashSlow: 0.3,
+  iceSlashSlowMs: 2000,
+  /** Investida com escudo: like the Guardião's charge, quicker to line up. */
+  knightChargeCooldownMs: 9000,
+  knightChargeTelegraphMs: 800,
+  knightChargeSpeed: 900,
+  knightChargeDamage: 20,
+  knightTurnRate: (140 * Math.PI) / 180,
+  /** Paredes de gelo: a ring of ice pillars around the hero with one gap, the one facing the knight. */
+  iceWallCooldownMs: 12000,
+  iceWallRange: 600,
+  iceWallTelegraphMs: 800,
+  iceWallRing: 165,
+  iceWallPillars: 10,
+  iceWallGap: 2,
+  iceWallPillarRadius: 28,
+  iceWallMs: 5000,
+  /** His shield takes the edge off hits from the front... until the armour breaks at half health. */
+  shieldDamageMultiplier: 0.5,
+  enrageAt: 0.5,
+  enragedSpeedMultiplier: 1.5,
+  /** Cooldowns run this much faster once enraged. */
+  enragedCooldownRate: 1.6,
+  enragedDamageTaken: 1.2
 };
 
-export type MiniBossAttackType = 'raise' | 'slam' | 'burrow' | 'charge' | 'shockwave' | 'drain' | 'wave' | 'geyser' | 'whirlpool';
+export type MiniBossAttackType = 'raise' | 'slam' | 'burrow' | 'charge' | 'shockwave' | 'drain' | 'wave' | 'geyser' | 'whirlpool' | 'iceSlash' | 'iceWall';
 
 export interface MiniBossAttack {
   type: MiniBossAttackType;
@@ -129,6 +167,15 @@ export interface MiniBossAttack {
   hit: boolean;
   /** Geysers launched so far (geyser volley), damage ticks dealt (whirlpool). */
   count: number;
+}
+
+/** One pillar of the Cavaleiro's ice wall: blocks the hero while it stands. */
+export interface IcePillarState {
+  x: number;
+  y: number;
+  radius: number;
+  /** Counts up from 0; the pillar melts at MINI_BOSS_TUNING.iceWallMs. */
+  elapsedMs: number;
 }
 
 /** A geyser about to erupt. */
@@ -149,8 +196,10 @@ export interface MiniBossState {
   /** Facing angle (sim, radians). The Guardião turns slowly; the Coveiro snaps. */
   facing: number;
   attack: MiniBossAttack | null;
-  cooldowns: Record<'raise' | 'slam' | 'burrow' | 'charge' | 'shockwave' | 'wave' | 'geyser' | 'whirlpool', number>;
+  cooldowns: Record<'raise' | 'slam' | 'burrow' | 'charge' | 'shockwave' | 'wave' | 'geyser' | 'whirlpool' | 'iceSlash' | 'iceWall', number>;
   stunnedMs: number;
+  /** Past its second-phase threshold (the Cavaleiro's armour broke). */
+  enraged: boolean;
 }
 
 export interface MiniBossEvents extends Record<string, unknown> {
@@ -159,6 +208,8 @@ export interface MiniBossEvents extends Record<string, unknown> {
   'miniboss-impact': { kind: MiniBossKind; attack: MiniBossAttackType; x: number; y: number; radius: number };
   'miniboss-stunned': { kind: MiniBossKind; enemy: EnemyState };
   'miniboss-defeated': { kind: MiniBossKind; x: number; y: number };
+  /** Entered its second phase (the Cavaleiro's armour shatters). */
+  'miniboss-enraged': { kind: MiniBossKind; enemy: EnemyState };
 }
 
 export interface MiniBossHost {
@@ -176,11 +227,15 @@ export interface MiniBossHost {
   setLakeLevel(level: number): void;
   /** Shoves the player by (dx, dy), sliding along walls. */
   pushPlayer(dx: number, dy: number): void;
+  /** Slows the player by `percent` for `ms`. */
+  slowPlayer(percent: number, ms: number): void;
 }
 
 export class MiniBossSystem {
   readonly bosses: MiniBossState[] = [];
   readonly geysers: GeyserState[] = [];
+  /** The Cavaleiro Congelado's standing ice pillars. */
+  readonly icePillars: IcePillarState[] = [];
   /** Announced, spawning when the countdown ends. */
   pending: { kind: MiniBossKind; inMs: number } | null = null;
 
@@ -214,6 +269,12 @@ export class MiniBossSystem {
     if (boss.attack?.type === 'drain') return 0;
     if (boss.attack?.type === 'burrow' && (boss.attack.phase === 'sink' || boss.attack.phase === 'tunnel' || boss.attack.phase === 'emerge')) return 0;
     if (boss.stunnedMs > 0) return MINI_BOSS_TUNING.stunDamageMultiplier;
+    if (boss.kind === 'frostKnight') {
+      if (boss.enraged) return MINI_BOSS_TUNING.enragedDamageTaken;
+      const { player } = this.host;
+      const toPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+      return Math.abs(wrapAngle(toPlayer - boss.facing)) <= MINI_BOSS_TUNING.frontArc ? MINI_BOSS_TUNING.shieldDamageMultiplier : 1;
+    }
     if (boss.kind === 'templeGuardian') {
       const { player } = this.host;
       const toPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
@@ -239,8 +300,9 @@ export class MiniBossSystem {
     this.pending = null;
   }
 
-  /** Cleanup when a mini-boss leaves the field: the lake spirit's water comes back. */
+  /** Cleanup when a mini-boss leaves the field: the lake spirit's water comes back, the ice walls melt. */
   private forget(boss: MiniBossState): void {
+    if (boss.kind === 'frostKnight') this.icePillars.length = 0;
     if (boss.kind !== 'lakeSpirit') return;
     this.geysers.length = 0;
     this.host.setLakeLevel(1);
@@ -253,6 +315,7 @@ export class MiniBossSystem {
       this.bosses.splice(index, 1);
     }
     this.updateGeysers(delta);
+    this.updateIcePillars(delta);
     if (this.pending) {
       this.pending.inMs -= delta;
       if (this.pending.inMs <= 0) {
@@ -263,7 +326,9 @@ export class MiniBossSystem {
     }
     [...this.bosses].forEach((boss) => {
       if (!boss.enemy.alive) return;
-      (Object.keys(boss.cooldowns) as Array<keyof MiniBossState['cooldowns']>).forEach((key) => { boss.cooldowns[key] += delta; });
+      const cooling = boss.enraged ? delta * MINI_BOSS_TUNING.enragedCooldownRate : delta;
+      (Object.keys(boss.cooldowns) as Array<keyof MiniBossState['cooldowns']>).forEach((key) => { boss.cooldowns[key] += cooling; });
+      if (boss.kind === 'frostKnight') this.checkKnightArmour(boss);
       if (boss.stunnedMs > 0) {
         boss.stunnedMs = Math.max(0, boss.stunnedMs - delta);
         return;
@@ -271,19 +336,22 @@ export class MiniBossSystem {
       if (boss.attack) {
         if (boss.kind === 'gravedigger') this.updateCoveiroAttack(boss, delta);
         else if (boss.kind === 'templeGuardian') this.updateGuardianAttack(boss, delta);
+        else if (boss.kind === 'frostKnight') this.updateKnightAttack(boss, delta);
         else this.updateSpiritAttack(boss, delta);
         return;
       }
       if (this.updateLeash(boss, delta)) return;
       if (boss.kind === 'gravedigger') this.thinkCoveiro(boss, delta);
       else if (boss.kind === 'templeGuardian') this.thinkGuardian(boss, delta);
+      else if (boss.kind === 'frostKnight') this.thinkKnight(boss, delta);
       else this.thinkSpirit(boss, delta);
     });
   }
 
   private spawn(kind: MiniBossKind): void {
     const spec = MINI_BOSSES[kind];
-    const spot = spec.spawnInWater ? { ...spec.anchor } : this.host.arena.nearestWalkable(spec.anchor.x, spec.anchor.y, 40);
+    const anchor = spec.anchor(this.host.arena.layout);
+    const spot = spec.spawnInWater ? { ...anchor } : this.host.arena.nearestWalkable(anchor.x, anchor.y, 40);
     const enemy = this.host.spawnEnemy(kind, spot.x, spot.y, MINI_BOSS_VARIANTS[kind].maxHealth * this.host.healthMultiplier());
     if (!enemy) return;
     // The spawn snapped it to dry land; the lake spirit really is in the middle of the water.
@@ -299,8 +367,9 @@ export class MiniBossSystem {
       facing: Math.atan2(player.y - spot.y, player.x - spot.x),
       attack: null,
       // A little grace before the first of each attack.
-      cooldowns: { raise: MINI_BOSS_TUNING.raiseIntervalMs - 1500, slam: 0, burrow: 4000, charge: 4000, shockwave: 2500, wave: 3000, geyser: 1500, whirlpool: 4000 },
-      stunnedMs: 0
+      cooldowns: { raise: MINI_BOSS_TUNING.raiseIntervalMs - 1500, slam: 0, burrow: 4000, charge: 4000, shockwave: 2500, wave: 3000, geyser: 1500, whirlpool: 4000, iceSlash: 2000, iceWall: 5000 },
+      stunnedMs: 0,
+      enraged: false
     });
     if (kind === 'lakeSpirit') this.bosses[this.bosses.length - 1].attack = { type: 'drain', phase: 'active', elapsedMs: 0, x: spot.x, y: spot.y, dirX: 0, dirY: 0, hit: false, count: 0 };
     this.host.events.emit('miniboss-spawned', { kind, enemy });
@@ -502,35 +571,7 @@ export class MiniBossSystem {
     const { player, arena } = this.host;
     attack.elapsedMs += delta;
     if (attack.type === 'charge') {
-      if (attack.phase === 'telegraph') {
-        // Lines up quickly for most of the wind-up, then commits.
-        if (attack.elapsedMs < T.chargeTelegraphMs * 0.6) this.turnTowards(boss, Math.atan2(player.y - enemy.y, player.x - enemy.x), T.guardianTurnRate * 3, delta);
-        if (attack.elapsedMs >= T.chargeTelegraphMs) {
-          attack.dirX = Math.cos(boss.facing);
-          attack.dirY = Math.sin(boss.facing);
-          this.next(attack, 'active');
-        }
-        return;
-      }
-      if (attack.phase === 'active') {
-        const expected = (T.chargeSpeed * delta) / 1000;
-        const moved = this.walkTowards(boss, enemy.x + attack.dirX * 1000, enemy.y + attack.dirY * 1000, T.chargeSpeed, delta, false);
-        if (!attack.hit && Math.hypot(player.x - enemy.x, player.y - enemy.y) <= enemy.radius + player.radius + 12) {
-          attack.hit = true;
-          this.host.hurtPlayer(T.chargeDamage);
-        }
-        if (moved < expected * 0.5) {
-          // Slammed into a wall or pillar: dazed.
-          boss.attack = null;
-          boss.stunnedMs = T.stunMs;
-          this.host.events.emit('miniboss-impact', { kind: boss.kind, attack: 'charge', x: enemy.x, y: enemy.y, radius: enemy.radius * 2 });
-          this.host.events.emit('miniboss-stunned', { kind: boss.kind, enemy });
-          return;
-        }
-        if (attack.elapsedMs >= T.chargeMs) this.next(attack, 'recover');
-        return;
-      }
-      if (attack.elapsedMs >= T.recoverMs) boss.attack = null;
+      this.updateCharge(boss, delta, { telegraphMs: T.chargeTelegraphMs, turnRate: T.guardianTurnRate * 3, speed: T.chargeSpeed, damage: T.chargeDamage });
       return;
     }
     if (attack.type === 'shockwave') {
@@ -556,6 +597,132 @@ export class MiniBossSystem {
       return;
     }
     boss.attack = null;
+  }
+
+  /** A charge in a straight line: lines up quickly for most of the wind-up, then commits; slamming into a wall or
+   *  pillar dazes the charger. */
+  private updateCharge(boss: MiniBossState, delta: number, charge: { telegraphMs: number; turnRate: number; speed: number; damage: number }): void {
+    const T = MINI_BOSS_TUNING;
+    const attack = boss.attack!;
+    const { enemy } = boss;
+    const { player } = this.host;
+    if (attack.phase === 'telegraph') {
+      if (attack.elapsedMs < charge.telegraphMs * 0.6) this.turnTowards(boss, Math.atan2(player.y - enemy.y, player.x - enemy.x), charge.turnRate, delta);
+      if (attack.elapsedMs >= charge.telegraphMs) {
+        attack.dirX = Math.cos(boss.facing);
+        attack.dirY = Math.sin(boss.facing);
+        this.next(attack, 'active');
+      }
+      return;
+    }
+    if (attack.phase === 'active') {
+      const expected = (charge.speed * delta) / 1000;
+      const moved = this.walkTowards(boss, enemy.x + attack.dirX * 1000, enemy.y + attack.dirY * 1000, charge.speed, delta, false);
+      if (!attack.hit && Math.hypot(player.x - enemy.x, player.y - enemy.y) <= enemy.radius + player.radius + 12) {
+        attack.hit = true;
+        this.host.hurtPlayer(charge.damage);
+      }
+      if (moved < expected * 0.5) {
+        boss.attack = null;
+        boss.stunnedMs = T.stunMs;
+        this.host.events.emit('miniboss-impact', { kind: boss.kind, attack: 'charge', x: enemy.x, y: enemy.y, radius: enemy.radius * 2 });
+        this.host.events.emit('miniboss-stunned', { kind: boss.kind, enemy });
+        return;
+      }
+      if (attack.elapsedMs >= T.chargeMs) this.next(attack, 'recover');
+      return;
+    }
+    if (attack.elapsedMs >= T.recoverMs) boss.attack = null;
+  }
+
+  // ── O Cavaleiro Congelado: icy sweeps that slow, shield charges, ice walls that pen you in; at half health the
+  //    armour shatters — faster, angrier, and the shield is gone ─────────────────────────────────────────────────
+
+  private checkKnightArmour(boss: MiniBossState): void {
+    const { enemy } = boss;
+    if (boss.enraged || enemy.health > enemy.maxHealth * MINI_BOSS_TUNING.enrageAt) return;
+    boss.enraged = true;
+    enemy.movementSpeed *= MINI_BOSS_TUNING.enragedSpeedMultiplier;
+    this.host.events.emit('miniboss-enraged', { kind: boss.kind, enemy });
+  }
+
+  private thinkKnight(boss: MiniBossState, delta: number): void {
+    const T = MINI_BOSS_TUNING;
+    const { player } = this.host;
+    const { enemy } = boss;
+    const toPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    const distance = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+    this.turnTowards(boss, toPlayer, T.knightTurnRate, delta);
+    if (distance <= T.iceSlashRange && boss.cooldowns.iceSlash >= T.iceSlashCooldownMs) {
+      boss.cooldowns.iceSlash = 0;
+      boss.facing = toPlayer;
+      this.start(boss, 'iceSlash', 'telegraph', enemy.x + Math.cos(toPlayer) * T.iceSlashReach, enemy.y + Math.sin(toPlayer) * T.iceSlashReach);
+      return;
+    }
+    if (distance <= T.iceWallRange && distance > T.iceWallRing && boss.cooldowns.iceWall >= T.iceWallCooldownMs) {
+      boss.cooldowns.iceWall = 0;
+      // The ring closes around where the hero stands now.
+      this.start(boss, 'iceWall', 'telegraph', player.x, player.y, Math.cos(toPlayer), Math.sin(toPlayer));
+      return;
+    }
+    if (distance >= T.chargeMinDistance && boss.cooldowns.charge >= T.knightChargeCooldownMs) {
+      boss.cooldowns.charge = 0;
+      this.start(boss, 'charge', 'telegraph');
+      return;
+    }
+    if (distance > enemy.radius + player.radius) this.walkTowards(boss, player.x, player.y, enemy.movementSpeed, delta, false);
+  }
+
+  private updateKnightAttack(boss: MiniBossState, delta: number): void {
+    const T = MINI_BOSS_TUNING;
+    const attack = boss.attack!;
+    attack.elapsedMs += delta;
+    switch (attack.type) {
+      case 'charge':
+        this.updateCharge(boss, delta, { telegraphMs: T.knightChargeTelegraphMs, turnRate: T.knightTurnRate * 2, speed: T.knightChargeSpeed, damage: T.knightChargeDamage });
+        return;
+      case 'iceSlash':
+        if (attack.phase === 'telegraph' && attack.elapsedMs >= T.iceSlashTelegraphMs) {
+          const { player } = this.host;
+          const hit = Math.hypot(player.x - attack.x, player.y - attack.y) <= T.iceSlashRadius + player.radius;
+          this.impact(boss, 'iceSlash', attack.x, attack.y, T.iceSlashRadius, T.iceSlashDamage);
+          if (hit) this.host.slowPlayer(T.iceSlashSlow, T.iceSlashSlowMs);
+          this.next(attack, 'recover');
+        } else if (attack.phase === 'recover' && attack.elapsedMs >= T.recoverMs) boss.attack = null;
+        return;
+      case 'iceWall':
+        if (attack.phase === 'telegraph' && attack.elapsedMs >= T.iceWallTelegraphMs) {
+          icePillarSpots(attack.x, attack.y, attack.dirX, attack.dirY).forEach((spot) => {
+            this.icePillars.push({ ...spot, radius: T.iceWallPillarRadius, elapsedMs: 0 });
+          });
+          this.host.events.emit('miniboss-impact', { kind: boss.kind, attack: 'iceWall', x: attack.x, y: attack.y, radius: T.iceWallRing });
+          this.next(attack, 'recover');
+        } else if (attack.phase === 'recover' && attack.elapsedMs >= T.recoverMs) boss.attack = null;
+        return;
+      default:
+        boss.attack = null;
+    }
+  }
+
+  /** The pillars stand for iceWallMs and keep the hero out of them (they're solid ice). */
+  private updateIcePillars(delta: number): void {
+    const { player } = this.host;
+    for (let index = this.icePillars.length - 1; index >= 0; index -= 1) {
+      const pillar = this.icePillars[index];
+      pillar.elapsedMs += delta;
+      if (pillar.elapsedMs >= MINI_BOSS_TUNING.iceWallMs) {
+        this.icePillars.splice(index, 1);
+        continue;
+      }
+      const dx = player.x - pillar.x;
+      const dy = player.y - pillar.y;
+      const distance = Math.hypot(dx, dy);
+      const minimum = pillar.radius + player.radius;
+      if (distance >= minimum) continue;
+      const nx = distance > 0 ? dx / distance : 1;
+      const ny = distance > 0 ? dy / distance : 0;
+      this.host.pushPlayer(nx * (minimum - distance), ny * (minimum - distance));
+    }
   }
 
   // ── O Espírito do Lago: drinks the lake, tidal waves, geysers, a whirlpool ───────────────────────────────────
@@ -677,6 +844,20 @@ export class MiniBossSystem {
     attack.phase = phase;
     attack.elapsedMs = 0;
   }
+}
+
+/** Where the Cavaleiro's ice wall rises: a ring round (x, y) with a gap on the side facing the knight (dir points
+ *  from the knight to the ring's centre) — the way out is straight at him. */
+export function icePillarSpots(x: number, y: number, dirX: number, dirY: number): Vec2[] {
+  const T = MINI_BOSS_TUNING;
+  const towardKnight = Math.atan2(-dirY, -dirX);
+  const spots: Vec2[] = [];
+  for (let index = 0; index < T.iceWallPillars; index += 1) {
+    const angle = towardKnight + ((index + 0.5) / T.iceWallPillars) * Math.PI * 2;
+    if (Math.abs(wrapAngle(angle - towardKnight)) < (T.iceWallGap / T.iceWallPillars) * Math.PI) continue;
+    spots.push({ x: x + Math.cos(angle) * T.iceWallRing, y: y + Math.sin(angle) * T.iceWallRing });
+  }
+  return spots;
 }
 
 function wrapAngle(angle: number): number {

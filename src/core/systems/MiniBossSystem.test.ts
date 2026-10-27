@@ -21,7 +21,7 @@ const advance = (run: GameSession, ms: number) => { for (let elapsed = 0; elapse
 /** Calls `kind` and waits out its warning; the hero stands at `at` (default: next to its zone). */
 function withMiniBoss(kind: MiniBossKind, at?: { x: number; y: number }) {
   const run = session();
-  const anchor = MINI_BOSSES[kind].anchor;
+  const anchor = MINI_BOSSES[kind].anchor(ARENA.layout);
   const spot = ARENA.nearestWalkable(at?.x ?? anchor.x + 200, at?.y ?? anchor.y, 20);
   run.player.x = run.player.prevX = spot.x;
   run.player.y = run.player.prevY = spot.y;

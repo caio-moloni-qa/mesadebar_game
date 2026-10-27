@@ -180,7 +180,7 @@ export class BossUi {
     const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = session.merchant.inside ? [] : session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' as const, tier: 'boss' }));
     session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.kind, tier: 'miniboss' }));
     // While a guardian is announced, point at its zone.
-    if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor, kind: session.miniBosses.pending.kind, tier: 'miniboss' });
+    if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor(session.arena.layout), kind: session.miniBosses.pending.kind, tier: 'miniboss' });
     if (session.portals) targets.push({ ...session.portals.end, kind: 'end', tier: 'end' }, { ...session.portals.continue, kind: 'continue', tier: 'continue' });
     if (session.merchant.portal && !session.merchant.inside) targets.push({ x: session.merchant.portal.x, y: session.merchant.portal.y, kind: 'merchant', tier: 'merchant' });
     const prophecy = session.merchant.inside ? null : session.prophecy();

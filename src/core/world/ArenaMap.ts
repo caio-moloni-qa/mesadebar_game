@@ -1,4 +1,4 @@
-import { ARENA_CENTER, ARENA_SIZE, CAMP, GRAVEYARD, LAKE, Point, SHRINE, SPAWN_CLEARING_RADIUS, STONE_CIRCLE, TEMPLE, TRAILS, TRAIL_WIDTH, ZONES, ZoneKind } from '../../config/arenaLayout';
+import { ACTIVE_LAYOUT, ARENA_CENTER, ARENA_SIZE, ArenaLayout, GREENFIELD, Point, SPAWN_CLEARING_RADIUS, TRAIL_WIDTH, ZoneKind } from '../../config/arenaLayout';
 import { SpatialHash } from '../SpatialHash';
 import { Circle, OrientedBox, resolveCircleCircle, resolveCircleOrientedBox } from '../collision';
 import { Rng, Vec2, createRng, floatBetween, intBetween } from '../math';
@@ -46,17 +46,18 @@ export class ArenaMap {
    *  is mostly full; the renderer lowers the water to match. The map is shared across runs, so each run resets it. */
   lakeLevel = 1;
 
-  /** `authored` = built from the layout (zones, lake, trails); an open test field has none of them. */
-  private constructor(readonly size: number, readonly authored: boolean) {}
+  /** `authored` = built from `layout` (zones, lake, trails); an open test field has none of them. The map keeps its
+   *  own layout, so it stays right even after another arena is made active. */
+  private constructor(readonly size: number, readonly authored: boolean, readonly layout: ArenaLayout) {}
 
   /** Whether the lake's deep water currently blocks movement. */
   get lakeBlocks(): boolean {
     return this.authored && this.lakeLevel > 0.5;
   }
 
-  /** The authored arena, with seeded detail. */
-  static generate(seed: number): ArenaMap {
-    const map = new ArenaMap(ARENA_SIZE, true);
+  /** The authored arena (the active layout unless told otherwise), with seeded detail. */
+  static generate(seed: number, layout: ArenaLayout = ACTIVE_LAYOUT): ArenaMap {
+    const map = new ArenaMap(ARENA_SIZE, true, layout);
     new ArenaGenerator(map, createRng(seed ^ 0x5eed)).run();
     map.obstacles.forEach((obstacle) => map.hash.insert(obstacle, obstacle.bound));
     return map;
@@ -64,12 +65,12 @@ export class ArenaMap {
 
   /** An empty square field (tests and sandbox): no obstacles, no water. */
   static open(size: number): ArenaMap {
-    return new ArenaMap(size, false);
+    return new ArenaMap(size, false, GREENFIELD);
   }
 
   /** A square field with exactly these obstacles (tests: a wall between an enemy and the hero, etc.). */
   static withObstacles(size: number, obstacles: Obstacle[]): ArenaMap {
-    const map = new ArenaMap(size, false);
+    const map = new ArenaMap(size, false, GREENFIELD);
     obstacles.forEach((obstacle) => {
       map.obstacles.push(obstacle);
       map.hash.insert(obstacle, obstacle.bound);
@@ -84,18 +85,18 @@ export class ArenaMap {
   /** Signed distance from the lake's shoreline: negative in deep water, positive on land. */
   shoreDistance(x: number, y: number): number {
     if (!this.authored) return Number.POSITIVE_INFINITY;
-    return lakeShoreDistance(x, y);
+    return lakeShoreDistance(x, y, this.layout);
   }
 
   /** How much of `kind` is at a point, 0..1 (soft blob edges). */
   zoneWeight(kind: ZoneKind, x: number, y: number): number {
     if (!this.authored) return 0;
-    return zoneWeight(kind, x, y);
+    return zoneWeight(kind, x, y, this.layout);
   }
 
   trailDistance(x: number, y: number): number {
     if (!this.authored) return Number.POSITIVE_INFINITY;
-    return trailDistance(x, y);
+    return trailDistance(x, y, this.layout);
   }
 
   /** Pushes a body out of every obstacle, the deep water and the arena bounds, in place. Called after each move:
@@ -112,10 +113,11 @@ export class ArenaMap {
         moved = true;
       }
       if (this.lakeBlocks) {
-        const shore = lakeShoreDistance(body.x, body.y);
+        const { center } = this.layout.lake;
+        const shore = lakeShoreDistance(body.x, body.y, this.layout);
         if (shore < body.radius) {
-          const dx = body.x - LAKE.center.x;
-          const dy = body.y - LAKE.center.y;
+          const dx = body.x - center.x;
+          const dy = body.y - center.y;
           const length = Math.hypot(dx, dy);
           // Dead centre of the lake has no outward direction; any direction works there.
           const nx = length > 1e-6 ? dx / length : 1;
@@ -152,7 +154,7 @@ export class ArenaMap {
 
   isWalkable(x: number, y: number, radius: number): boolean {
     if (x < radius || y < radius || x > this.size - radius || y > this.size - radius) return false;
-    if (this.lakeBlocks && lakeShoreDistance(x, y) < radius) return false;
+    if (this.lakeBlocks && lakeShoreDistance(x, y, this.layout) < radius) return false;
     this.scratch.length = 0;
     const probe = { x, y, radius };
     return !this.hash.queryRadius(probe, radius, this.scratch).some((obstacle) => pushOut(probe, obstacle) !== null);
@@ -194,28 +196,32 @@ function pushOut(body: Circle, obstacle: Obstacle): Vec2 | null {
 
 // ── Layout geometry (pure functions shared by the map, the generator and the ground painter) ─────────────────────
 
-export function lakeRadiusAt(angle: number): number {
-  return LAKE.harmonics.reduce((radius, [amplitude, frequency, phase]) => radius + amplitude * Math.sin(angle * frequency + phase), LAKE.radius);
+// `layout` defaults to the active one (what the renderer is drawing); the map and its generator pass their own.
+
+export function lakeRadiusAt(angle: number, layout = ACTIVE_LAYOUT): number {
+  const { harmonics, radius } = layout.lake;
+  return harmonics.reduce((sum, [amplitude, frequency, phase]) => sum + amplitude * Math.sin(angle * frequency + phase), radius);
 }
 
-export function lakeShoreDistance(x: number, y: number): number {
-  const dx = x - LAKE.center.x;
-  const dy = y - LAKE.center.y;
-  return Math.hypot(dx, dy) - lakeRadiusAt(Math.atan2(dy, dx));
+export function lakeShoreDistance(x: number, y: number, layout = ACTIVE_LAYOUT): number {
+  const dx = x - layout.lake.center.x;
+  const dy = y - layout.lake.center.y;
+  return Math.hypot(dx, dy) - lakeRadiusAt(Math.atan2(dy, dx), layout);
 }
 
 /** The lake outline as a closed polygon (for the water mesh). */
-export function lakeOutline(points = 64): Point[] {
+export function lakeOutline(points = 64, layout = ACTIVE_LAYOUT): Point[] {
+  const { center } = layout.lake;
   return Array.from({ length: points }, (_value, index) => {
     const angle = (index / points) * Math.PI * 2;
-    const radius = lakeRadiusAt(angle);
-    return { x: LAKE.center.x + Math.cos(angle) * radius, y: LAKE.center.y + Math.sin(angle) * radius };
+    const radius = lakeRadiusAt(angle, layout);
+    return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius };
   });
 }
 
-export function zoneWeight(kind: ZoneKind, x: number, y: number): number {
+export function zoneWeight(kind: ZoneKind, x: number, y: number, layout = ACTIVE_LAYOUT): number {
   let weight = 0;
-  for (const zone of ZONES) {
+  for (const zone of layout.zones) {
     if (zone.kind !== kind) continue;
     for (const blob of zone.blobs) {
       const distance = Math.hypot(x - blob.x, y - blob.y);
@@ -225,9 +231,9 @@ export function zoneWeight(kind: ZoneKind, x: number, y: number): number {
   return weight;
 }
 
-export function trailDistance(x: number, y: number): number {
+export function trailDistance(x: number, y: number, layout = ACTIVE_LAYOUT): number {
   let best = Number.POSITIVE_INFINITY;
-  for (const trail of TRAILS) {
+  for (const trail of layout.trails) {
     for (let index = 0; index < trail.length - 1; index += 1) best = Math.min(best, segmentDistance(x, y, trail[index], trail[index + 1]));
   }
   return best;
@@ -250,7 +256,11 @@ function frame(center: Point, rotation: number) {
 // ── Generator ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 class ArenaGenerator {
-  constructor(private readonly map: ArenaMap, private readonly rng: Rng) {}
+  private readonly layout: ArenaLayout;
+
+  constructor(private readonly map: ArenaMap, private readonly rng: Rng) {
+    this.layout = map.layout;
+  }
 
   run(): void {
     this.temple();
@@ -281,8 +291,8 @@ class ArenaGenerator {
    *  clear of every obstacle placed so far (with a walking gap). */
   private free(x: number, y: number, radius: number, { allowTrail = false } = {}): boolean {
     if (x < EDGE_MARGIN || y < EDGE_MARGIN || x > ARENA_SIZE - EDGE_MARGIN || y > ARENA_SIZE - EDGE_MARGIN) return false;
-    if (lakeShoreDistance(x, y) < radius + 30) return false;
-    if (!allowTrail && trailDistance(x, y) < TRAIL_WIDTH / 2 + radius + 12) return false;
+    if (lakeShoreDistance(x, y, this.layout) < radius + 30) return false;
+    if (!allowTrail && trailDistance(x, y, this.layout) < TRAIL_WIDTH / 2 + radius + 12) return false;
     if (Math.hypot(x - ARENA_CENTER.x, y - ARENA_CENTER.y) < SPAWN_CLEARING_RADIUS + radius) return false;
     return !this.map.obstacles.some((other) => Math.hypot(other.x - x, other.y - y) < other.bound + radius + OBSTACLE_GAP);
   }
@@ -293,8 +303,8 @@ class ArenaGenerator {
     for (let attempt = 0; attempt < count * 30 && placed < count; attempt += 1) {
       const x = floatBetween(this.rng, EDGE_MARGIN, ARENA_SIZE - EDGE_MARGIN);
       const y = floatBetween(this.rng, EDGE_MARGIN, ARENA_SIZE - EDGE_MARGIN);
-      if (zone && zoneWeight(zone, x, y) < minWeight) continue;
-      if (!zone && ZONES.some((spec) => zoneWeight(spec.kind, x, y) > 0.15)) continue;
+      if (zone && zoneWeight(zone, x, y, this.layout) < minWeight) continue;
+      if (!zone && this.layout.zones.some((spec) => zoneWeight(spec.kind, x, y, this.layout) > 0.15)) continue;
       if (!this.free(x, y, radius)) continue;
       place(x, y);
       placed += 1;
@@ -339,7 +349,7 @@ class ArenaGenerator {
   /** Ruined temple: broken outer walls with four doorways, two colonnades, an inner sanctum, a toppled tower, fallen
    *  columns and rubble — corridors and chokepoints. */
   private temple(): void {
-    const { center, halfWidth, halfHeight, rotation, doorways, sanctum } = TEMPLE;
+    const { center, halfWidth, halfHeight, rotation, doorways, sanctum } = this.layout.temple;
     const toWorld = frame(center, rotation);
     this.perimeter(center, halfWidth, halfHeight, rotation, 70, 'wall', 24, true, doorways, 0.1);
     this.perimeter(center, sanctum.halfWidth, sanctum.halfHeight, rotation, 60, 'wall', 22, true, [{ at: 0.39, width: 90 }], 0);
@@ -364,7 +374,7 @@ class ArenaGenerator {
 
   /** Fenced graveyard (low iron fence with a gate facing the trail), gravestone rows and a tall crypt. */
   private graveyard(): void {
-    const { center, halfWidth, halfHeight, rotation, gateAt, gateWidth, crypt } = GRAVEYARD;
+    const { center, halfWidth, halfHeight, rotation, gateAt, gateWidth, crypt } = this.layout.graveyard;
     const toWorld = frame(center, rotation);
     this.perimeter(center, halfWidth, halfHeight, rotation, 60, 'fence', 8, false, [{ at: gateAt, width: gateWidth }], 0.04);
     this.box('crypt', crypt.x, crypt.y, crypt.halfWidth, crypt.halfHeight, rotation, true);
@@ -372,7 +382,7 @@ class ArenaGenerator {
       for (let column = -3; column <= 3; column += 1) {
         const point = toWorld(column * 75 + floatBetween(this.rng, -8, 8), row * 80 + 20);
         if (Math.abs(point.x - crypt.x) < crypt.halfWidth + 50 && Math.abs(point.y - crypt.y) < crypt.halfHeight + 50) continue;
-        if (trailDistance(point.x, point.y) < TRAIL_WIDTH / 2 + 30) continue; // keep the path from the gate clear
+        if (trailDistance(point.x, point.y, this.layout) < TRAIL_WIDTH / 2 + 30) continue; // keep the path from the gate clear
         if (this.rng() < 0.15) continue;
         this.box('gravestone', point.x, point.y, 11, 5, rotation + floatBetween(this.rng, -0.2, 0.2), false);
       }
@@ -385,7 +395,7 @@ class ArenaGenerator {
 
   /** Camp around a fire: tents facing it, log benches, crates, a cart, and braziers at the entrance. */
   private camp(): void {
-    const { center, fire } = CAMP;
+    const { center, fire } = this.layout.camp;
     this.circle('campfire', fire.x, fire.y, 26, false);
     for (let index = 0; index < 4; index += 1) {
       const angle = (index / 4) * Math.PI * 2 + 0.6;
@@ -397,7 +407,7 @@ class ArenaGenerator {
       const angle = (index / 3) * Math.PI * 2 + 0.2;
       const x = fire.x + Math.cos(angle) * 85;
       const y = fire.y + Math.sin(angle) * 85;
-      if (trailDistance(x, y) < TRAIL_WIDTH / 2 + 50) continue; // the bench ring leaves the trail's end open
+      if (trailDistance(x, y, this.layout) < TRAIL_WIDTH / 2 + 50) continue; // the bench ring leaves the trail's end open
       this.box('log', x, y, 42, 11, angle + Math.PI / 2, false);
     }
     this.scatter('camp', 7, 20, (x, y) => this.box('crate', x, y, 15, 15, this.rng() * Math.PI, false), 0.3);
@@ -411,7 +421,7 @@ class ArenaGenerator {
 
   /** Ring of standing stones in the meadow, one toppled; a pair of braziers lights the spawn clearing. */
   private stoneCircle(): void {
-    const { center, radius, stones } = STONE_CIRCLE;
+    const { center, radius, stones } = this.layout.stoneCircle;
     const fallen = intBetween(this.rng, 0, stones - 1);
     for (let index = 0; index < stones; index += 1) {
       const angle = (index / stones) * Math.PI * 2;
@@ -428,8 +438,9 @@ class ArenaGenerator {
   }
 
   private shrine(): void {
-    this.box('shrine', SHRINE.x, SHRINE.y, 32, 32, 0.2, true);
-    for (const side of [-1, 1]) this.circle('brazier', SHRINE.x + side * 70, SHRINE.y + 40, 13, true);
+    const { shrine } = this.layout;
+    this.box('shrine', shrine.x, shrine.y, 32, 32, 0.2, true);
+    for (const side of [-1, 1]) this.circle('brazier', shrine.x + side * 70, shrine.y + 40, 13, true);
   }
 
   /** Dense dead forest: Poisson-ish trees (min spacing), fallen logs, undergrowth — trails stay open. */
@@ -439,30 +450,31 @@ class ArenaGenerator {
     for (let index = 0; index < 180; index += 1) {
       const x = floatBetween(this.rng, 0, ARENA_SIZE);
       const y = floatBetween(this.rng, 0, ARENA_SIZE);
-      if (zoneWeight('forest', x, y) > 0.3 && lakeShoreDistance(x, y) > 20) this.decor('bush', x, y);
+      if (zoneWeight('forest', x, y, this.layout) > 0.3 && lakeShoreDistance(x, y, this.layout) > 20) this.decor('bush', x, y);
     }
   }
 
   /** Reeds along the waterline, lily pads on the water, a few shore rocks. */
   private lakeShore(): void {
+    const { center } = this.layout.lake;
     for (let index = 0; index < 520; index += 1) {
       const angle = this.rng() * Math.PI * 2;
-      const radius = lakeRadiusAt(angle) + floatBetween(this.rng, -20, 45);
-      const x = LAKE.center.x + Math.cos(angle) * radius;
-      const y = LAKE.center.y + Math.sin(angle) * radius;
-      if (trailDistance(x, y) < TRAIL_WIDTH) continue;
+      const radius = lakeRadiusAt(angle, this.layout) + floatBetween(this.rng, -20, 45);
+      const x = center.x + Math.cos(angle) * radius;
+      const y = center.y + Math.sin(angle) * radius;
+      if (trailDistance(x, y, this.layout) < TRAIL_WIDTH) continue;
       if (this.rng() < 0.55) this.decor('reeds', x, y);
     }
     for (let index = 0; index < 40; index += 1) {
       const angle = this.rng() * Math.PI * 2;
-      const radius = lakeRadiusAt(angle) * floatBetween(this.rng, 0.2, 0.85);
-      this.decor('lilyPad', LAKE.center.x + Math.cos(angle) * radius, LAKE.center.y + Math.sin(angle) * radius);
+      const radius = lakeRadiusAt(angle, this.layout) * floatBetween(this.rng, 0.2, 0.85);
+      this.decor('lilyPad', center.x + Math.cos(angle) * radius, center.y + Math.sin(angle) * radius);
     }
     for (let index = 0; index < 12; index += 1) {
       const angle = this.rng() * Math.PI * 2;
-      const radius = lakeRadiusAt(angle) + floatBetween(this.rng, 40, 90);
-      const x = LAKE.center.x + Math.cos(angle) * radius;
-      const y = LAKE.center.y + Math.sin(angle) * radius;
+      const radius = lakeRadiusAt(angle, this.layout) + floatBetween(this.rng, 40, 90);
+      const x = center.x + Math.cos(angle) * radius;
+      const y = center.y + Math.sin(angle) * radius;
       if (this.free(x, y, 22)) this.circle('rock', x, y, floatBetween(this.rng, 12, 22), false);
     }
   }
@@ -475,7 +487,7 @@ class ArenaGenerator {
     for (let index = 0; index < 260; index += 1) {
       const x = floatBetween(this.rng, EDGE_MARGIN, ARENA_SIZE - EDGE_MARGIN);
       const y = floatBetween(this.rng, EDGE_MARGIN, ARENA_SIZE - EDGE_MARGIN);
-      if (lakeShoreDistance(x, y) > 30 && trailDistance(x, y) > TRAIL_WIDTH && zoneWeight('ruins', x, y) < 0.3) this.decor('bush', x, y);
+      if (lakeShoreDistance(x, y, this.layout) > 30 && trailDistance(x, y, this.layout) > TRAIL_WIDTH && zoneWeight('ruins', x, y, this.layout) < 0.3) this.decor('bush', x, y);
     }
   }
 }

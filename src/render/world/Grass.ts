@@ -7,6 +7,7 @@ import { mergeParts, part, cylinder, cone, gem } from '../models/parts';
 import { WORLD_SCALE } from '../space';
 import { withEnvironment } from './environmentShader';
 import { valueNoise } from './groundPainter';
+import { ArenaTheme, activeArenaTheme } from './arenaTheme';
 
 const CHUNKS = 4;
 const TUFTS = 26000;
@@ -14,9 +15,9 @@ const TUFTS = 26000;
 /** Four bent, tapered ribbons; broad enough to read as soft grass at the world's pixel density.
  * Vertex tint grounds the roots and catches light on the tips without outlining each blade.
  */
-export function grassGeometry(): THREE.BufferGeometry {
+export function grassGeometry(blade = { root: 0x76945c, middle: 0xb4cb8b, tip: 0xe0e7aa }): THREE.BufferGeometry {
   const positions: number[] = [], normals: number[] = [], colors: number[] = [];
-  const root = new THREE.Color(0x76945c), middle = new THREE.Color(0xb4cb8b), tip = new THREE.Color(0xe0e7aa);
+  const root = new THREE.Color(blade.root), middle = new THREE.Color(blade.middle), tip = new THREE.Color(blade.tip);
   for (let blade = 0; blade < 4; blade++) {
     const angle = blade * 2.39996, height = .24 + (blade % 3) * .065;
     const side = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
@@ -43,9 +44,9 @@ export function grassGeometry(): THREE.BufferGeometry {
 export class Grass {
   readonly root = new THREE.Group();
 
-  constructor(map: ArenaMap, seed: number) {
+  constructor(map: ArenaMap, seed: number, theme: ArenaTheme = activeArenaTheme()) {
     this.root.name = 'meadow-grass-and-flowers';
-    const geometry = grassGeometry();
+    const geometry = grassGeometry(theme.grass.blade);
     const material = withEnvironment(toonMaterial({ vertexColors: true, side: THREE.DoubleSide }), { wind: true, clouds: true, foliage: true });
     material.depthWrite = false;
     const flowerParts = [part(cylinder(.012, .02, .25, 3), 0x4a753d, [0, .125, 0]), part(gem(.045), 0xe5ba58, [0, .275, 0], [0, 0, 0], [1, .65, 1])];
@@ -65,7 +66,7 @@ export class Grass {
       const x = floatBetween(rng, 20, map.size - 20), y = floatBetween(rng, 20, map.size - 20);
       const meadow = zoneWeight('meadow', x, y), forest = zoneWeight('forest', x, y), grave = zoneWeight('graveyard', x, y);
       const density = clumps(x / 145, y / 145) + meadow * .23 - grave * .21 - forest * .1;
-      if (density < .43 || lakeShoreDistance(x, y) < LAKE.shoreWidth * .52 || trailDistance(x, y) < TRAIL_WIDTH * .57) continue;
+      if (density < theme.grass.threshold || lakeShoreDistance(x, y) < LAKE.shoreWidth * .52 || trailDistance(x, y) < TRAIL_WIDTH * .57) continue;
       if (Math.hypot(x - CAMP.fire.x, y - CAMP.fire.y) < 245) continue;
       const tx = x - TEMPLE.center.x, ty = y - TEMPLE.center.y;
       if (Math.abs(tx * templeCos - ty * templeSin) < TEMPLE.halfWidth && Math.abs(tx * templeSin + ty * templeCos) < TEMPLE.halfHeight && rng() < .94) continue;
@@ -74,10 +75,12 @@ export class Grass {
       rotation.setFromAxisAngle(up, rng() * Math.PI * 2);
       const size = floatBetween(rng, .65, 1.35) * (1 + meadow * .1);
       scale.set(size, size * floatBetween(rng, .7, 1.2), size);
-      const swatches = grave > .5 ? [0xa29867, 0x97966c, 0xb1a774] : forest > .5 ? [0x728657, 0x819764, 0x677c53] : [0xa5c76e, 0xb5d47c, 0x8eb663, 0x9dc48a];
+      // Nothing grows on the ice.
+      if (theme.ground.ice && zoneWeight('lake', x, y) > 0.4) continue;
+      const swatches = grave > .5 ? theme.grass.graveyard : forest > .5 ? theme.grass.forest : theme.grass.field;
       const color = new THREE.Color(swatches[intBetween(rng, 0, swatches.length - 1)]);
       const index = Math.min(CHUNKS - 1, Math.floor(x / map.size * CHUNKS)) + Math.min(CHUNKS - 1, Math.floor(y / map.size * CHUNKS)) * CHUNKS;
-      const flower = meadow > .2 && grave < .2 && forest < .3 && clumps(x / 90 + 25, y / 90) > .59 && rng() < .11;
+      const flower = theme.grass.flowers && meadow > .2 && grave < .2 && forest < .3 && clumps(x / 90 + 25, y / 90) > .59 && rng() < .11;
       records[index].push({ matrix: matrix.compose(position, rotation, scale).clone(), color, flower });
       placed++;
     }

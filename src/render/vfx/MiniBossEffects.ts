@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MINI_BOSS_TUNING, MiniBossState, MiniBossSystem } from '../../core/systems/MiniBossSystem';
+import { MINI_BOSS_TUNING, MiniBossState, MiniBossSystem, icePillarSpots } from '../../core/systems/MiniBossSystem';
 import { LAKE } from '../../config/arenaLayout';
 import { WORLD_SCALE, simToWorld } from '../space';
 import { ParticleView } from '../views/PickupAndProjectileViews';
@@ -12,6 +12,13 @@ const DANGER_LIGHT = 0xffc890;
 const WATER = 0x6fd3ff;
 const FOAM = 0xe6f6ff;
 const MAX_GEYSERS = 16;
+/** The Cavaleiro's ice. */
+const ICE = 0x9fe0ff;
+const ICE_LIGHT = 0xe8f6ff;
+const MAX_ICE_PILLARS = 24;
+/** Ice pillars grow out of the ground this fast and melt away over their last moments. */
+const PILLAR_RISE_MS = 220;
+const PILLAR_MELT_MS = 600;
 
 const additive = (color: number, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
 
@@ -92,6 +99,7 @@ export class MiniBossEffects {
   /** Geyser warnings: a pale disc with a ring closing onto the eruption point. */
   private readonly geyserDiscs: THREE.InstancedMesh;
   private readonly geyserRings: THREE.InstancedMesh;
+  private readonly icePillars: THREE.InstancedMesh;
   private readonly matrix = new THREE.Matrix4();
   private readonly position = new THREE.Vector3();
   private readonly quaternion = new THREE.Quaternion();
@@ -103,7 +111,12 @@ export class MiniBossEffects {
     this.geyserDiscs = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 28).rotateX(-Math.PI / 2), additive(WATER, 0.25), MAX_GEYSERS);
     this.geyserRings = new THREE.InstancedMesh(new THREE.RingGeometry(0.88, 1, 36).rotateX(-Math.PI / 2), additive(FOAM, 0.9), MAX_GEYSERS);
     [this.geyserDiscs, this.geyserRings].forEach((mesh) => { mesh.count = 0; mesh.frustumCulled = false; });
-    this.root.add(this.geyserDiscs, this.geyserRings);
+    // A jagged six-sided shard of ice, 1 m across at the base and 2.2 m tall (scaled per pillar).
+    this.icePillars = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.28, 0.5, 2.2, 6).translate(0, 1.1, 0), new THREE.MeshLambertMaterial({ color: ICE, emissive: 0x1b4a66, transparent: true, opacity: 0.9, flatShading: true }), MAX_ICE_PILLARS);
+    this.icePillars.count = 0;
+    this.icePillars.frustumCulled = false;
+    this.icePillars.castShadow = true;
+    this.root.add(this.geyserDiscs, this.geyserRings, this.icePillars);
   }
 
   update(miniBosses: MiniBossSystem, alpha: number, deltaSeconds: number): void {
@@ -123,6 +136,27 @@ export class MiniBossEffects {
       this.updateBoss(boss, pieces, alpha, deltaSeconds);
     });
     this.updateGeysers(miniBosses, deltaSeconds);
+    this.updateIcePillars(miniBosses, deltaSeconds);
+  }
+
+  private updateIcePillars(miniBosses: MiniBossSystem, deltaSeconds: number): void {
+    const T = MINI_BOSS_TUNING;
+    const count = Math.min(MAX_ICE_PILLARS, miniBosses.icePillars.length);
+    for (let index = 0; index < count; index += 1) {
+      const pillar = miniBosses.icePillars[index];
+      const rise = Math.min(1, pillar.elapsedMs / PILLAR_RISE_MS);
+      const melt = Math.min(1, (T.iceWallMs - pillar.elapsedMs) / PILLAR_MELT_MS);
+      const height = rise * melt;
+      const ground = simToWorld(pillar.x, pillar.y, 0, this.position);
+      this.quaternion.setFromAxisAngle(this.direction.set(0, 1, 0), (pillar.x + pillar.y) * 0.01);
+      const width = (pillar.radius * 2 * WORLD_SCALE) * (0.8 + 0.2 * melt);
+      this.icePillars.setMatrixAt(index, this.matrix.compose(ground, this.quaternion, this.scale.set(width, Math.max(0.01, height), width)));
+      // Frost mist off the melting ice.
+      if (deltaSeconds > 0 && melt < 1 && Math.random() < 0.4) this.particles.emit(ground.x, 0.4, ground.z, ICE_LIGHT, 1, { spread: 0.6, rise: 1.2, gravity: -1, life: 0.6, size: 1 });
+    }
+    this.scale.set(1, 1, 1);
+    this.icePillars.count = count;
+    this.icePillars.instanceMatrix.needsUpdate = true;
   }
 
   private updateGeysers(miniBosses: MiniBossSystem, deltaSeconds: number): void {
@@ -193,6 +227,23 @@ export class MiniBossEffects {
       }
     }
     if (boss.kind === 'lakeSpirit') this.updateSpirit(boss, pieces, x, y, deltaSeconds);
+    if (attack?.type === 'iceSlash' && attack.phase === 'telegraph') pieces.circle(attack.x, attack.y, T.iceSlashRadius, attack.elapsedMs / T.iceSlashTelegraphMs);
+    if (attack?.type === 'iceWall' && attack.phase === 'telegraph') {
+      // The ring it will close, and frost gathering where each pillar is about to break through.
+      pieces.circle(attack.x, attack.y, T.iceWallRing, attack.elapsedMs / T.iceWallTelegraphMs);
+      (pieces.area.material as THREE.MeshBasicMaterial).opacity = 0.06;
+      if (running) {
+        icePillarSpots(attack.x, attack.y, attack.dirX, attack.dirY).forEach((spot) => {
+          const ground = simToWorld(spot.x, spot.y, 0.1, this.position);
+          if (Math.random() < 0.5) this.particles.emit(ground.x, 0.1, ground.z, ICE_LIGHT, 1, { spread: 0.5, rise: 2, gravity: 4, life: 0.4, size: 1 });
+        });
+      }
+    }
+    if (boss.enraged && running && Math.random() < 0.3) {
+      // Shards of the broken armour still flaking off.
+      const body = simToWorld(x, y, 1.5, this.position);
+      this.particles.emit(body.x, 1 + Math.random() * 1.5, body.z, ICE, 1, { spread: 1.5, rise: 1, gravity: 8, life: 0.5, size: 0.9 });
+    }
     if (boss.stunnedMs > 0) {
       const head = this.views.viewFor(enemy)?.headPosition();
       if (head) {

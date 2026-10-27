@@ -1,9 +1,11 @@
 import { POWER_TIERS, POWER_TIER_LEVELS } from '../config/powerTiers';
 import { weaponIcon } from './ui/icons';
-import { MASTERY_REWARDS, MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, SkinId, masteryFrame, masteryLevel, masteryProgress, masteryTitle, unlockSteps, unlockedSkins } from '../core/progress/Progress';
+import { DIFFICULTY_TIERS, MASTERY_REWARDS, MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, SkinId, arenaProgress, masteryFrame, masteryLevel, masteryProgress, masteryTitle, unlockSteps, unlockedSkins } from '../core/progress/Progress';
 import { SKINS, SKIN_ORDER } from './models/skins';
 import { CHARACTERS, CharacterConfig, CharacterId } from '../config/characters';
 import { WEAPONS, WeaponConfig } from '../config/weapons';
+import { ARENA_LAYOUTS } from '../config/arenaLayout';
+import { MINI_BOSSES, MiniBossKind } from '../core/systems/MiniBossSystem';
 import { HeroPreview } from './HeroPreview';
 
 export interface RunChoice {
@@ -25,15 +27,23 @@ const HERO_ROLES: Record<CharacterId, { title: string; trait: string }> = {
   sergio: { title: 'A loja vai junto', trait: 'MERCADOR · VERSÁTIL' }
 };
 
-type MenuScreen = 'title' | 'characters' | 'weapons' | 'controls' | 'credits';
+/** What the area picker says of each arena (ARENA_LAYOUTS ids, in the order they're listed). */
+const AREA_TEXT: Record<string, string> = {
+  greenfield: 'Campos verdes, o templo em ruínas, o lago e o cemitério.',
+  snowfield: 'Neve e ruínas medievais: o castelo, o lago congelado e a capela.'
+};
+
+type MenuScreen = 'title' | 'areas' | 'characters' | 'weapons' | 'controls' | 'credits';
 
 /** Title and loadout screens over the idle 3D arena. */
 /** What the menu reads from and writes to the progress save. */
 export interface MenuProgress {
   save(): SaveData;
   setSkin(hero: CharacterId, skin: SkinId): void;
-  /** "Jogar": into the tavern. */
-  play(): void;
+  /** An area picked after "Jogar": its arena is loaded and the player walks into the tavern. */
+  play(arenaId: string): void;
+  /** The arena last played (preselected in the area picker). */
+  arena(): string;
   /** Hero selection opened from the tavern was closed without choosing. */
   closeToTavern(): void;
   /** The heroes that may be picked (the regulars join as they're unlocked). */
@@ -122,6 +132,7 @@ export class StartMenu {
     if (this.screen !== 'characters' && this.screen !== 'weapons') this.preview?.unmount();
     this.root.dataset.screen = this.screen;
     const step = this.screen === 'title' ? this.titleStep()
+      : this.screen === 'areas' ? this.areaStep()
       : this.screen === 'characters' ? this.characterStep()
       : this.screen === 'weapons' && this.selected ? this.weaponStep(this.selected)
       : this.infoStep(this.screen === 'credits');
@@ -129,6 +140,7 @@ export class StartMenu {
     this.root.scrollTop = 0;
     const focus = this.screen === 'characters' ? step.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
       : this.screen === 'weapons' ? step.querySelector<HTMLButtonElement>('.weapon-row.preferred')
+      : this.screen === 'areas' ? step.querySelector<HTMLButtonElement>('.area-card[aria-current="true"] button')
       : step.querySelector<HTMLButtonElement>('button');
     focus?.focus({ preventScroll: true });
   }
@@ -142,15 +154,86 @@ export class StartMenu {
         <div class="brand-rule" aria-hidden="true"><i></i><b>◆</b><i></i></div>
         <p class="title-tagline">A última rodada é pela sobrevivência.</p></div>
       <nav class="title-nav" aria-label="Menu principal">
-        <button type="button" class="title-play" data-screen="characters"><span>Jogar</span><span aria-hidden="true">↗</span></button>
+        <button type="button" class="title-play" data-screen="areas"><span>Jogar</span><span aria-hidden="true">↗</span></button>
         <button type="button" data-screen="controls">Como jogar</button>
         <button type="button" data-screen="credits">Créditos</button>
       </nav>
       <footer class="title-footer"><span>FANTASIA MEDIEVAL · SOBREVIVÊNCIA</span><span>v0.2 <i>◆</i> Feito para sobreviver</span></footer>`;
+    // "Jogar" opens the area picker; an area leads into its tavern, where heroes are picked and runs start.
     step.querySelectorAll<HTMLButtonElement>('[data-screen]').forEach((button) => {
-      // "Jogar" goes into the tavern, where heroes are picked and runs start.
-      button.addEventListener('click', () => (button.classList.contains('title-play') ? this.progress.play() : this.navigate(button.dataset.screen as MenuScreen)));
+      button.addEventListener('click', () => this.navigate(button.dataset.screen as MenuScreen));
     });
+    return step;
+  }
+
+  /** After "Jogar": the save's overall progress, then one card per arena with its missions, heroes won over and
+   *  guardians beaten, and the button that loads it. */
+  private areaStep(): HTMLElement {
+    const save = this.progress.save();
+    const step = document.createElement('section');
+    step.className = 'start-step area-step';
+    step.innerHTML = `<header class="selection-heading"><p class="eyebrow">PROGRESSÃO</p><h1>Escolha a área</h1><p class="start-subtitle">Para onde vai a próxima rodada?</p></header>`;
+    const summary = document.createElement('dl');
+    summary.className = 'area-summary';
+    const totals: Array<[string, string]> = [
+      ['Heróis liberados', `${this.progress.roster().length}/${Object.keys(CHARACTERS).length}`],
+      ['Partidas', String(save.records.runs)],
+      ['Vitórias', String(save.records.wins)],
+      ['Dificuldade aberta', DIFFICULTY_TIERS[save.tierUnlocked - 1].name],
+      ['Fichas', String(save.fichas)]
+    ];
+    totals.forEach(([label, value]) => {
+      const item = document.createElement('div');
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const detail = document.createElement('dd');
+      detail.textContent = value;
+      item.append(term, detail);
+      summary.append(item);
+    });
+    const list = document.createElement('div');
+    list.className = 'area-list';
+    Object.values(ARENA_LAYOUTS).forEach((layout, index) => {
+      const progress = arenaProgress(save, layout.id, layout.guardians);
+      const card = document.createElement('article');
+      card.className = 'area-card';
+      card.dataset.arena = layout.id;
+      card.setAttribute('aria-current', String(layout.id === this.progress.arena()));
+      card.innerHTML = `<p class="eyebrow">ÁREA ${index + 1}</p><h2></h2><p class="area-text"></p><ul class="area-stats"></ul><p class="area-heading">Guardiões</p><ul class="area-guardians"></ul>`;
+      card.querySelector('h2')!.textContent = layout.name;
+      card.querySelector('.area-text')!.textContent = AREA_TEXT[layout.id] ?? '';
+      const stats = card.querySelector('.area-stats')!;
+      const stat = (label: string, done: number, total: number) => {
+        const item = document.createElement('li');
+        const name = document.createElement('span');
+        name.textContent = label;
+        const count = document.createElement('small');
+        count.textContent = total ? `${done}/${total}` : 'Em breve';
+        const bar = document.createElement('i');
+        bar.style.setProperty('--progress', `${total ? Math.round((done / total) * 100) : 0}%`);
+        item.append(name, count, bar);
+        stats.append(item);
+      };
+      stat('Missões da taverna', progress.missions.done, progress.missions.total);
+      stat('Heróis da região', progress.heroes.joined, progress.heroes.total);
+      const defeated = progress.guardians.filter((guardian) => guardian.defeated).length;
+      stat('Guardiões derrotados', defeated, progress.guardians.length);
+      const guardians = card.querySelector('.area-guardians')!;
+      progress.guardians.forEach((guardian) => {
+        const item = document.createElement('li');
+        item.classList.toggle('done', guardian.defeated);
+        item.textContent = guardian.defeated ? MINI_BOSSES[guardian.kind as MiniBossKind]?.name ?? guardian.kind : '???';
+        guardians.append(item);
+      });
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'ui-button primary';
+      play.textContent = `Jogar em ${layout.name}  →`;
+      play.addEventListener('click', () => this.progress.play(layout.id));
+      card.append(play);
+      list.append(card);
+    });
+    step.append(summary, list, this.backButton('title', 'Menu principal'));
     return step;
   }
 

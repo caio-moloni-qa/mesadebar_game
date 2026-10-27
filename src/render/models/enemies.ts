@@ -189,6 +189,7 @@ export function createEnemyModels(): Record<EnemyVariantId, BakedEnemyModel> {
     // Drawn by their own rigged views; never instanced.
     gravedigger: superSkeleton,
     templeGuardian: superSkeleton,
+    frostKnight: superSkeleton,
     lakeSpirit: superSkeleton
   };
 }

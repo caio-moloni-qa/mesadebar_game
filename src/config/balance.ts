@@ -14,7 +14,9 @@ export const ENEMY_VARIANTS = {
 export const MINI_BOSS_VARIANTS = {
   gravedigger: { maxHealth: 1200, movementSpeed: 70, contactDamage: 10, reward: 0 },
   templeGuardian: { maxHealth: 1700, movementSpeed: 55, contactDamage: 15, reward: 0 },
-  lakeSpirit: { maxHealth: 2000, movementSpeed: 60, contactDamage: 12, reward: 0 }
+  lakeSpirit: { maxHealth: 2000, movementSpeed: 60, contactDamage: 12, reward: 0 },
+  // Campo Nevado
+  frostKnight: { maxHealth: 1600, movementSpeed: 70, contactDamage: 14, reward: 0 }
 };
 /** Every variant the 3D core can spawn. */
 export const ALL_ENEMY_VARIANTS = { ...ENEMY_VARIANTS, ...MINI_BOSS_VARIANTS };

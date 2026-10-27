@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ArenaMap } from '../../core/world/ArenaMap';
 import { createRng } from '../../core/math';
-import { PALETTE, toonMaterial } from '../materials';
+import { toonMaterial } from '../materials';
 import { mergeParts } from '../models/parts';
 import { WORLD_SCALE, toMeters } from '../space';
 import { Ambient, FireSpot } from './Ambient';
@@ -11,12 +11,11 @@ import { paintGround } from './groundPainter';
 import { Grass } from './Grass';
 import { decorParts, obstacleParts, placeParts } from './props';
 import { Water } from './Water';
+import { ArenaTheme, activeArenaTheme } from './arenaTheme';
 
 /** Low warm sun, about 30° up — long shadows falling down-left across the screen like the style reference. */
 const SUN_DIRECTION = new THREE.Vector3(-0.55, 0.5, -0.67).normalize();
 const SHADOW_HALF_EXTENT = 34;
-/** Cool, slightly violet mist — matches the shadow tone so the border reads as dusk haze, not a wall. */
-const MIST_COLOR = 0xb8b2c8;
 /** Props are merged per chunk (CHUNKS × CHUNKS over the arena) so off-screen chunks are frustum-culled. */
 const CHUNKS = 4;
 
@@ -34,22 +33,22 @@ export class Arena {
   private time = 0;
   private readonly sunOffset = SUN_DIRECTION.clone().multiplyScalar(60);
 
-  constructor(private readonly map: ArenaMap, seed: number) {
+  constructor(private readonly map: ArenaMap, seed: number, private readonly theme: ArenaTheme = activeArenaTheme()) {
     const arenaMeters = toMeters(map.size);
     this.root.add(this.createGround(seed, arenaMeters));
     this.root.add(this.createOuterGround(arenaMeters));
     this.createPropChunks().forEach((chunk) => this.root.add(chunk));
-    this.grass = new Grass(map, seed);
+    this.grass = new Grass(map, seed, theme);
     this.root.add(this.grass.root);
-    this.water = new Water(map);
+    this.water = new Water(map, theme);
     this.root.add(this.water.root);
-    this.mist = new EdgeMist(arenaMeters, MIST_COLOR);
-    this.ambient = new Ambient(this.fireSpots(), createRng(seed ^ 0xf17e));
+    // The mist matches the shadow tone, so the border reads as haze, not a wall.
+    this.mist = new EdgeMist(arenaMeters, theme.mist);
+    this.ambient = new Ambient(this.fireSpots(), createRng(seed ^ 0xf17e), theme.particles === 'snow');
     this.root.add(this.mist.root, this.ambient.root);
-    // Ambient is cool purple-blue from above (that's what shadowed, upward-facing ground sees), warmth comes only
-    // from the sun — gives the reference's golden light / violet shadow split.
-    this.root.add(new THREE.HemisphereLight(PALETTE.shadowLight, PALETTE.shadowGround, 3.6));
-    this.sun = new THREE.DirectionalLight(PALETTE.sun, 3.0);
+    // Ambient light from above is what shadowed, upward-facing ground sees; the sun brings the warmth (or the cold).
+    this.root.add(new THREE.HemisphereLight(theme.light.sky, theme.light.ground, theme.light.ambientIntensity));
+    this.sun = new THREE.DirectionalLight(theme.light.sun, theme.light.sunIntensity);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const shadowCamera = this.sun.shadow.camera;
@@ -104,7 +103,7 @@ export class Arena {
   }
 
   private createGround(seed: number, arenaMeters: number): THREE.Mesh {
-    const texture = new THREE.CanvasTexture(paintGround(this.map, seed));
+    const texture = new THREE.CanvasTexture(paintGround(this.map, seed, this.theme));
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
@@ -118,9 +117,9 @@ export class Arena {
     return ground;
   }
 
-  /** Grass-toned ring outside the arena, under the edge mist, so the border dissolves instead of ending. */
+  /** Ground-toned ring outside the arena, under the edge mist, so the border dissolves instead of ending. */
   private createOuterGround(arenaMeters: number): THREE.Mesh {
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(arenaMeters * 4, arenaMeters * 4), withEnvironment(toonMaterial({ color: 0x627c3a }), { clouds: true }));
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(arenaMeters * 4, arenaMeters * 4), withEnvironment(toonMaterial({ color: this.theme.outerGround }), { clouds: true }));
     outer.rotation.x = -Math.PI / 2;
     outer.position.set(arenaMeters / 2, -0.02, arenaMeters / 2);
     outer.receiveShadow = true;
@@ -136,11 +135,15 @@ export class Arena {
     this.map.obstacles.forEach((obstacle) => bucket(obstacle.x, obstacle.y).push(...placeParts(obstacleParts(obstacle), obstacle.x, obstacle.y, obstacle.rotation)));
     this.map.decor.forEach((decor) => {
       if (decor.kind === 'reeds') return; // instanced by Water (they sway)
+      // No lily pads on a frozen lake.
+      if (decor.kind === 'lilyPad' && !this.theme.water.reeds) return;
       bucket(decor.x, decor.y).push(...placeParts(decorParts(decor), decor.x, decor.y, decor.rotation));
     });
     const material = withEnvironment(toonMaterial({ vertexColors: true, flatShading: true }), { clouds: true, occlusion: true });
     return buckets.filter((parts) => parts.length > 0).map((parts) => {
-      const mesh = new THREE.Mesh(mergeParts(parts), material);
+      const geometry = mergeParts(parts);
+      if (this.theme.snowCover > 0) coverWithSnow(geometry, this.theme.snowCover);
+      const mesh = new THREE.Mesh(geometry, material);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.geometry.computeBoundingSphere();
@@ -157,4 +160,21 @@ export class Arena {
     }));
   }
 
+}
+
+/** Snow lying on everything: faces turned up (wall tops, rock crowns, the upper side of pine boughs) fade to white
+ *  by how much they face the sky, times `amount`; sides keep their colour. */
+function coverWithSnow(geometry: THREE.BufferGeometry, amount: number): void {
+  const normals = geometry.getAttribute('normal');
+  const colors = geometry.getAttribute('color');
+  if (!normals || !colors) return;
+  const snow = new THREE.Color(0xf2f6fb);
+  const color = new THREE.Color();
+  for (let index = 0; index < colors.count; index += 1) {
+    const up = normals.getY(index);
+    if (up < 0.35) continue;
+    color.fromBufferAttribute(colors as THREE.BufferAttribute, index).lerp(snow, Math.min(1, (up - 0.35) / 0.5) * amount);
+    colors.setXYZ(index, color.r, color.g, color.b);
+  }
+  colors.needsUpdate = true;
 }

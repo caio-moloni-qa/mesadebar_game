@@ -1,26 +1,17 @@
 import { CAMP, GRAVEYARD, LAKE, TEMPLE, TRAIL_WIDTH } from '../../config/arenaLayout';
 import { ArenaMap, lakeShoreDistance, trailDistance, zoneWeight } from '../../core/world/ArenaMap';
 import { Rng, createRng, floatBetween, intBetween } from '../../core/math';
+import { ArenaTheme, RGB, activeArenaTheme } from './arenaTheme';
 
 /** Ground texture density matches the internal render (16 px per meter), so one texel ≈ one screen pixel. */
 export const GROUND_TEXELS_PER_METER = 16;
 const UNITS_PER_METER = 32;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
-type RGB = [number, number, number];
-const GRASS: RGB[] = [[64, 99, 56], [74, 112, 61], [85, 126, 66], [99, 138, 73], [113, 149, 79]];
-const MEADOW: RGB[] = [[73, 115, 59], [85, 129, 64], [99, 143, 71], [115, 156, 78], [131, 168, 88]];
-const FOREST_SOIL: RGB[] = [[48, 59, 43], [57, 67, 47], [65, 73, 51], [63, 75, 48], [75, 85, 54]];
-const DEAD_GRASS: RGB[] = [[104, 104, 70], [118, 114, 76], [92, 92, 64], [130, 124, 84], [84, 82, 60]];
-const DIRT: RGB[] = [[119, 99, 70], [135, 113, 80], [151, 128, 91], [107, 90, 66]];
-const SAND: RGB[] = [[176, 156, 112], [190, 170, 124], [160, 140, 100]];
-const MUD: RGB[] = [[88, 74, 56], [100, 84, 62], [76, 64, 50]];
-const FLAGSTONE: RGB[] = [[150, 142, 128], [136, 128, 116], [164, 156, 140], [124, 118, 108]];
-const GROUT: RGB = [74, 70, 62];
-
 /** Paints the whole arena once, every texel unique (no tiling to repeat): each texel asks the map what is there —
- *  zone weights, trails, the temple floor, the lake shore — and picks a dithered swatch from that palette. */
-export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
+ *  zone weights, trails, the temple floor, the lake shore — and picks a dithered swatch from the theme's palette. */
+export function paintGround(map: ArenaMap, seed: number, theme: ArenaTheme = activeArenaTheme()): HTMLCanvasElement {
+  const { grass: GRASS, meadow: MEADOW, forest: FOREST_SOIL, graveyard: DEAD_GRASS, dirt: DIRT, shore: SAND, bed: MUD, flagstone: FLAGSTONE, grout: GROUT, moss: MOSS, ice: ICE } = theme.ground;
   const meters = map.size / UNITS_PER_METER;
   const size = Math.round(meters * GROUND_TEXELS_PER_METER);
   const unitsPerTexel = map.size / size;
@@ -76,10 +67,15 @@ export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
           const grout = u < 0.06 || v < 0.06;
           color = grout ? GROUT : FLAGSTONE[Math.floor(slab * 97) % FLAGSTONE.length];
           if (!grout && (u < .095 || v < .095)) color = [Math.min(255, color[0] + 15), Math.min(255, color[1] + 15), Math.min(255, color[2] + 12)];
-          if (!grout && noise(px / 4, py / 4) > 0.82) color = [96, 116, 64]; // moss in the cracks
+          if (!grout && noise(px / 4, py / 4) > 0.82) color = MOSS; // moss (or frost) in the cracks
         } else {
           color = pick(DIRT);
         }
+      }
+      // A frozen lake: cracked ice over the whole lake zone (walkable), around the open water.
+      if (ICE && zoneWeight('lake', x, y) + wobble * 0.35 > 0.5) {
+        color = pick(ICE.colors);
+        if (Math.abs(noise(px / 14 + 70, py / 14) - 0.5) < 0.018 || Math.abs(noise(px / 31, py / 31 + 40) - 0.5) < 0.012) color = ICE.crack;
       }
       // Trails (with a ragged edge).
       if (trailDistance(x, y) + wobble * 18 < TRAIL_WIDTH / 2) color = pick(DIRT);
@@ -108,11 +104,11 @@ export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
     const wy = cy * unitsPerTexel;
     if (lakeShoreDistance(wx, wy) < LAKE.shoreWidth || trailDistance(wx, wy) < TRAIL_WIDTH) continue;
     const forest = zoneWeight('forest', wx, wy) > 0.5;
-    const flower: RGB = forest ? (rng() < 0.5 ? [150, 90, 40] : [120, 70, 34]) : ([[240, 230, 200], [236, 210, 96], [196, 120, 170], [170, 150, 230]] as RGB[])[intBetween(rng, 0, 3)];
+    const flower: RGB = forest ? theme.ground.forestSpecks[intBetween(rng, 0, theme.ground.forestSpecks.length - 1)] : theme.ground.specks[intBetween(rng, 0, theme.ground.specks.length - 1)];
     const count = zoneWeight('meadow', wx, wy) > 0.4 ? 8 : forest ? 12 : 3;
     for (let index = 0; index < count; index += 1) speck(cx + Math.round(floatBetween(rng, -10, 10)), cy + Math.round(floatBetween(rng, -10, 10)), flower);
   }
-  for (let index = 0; index < size; index += 1) speck(intBetween(rng, 0, size - 1), intBetween(rng, 0, size - 1), [146, 146, 116]);
+  for (let index = 0; index < size; index += 1) speck(intBetween(rng, 0, size - 1), intBetween(rng, 0, size - 1), theme.ground.pebble);
 
   context.putImageData(image, 0, 0);
   // Small baked contact shadows tie props into the terrain without extra meshes or per-frame work.
@@ -124,9 +120,10 @@ export function paintGround(map: ArenaMap, seed: number): HTMLCanvasElement {
     const ry = (obstacle.shape === 'circle' ? obstacle.radius : obstacle.halfHeight) / unitsPerTexel;
     context.scale(Math.max(1, rx * 1.7), Math.max(1, ry * 1.7));
     const shadow = context.createRadialGradient(0, 0, .15, 0, 0, 1);
-    shadow.addColorStop(0, 'rgba(18, 33, 22, .36)');
-    shadow.addColorStop(.5, 'rgba(24, 38, 23, .19)');
-    shadow.addColorStop(1, 'rgba(24, 38, 23, 0)');
+    const [r, g, b] = theme.ground.shadow;
+    shadow.addColorStop(0, `rgba(${r}, ${g}, ${b}, .36)`);
+    shadow.addColorStop(.5, `rgba(${r + 6}, ${g + 5}, ${b + 1}, .19)`);
+    shadow.addColorStop(1, `rgba(${r + 6}, ${g + 5}, ${b + 1}, 0)`);
     context.fillStyle = shadow; context.fillRect(-1, -1, 2, 2);
     context.restore();
   }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CURRENT_AREA } from '../../config/areas';
 import {
   DIFFICULTY_TIERS, MASTERY_THRESHOLDS, MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, RunSummary, SERGIO_TOTAL_MASTERY, applyRun, buyUpgrade, emptySave,
-  areaCompletion, heroesToWelcome, masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockSteps, unlockedSkins
+  areaCompletion, arenaProgress, heroesToWelcome, masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockSteps, unlockedSkins
 } from './Progress';
 
 function run(overrides: Partial<RunSummary> = {}): RunSummary {
@@ -133,5 +133,29 @@ describe('Greenfield', () => {
     const save = emptySave();
     expect(areaCompletion(save, CURRENT_AREA)).toEqual({ joined: 0, total: 5 });
     expect(unlockSteps(save, CURRENT_AREA.finale)[0].label).toContain('Greenfield');
+  });
+});
+
+describe('the area picker', () => {
+  it('counts an arena\'s missions, heroes and guardians beaten', () => {
+    const save = { ...emptySave(), regularMissions: { brom: MISSIONS_PER_REGULAR, lyra: 1 } };
+    save.records = { ...save.records, guardians: { gravedigger: 2 }, arenaGuardians: { greenfield: { gravedigger: 2 } } };
+    const greenfield = arenaProgress(save, 'greenfield', ['gravedigger', 'lakeSpirit']);
+    expect(greenfield.missions).toEqual({ done: MISSIONS_PER_REGULAR + 1, total: 4 * MISSIONS_PER_REGULAR });
+    expect(greenfield.heroes).toEqual({ joined: 0, total: 5 });
+    expect(greenfield.guardians).toEqual([{ kind: 'gravedigger', defeated: true }, { kind: 'lakeSpirit', defeated: false }]);
+    // An arena with no tavern regulars yet: nothing to count but its guardians.
+    const snowfield = arenaProgress(save, 'snowfield', ['frostKnight']);
+    expect(snowfield.missions).toEqual({ done: 0, total: 0 });
+    expect(snowfield.heroes).toEqual({ joined: 0, total: 0 });
+  });
+
+  it('counts a guardian only in the arena it was beaten in', () => {
+    const { save } = applyRun(emptySave(), run({ arena: 'snowfield', guardiansByKind: { lakeSpirit: 1 } }));
+    expect(arenaProgress(save, 'snowfield', ['lakeSpirit'])).toMatchObject({ guardians: [{ kind: 'lakeSpirit', defeated: true }] });
+    expect(arenaProgress(save, 'greenfield', ['lakeSpirit'])).toMatchObject({ guardians: [{ kind: 'lakeSpirit', defeated: false }] });
+    // A save from before the split: its guardians were all beaten in Greenfield.
+    const old = parseSave(JSON.stringify({ records: { guardians: { gravedigger: 1 } } }));
+    expect(old.records.arenaGuardians).toEqual({ greenfield: { gravedigger: 1 } });
   });
 });

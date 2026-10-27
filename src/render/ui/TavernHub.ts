@@ -263,7 +263,11 @@ export class TierPicker {
     window.addEventListener('keydown', (event) => {
       if (this.root.hidden) return;
       const index = Number(event.key) - 1;
-      if (Number.isInteger(index) && index >= 0) this.root.querySelectorAll<HTMLButtonElement>('.tier-option:not(:disabled)')[index]?.click();
+      const option = Number.isInteger(index) && index >= 0 ? this.root.querySelectorAll<HTMLButtonElement>('.tier-option:not(:disabled)')[index] : undefined;
+      if (!option) return;
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      option.click();
     });
   }
 
@@ -326,6 +330,7 @@ const BESTIARY: Array<{ id: string; name: string; kind: 'horda' | 'guardião' | 
   { id: 'superSkeleton', name: 'Super Esqueleto', kind: 'horda' },
   { id: 'gravedigger', name: 'O Coveiro', kind: 'guardião' },
   { id: 'templeGuardian', name: 'Guardião do Templo', kind: 'guardião' },
+  { id: 'frostKnight', name: 'O Cavaleiro Congelado', kind: 'guardião' },
   { id: 'lakeSpirit', name: 'O Espírito do Lago', kind: 'guardião' },
   { id: 'finalBoss', name: 'O Necromante', kind: 'chefe' }
 ];

@@ -113,6 +113,25 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .info-panel h2 { font: 600 27px var(--display); color: var(--gold); margin: 0; }
 .info-panel p { color: var(--muted); line-height: 1.8; font-size: 13px; }
 .info-divider { height: 1px; background: var(--line); margin: 23px 0; }
+.area-summary { margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.area-summary div { min-width: 120px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); text-align: center; }
+.area-summary dt { color: var(--muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+.area-summary dd { margin: 4px 0 0; color: var(--cream); font: 600 20px var(--display); }
+.area-list { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.area-card { display: flex; flex-direction: column; gap: 8px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.area-card[aria-current="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.area-card h2 { margin: 0; color: var(--cream); font: 500 30px/1.15 var(--display); }
+.area-card .area-text { margin: 0 0 6px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.area-stats { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.area-stats li { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; font-size: 13px; color: var(--cream); }
+.area-stats li small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.area-stats li i { grid-column: 1 / -1; height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--gold) var(--progress), #ffffff14 var(--progress)); }
+.area-heading { margin: 8px 0 0; color: var(--gold); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+.area-guardians { margin: 0 0 10px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.area-guardians li { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; }
+.area-guardians li.done { border-color: #8dffa866; color: #8dffa8; }
+.area-guardians li.done::before { content: '✔ '; }
+.area-card .ui-button { margin-top: auto; align-self: stretch; }
 .control-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 0; border-bottom: 1px solid #ffffff09; font-size: 12px; }
 .control-row strong { font-weight: 500; }
 
