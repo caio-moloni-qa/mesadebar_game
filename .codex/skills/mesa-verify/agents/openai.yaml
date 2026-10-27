@@ -1,4 +1,0 @@
-interface:
-  display_name: "Verify a change"
-  short_description: "Verify a Mesa de Bar change for real: typecheck, tests, build, then open the game in headless Chrome with tools/probe/probe.mjs to drive it, read its state and take screenshots."
-  default_prompt: "Use $mesa-verify for this task."

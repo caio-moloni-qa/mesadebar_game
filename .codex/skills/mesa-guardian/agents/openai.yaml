@@ -1,4 +1,0 @@
-interface:
-  display_name: "Add or change a zone guardian"
-  short_description: "Add or change a zone guardian (mini-boss) in Mesa de Bar: its stats, behaviour and attacks in MiniBossSystem, the arena it belongs to, its 3D model, animations, telegraphs and effects, marker, music, bestiary, sandbox button and tests."
-  default_prompt: "Use $mesa-guardian for this task."

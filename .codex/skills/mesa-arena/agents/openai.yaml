@@ -1,4 +1,0 @@
-interface:
-  display_name: "Add or change an arena"
-  short_description: "Add or change an arena in Mesa de Bar: its layout (zones, lake, trails, ruins, graveyard, camp, guardians) in arenaLayout.ts, its look (ArenaTheme), the arena picker, and how to check the layout against approved concept art."
-  default_prompt: "Use $mesa-arena for this task."
