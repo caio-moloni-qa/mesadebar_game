@@ -68,10 +68,21 @@ describe('Campo Nevado (snowfield layout)', () => {
   it('the castle opens on three sides and the guardians rise in the new regions', () => {
     useArenaLayout(SNOWFIELD);
     expect(TEMPLE.doorways).toHaveLength(3);
-    expect(MINI_BOSSES.templeGuardian.anchor).toEqual(SNOWFIELD.temple.center);
-    expect(MINI_BOSSES.lakeSpirit.anchor).toEqual(SNOWFIELD.lake.center);
-    expect(MINI_BOSSES.gravedigger.anchor).toEqual(SNOWFIELD.graveyard.center);
+    expect(MINI_BOSSES.templeGuardian.anchor(SNOWFIELD)).toEqual(SNOWFIELD.temple.center);
+    expect(MINI_BOSSES.lakeSpirit.anchor(SNOWFIELD)).toEqual(SNOWFIELD.lake.center);
+    expect(MINI_BOSSES.gravedigger.anchor(SNOWFIELD)).toEqual(SNOWFIELD.graveyard.center);
+  });
+
+  it('a map keeps its own layout after another arena is made active', () => {
+    useArenaLayout(SNOWFIELD);
+    const snow = ArenaMap.generate(3);
     useArenaLayout(GREENFIELD);
-    expect(MINI_BOSSES.templeGuardian.anchor).toEqual(GREENFIELD.temple.center);
+    expect(snow.layout).toBe(SNOWFIELD);
+    // Snowfield's open water still blocks, Greenfield's lake centre (dry land here) doesn't.
+    expect(snow.isWalkable(SNOWFIELD.lake.center.x, SNOWFIELD.lake.center.y, WALKER)).toBe(false);
+    expect(snow.shoreDistance(GREENFIELD.lake.center.x, GREENFIELD.lake.center.y)).toBeGreaterThan(0);
+    expect(snow.zoneWeight('ruins', SNOWFIELD.temple.center.x, SNOWFIELD.temple.center.y)).toBe(1);
+    // Same seed, same layout → same map, whatever is active.
+    expect(ArenaMap.generate(3, SNOWFIELD).obstacles).toEqual(snow.obstacles);
   });
 });

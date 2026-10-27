@@ -51,6 +51,8 @@ export interface RunSummary {
   cycle: number;
   killsByVariant: Record<string, number>;
   guardiansByKind: Record<string, number>;
+  /** The arena it was played in (ArenaLayout id), so its guardians count for that area only. */
+  arena?: string;
   /** Each regular's mission tier at the end of the run (how many of their missions are done). */
   questTiers: Partial<Record<QuestNpcId, number>>;
   /** When it ended (ms since epoch), for the run history. */
@@ -367,6 +369,22 @@ export function areaCompletion(save: SaveData, area: AreaConfig): { joined: numb
   return { joined: heroes.filter((hero) => roster.includes(hero)).length, total: heroes.length };
 }
 
+/** What the area picker shows for one arena: the missions done for its regulars (none yet where no area config
+ *  exists), its heroes won over, and which of its guardians have ever been beaten. */
+export function arenaProgress(save: SaveData, arenaId: string, guardians: string[]): {
+  missions: { done: number; total: number };
+  heroes: { joined: number; total: number };
+  guardians: Array<{ kind: string; defeated: boolean }>;
+} {
+  const area = AREAS.find((entry) => entry.id === arenaId);
+  const missions = area ? area.regulars.reduce((sum, npc) => sum + Math.min(MISSIONS_PER_REGULAR, save.regularMissions[npc as QuestNpcId] ?? 0), 0) : 0;
+  return {
+    missions: { done: missions, total: (area?.regulars.length ?? 0) * MISSIONS_PER_REGULAR },
+    heroes: area ? areaCompletion(save, area) : { joined: 0, total: 0 },
+    guardians: guardians.map((kind) => ({ kind, defeated: (save.records.arenaGuardians[arenaId]?.[kind] ?? 0) > 0 }))
+  };
+}
+
 // ── The save ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export const SAVE_VERSION = 1;
@@ -404,6 +422,8 @@ export interface SaveData {
     deepestCycle: number;
     kills: Record<string, number>;
     guardians: Record<string, number>;
+    /** The same guardian kills split by arena (the area picker's progress; a kind can rise in more than one). */
+    arenaGuardians: Record<string, Record<string, number>>;
   };
   history: RunRecord[];
   /** The highest difficulty tier open (a win on the top open tier opens the next). */
@@ -429,7 +449,7 @@ export function emptySave(): SaveData {
     mastery: {},
     skins: {},
     regularMissions: {},
-    records: { runs: 0, wins: 0, bestTimeMs: 0, deepestCycle: 0, kills: {}, guardians: {} },
+    records: { runs: 0, wins: 0, bestTimeMs: 0, deepestCycle: 0, kills: {}, guardians: {}, arenaGuardians: {} },
     history: [],
     tierUnlocked: 1,
     announced: [...STARTING_HEROES],
@@ -469,7 +489,11 @@ export function parseSave(text: string | null | undefined): SaveData {
       bestTimeMs: number(records.bestTimeMs),
       deepestCycle: number(records.deepestCycle),
       kills: numbersOnly<string>(records.kills) as Record<string, number>,
-      guardians: numbersOnly<string>(records.guardians) as Record<string, number>
+      guardians: numbersOnly<string>(records.guardians) as Record<string, number>,
+      // Saves from before the split only knew Greenfield.
+      arenaGuardians: isRecord(records.arenaGuardians)
+        ? Object.fromEntries(Object.entries(records.arenaGuardians).map(([arena, kinds]) => [arena, numbersOnly<string>(kinds) as Record<string, number>]))
+        : { greenfield: numbersOnly<string>(records.guardians) as Record<string, number> }
     },
     history: Array.isArray(raw.history) ? (raw.history.filter(isRecord) as unknown as RunRecord[]).slice(0, HISTORY_LENGTH) : [],
     tierUnlocked: Math.min(DIFFICULTY_TIERS.length, Math.max(1, Math.floor(number(raw.tierUnlocked, 1)))),
@@ -525,7 +549,10 @@ export function applyRun(save: SaveData, run: RunSummary): RunOutcome {
       bestTimeMs: Math.max(save.records.bestTimeMs, run.elapsedMs),
       deepestCycle: Math.max(save.records.deepestCycle, run.cycle),
       kills: add(save.records.kills, run.killsByVariant),
-      guardians: add(save.records.guardians, run.guardiansByKind)
+      guardians: add(save.records.guardians, run.guardiansByKind),
+      arenaGuardians: run.arena
+        ? { ...save.records.arenaGuardians, [run.arena]: add(save.records.arenaGuardians[run.arena] ?? {}, run.guardiansByKind) }
+        : save.records.arenaGuardians
     },
     history: [{ heroId: run.heroId, tier: run.tier, victory: run.victory, elapsedMs: run.elapsedMs, kills: run.kills, cycle: run.cycle, fichas: payout.fichasTotal, endedAt: run.endedAt }, ...save.history].slice(0, HISTORY_LENGTH)
   };

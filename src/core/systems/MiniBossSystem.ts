@@ -1,4 +1,4 @@
-import { ACTIVE_LAYOUT, GRAVEYARD, LAKE, TEMPLE, ZoneKind } from '../../config/arenaLayout';
+import { ArenaLayout, ZoneKind } from '../../config/arenaLayout';
 import { MINI_BOSS_VARIANTS } from '../../config/balance';
 import { EventBus } from '../EventBus';
 import { Rng, Vec2, floatBetween, pickOne } from '../math';
@@ -19,7 +19,8 @@ export interface MiniBossSpec {
   /** Where it's announced: "O Coveiro desperta no cemitério!" */
   where: string;
   zone: ZoneKind;
-  anchor: Vec2;
+  /** Its home in an arena (read from the map's own layout, never the active one: the two can differ). */
+  anchor: (layout: ArenaLayout) => Vec2;
   /** Leaves its zone only this far: beyond it, it walks home and regenerates. */
   leashRadius: number;
   companion: CompanionKind;
@@ -28,16 +29,16 @@ export interface MiniBossSpec {
 }
 
 export const MINI_BOSSES: Record<MiniBossKind, MiniBossSpec> = {
-  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', get anchor() { return GRAVEYARD.center; }, leashRadius: 700, companion: 'gravedigger' },
-  templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', get anchor() { return TEMPLE.center; }, leashRadius: 720, companion: 'stoneGolem' },
-  lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', get anchor() { return LAKE.center; }, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true },
+  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', anchor: ({ graveyard }) => graveyard.center, leashRadius: 700, companion: 'gravedigger' },
+  templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', anchor: ({ temple }) => temple.center, leashRadius: 720, companion: 'stoneGolem' },
+  lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', anchor: ({ lake }) => lake.center, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true },
   // In the open courtyard south of the keep's inner sanctum (the sanctum itself is too tight to fight in).
-  frostKnight: { name: 'O Cavaleiro Congelado', where: 'na fortaleza', zone: 'ruins', get anchor() { return { x: TEMPLE.center.x, y: TEMPLE.center.y + TEMPLE.halfHeight * 0.5 }; }, leashRadius: 760, companion: 'stoneGolem' }
+  frostKnight: { name: 'O Cavaleiro Congelado', where: 'na fortaleza', zone: 'ruins', anchor: ({ temple }) => ({ x: temple.center.x, y: temple.center.y + temple.halfHeight * 0.5 }), leashRadius: 760, companion: 'stoneGolem' }
 };
 
-/** Rotation order of the per-cycle mini-boss slots: the active arena's guardians. */
-export function guardianRotation(): MiniBossKind[] {
-  return ACTIVE_LAYOUT.guardians.filter((kind): kind is MiniBossKind => kind in MINI_BOSSES);
+/** Rotation order of the per-cycle mini-boss slots: the arena's guardians. */
+export function guardianRotation(layout: ArenaLayout): MiniBossKind[] {
+  return layout.guardians.filter((kind): kind is MiniBossKind => kind in MINI_BOSSES);
 }
 
 export const MINI_BOSS_TUNING = {
@@ -349,7 +350,8 @@ export class MiniBossSystem {
 
   private spawn(kind: MiniBossKind): void {
     const spec = MINI_BOSSES[kind];
-    const spot = spec.spawnInWater ? { ...spec.anchor } : this.host.arena.nearestWalkable(spec.anchor.x, spec.anchor.y, 40);
+    const anchor = spec.anchor(this.host.arena.layout);
+    const spot = spec.spawnInWater ? { ...anchor } : this.host.arena.nearestWalkable(anchor.x, anchor.y, 40);
     const enemy = this.host.spawnEnemy(kind, spot.x, spot.y, MINI_BOSS_VARIANTS[kind].maxHealth * this.host.healthMultiplier());
     if (!enemy) return;
     // The spawn snapped it to dry land; the lake spirit really is in the middle of the water.

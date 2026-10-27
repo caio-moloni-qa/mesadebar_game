@@ -368,6 +368,7 @@ export class GameSession implements WeaponHost {
       cycle: this.bossCycle,
       killsByVariant: { ...this.stats.killsByVariant },
       guardiansByKind: { ...this.stats.guardiansByKind },
+      arena: this.arena.layout.id,
       questTiers: Object.fromEntries(this.quests.quests.map((quest) => [quest.npc.id, quest.tier])),
       endedAt,
       tier: this.tier.tier
@@ -449,9 +450,9 @@ export class GameSession implements WeaponHost {
     const slotMs = this.phaseDurationMs() / (slots + 1);
     const untilNext = (this.miniBossSlotsThisPhase + 1) * slotMs - (this.elapsedMs - this.phaseStartedAtMs);
     if (untilNext > HERO_ABILITY_TUNING.prophecyLeadMs) return null;
-    const rotation = guardianRotation();
+    const rotation = guardianRotation(this.arena.layout);
     const kind = rotation[this.miniBossRotation % rotation.length];
-    return { kind, ...MINI_BOSSES[kind].anchor };
+    return { kind, ...MINI_BOSSES[kind].anchor(this.arena.layout) };
   }
 
   /** The Tomo de Afinidade's pick. */
@@ -987,7 +988,7 @@ export class GameSession implements WeaponHost {
     if (due <= this.miniBossSlotsThisPhase) return;
     this.miniBossSlotsThisPhase = due;
     if (this.bosses.hasActiveEncounter() || this.miniBosses.active) return;
-    const rotation = guardianRotation();
+    const rotation = guardianRotation(this.arena.layout);
     this.miniBosses.announce(rotation[this.miniBossRotation % rotation.length]);
     this.miniBossRotation += 1;
   }

@@ -7,7 +7,7 @@ import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { ArenaMap } from '../core/world/ArenaMap';
 import { ProjectileKind, snapPrevious } from '../core/session/entities';
 import { HandAttack } from './models/clips';
-import { ARENA_LAYOUTS, ZONES, ZoneKind, useArenaLayout } from '../config/arenaLayout';
+import { ARENA_LAYOUTS, ZoneKind, useArenaLayout } from '../config/arenaLayout';
 import { CameraRig } from './CameraRig';
 import { ChoiceOverlay } from './ChoiceOverlay';
 import { Hud } from './Hud';
@@ -32,12 +32,12 @@ import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyConsumable, buy
 import { HeroKitViews } from './views/HeroKitViews';
 import { PowerViews } from './views/PowerViews';
 import { PowerBanner } from './ui/PowerBanner';
-import { ArenaPicker, RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
+import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
 import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
 import { GuardianIntro } from './GuardianIntro';
-import { CURRENT_AREA } from '../config/areas';
-import { QuestNpcId } from '../core/systems/QuestSystem';
+import { AREAS } from '../config/areas';
+import { QUEST_NPCS, QuestNpcId } from '../core/systems/QuestSystem';
 import { Tip, TipDialog } from './ui/TipDialog';
 import { FIRST_RUN_TIP, GUARDIAN_TIP, welcomeTip } from './ui/tips';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
@@ -64,8 +64,6 @@ export interface Game3DOptions {
   seed?: number;
   stressEnemyCount?: number;
   invincible?: boolean;
-  /** The arena to start in (?arena=snowfield); the tavern's portal lets the player change it. */
-  arena?: string;
   /** Debug: start the hero in a zone instead of the spawn clearing (?at=ruins|lake|forest|graveyard|camp|meadow). */
   startZone?: ZoneKind;
   /** Debug: draw every collision shape (?debug=collision). */
@@ -133,7 +131,6 @@ export class Game3D {
   private readonly shop: SergioShop;
   private readonly tavernHeader: TavernHeader;
   private readonly tierPicker: TierPicker;
-  private readonly arenaPicker: ArenaPicker;
   private readonly recordBook: RecordBook;
   /** Difficulty tier for the next run (kept for "Tentar novamente"). */
   private tier = 1;
@@ -173,11 +170,7 @@ export class Game3D {
     this.pipeline = new PixelPipeline(this.renderer);
     this.scene.background = new THREE.Color(PALETTE.background);
     this.arenaSeed = options.seed ?? randomSeed();
-    if (options.arena && ARENA_LAYOUTS[options.arena]) {
-      this.arenaId = options.arena;
-      useArenaLayout(ARENA_LAYOUTS[options.arena]);
-    }
-    this.arenaMap = ArenaMap.generate(this.arenaSeed);
+    this.arenaMap = ArenaMap.generate(this.arenaSeed, ARENA_LAYOUTS[this.arenaId]);
     this.arena = new Arena(this.arenaMap, this.arenaSeed);
     if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
     this.bossEffects = new BossEffects(this.particles, this.bossViews);
@@ -291,25 +284,25 @@ export class Game3D {
       }
     });
     this.tavernHeader = new TavernHeader(container);
-    this.arenaPicker = new ArenaPicker(container, (id) => {
-      this.arenaPicker.hide();
-      this.useArena(id);
-      this.pickTierOrStart();
-    }, () => this.arenaPicker.hide());
     this.tierPicker = new TierPicker(container, (tier) => {
       this.tier = tier;
       this.tierPicker.hide();
       this.startRun(this.run);
     }, () => this.tierPicker.hide());
     this.recordBook = new RecordBook(container, () => this.recordBook.hide());
-    // From the title "Jogar" enters the tavern; there, picking a hero (and weapon) makes them yours in the room.
+    // From the title "Jogar" opens the area picker, and an area its tavern; there, picking a hero (and weapon) makes
+    // them yours in the room.
     this.menu = new StartMenu(container, (choice) => (this.mode === 'hub' ? this.departFromTavern(choice) : this.startRun(choice)), {
       save: () => this.progress,
       setSkin: (hero, skin) => {
         this.progress = { ...this.progress, skins: { ...this.progress.skins, [hero]: skin } };
         SaveStore.save(this.progress);
       },
-      play: () => this.enterHub(),
+      play: (arenaId) => {
+        this.useArena(arenaId);
+        this.enterHub();
+      },
+      arena: () => this.arenaId,
       closeToTavern: () => this.menu.hide(),
       roster: () => this.roster()
     });
@@ -328,7 +321,6 @@ export class Game3D {
     this.mode = 'run';
     this.shop.hide();
     this.tierPicker.hide();
-    this.arenaPicker.hide();
     this.recordBook.hide();
     this.run = choice;
     this.inMenu = false;
@@ -389,11 +381,12 @@ export class Game3D {
     return this.allHeroesUnlocked ? (Object.keys(CHARACTERS) as CharacterId[]) : (rosterFor(this.progress) as CharacterId[]);
   }
 
-  /** Leaving the tavern through its portal with the hero just picked: the difficulty next, once a harder one is open. */
+  /** Leaving the tavern through its portal with the hero just picked (into the area chosen after "Jogar"): the
+   *  difficulty next, once a harder one is open. */
   private departFromTavern(choice: RunChoice): void {
     this.run = choice;
     this.menu.hide();
-    this.arenaPicker.show(this.arenaId);
+    this.pickTierOrStart();
   }
 
   private pickTierOrStart(): void {
@@ -412,7 +405,7 @@ export class Game3D {
     useArenaLayout(layout);
     this.scene.remove(this.arena.root);
     disposeTree(this.arena.root);
-    this.arenaMap = ArenaMap.generate(this.arenaSeed);
+    this.arenaMap = ArenaMap.generate(this.arenaSeed, layout);
     this.arena = new Arena(this.arenaMap, this.arenaSeed);
     this.scene.add(this.arena.root);
   }
@@ -439,6 +432,14 @@ export class Game3D {
       this.saveProgress({ welcomed: [...new Set([...this.progress.welcomed, hero])] });
       this.welcomeNewHeroes(rest);
     });
+  }
+
+  /** Regulars missing from this tavern: the ones already in your roster, and everyone from another area (an area
+   *  without regulars of its own, like the Campo Nevado for now, has an empty tavern). */
+  private regularsAway(): QuestNpcId[] {
+    const here = AREAS.find((area) => area.id === this.arenaMap.layout.id)?.regulars ?? [];
+    const roster = rosterFor(this.progress);
+    return QUEST_NPCS.map((npc) => npc.id).filter((id) => !here.includes(id) || roster.includes(id));
   }
 
   private createSession({ skipStartingUpgrades, attract, hub = false }: { skipStartingUpgrades: boolean; attract: boolean; hub?: boolean }): void {
@@ -468,7 +469,7 @@ export class Game3D {
       // Sergio's permanent upgrades (and what's in the pack) and the regulars' mission progress carry into every real run.
       meta: attract || hub ? undefined : runBonuses(this.progress),
       questTiers: attract ? undefined : this.progress.regularMissions,
-      regularsAway: rosterFor(this.progress).filter((hero): hero is QuestNpcId => CURRENT_AREA.regulars.includes(hero)),
+      regularsAway: this.regularsAway(),
       hub,
       tier: attract || hub ? 1 : this.tier
     });
@@ -483,7 +484,7 @@ export class Game3D {
     }
     this.session.player.invincible = Boolean(this.options.invincible);
     if (!attract) this.sandbox.applyTo(this.session, Boolean(this.options.invincible));
-    const zone = ZONES.find((spec) => spec.kind === this.options.startZone);
+    const zone = this.arenaMap.layout.zones.find((spec) => spec.kind === this.options.startZone);
     if (zone && !attract) {
       // The lake's blob centre is deep water; aim at its south shore instead.
       const target = zone.kind === 'lake' ? { x: zone.blobs[0].x, y: zone.blobs[0].y + 560 } : zone.blobs[0];
@@ -1017,11 +1018,10 @@ export class Game3D {
         }
         return;
       }
-      if (this.shop.open || this.tierPicker.open || this.arenaPicker.open || this.recordBook.open) {
+      if (this.shop.open || this.tierPicker.open || this.recordBook.open) {
         if (event.code === 'Escape') {
           this.shop.hide();
           this.tierPicker.hide();
-          this.arenaPicker.hide();
           this.recordBook.hide();
         }
         return;
@@ -1068,7 +1068,7 @@ export class Game3D {
   }
 
   private readMoveInput(): void {
-    if (this.inMenu || this.shop.open || this.tierPicker.open || this.arenaPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)) {
+    if (this.inMenu || this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)) {
       this.session.setMoveInput(0, 0);
       return;
     }
@@ -1153,7 +1153,7 @@ export class Game3D {
     }
     this.screens.update(this.session, this.inMenu, this.result);
     // Station prompts hide behind the tavern's panels.
-    if (this.mode !== 'menu') this.bossUi.setVisible(!(this.shop.open || this.tierPicker.open || this.arenaPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)));
+    if (this.mode !== 'menu') this.bossUi.setVisible(!(this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)));
     this.bossUi.update(this.session, this.projectToScreen);
     this.companionBars.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {
@@ -1166,7 +1166,7 @@ export class Game3D {
     });
     this.choices.update(this.session);
     this.tavernDialog.update(this.session, this.progress);
-    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.arenaPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId));
+    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId));
   }
 }
 

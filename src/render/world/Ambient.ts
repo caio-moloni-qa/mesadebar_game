@@ -62,7 +62,8 @@ export class Ambient {
 
     this.fireflies = new THREE.InstancedMesh(cube, new THREE.MeshBasicMaterial({ color: snow ? 0xf4f8ff : 0xe8ff9a }), snow ? SNOWFLAKE_COUNT : FIREFLY_COUNT);
     this.fireflies.frustumCulled = false;
-    for (let index = 0; index < FIREFLY_COUNT; index += 1) {
+    // One state per instance: an instance left without one would sit forever at the world origin.
+    for (let index = 0; index < this.fireflies.count; index += 1) {
       this.fireflyState.push({ x: (rng() - 0.5) * 2 * FIREFLY_RANGE, y: snow ? rng() * SNOW_HEIGHT : 0.4 + rng() * 2, z: (rng() - 0.5) * 2 * FIREFLY_RANGE, phase: rng() * 10, speed: 0.4 + rng() * 0.6 });
     }
 

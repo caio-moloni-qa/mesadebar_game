@@ -1,17 +1,14 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { GREENFIELD, SNOWFIELD, TEMPLE, useArenaLayout } from '../../config/arenaLayout';
+import { describe, expect, it } from 'vitest';
+import { SNOWFIELD } from '../../config/arenaLayout';
 import { GameSession, STEP_MS } from '../session/GameSession';
 import { ArenaMap } from '../world/ArenaMap';
 import { MINI_BOSSES, MINI_BOSS_TUNING, MiniBossState, guardianRotation, icePillarSpots } from './MiniBossSystem';
 
 const advance = (run: GameSession, ms: number) => { for (let elapsed = 0; elapsed < ms; elapsed += STEP_MS) run.step(STEP_MS); };
 
-let arena: ArenaMap;
-beforeAll(() => {
-  useArenaLayout(SNOWFIELD);
-  arena = ArenaMap.generate(5);
-});
-afterAll(() => useArenaLayout(GREENFIELD));
+// Campo Nevado's map, while Greenfield stays the active layout: the map carries its own.
+const arena = ArenaMap.generate(5, SNOWFIELD);
+const ANCHOR = MINI_BOSSES.frostKnight.anchor(SNOWFIELD);
 
 /** The Cavaleiro risen in the castle courtyard, the hero `distance` south of him. */
 function knight(distance = 260): { run: GameSession; boss: MiniBossState } {
@@ -19,7 +16,7 @@ function knight(distance = 260): { run: GameSession; boss: MiniBossState } {
   run.skeletonSpawnEnabled = false;
   run.variantSpawnEnabled = false;
   run.player.invincible = true;
-  const spot = arena.nearestWalkable(MINI_BOSSES.frostKnight.anchor.x, MINI_BOSSES.frostKnight.anchor.y + distance, 20);
+  const spot = arena.nearestWalkable(ANCHOR.x, ANCHOR.y + distance, 20);
   run.player.x = run.player.prevX = spot.x;
   run.player.y = run.player.prevY = spot.y;
   run.spawnMiniBoss('frostKnight');
@@ -29,14 +26,13 @@ function knight(distance = 260): { run: GameSession; boss: MiniBossState } {
 
 describe('O Cavaleiro Congelado (Campo Nevado)', () => {
   it('is the castle guardian of Campo Nevado, and rises in the courtyard', () => {
-    expect(guardianRotation()[0]).toBe('frostKnight');
+    expect(guardianRotation(arena.layout)[0]).toBe('frostKnight');
     const { run, boss } = knight(300);
     const start = Math.hypot(boss.enemy.x - run.player.x, boss.enemy.y - run.player.y);
     expect(boss.kind).toBe('frostKnight');
     // In the courtyard, and free to walk: a few seconds later he has come for the hero.
-    const anchor = MINI_BOSSES.frostKnight.anchor;
-    expect(Math.hypot(boss.enemy.x - anchor.x, boss.enemy.y - anchor.y)).toBeLessThan(80);
-    expect(Math.abs(boss.enemy.y - TEMPLE.center.y)).toBeGreaterThan(SNOWFIELD.temple.sanctum.halfHeight + boss.enemy.radius);
+    expect(Math.hypot(boss.enemy.x - ANCHOR.x, boss.enemy.y - ANCHOR.y)).toBeLessThan(80);
+    expect(Math.abs(boss.enemy.y - SNOWFIELD.temple.center.y)).toBeGreaterThan(SNOWFIELD.temple.sanctum.halfHeight + boss.enemy.radius);
     boss.cooldowns.charge = boss.cooldowns.iceWall = -60000;
     advance(run, 2000);
     expect(Math.hypot(boss.enemy.x - run.player.x, boss.enemy.y - run.player.y)).toBeLessThan(start - 60);
