@@ -41,6 +41,10 @@ const ownerId = process.env.DISCORD_OWNER_ID;
 if (!token) fail(`Falta DISCORD_TOKEN_${agent.toUpperCase()} no .env.`);
 if (!guildId || !channelId) fail('Faltam DISCORD_GUILD_ID e DISCORD_CHANNEL_ID no .env.');
 if (!ownerId) fail('Falta DISCORD_OWNER_ID no .env (o seu ID de usuário do Discord).');
+// IDs are numbers (snowflakes); a username here would never match anyone, and the agents would take no orders.
+for (const [name, value] of [['DISCORD_GUILD_ID', guildId], ['DISCORD_CHANNEL_ID', channelId], ['DISCORD_OWNER_ID', ownerId]]) {
+  if (!/^\d{15,21}$/.test(value)) fail(`${name} precisa ser o ID numérico (botão direito → Copiar ID), não um nome: "${value}".`);
+}
 
 const stateFile = join(HERE, '.state', `${agent}.json`);
 
