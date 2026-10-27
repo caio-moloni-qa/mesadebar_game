@@ -9,6 +9,8 @@ import barbarianGlb from '../../assets/3d/characters/barbarian.glb?inline';
 import fabriGlb from '../../assets/3d/characters/fabri.glb?inline';
 import mageGlb from '../../assets/3d/characters/mage.glb?inline';
 import reliquiaGlb from '../../assets/3d/characters/reliquia.glb?inline';
+import templeGuardianGlb from '../../assets/3d/bosses/temple-guardian.glb?inline';
+import { TEMPLE_GUARDIAN_JOINTS } from './importedBosses';
 import { box, mergeParts, part } from './parts';
 
 /** A blocky stand-in for the Tripo mesh at Fabri's proportions: torso, head, A-pose arms, legs (limbs subdivided
@@ -116,5 +118,28 @@ describe('imported hero model', () => {
     expect(['handR', 'foreArmR']).toContain(dominantBone(model.mesh, new THREE.Vector3(-handX, handY, 0)));
     expect(['footL', 'shinL']).toContain(dominantBone(model.mesh, new THREE.Vector3(0.28, 0.03, 0.1)));
     expect(dominantBone(model.mesh, new THREE.Vector3(0, 1.9, 0))).toBe('head');
+  });
+
+  it('keeps the Guardião do Templo\'s fists off its legs (they hang right beside the thighs)', async () => {
+    const file = await (await fetch(templeGuardianGlb)).arrayBuffer();
+    const gltf = await new GLTFLoader().parseAsync(file, '');
+    let geometry: THREE.BufferGeometry | undefined;
+    gltf.scene.traverse((object) => { if (!geometry && object instanceof THREE.Mesh) geometry = object.geometry; });
+    const model = rigImportedMesh(geometry!, TEMPLE_GUARDIAN_JOINTS, new THREE.MeshBasicMaterial());
+    const names = model.mesh.skeleton.bones.map((bone) => bone.name);
+    const index = model.mesh.geometry.attributes.skinIndex;
+    const weight = model.mesh.geometry.attributes.skinWeight;
+    const chain = (vertex: number, pattern: RegExp) => [0, 1, 2, 3].reduce((sum, k) => sum + (pattern.test(names[index.getComponent(vertex, k)]) ? weight.getComponent(vertex, k) : 0), 0);
+    const position = model.mesh.geometry.attributes.position;
+    let mixed = 0;
+    let armsOnFeet = 0;
+    for (let vertex = 0; vertex < index.count; vertex += 1) {
+      if (chain(vertex, /^(foreArm|hand)/) > 0.25 && chain(vertex, /^(thigh|shin|foot)/) > 0.25) mixed += 1;
+      if (position.getY(vertex) < 0.45 && chain(vertex, /^(upperArm|foreArm|hand)/) > 0.05) armsOnFeet += 1;
+    }
+    expect(mixed).toBe(0);
+    expect(armsOnFeet).toBe(0);
+    expect(['handL', 'foreArmL']).toContain(dominantBone(model.mesh, new THREE.Vector3(0.65, 0.7, 0)));
+    expect(['thighL', 'shinL']).toContain(dominantBone(model.mesh, new THREE.Vector3(0.42, 0.65, 0)));
   });
 });

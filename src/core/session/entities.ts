@@ -285,7 +285,7 @@ export class EnemyState implements Body {
     this.hasRottenAura = variantId === 'superSkeleton' || variantId === 'finalBoss';
     this.rottenAuraSuppressed = false;
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
-    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 38 : variantId === 'gravedigger' ? 30 : BODY_RADIUS.enemy;
+    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'gravedigger' ? 30 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
@@ -338,7 +338,8 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   superSkeleton: 92,
   finalBoss: 390,
   gravedigger: 160,
-  templeGuardian: 190,
+  /** Sized (with its 28-unit body) to walk between the temple's colonnade pillars, 73 units apart. */
+  templeGuardian: 150,
   /** Grows to 230 as it drinks the lake (MiniBossSystem). */
   lakeSpirit: 80
 };

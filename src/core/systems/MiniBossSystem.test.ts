@@ -97,6 +97,25 @@ describe('zone mini-bosses', () => {
     expect(stuns).toContain('templeGuardian');
   });
 
+  it('the Guardião fits between the temple pillars, and slides around one in its way', () => {
+    const pillars = ARENA.obstacles.filter((obstacle) => obstacle.kind === 'pillar');
+    const { run, boss } = withMiniBoss('templeGuardian');
+    const [a, b] = pillars.map((pillar) => pillars.map((other) => ({ pillar, other, gap: Math.hypot(other.x - pillar.x, other.y - pillar.y) })))
+      .flat().filter(({ gap }) => gap > 0).sort((p, q) => p.gap - q.gap).map(({ pillar, other }) => [pillar, other])[0];
+    expect(ARENA.isWalkable((a.x + b.x) / 2, (a.y + b.y) / 2, boss.enemy.radius)).toBe(true);
+
+    // Parked right behind a pillar, the player straight ahead past it: it has to go around.
+    const pillar = pillars[0];
+    boss.enemy.x = pillar.x - 60;
+    boss.enemy.y = pillar.y;
+    run.player.x = run.player.prevX = pillar.x + 220;
+    run.player.y = run.player.prevY = pillar.y;
+    boss.facing = 0;
+    boss.cooldowns.charge = boss.cooldowns.shockwave = -1e9;
+    advance(run, 3000);
+    expect(boss.enemy.x).toBeGreaterThan(pillar.x);
+  });
+
   it('runs home and regenerates when the player leaves its zone', () => {
     const { run, boss } = withMiniBoss('gravedigger');
     boss.enemy.health = boss.enemy.maxHealth * 0.5;

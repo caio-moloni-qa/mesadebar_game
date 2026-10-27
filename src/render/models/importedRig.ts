@@ -18,6 +18,8 @@ export interface JointSpec {
   maxY?: number;
   /** Only skin vertices at least this far from the centre line (arms never take the chest). */
   minAbsX?: number;
+  /** Only skin vertices at most this far from the centre line (legs never take a fist hanging beside them). */
+  maxAbsX?: number;
   /** Bind rotation in degrees: the pose the mesh was modelled in, so a clip's rest pose reproduces it. */
   rest?: Vec3Tuple;
 }
@@ -72,6 +74,7 @@ export function rigImportedMesh(geometry: THREE.BufferGeometry, joints: JointSpe
       && (joint.minY === undefined || point.y >= joint.minY)
       && (joint.maxY === undefined || point.y <= joint.maxY)
       && (joint.minAbsX === undefined || Math.abs(point.x) >= joint.minAbsX)
+      && (joint.maxAbsX === undefined || Math.abs(point.x) <= joint.maxAbsX)
     ));
     const scored = (candidates.length ? candidates : capsules).map(({ joint, index, segment }) => {
       segment.closestPointToPoint(point, true, closest);

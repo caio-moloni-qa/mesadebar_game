@@ -95,24 +95,25 @@ export const GRAVEDIGGER_JOINTS: JointSpec[] = [
 ];
 export const GRAVEDIGGER_HIP_HEIGHT = 1.05;
 
-/** Guardião do Templo (2.3 m): massive shoulders and fists, short thick legs, the crest high on the head. */
+/** Guardião do Templo (2.3 m): massive shoulders and fists, short thick legs, the crest high on the head. The fists
+ *  hang right beside the thighs (|x| ≈ 0.47 is the gap), so arms and legs are split there or the fists walk with them. */
 export const TEMPLE_GUARDIAN_JOINTS: JointSpec[] = [
   { name: 'root', at: [0, 0, 0] },
   { name: 'hips', parent: 'root', at: [0, 0.9, 0], radius: 0.3, minY: 0.7 },
   { name: 'spine', parent: 'hips', at: [0, 1.15, 0], radius: 0.36, minY: 0.95 },
   { name: 'chest', parent: 'spine', at: [0, 1.45, 0], radius: 0.4, minY: 1.2, maxY: 1.9 },
   { name: 'head', parent: 'chest', at: [0, 1.8, 0.1], tip: [0, 2.3, 0.1], radius: 0.18, minY: 1.75 },
-  { name: 'upperArmL', parent: 'chest', at: [0.45, 1.62, 0], radius: 0.17, side: 'L', minAbsX: 0.42 },
-  { name: 'foreArmL', parent: 'upperArmL', at: [0.6, 1.2, 0.03], radius: 0.16, side: 'L', minAbsX: 0.46 },
-  { name: 'handL', parent: 'foreArmL', at: [0.62, 0.93, 0.05], tip: [0.6, 0.57, 0.05], radius: 0.17, side: 'L', minAbsX: 0.42 },
-  { name: 'upperArmR', parent: 'chest', at: [-0.45, 1.62, 0], radius: 0.17, side: 'R', minAbsX: 0.42 },
-  { name: 'foreArmR', parent: 'upperArmR', at: [-0.6, 1.2, 0.03], radius: 0.16, side: 'R', minAbsX: 0.46 },
-  { name: 'handR', parent: 'foreArmR', at: [-0.62, 0.93, 0.05], tip: [-0.6, 0.57, 0.05], radius: 0.17, side: 'R', minAbsX: 0.42 },
-  { name: 'thighL', parent: 'hips', at: [0.22, 0.88, 0], radius: 0.17, side: 'L', maxY: 0.95 },
-  { name: 'shinL', parent: 'thighL', at: [0.23, 0.48, 0], radius: 0.16, side: 'L', maxY: 0.6 },
+  { name: 'upperArmL', parent: 'chest', at: [0.45, 1.62, 0], radius: 0.17, side: 'L', minAbsX: 0.42, minY: 1.2 },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.6, 1.2, 0.03], radius: 0.16, side: 'L', minAbsX: 0.47, minY: 0.75 },
+  { name: 'handL', parent: 'foreArmL', at: [0.62, 0.93, 0.05], tip: [0.6, 0.57, 0.05], radius: 0.17, side: 'L', minAbsX: 0.47, minY: 0.48 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.45, 1.62, 0], radius: 0.17, side: 'R', minAbsX: 0.42, minY: 1.2 },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.6, 1.2, 0.03], radius: 0.16, side: 'R', minAbsX: 0.47, minY: 0.75 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.62, 0.93, 0.05], tip: [-0.6, 0.57, 0.05], radius: 0.17, side: 'R', minAbsX: 0.47, minY: 0.48 },
+  { name: 'thighL', parent: 'hips', at: [0.22, 0.88, 0], radius: 0.17, side: 'L', maxY: 0.95, maxAbsX: 0.47 },
+  { name: 'shinL', parent: 'thighL', at: [0.23, 0.48, 0], radius: 0.16, side: 'L', maxY: 0.6, maxAbsX: 0.5 },
   { name: 'footL', parent: 'shinL', at: [0.24, 0.15, 0], tip: [0.25, 0.02, 0.18], radius: 0.16, side: 'L', maxY: 0.25 },
-  { name: 'thighR', parent: 'hips', at: [-0.22, 0.88, 0], radius: 0.17, side: 'R', maxY: 0.95 },
-  { name: 'shinR', parent: 'thighR', at: [-0.23, 0.48, 0], radius: 0.16, side: 'R', maxY: 0.6 },
+  { name: 'thighR', parent: 'hips', at: [-0.22, 0.88, 0], radius: 0.17, side: 'R', maxY: 0.95, maxAbsX: 0.47 },
+  { name: 'shinR', parent: 'thighR', at: [-0.23, 0.48, 0], radius: 0.16, side: 'R', maxY: 0.6, maxAbsX: 0.5 },
   { name: 'footR', parent: 'shinR', at: [-0.24, 0.15, 0], tip: [-0.25, 0.02, 0.18], radius: 0.16, side: 'R', maxY: 0.25 }
 ];
 export const TEMPLE_GUARDIAN_HIP_HEIGHT = 0.9;
