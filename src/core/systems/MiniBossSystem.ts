@@ -28,9 +28,9 @@ export interface MiniBossSpec {
 }
 
 export const MINI_BOSSES: Record<MiniBossKind, MiniBossSpec> = {
-  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', anchor: GRAVEYARD.center, leashRadius: 700, companion: 'gravedigger' },
-  templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', anchor: TEMPLE.center, leashRadius: 720, companion: 'stoneGolem' },
-  lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', anchor: LAKE.center, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true }
+  gravedigger: { name: 'O Coveiro', where: 'no cemitério', zone: 'graveyard', get anchor() { return GRAVEYARD.center; }, leashRadius: 700, companion: 'gravedigger' },
+  templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', get anchor() { return TEMPLE.center; }, leashRadius: 720, companion: 'stoneGolem' },
+  lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', get anchor() { return LAKE.center; }, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true }
 };
 /** Rotation order of the per-cycle mini-boss slots. */
 export const MINI_BOSS_ROTATION: MiniBossKind[] = ['gravedigger', 'lakeSpirit', 'templeGuardian'];
