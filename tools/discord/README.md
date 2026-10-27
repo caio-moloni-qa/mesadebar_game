@@ -54,6 +54,7 @@ O resultado de cada um precisa ser `{"ok":true,...}`, com o nome do bot e do can
 | `read [n]` | Mostra as últimas n mensagens (padrão 20), da mais antiga para a mais nova |
 | `wait [s]` | Espera até chegar mensagem nova (padrão 240 s) e devolve só o que é novo |
 | `send <texto>` / `send --file <arq>` | Posta no canal; textos longos são divididos em partes |
+| `send --attach <img> [texto]` | Posta arquivos (até 10, 10 MB cada; repita `--attach`), com texto opcional. O bot precisa da permissão *Anexar arquivos* |
 
 **Formato da saída:** é JSON, uma mensagem por linha, com estes campos:
 
