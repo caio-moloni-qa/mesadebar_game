@@ -251,6 +251,19 @@ export class Game3D {
         const bought = buyConsumable(this.progress, id);
         if (bought) this.saveProgress(bought);
       },
+      runShop: () => {
+        const { session } = this;
+        if (this.mode !== 'run' || !session.merchant.inside || session.merchant.hub) return null;
+        return {
+          coins: session.currency,
+          offers: session.merchant.offers,
+          buy: (index) => {
+            session.buyMerchantItem(index);
+            // The Tomo de Afinidade's family choice takes the screen.
+            if (session.pendingChoice) this.shop.hide();
+          }
+        };
+      },
       exportSave: () => SaveStore.export(this.progress),
       importSave: () => {
         void SaveStore.import().then((save) => {
@@ -474,6 +487,7 @@ export class Game3D {
     events.on('hub-exit', () => this.menu.showCharacters(this.run.characterId));
     events.on('hub-records', () => this.recordBook.show(this.progress));
     events.on('hub-sergio', () => this.shop.show());
+    events.on('merchant-shop', () => this.shop.show());
     events.on('player-revived', () => {
       this.floatAboveHero('SEGUNDA CHANCE!', '#ffe29a');
       this.effects.pulse(this.session.player.x, this.session.player.y, 140, 0xffe29a, 0.6, 0.8);

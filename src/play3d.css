@@ -531,7 +531,7 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 @media (max-width: 520px) { .power-fanfare-card h2 { font-size: 26px; } .power-fanfare-rays { width: 600px; height: 600px; margin: -300px 0 0 -300px; } }
 .hero-powers { display: grid; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
 .hero-powers li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: baseline; font-size: 12px; line-height: 1.4; color: var(--muted); }
-.hero-powers b { grid-row: span 2; min-width: 42px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--gold); font: 600 11px/1.5 var(--sans); text-align: center; }
+.hero-powers b { grid-row: span 2; min-width: 50px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--gold); font: 600 11px/1.5 var(--sans); text-align: center; }
 .hero-powers strong { color: var(--cream); font-weight: 600; }
 
 /* Sergio's store between runs (SergioShop): a full screen with two shelves. */
@@ -564,3 +564,35 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .store-buy:disabled { opacity: .5; cursor: default; }
 .store-footer { flex-wrap: wrap; }
 @media (max-width: 620px) { .store-header { grid-template-columns: auto 1fr; } .store-balance { grid-column: 1 / -1; justify-items: start; } .store-portrait { width: 64px; height: 64px; } .store-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+
+/* Hero details: the kit, the run's powers and the mastery in one tabbed panel, so the column stays as short as the
+   3D stage. The stage matches the column's height and its viewport grows into it (the preview frames the hero by
+   height); the fixed viewport heights become minimums. */
+.hero-detail-tabs { width: 100%; margin-bottom: 14px; }
+.hero-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); }
+.hero-tabs [role="tab"] { margin-bottom: -1px; padding: 6px 12px; border: 1px solid transparent; border-radius: 5px 5px 0 0; background: none; color: #a0afa4; font: 600 10px/1.4 var(--sans); letter-spacing: .14em; text-transform: uppercase; }
+.hero-tabs [role="tab"]:hover { color: var(--cream); }
+.hero-tabs [role="tab"][aria-selected="true"] { color: var(--gold); border-color: var(--line); border-bottom-color: #101b1d; background: #ffffff06; }
+.hero-tabpanel { min-height: 140px; padding-top: 10px; }
+.hero-kit { display: grid; gap: 10px; }
+.hero-kit .hero-signature { margin-top: 0; }
+.hero-tabpanel .hero-powers { gap: 5px; }
+.hero-tabpanel .hero-powers li { line-height: 1.35; }
+.hero-showcase .hero-attributes { margin: 12px 0; padding: 10px 0; }
+.hero-showcase .hero-confirm { margin-top: 0; }
+.hero-tabpanel .hero-abilities, .hero-tabpanel .hero-powers { margin: 0; }
+.hero-showcase .hero-viewport { height: auto; min-height: 340px; }
+@media (min-width: 851px) and (max-height: 800px) { .hero-showcase .hero-viewport { min-height: 285px; } }
+@media (max-width: 850px) { .hero-showcase .hero-viewport { min-height: 310px; } }
+@media (max-width: 520px) { .hero-showcase .hero-viewport { min-height: 290px; } }
+@media (max-height: 580px) and (min-width: 650px) { .hero-showcase .hero-viewport { min-height: 230px; } }
+
+/* Weapon selection: ten weapons are taller than the 3D stage, so the stage sets the row's height (the list adds none)
+   and the list scrolls inside it, instead of stretching the stage into an empty box. Phones keep the full list. */
+@media (min-width: 521px) {
+  .weapon-showcase { align-items: start; }
+  .weapon-showcase > .weapon-list { align-self: stretch; height: 0; min-height: 100%; overflow-y: auto; align-content: start; padding-right: 8px; scrollbar-width: thin; scrollbar-color: #dec28a55 transparent; overscroll-behavior: contain; }
+  .weapon-showcase .weapon-row { padding: 12px 18px; }
+  /* A soft fade at the bottom says there's more below. */
+  .weapon-showcase > .weapon-list { -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), transparent); mask-image: linear-gradient(#000 calc(100% - 36px), transparent); padding-bottom: 28px; }
+}

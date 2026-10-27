@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MERCHANT_ROOM, MERCHANT_TUNING, MerchantItemId, MerchantSystem } from '../../core/systems/MerchantSystem';
+import { MERCHANT_ROOM, MERCHANT_TUNING, MerchantSystem } from '../../core/systems/MerchantSystem';
 import { QuestStatus, QuestSystem } from '../../core/systems/QuestSystem';
 import { importedHeroRig } from '../models/heroes';
 import { toonMaterial } from '../materials';
@@ -9,20 +9,6 @@ import { PartSpec, REGULAR_FIGURES, REGULAR_FIGURE_LOOK, RegularFigureId } from 
 import { buildRiggedModel, clipForBones, humanoidBones } from '../models/rig';
 import { WORLD_SCALE, simToWorld } from '../space';
 
-/** The merchant's item art (the Phaser shop's icons), one static URL per file for Vite. */
-const ITEM_ICONS: Record<MerchantItemId, string> = {
-  'divine-blessing': new URL('../../assets/upgrades/merchant/merchant-divine-blessing-icon.png', import.meta.url).href,
-  'arcane-curse': new URL('../../assets/upgrades/merchant/merchant-arcane-curse-icon.png', import.meta.url).href,
-  heal: new URL('../../assets/upgrades/merchant/merchant-heal-potion-icon.png', import.meta.url).href,
-  damage: new URL('../../assets/upgrades/merchant/merchant-sharp-blade-icon.png', import.meta.url).href,
-  speed: new URL('../../assets/upgrades/merchant/merchant-swift-boots-icon.png', import.meta.url).href,
-  'affinity-tome': new URL('../../assets/upgrades/merchant/merchant-affinity-tome-icon.png', import.meta.url).href,
-  'max-health': new URL('../../assets/upgrades/merchant/merchant-vitality-elixir-icon.png', import.meta.url).href
-};
-
-export function merchantItemIcon(id: MerchantItemId): string {
-  return ITEM_ICONS[id];
-}
 
 const PORTAL_COLOR = 0xffc65a;
 const PORTAL_CORE = 0xb48cff;
@@ -104,7 +90,6 @@ export class MerchantRoom {
   readonly characters = new THREE.Group();
   private readonly arenaPortal = portalMesh();
   private readonly exitPortal = portalMesh();
-  private readonly icons: THREE.Sprite[] = [];
   private readonly sergio = sergioModel();
   private readonly regulars = REGULAR_MODELS.map((build) => build());
   private readonly markers: THREE.Sprite[] = [];
@@ -115,9 +100,6 @@ export class MerchantRoom {
   };
   private readonly fireLight = new THREE.PointLight(0xff8a3a, 20, 9, 2);
   private readonly flames: THREE.Mesh[] = [];
-  private readonly loader = new THREE.TextureLoader();
-  private readonly textures = new Map<MerchantItemId, THREE.Texture>();
-  private shownOffers = '';
   private time = 0;
 
   constructor(private readonly system: MerchantSystem, private readonly quests: QuestSystem) {
@@ -219,15 +201,6 @@ export class MerchantRoom {
       }
     });
 
-    // Sergio's items float over the counter beside where you stand to buy them.
-    MERCHANT_ROOM.slots.forEach((slot) => {
-      const icon = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true }));
-      icon.scale.setScalar(1.1);
-      icon.position.copy(at(counter.x, slot.y, 1.9));
-      room.add(icon);
-      this.icons.push(icon);
-    });
-
     const props = new THREE.Mesh(mergeParts(lit), toonMaterial({ vertexColors: true, flatShading: true }));
     props.castShadow = true;
     props.receiveShadow = true;
@@ -290,33 +263,5 @@ export class MerchantRoom {
       }
       marker.position.y = 2.5 + Math.sin(this.time * 3 + index) * 0.08;
     });
-    // Items bob over the counter; sold ones sink, greyed.
-    const key = system.offers.map((offer) => `${offer.id}${offer.purchased ? 'x' : ''}`).join(',');
-    if (key !== this.shownOffers) {
-      this.shownOffers = key;
-      system.offers.forEach((offer, index) => {
-        const material = this.icons[index].material;
-        material.map = this.texture(offer.id);
-        material.color.setHex(offer.purchased ? 0x555555 : 0xffffff);
-        material.opacity = offer.purchased ? 0.5 : 1;
-        material.needsUpdate = true;
-      });
-    }
-    this.icons.forEach((icon, index) => {
-      // Between runs the counter is bare (Sergio sells his permanent upgrades by talking to him).
-      icon.visible = !!system.offers[index];
-      const sold = system.offers[index]?.purchased;
-      icon.position.y = sold ? 1.45 : 1.9 + Math.sin(this.time * 2 + index) * 0.1;
-    });
-  }
-
-  private texture(id: MerchantItemId): THREE.Texture {
-    let texture = this.textures.get(id);
-    if (!texture) {
-      texture = this.loader.load(ITEM_ICONS[id]);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      this.textures.set(id, texture);
-    }
-    return texture;
   }
 }

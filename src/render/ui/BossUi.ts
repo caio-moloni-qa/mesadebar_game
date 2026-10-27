@@ -145,7 +145,7 @@ export class BossUi {
     this.prompt.style.transform = `translate(${this.screen.x}px, ${this.screen.y}px) translate(-50%, -100%)`;
   }
 
-  /** The merchant's prompts: his arena portal, a pedestal's price, or the way back. */
+  /** The merchant's prompts: his arena portal, Sergio's store, a regular, or the way back. */
   private merchantPrompt(session: GameSession): { x: number; y: number; text: string; poor: boolean } | null {
     const { merchant } = session;
     if (merchant.portalInReach && merchant.portal) return { ...merchant.portal, text: 'Pressione E para entrar no portal', poor: false };
@@ -157,23 +157,14 @@ export class BossUi {
     }
     if (spot.kind === 'sergio') {
       if (session.dialogue !== null) return null;
-      return { x: merchant.room.x + MERCHANT_ROOM.merchant.x, y: merchant.room.y + MERCHANT_ROOM.merchant.y, text: 'Pressione E para falar com o Sergio (melhorias permanentes)', poor: false };
+      return { x: merchant.room.x + MERCHANT_ROOM.merchant.x, y: merchant.room.y + MERCHANT_ROOM.merchant.y, text: 'Pressione E para ver a loja do Sergio', poor: false };
     }
     if (spot.kind === 'npc') {
       if (session.dialogue !== null) return null;
       const npc = MERCHANT_ROOM.npcs[spot.index];
       return { x: merchant.room.x + npc.x, y: merchant.room.y + npc.y, text: `Pressione E para falar com ${session.quests.quests[spot.index].npc.name}`, poor: false };
     }
-    const offer = merchant.offers[spot.index];
-    const slot = MERCHANT_ROOM.slots[spot.index];
-    const poor = session.currency < offer.cost;
-    return {
-      x: merchant.room.x + slot.x,
-      y: merchant.room.y + slot.y,
-      text: `${offer.name} — ${offer.cost} moedas ${poor ? '(moedas insuficientes)' : '(E para comprar)'}
-${offer.description}`,
-      poor
-    };
+    return null;
   }
 
   private promptText(session: GameSession, kind: PortalKind): string {

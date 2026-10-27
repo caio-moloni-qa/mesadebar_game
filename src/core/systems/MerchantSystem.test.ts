@@ -55,7 +55,7 @@ describe('merchant', () => {
     expect(enemy.x).toBe(enemyX);
   });
 
-  it('pedestals sell their item, every purchase triples what is left, and the exit returns you where you entered', () => {
+  it('Sergio sells this visit’s items, every purchase triples what is left, and the exit returns you where you entered', () => {
     const run = session();
     const entry = { x: 0, y: 0 };
     run.openMerchantPortal();
@@ -67,8 +67,7 @@ describe('merchant', () => {
     expect(curse.id).toBe('arcane-curse');
     const blessingCost = run.merchant.offers[0].cost;
     const damage = run.player.damageMultiplier;
-    standAt(run, MERCHANT_ROOM.slots[1]);
-    run.interact();
+    run.buyMerchantItem(1);
     expect(curse.purchased).toBe(true);
     expect(run.currency).toBe(1000 - curse.cost);
     expect(run.player.damageMultiplier).toBeCloseTo(damage + 1.5);
@@ -81,12 +80,23 @@ describe('merchant', () => {
     expect(run.player.y).toBeCloseTo(entry.y);
   });
 
+  it('talking to Sergio opens his store; the counter has nothing on it to walk up to', () => {
+    const run = session();
+    enter(run);
+    const heard: string[] = [];
+    run.events.on('merchant-shop', () => heard.push('shop'));
+    standAt(run, MERCHANT_ROOM.sergioSpot);
+    expect(run.merchant.roomSpot).toEqual({ kind: 'sergio' });
+    run.interact();
+    expect(heard).toEqual(['shop']);
+    expect(run.merchant.offers).toHaveLength(4);
+  });
+
   it('can’t buy what you can’t afford', () => {
     const run = session();
     enter(run);
     run.currency = 10;
-    standAt(run, MERCHANT_ROOM.slots[0]);
-    run.interact();
+    run.buyMerchantItem(0);
     expect(run.merchant.offers[0].purchased).toBe(false);
     expect(run.currency).toBe(10);
   });
@@ -96,8 +106,7 @@ describe('merchant', () => {
     enter(run);
     run.currency = 1000;
     expect(run.merchant.offers[3].id).toBe('affinity-tome');
-    standAt(run, MERCHANT_ROOM.slots[3]);
-    run.interact();
+    run.buyMerchantItem(3);
     const choice = run.pendingChoice as Extract<typeof run.pendingChoice, { kind: 'affinity' }>;
     expect(choice.kind).toBe('affinity');
     expect(choice.families).not.toContain('ranged');

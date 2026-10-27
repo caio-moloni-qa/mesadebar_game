@@ -1,7 +1,8 @@
 import { CONSUMABLES, ConsumableId, DIFFICULTY_TIERS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
 import { CURRENT_AREA } from '../../config/areas';
 import { heroName } from '../progress/heroNames';
-import { npcPortrait, storeIcon } from './icons';
+import { merchantItemIcon, npcPortrait, storeIcon } from './icons';
+import { MerchantOffer } from '../../core/systems/MerchantSystem';
 
 export interface SergioShopActions {
   save(): SaveData;
@@ -10,6 +11,9 @@ export interface SergioShopActions {
   playSergio(): void;
   buy(id: MetaUpgradeId): void;
   buyConsumable(id: ConsumableId): void;
+  /** During a run's visit through his portal: this visit's items, the run's coins, and buying one. Null between
+   *  runs. */
+  runShop(): { coins: number; offers: MerchantOffer[]; buy(index: number): void } | null;
   exportSave(): void;
   importSave(): void;
   close(): void;
@@ -17,6 +21,7 @@ export interface SergioShopActions {
 
 const WELCOME = 'Bem-vindo à minha taverna! Cada partida rende Fichas. Aqui no balcão você gasta: melhorias que valem para sempre, ou provisões para a próxima saída.';
 const GREETING = 'De volta, viajante? Fichas na mesa, e eu deixo você mais forte para a próxima.';
+const RUN_GREETING = 'Lá fora o tempo parou, pode escolher com calma. Moedas na mesa!';
 
 type ShopTab = 'atributos' | 'consumiveis';
 
@@ -25,9 +30,10 @@ const TABS: Array<{ id: ShopTab; label: string; hint: string }> = [
   { id: 'consumiveis', label: 'Consumíveis', hint: 'Valem só para a próxima partida: saem da mochila quando ela começa. Um de cada.' }
 ];
 
-/** Sergio's store between runs, opened at his counter: a full screen with two shelves, the permanent attributes
- *  (level pips, the next price) and the consumables for the next run (one of each in the pack), the Fichas you hold,
- *  and the save's export/import. The first visit opens with his welcome. */
+/** Sergio's store, opened at his counter. Between runs: two shelves for Fichas, the permanent attributes (level
+ *  pips, the next price) and the consumables for the next run (one of each in the pack), plus the save's
+ *  export/import; the first visit opens with his welcome. During a run's visit: this visit's items, for the run's
+ *  coins (every purchase makes what's left dearer). */
 export class SergioShop {
   private readonly root: HTMLDivElement;
   private welcome = false;
@@ -60,6 +66,7 @@ export class SergioShop {
   render(): void {
     if (this.root.hidden) return;
     const save = this.actions.save();
+    const run = this.actions.runShop();
     const focused = document.activeElement instanceof HTMLElement && this.root.contains(document.activeElement) ? document.activeElement.dataset.focus : undefined;
     this.root.replaceChildren();
     const panel = document.createElement('div');
@@ -77,11 +84,11 @@ export class SergioShop {
     name.innerHTML = 'Sergio <span>Taberneiro e mercador</span>';
     const said = document.createElement('p');
     said.className = 'dialog-text';
-    said.textContent = `“${this.welcome ? WELCOME : GREETING}”`;
+    said.textContent = `“${run ? RUN_GREETING : this.welcome ? WELCOME : GREETING}”`;
     speech.append(name, said);
     const balance = document.createElement('p');
     balance.className = 'store-balance';
-    balance.innerHTML = `<small>Suas Fichas</small><b>${save.fichas}</b>`;
+    balance.innerHTML = run ? `<small>Suas moedas</small><b>${run.coins}</b>` : `<small>Suas Fichas</small><b>${save.fichas}</b>`;
     header.append(portrait, speech, balance);
 
     const tabs = document.createElement('div');
@@ -102,12 +109,28 @@ export class SergioShop {
     });
     const hint = document.createElement('p');
     hint.className = 'store-hint';
-    hint.textContent = TABS.find((spec) => spec.id === this.tab)!.hint;
+    hint.textContent = run ? 'Itens desta partida, pagos com moedas. Cada compra deixa o resto 3× mais caro.' : TABS.find((spec) => spec.id === this.tab)!.hint;
+    if (run) {
+      tabs.replaceChildren();
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', 'true');
+      tab.textContent = 'Itens da run';
+      tabs.append(tab);
+    }
 
     const grid = document.createElement('ul');
     grid.className = 'store-grid';
     grid.setAttribute('role', 'tabpanel');
-    if (this.tab === 'atributos') {
+    if (run) {
+      run.offers.forEach((offer, index) => {
+        const tag = document.createElement('span');
+        tag.className = `store-tag${offer.purchased ? ' packed' : ''}`;
+        tag.textContent = offer.purchased ? 'Comprado' : offer.cost === 0 ? 'Grátis!' : 'Nesta partida';
+        grid.append(this.card(offer.id, offer.name, offer.description, tag, offer.purchased ? null : { price: offer.cost, affordable: run.coins >= offer.cost, label: 'Comprar', unit: 'moedas' }, () => run.buy(index), 'Vendido', merchantItemIcon(offer.id)));
+      });
+    } else if (this.tab === 'atributos') {
       META_UPGRADES.forEach((spec) => {
         const level = save.upgrades[spec.id] ?? 0;
         const price = nextPrice(save, spec.id);
@@ -139,7 +162,7 @@ export class SergioShop {
     close.textContent = 'Até mais (Esc)';
     close.addEventListener('click', () => this.actions.close());
     footer.append(close);
-    if (this.actions.canPlaySergio()) {
+    if (!run && this.actions.canPlaySergio()) {
       const play = document.createElement('button');
       play.type = 'button';
       play.className = 'ui-button';
@@ -157,7 +180,7 @@ export class SergioShop {
     importButton.className = 'link-button';
     importButton.textContent = 'Importar progresso';
     importButton.addEventListener('click', () => this.actions.importSave());
-    footer.append(exportButton, importButton);
+    if (!run) footer.append(exportButton, importButton);
 
     panel.append(header, tabs, hint, grid, footer);
     this.root.append(panel);
@@ -165,14 +188,14 @@ export class SergioShop {
   }
 
   /** One item on the shelf: art, name, what it does, its status line, and the buy button (or why there's none). */
-  private card(id: string, title: string, effect: string, status: HTMLElement, offer: { price: number; affordable: boolean; label: string } | null, buy: () => void, done: string): HTMLLIElement {
+  private card(id: string, title: string, effect: string, status: HTMLElement, offer: { price: number; affordable: boolean; label: string; unit?: string } | null, buy: () => void, done: string, art = storeIcon(id)): HTMLLIElement {
     const card = document.createElement('li');
     card.className = 'store-card';
     if (!offer) card.classList.add('owned');
     const icon = document.createElement('img');
     icon.className = 'store-icon';
     icon.alt = '';
-    icon.src = storeIcon(id);
+    icon.src = art;
     const name = document.createElement('strong');
     name.textContent = title;
     const text = document.createElement('span');
@@ -186,10 +209,11 @@ export class SergioShop {
       button.textContent = done;
       button.disabled = true;
     } else {
-      button.innerHTML = `<b>${offer.price}</b> Fichas`;
+      const unit = offer.unit ?? 'Fichas';
+      button.innerHTML = offer.price === 0 ? '<b>Grátis</b>' : `<b>${offer.price}</b> ${unit}`;
       button.disabled = !offer.affordable;
-      button.title = offer.affordable ? offer.label : 'Fichas insuficientes';
-      button.setAttribute('aria-label', `${offer.label}: ${title}, ${offer.price} Fichas`);
+      button.title = offer.affordable ? offer.label : `${unit[0].toUpperCase()}${unit.slice(1)} insuficientes`;
+      button.setAttribute('aria-label', `${offer.label}: ${title}, ${offer.price} ${unit}`);
       button.addEventListener('click', () => {
         this.welcome = false;
         buy();
