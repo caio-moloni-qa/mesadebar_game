@@ -9,6 +9,10 @@
 //   node tools/discord/discord.mjs <agent> send <text...>       posts a message (long ones are split)
 //   node tools/discord/discord.mjs <agent> send --file <path>   posts a file's text
 //   node tools/discord/discord.mjs <agent> send --attach <image> [text...]   posts files (repeatable) with an optional text
+//   node tools/discord/discord.mjs <agent> edit <message id> <text...>   rewrites one of this bot's messages
+//
+// When DISCORD_PLACEHOLDER_FILE names a file holding {"id": ...} (the dispatcher's "⏳ working on it" message), the
+// next `send` edits that message instead of posting a new one, and removes the file (later sends post normally).
 //
 // <agent> is `claude` or `codex`. Settings come from the environment or the repo's .env (never committed):
 //   DISCORD_GUILD_ID, DISCORD_CHANNEL_ID   the server and the text channel to work in
@@ -19,7 +23,7 @@
 // Output is JSON, one object per line, for the agent to read. `wait` remembers the last message it showed (per agent,
 // in tools/discord/.state/, ignored by git), so each call returns only what's new; the first call starts from now.
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -106,15 +110,22 @@ async function send(args) {
   text = text.trim();
   if (!text && attachments.length === 0) fail('Mensagem vazia.');
   const sent = [];
+  // The first message may replace the dispatcher's placeholder.
+  let editId = takePlaceholder();
   if (attachments.length > 0) {
     // The files go with the first part of the text (or alone).
     const parts = split(text);
-    sent.push((await upload(attachments, parts.shift() ?? '')).id);
+    sent.push((await upload(attachments, parts.shift() ?? '', editId)).id);
+    editId = null;
     text = parts.join('\n');
   }
   for (const part of text ? split(text) : []) {
     // Mentions only reach people the message names on purpose; never @everyone/@here.
-    const message = await api(`/channels/${channelId}/messages`, { method: 'POST', body: { content: part, allowed_mentions: { parse: ['users'] } } });
+    const body = { content: part, allowed_mentions: { parse: ['users'] } };
+    const message = editId
+      ? await api(`/channels/${channelId}/messages/${editId}`, { method: 'PATCH', body })
+      : await api(`/channels/${channelId}/messages`, { method: 'POST', body });
+    editId = null;
     sent.push(message.id);
   }
   // What we just said shouldn't come back from the next wait.
@@ -122,8 +133,30 @@ async function send(args) {
   out({ sent: sent.length, ids: sent });
 }
 
-/** One message carrying `files` (multipart/form-data, Discord's upload format). */
-async function upload(files, content) {
+async function edit([id, ...words]) {
+  await guardChannel();
+  const content = words.join(' ').trim();
+  if (!id || !content) fail('Uso: edit <id da mensagem> <texto>');
+  const message = await api(`/channels/${channelId}/messages/${id}`, { method: 'PATCH', body: { content: split(content)[0], allowed_mentions: { parse: ['users'] } } });
+  out({ edited: message.id });
+}
+
+/** The dispatcher's placeholder message to replace, once: reads and removes DISCORD_PLACEHOLDER_FILE. */
+function takePlaceholder() {
+  const file = process.env.DISCORD_PLACEHOLDER_FILE;
+  if (!file || !existsSync(file)) return null;
+  try {
+    const { id } = JSON.parse(readFileSync(file, 'utf8'));
+    unlinkSync(file);
+    return id ?? null;
+  } catch {
+    // Can't take it (unreadable, or a sandbox that can't delete it): post normally rather than edit it twice.
+    return null;
+  }
+}
+
+/** One message carrying `files` (multipart/form-data, Discord's upload format); `editId` replaces that message. */
+async function upload(files, content, editId = null) {
   if (files.length > 10) throw new Error('No máximo 10 anexos por mensagem.');
   const form = new FormData();
   form.append('payload_json', JSON.stringify({ content, allowed_mentions: { parse: ['users'] }, attachments: files.map((file, id) => ({ id, filename: basename(file) })) }));
@@ -133,7 +166,7 @@ async function upload(files, content) {
     if (size > MAX_ATTACHMENT_BYTES) throw new Error(`Anexo grande demais (${(size / 1048576).toFixed(1)} MB; o limite é 10 MB): ${file}. Reduza (ex.: salve uma cópia em JPG ou menor).`);
     form.append(`files[${id}]`, new Blob([readFileSync(file)]), basename(file));
   });
-  return api(`/channels/${channelId}/messages`, { method: 'POST', form });
+  return editId ? api(`/channels/${channelId}/messages/${editId}`, { method: 'PATCH', form }) : api(`/channels/${channelId}/messages`, { method: 'POST', form });
 }
 
 // ── Discord ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -253,8 +286,8 @@ function fail(message) {
 
 // ── Run ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-const commands = { check, read, wait, send };
-if (!commands[command]) fail(`Comando desconhecido: ${command}. Use check, read, wait ou send.`);
+const commands = { check, read, wait, send, edit };
+if (!commands[command]) fail(`Comando desconhecido: ${command}. Use check, read, wait, send ou edit.`);
 // A failed request reports and sets the exit code without forcing the exit (an abrupt exit while a connection is
 // still closing crashes Node on Windows).
 await commands[command](args).catch((error) => {
