@@ -26,6 +26,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFile
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readSkills } from '../sync-skills.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
@@ -124,6 +125,14 @@ async function runAgent(batch) {
   else if (problem) await discord('send', problem);
 }
 
+/** The project's skills (.agents/skills), listed in every prompt so each agent reads the ones that fit the job —
+ *  whether or not its own tool would have discovered them. */
+function skillsIndex() {
+  const skills = readSkills(ROOT);
+  if (skills.length === 0) return '(nenhuma)';
+  return skills.map((skill) => `- ${skill.name}: ${skill.description}\n  arquivo: ${skill.path}`).join('\n');
+}
+
 function buildPrompt(batch, history, notes) {
   const line = (message) => `[${message.at?.slice(11, 16) ?? ''}] ${message.author} (${message.from}): ${message.content}${message.attachments?.length ? ` [anexos: ${message.attachments.join(' ')}]` : ''}`;
   const send = `node "${DISCORD}" ${agent} send`;
@@ -137,7 +146,12 @@ Regras (resumo de tools/discord/PROTOCOL.md; leia o arquivo se precisar de detal
 - NÃO rode \`wait\`: quem espera mensagens é o script.
 - Antes de começar uma parte de uma tarefa compartilhada, poste "📌 Pego: ...".
 - Git: siga .codex/skills/git-feature-flow; commit/push/PR só quando o dono pedir. Nunca poste segredos (.env, tokens).
+- Antes de começar, leia POR COMPLETO as skills do projeto que se aplicam ao pedido (lista abaixo) e siga-as: são
+  as regras da casa para arquitetura, verificação no jogo, guardiões, arenas, arte e entrega. Diga no canal quais usou.
 - Ao terminar, REESCREVA suas notas em ${notesFile} (no máximo ~40 linhas: em que está, branch/worktree, decisões, pendências). Elas são sua memória entre sessões.
+
+Skills do projeto:
+${skillsIndex()}
 
 Suas notas da última sessão:
 ${notes}

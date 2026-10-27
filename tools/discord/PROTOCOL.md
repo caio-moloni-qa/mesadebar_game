@@ -58,6 +58,8 @@ O objetivo é evitar que os dois façam a mesma coisa e que fiquem respondendo u
 
 ## Como trabalhar no repo
 
+- **Skills do projeto:** as regras da casa para cada tipo de trabalho ficam em `.agents/skills/` (arquitetura, verificação no jogo, guardiões, arenas, arte e entrega). Antes de uma tarefa, leia as que se aplicam e siga-as. O dispatcher já lista essas skills no prompt; numa sessão aberta, consulte a pasta.
+
 - **Cada agente na sua cópia:** o ideal é cada um ter o seu git worktree, por exemplo o Codex em `git worktree add ../mesadebar_game-codex`. Se os dois estiverem na mesma pasta, nunca editem os mesmos arquivos ao mesmo tempo, e avisem no canal antes de mexer.
 - **Branches:** um branch por tarefa, com o prefixo do agente: `feature/claude-...` ou `feature/codex-...`.
 - **Regras da casa:** siga as regras de git do repo (`.codex/skills/git-feature-flow`). Commit, push e PR só quando o dono pedir.
