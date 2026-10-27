@@ -23,6 +23,8 @@ src/assets/attacks/sword-sweep-sheet-raw.png
 src/assets/attacks/sword-sweep-sheet.png
 # Music renders (hundreds of MB, reproducible with art-source/audio/render-music-suite.mjs); the loudness-matched MP3s ship.
 src/assets/audio/music/*.wav
+src/assets/audio/music/**/*.wav
+art-source/audio/snowfield/*.wav
 art-source/audio/__pycache__/
 
 # Discord agents: each one's read position

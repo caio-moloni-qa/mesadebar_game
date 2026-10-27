@@ -1,0 +1,43 @@
+{
+  "id": "guardian-frost-knight",
+  "title": "Cavaleiro Congelado",
+  "kind": "knight",
+  "bpm": 112,
+  "bars": 56,
+  "meter": 4,
+  "key": "D minor",
+  "base": 38,
+  "loop": true,
+  "seconds": 120,
+  "noteCount": 1148,
+  "hitCount": 238,
+  "instruments": [
+    "drone",
+    "cello",
+    "horn",
+    "glass"
+  ],
+  "percussion": [
+    "frame",
+    "stone"
+  ],
+  "seed": "guardian-frost-knight",
+  "rate": 44100,
+  "frames": 5292000,
+  "rawSeconds": 124,
+  "rawPeak": 0.1791945844888687,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.13070374607876883,
+  "gain": 4.687641662810292,
+  "seam": [
+    0.000982128083705902,
+    0.00033302977681159973
+  ],
+  "end": [
+    0.03086867555975914,
+    0.04109416529536247
+  ],
+  "file": "guardian-frost-knight.wav",
+  "rawFile": "guardian-frost-knight-raw.wav"
+}

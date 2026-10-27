@@ -1,0 +1,275 @@
+{
+  "method": "Original locally composed Web Audio synthesis; no recorded instruments, external music service or voice recordings.",
+  "normalization": "Peak normalized to .84; LUFS matching deferred to integration.",
+  "tracks": [
+    {
+      "id": "guardian-frost-knight",
+      "title": "Cavaleiro Congelado",
+      "kind": "knight",
+      "bpm": 112,
+      "bars": 56,
+      "meter": 4,
+      "key": "D minor",
+      "base": 38,
+      "loop": true,
+      "seconds": 120,
+      "noteCount": 1148,
+      "hitCount": 238,
+      "instruments": [
+        "drone",
+        "cello",
+        "horn",
+        "glass"
+      ],
+      "percussion": [
+        "frame",
+        "stone"
+      ],
+      "seed": "guardian-frost-knight",
+      "rate": 44100,
+      "frames": 5292000,
+      "rawSeconds": 124,
+      "rawPeak": 0.1791945844888687,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.13070374607876883,
+      "gain": 4.687641662810292,
+      "seam": [
+        0.000982128083705902,
+        0.00033302977681159973
+      ],
+      "end": [
+        0.03086867555975914,
+        0.04109416529536247
+      ],
+      "file": "guardian-frost-knight.wav",
+      "rawFile": "guardian-frost-knight-raw.wav"
+    },
+    {
+      "id": "guardian-ice-serpent",
+      "title": "Serpente do Gelo",
+      "kind": "serpent",
+      "bpm": 126,
+      "bars": 48,
+      "meter": 6,
+      "key": "F# minor",
+      "base": 42,
+      "loop": true,
+      "seconds": 137.14285714285714,
+      "noteCount": 1920,
+      "hitCount": 144,
+      "instruments": [
+        "drone",
+        "harp",
+        "cello",
+        "strings",
+        "recorder",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "timpani"
+      ],
+      "seed": "guardian-ice-serpent",
+      "rate": 44100,
+      "frames": 6048000,
+      "rawSeconds": 141.14285714285714,
+      "rawPeak": 0.17549285292625427,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.11325833926034327,
+      "gain": 4.786519712873922,
+      "seam": [
+        0.0030111558735370636,
+        0.00040777772665023804
+      ],
+      "end": [
+        -0.032322075217962265,
+        0.01861603558063507
+      ],
+      "file": "guardian-ice-serpent.wav",
+      "rawFile": "guardian-ice-serpent-raw.wav"
+    },
+    {
+      "id": "guardian-bellringer",
+      "title": "O Sineiro",
+      "kind": "bellringer",
+      "bpm": 96,
+      "bars": 64,
+      "meter": 3,
+      "key": "C harmonic minor",
+      "base": 36,
+      "loop": true,
+      "seconds": 120,
+      "noteCount": 928,
+      "hitCount": 208,
+      "instruments": [
+        "drone",
+        "organ",
+        "cello",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "rattle",
+        "scrape"
+      ],
+      "seed": "guardian-bellringer",
+      "rate": 44100,
+      "frames": 5292000,
+      "rawSeconds": 124,
+      "rawPeak": 0.09667318314313889,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.21805853391804844,
+      "gain": 8.689069426381215,
+      "seam": [
+        0.0015810318291187286,
+        0.0007699877023696899
+      ],
+      "end": [
+        -0.035727888345718384,
+        -0.08974441885948181
+      ],
+      "file": "guardian-bellringer.wav",
+      "rawFile": "guardian-bellringer-raw.wav"
+    },
+    {
+      "id": "guardian-ancient-yeti",
+      "title": "Yeti Ancião",
+      "kind": "yeti",
+      "bpm": 100,
+      "bars": 56,
+      "meter": 4,
+      "key": "E phrygian",
+      "base": 40,
+      "loop": true,
+      "seconds": 134.4,
+      "noteCount": 730,
+      "hitCount": 392,
+      "instruments": [
+        "drone",
+        "cello",
+        "horn",
+        "glass"
+      ],
+      "percussion": [
+        "frame",
+        "stone",
+        "timpani"
+      ],
+      "seed": "guardian-ancient-yeti",
+      "rate": 44100,
+      "frames": 5927040,
+      "rawSeconds": 138.4,
+      "rawPeak": 0.2686404585838318,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.10262655114269555,
+      "gain": 3.1268558891990947,
+      "seam": [
+        0.0009475173428654671,
+        0.0003367327153682709
+      ],
+      "end": [
+        0.004854434635490179,
+        0.040034327656030655
+      ],
+      "file": "guardian-ancient-yeti.wav",
+      "rawFile": "guardian-ancient-yeti-raw.wav"
+    },
+    {
+      "id": "boss-winter-king",
+      "title": "Rei do Inverno",
+      "kind": "king",
+      "bpm": 128,
+      "bars": 80,
+      "meter": 4,
+      "key": "D harmonic minor",
+      "base": 38,
+      "loop": true,
+      "seconds": 150,
+      "noteCount": 2320,
+      "hitCount": 970,
+      "instruments": [
+        "drone",
+        "cello",
+        "strings",
+        "horn",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "frame",
+        "rattle",
+        "gong"
+      ],
+      "seed": "boss-winter-king",
+      "rate": 44100,
+      "frames": 6615000,
+      "rawSeconds": 154,
+      "rawPeak": 0.24148988723754883,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.10731883543668956,
+      "gain": 3.47840652711767,
+      "seam": [
+        0.001551331952214241,
+        0.001300562173128128
+      ],
+      "end": [
+        -0.008943897671997547,
+        -0.039296992123126984
+      ],
+      "file": "boss-winter-king.wav",
+      "rawFile": "boss-winter-king-raw.wav"
+    },
+    {
+      "id": "boss-winter-king-enraged",
+      "title": "Rei do Inverno - Coroa Partida",
+      "kind": "king",
+      "bpm": 152,
+      "bars": 80,
+      "meter": 4,
+      "key": "D harmonic minor",
+      "base": 38,
+      "intense": true,
+      "loop": true,
+      "seconds": 126.3157894736842,
+      "noteCount": 3080,
+      "hitCount": 1130,
+      "instruments": [
+        "drone",
+        "strings",
+        "horn",
+        "glass",
+        "box",
+        "trumpet"
+      ],
+      "percussion": [
+        "frame",
+        "rattle",
+        "gong"
+      ],
+      "seed": "boss-winter-king-enraged",
+      "rate": 44100,
+      "frames": 5570526,
+      "rawSeconds": 130.31578231292517,
+      "rawPeak": 0.2148546576499939,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.15532541767944788,
+      "gain": 4.176700017419141,
+      "seam": [
+        0.0061973705887794495,
+        0.005079117603600025
+      ],
+      "end": [
+        0.04165242984890938,
+        -0.011149113066494465
+      ],
+      "file": "boss-winter-king-enraged.wav",
+      "rawFile": "boss-winter-king-enraged-raw.wav"
+    }
+  ]
+}

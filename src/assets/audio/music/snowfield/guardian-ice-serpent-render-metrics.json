@@ -1,0 +1,45 @@
+{
+  "id": "guardian-ice-serpent",
+  "title": "Serpente do Gelo",
+  "kind": "serpent",
+  "bpm": 126,
+  "bars": 48,
+  "meter": 6,
+  "key": "F# minor",
+  "base": 42,
+  "loop": true,
+  "seconds": 137.14285714285714,
+  "noteCount": 1920,
+  "hitCount": 144,
+  "instruments": [
+    "drone",
+    "harp",
+    "cello",
+    "strings",
+    "recorder",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "timpani"
+  ],
+  "seed": "guardian-ice-serpent",
+  "rate": 44100,
+  "frames": 6048000,
+  "rawSeconds": 141.14285714285714,
+  "rawPeak": 0.17549285292625427,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.11325833926034327,
+  "gain": 4.786519712873922,
+  "seam": [
+    0.0030111558735370636,
+    0.00040777772665023804
+  ],
+  "end": [
+    -0.032322075217962265,
+    0.01861603558063507
+  ],
+  "file": "guardian-ice-serpent.wav",
+  "rawFile": "guardian-ice-serpent-raw.wav"
+}

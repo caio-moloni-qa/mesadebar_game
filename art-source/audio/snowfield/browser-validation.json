@@ -1,0 +1,54 @@
+{
+  "status": "six_wavs_play_and_loop",
+  "errors": [],
+  "records": [
+    {
+      "title": "Cavaleiro Congelado",
+      "duration": 120,
+      "currentTime": 0.361473,
+      "paused": false,
+      "ended": false,
+      "error": null
+    },
+    {
+      "title": "Serpente do Gelo",
+      "duration": 137.142857,
+      "currentTime": 0.37932,
+      "paused": false,
+      "ended": false,
+      "error": null
+    },
+    {
+      "title": "O Sineiro",
+      "duration": 120,
+      "currentTime": 0.370073,
+      "paused": false,
+      "ended": false,
+      "error": null
+    },
+    {
+      "title": "Yeti Ancião",
+      "duration": 134.4,
+      "currentTime": 0.372308,
+      "paused": false,
+      "ended": false,
+      "error": null
+    },
+    {
+      "title": "Rei do Inverno",
+      "duration": 150,
+      "currentTime": 0.379227,
+      "paused": false,
+      "ended": false,
+      "error": null
+    },
+    {
+      "title": "Rei do Inverno - Coroa Partida",
+      "duration": 126.315782,
+      "currentTime": 0.377831,
+      "paused": false,
+      "ended": false,
+      "error": null
+    }
+  ]
+}

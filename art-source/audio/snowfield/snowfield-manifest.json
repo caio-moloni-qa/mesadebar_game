@@ -1,0 +1,355 @@
+{
+  "status": "six_tracks_rendered_and_technically_validated",
+  "method": "Original procedural Web Audio synthesis, acoustic-inspired timbres. No external generator, instrument recordings or voices.",
+  "integration": "Staged assets only; GameAudio and boss systems unchanged.",
+  "loudness": "Peak normalization to 0.84 (-1.51 dBFS). LUFS matching and subjective listening pending.",
+  "tracks": [
+    {
+      "id": "guardian-frost-knight",
+      "title": "Cavaleiro Congelado",
+      "kind": "knight",
+      "bpm": 112,
+      "bars": 56,
+      "meter": 4,
+      "key": "D minor",
+      "base": 38,
+      "loop": true,
+      "seconds": 120,
+      "noteCount": 1148,
+      "hitCount": 238,
+      "instruments": [
+        "drone",
+        "cello",
+        "horn",
+        "glass"
+      ],
+      "percussion": [
+        "frame",
+        "stone"
+      ],
+      "seed": "guardian-frost-knight",
+      "rate": 44100,
+      "frames": 5292000,
+      "rawSeconds": 124,
+      "rawPeak": 0.1791945844888687,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.13070374607876883,
+      "gain": 4.687641662810292,
+      "seam": [
+        0.000982128083705902,
+        0.00033302977681159973
+      ],
+      "end": [
+        0.03086867555975914,
+        0.04109416529536247
+      ],
+      "file": "guardian-frost-knight.wav",
+      "rawFile": "guardian-frost-knight-raw.wav",
+      "validated": true,
+      "duration_seconds": 120.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -17.67450433173824,
+      "dc_offset": 0.00018062115508502664,
+      "stereo_difference_rms": 0.0542982747113503,
+      "clipped_samples": 0,
+      "boundary_sample_delta": [
+        0.001007080078125,
+        0.000335693359375
+      ],
+      "final_sha256": "dc9b5f2d9a13e92ce0534186704ee8ecea057f23885699311d233b31f2cfacad",
+      "raw_sha256": "e3e949a95597f24f9f1b177af76bde4524e476acfff9cff2c093178a38914fbb"
+    },
+    {
+      "id": "guardian-ice-serpent",
+      "title": "Serpente do Gelo",
+      "kind": "serpent",
+      "bpm": 126,
+      "bars": 48,
+      "meter": 6,
+      "key": "F# minor",
+      "base": 42,
+      "loop": true,
+      "seconds": 137.14285714285714,
+      "noteCount": 1920,
+      "hitCount": 144,
+      "instruments": [
+        "drone",
+        "harp",
+        "cello",
+        "strings",
+        "recorder",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "timpani"
+      ],
+      "seed": "guardian-ice-serpent",
+      "rate": 44100,
+      "frames": 6048000,
+      "rawSeconds": 141.14285714285714,
+      "rawPeak": 0.17549285292625427,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.11325833926034327,
+      "gain": 4.786519712873922,
+      "seam": [
+        0.0030111558735370636,
+        0.00040777772665023804
+      ],
+      "end": [
+        -0.032322075217962265,
+        0.01861603558063507
+      ],
+      "file": "guardian-ice-serpent.wav",
+      "rawFile": "guardian-ice-serpent-raw.wav",
+      "validated": true,
+      "duration_seconds": 137.14285714285714,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -18.918861332110023,
+      "dc_offset": 0.00017154861631847563,
+      "stereo_difference_rms": 0.04970407801274943,
+      "clipped_samples": 0,
+      "boundary_sample_delta": [
+        0.003021240234375,
+        0.000396728515625
+      ],
+      "final_sha256": "5de9cf01b5b4d9490709cc8efb0d35aecfa1d1b8baa42396457a70155e0c048f",
+      "raw_sha256": "35de3d6a873f258cbc14e1c092b6180feb2eae5cefa69fdb991e40985676fa5c"
+    },
+    {
+      "id": "guardian-bellringer",
+      "title": "O Sineiro",
+      "kind": "bellringer",
+      "bpm": 96,
+      "bars": 64,
+      "meter": 3,
+      "key": "C harmonic minor",
+      "base": 36,
+      "loop": true,
+      "seconds": 120,
+      "noteCount": 928,
+      "hitCount": 208,
+      "instruments": [
+        "drone",
+        "organ",
+        "cello",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "rattle",
+        "scrape"
+      ],
+      "seed": "guardian-bellringer",
+      "rate": 44100,
+      "frames": 5292000,
+      "rawSeconds": 124,
+      "rawPeak": 0.09667318314313889,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.21805853391804844,
+      "gain": 8.689069426381215,
+      "seam": [
+        0.0015810318291187286,
+        0.0007699877023696899
+      ],
+      "end": [
+        -0.035727888345718384,
+        -0.08974441885948181
+      ],
+      "file": "guardian-bellringer.wav",
+      "rawFile": "guardian-bellringer-raw.wav",
+      "validated": true,
+      "duration_seconds": 120.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -13.228803344496141,
+      "dc_offset": -2.303264326699647e-05,
+      "stereo_difference_rms": 0.07961074083858616,
+      "clipped_samples": 0,
+      "boundary_sample_delta": [
+        0.0015869140625,
+        0.000762939453125
+      ],
+      "final_sha256": "421ecae6f62c8478f9d8e1deef19ef93d488ca4bccf3b3849e5c5fb7c262c78e",
+      "raw_sha256": "7b863783393e43b563dd9062147c0f9b87ba9998f953c6e906cb0336fb15793b"
+    },
+    {
+      "id": "guardian-ancient-yeti",
+      "title": "Yeti Ancião",
+      "kind": "yeti",
+      "bpm": 100,
+      "bars": 56,
+      "meter": 4,
+      "key": "E phrygian",
+      "base": 40,
+      "loop": true,
+      "seconds": 134.4,
+      "noteCount": 730,
+      "hitCount": 392,
+      "instruments": [
+        "drone",
+        "cello",
+        "horn",
+        "glass"
+      ],
+      "percussion": [
+        "frame",
+        "stone",
+        "timpani"
+      ],
+      "seed": "guardian-ancient-yeti",
+      "rate": 44100,
+      "frames": 5927040,
+      "rawSeconds": 138.4,
+      "rawPeak": 0.2686404585838318,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.10262655114269555,
+      "gain": 3.1268558891990947,
+      "seam": [
+        0.0009475173428654671,
+        0.0003367327153682709
+      ],
+      "end": [
+        0.004854434635490179,
+        0.040034327656030655
+      ],
+      "file": "guardian-ancient-yeti.wav",
+      "rawFile": "guardian-ancient-yeti-raw.wav",
+      "validated": true,
+      "duration_seconds": 134.4,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -19.775071081425406,
+      "dc_offset": 0.0001432605366922586,
+      "stereo_difference_rms": 0.02920823537236261,
+      "clipped_samples": 0,
+      "boundary_sample_delta": [
+        0.000946044921875,
+        0.000335693359375
+      ],
+      "final_sha256": "b4e9d32333866b70a35794e02e7a02f92130617469fd57a17af07ba2d990cd0a",
+      "raw_sha256": "71dffded5ac0e5712b6b100209e6f4b1b6e843864c01827d89b3b8a99f43acee"
+    },
+    {
+      "id": "boss-winter-king",
+      "title": "Rei do Inverno",
+      "kind": "king",
+      "bpm": 128,
+      "bars": 80,
+      "meter": 4,
+      "key": "D harmonic minor",
+      "base": 38,
+      "loop": true,
+      "seconds": 150,
+      "noteCount": 2320,
+      "hitCount": 970,
+      "instruments": [
+        "drone",
+        "cello",
+        "strings",
+        "horn",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "frame",
+        "rattle",
+        "gong"
+      ],
+      "seed": "boss-winter-king",
+      "rate": 44100,
+      "frames": 6615000,
+      "rawSeconds": 154,
+      "rawPeak": 0.24148988723754883,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.10731883543668956,
+      "gain": 3.47840652711767,
+      "seam": [
+        0.001551331952214241,
+        0.001300562173128128
+      ],
+      "end": [
+        -0.008943897671997547,
+        -0.039296992123126984
+      ],
+      "file": "boss-winter-king.wav",
+      "rawFile": "boss-winter-king-raw.wav",
+      "validated": true,
+      "duration_seconds": 150.0,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -19.38674622846794,
+      "dc_offset": 0.0002094989387356505,
+      "stereo_difference_rms": 0.043627808491172114,
+      "clipped_samples": 0,
+      "boundary_sample_delta": [
+        0.001556396484375,
+        0.00128173828125
+      ],
+      "final_sha256": "79aa17f48d6730f142267115967e01879b32d353400ca431deadac2e5c4c9326",
+      "raw_sha256": "fb2edaebe02dde5f4b2bdb2f37ea2d354e3ee45e1164a74e489bd637c2426541"
+    },
+    {
+      "id": "boss-winter-king-enraged",
+      "title": "Rei do Inverno - Coroa Partida",
+      "kind": "king",
+      "bpm": 152,
+      "bars": 80,
+      "meter": 4,
+      "key": "D harmonic minor",
+      "base": 38,
+      "intense": true,
+      "loop": true,
+      "seconds": 126.3157894736842,
+      "noteCount": 3080,
+      "hitCount": 1130,
+      "instruments": [
+        "drone",
+        "strings",
+        "horn",
+        "glass",
+        "box",
+        "trumpet"
+      ],
+      "percussion": [
+        "frame",
+        "rattle",
+        "gong"
+      ],
+      "seed": "boss-winter-king-enraged",
+      "rate": 44100,
+      "frames": 5570526,
+      "rawSeconds": 130.31578231292517,
+      "rawPeak": 0.2148546576499939,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.15532541767944788,
+      "gain": 4.176700017419141,
+      "seam": [
+        0.0061973705887794495,
+        0.005079117603600025
+      ],
+      "end": [
+        0.04165242984890938,
+        -0.011149113066494465
+      ],
+      "file": "boss-winter-king-enraged.wav",
+      "rawFile": "boss-winter-king-enraged-raw.wav",
+      "validated": true,
+      "duration_seconds": 126.31578231292517,
+      "measured_peak_dbfs": -1.5147677157072617,
+      "measured_rms_dbfs": -16.1754144994602,
+      "dc_offset": 0.0026094822117480607,
+      "stereo_difference_rms": 0.07166333578866878,
+      "clipped_samples": 0,
+      "boundary_sample_delta": [
+        0.006195068359375,
+        0.005096435546875
+      ],
+      "final_sha256": "2eeca10dc927d4a8e53be08da201f95981a627da5f2960a8c2e8e01b843ed0fc",
+      "raw_sha256": "09e042fbfcc09f10459ff2a85a10236a94efc08f418ead93356df1bc42782602"
+    }
+  ]
+}
