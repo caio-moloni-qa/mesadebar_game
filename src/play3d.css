@@ -25,7 +25,6 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .menu-content { position: relative; z-index: 1; min-height: 100%; display: grid; align-items: center; padding: 42px 32px; }
 .title-step { min-height: calc(100dvh - 84px); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: clamp(32px, 5vh, 56px); padding-bottom: 62px; }
 .title-brand { text-align: center; animation: arrive .7s ease both; }
-.title-brand > .eyebrow { font-size: 10px; letter-spacing: .44em; color: #e4d7b9; margin-bottom: 25px; }
 .game-wordmark { margin: 0; font: 900 clamp(50px, 9.4vw, 134px)/1.1 var(--display); letter-spacing: -.055em; filter: drop-shadow(0 10px 16px #0009); }
 .game-wordmark span { color: #cf7850; -webkit-text-stroke: 1px #f1cc80; text-shadow: 0 2px #a9513c, 0 4px #773831, 0 6px #4b2426, 0 8px #291c23; background: linear-gradient(#f4d599 7%, #e5a05d 38%, #ba5441 75%); background-clip: text; -webkit-text-fill-color: transparent; }
 .brand-rule { display: flex; align-items: center; justify-content: center; gap: 16px; max-width: 82%; margin: 22px auto 17px; color: var(--gold); }
@@ -303,7 +302,6 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
   .audio-controls[data-mode="menu"] { top: 16px; }
   .audio-panel { top: 54px; bottom: auto; }
   .menu-content { padding: 25px 16px; }
-  .title-brand > .eyebrow { font-size: 8px; letter-spacing: .3em; margin-bottom: 20px; }
   .game-wordmark { font-size: clamp(40px, 11vw, 58px); }
   .title-tagline { font-size: 11px; letter-spacing: .02em; }
   .title-nav { width: 225px; }
@@ -347,7 +345,6 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
   .hero-choice { min-height: 58px; }
   .menu-content { padding-block: 24px; }
   .title-step { min-height: calc(100dvh - 48px); gap: 18px; padding-bottom: 30px; }
-  .title-brand > .eyebrow { margin-bottom: 8px; }
   .game-wordmark { font-size: 70px; }
   .brand-rule { margin-block: 10px; }
   .title-nav { gap: 0; }

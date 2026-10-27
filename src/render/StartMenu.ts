@@ -152,7 +152,7 @@ export class StartMenu {
     const step = document.createElement('section');
     step.className = 'title-step';
     step.innerHTML = `
-      <div class="title-brand"><p class="eyebrow">UMA AVENTURA DE SOBREVIVÊNCIA</p>
+      <div class="title-brand">
         <h1 class="game-wordmark" aria-label="Venivium"><span aria-hidden="true">VENIVIUM</span></h1>
         <div class="brand-rule" aria-hidden="true"><i></i><b>◆</b><i></i></div>
         <p class="title-tagline">A última rodada é pela sobrevivência.</p></div>
