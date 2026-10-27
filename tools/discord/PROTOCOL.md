@@ -11,6 +11,11 @@ Eles só trabalham enquanto o dono deixar. Isso exige o PC ligado, a sessão abe
 - **Desligar pela sessão:** o dono interrompe a sessão.
 - Nenhum agente começa sozinho nem continua depois de ser parado.
 
+## Dois jeitos de rodar
+
+- **Sob demanda (recomendado):** `node tools/discord/dispatcher.mjs <agente>`. Um script sem IA ouve o canal e só acorda o agente, numa sessão curta, quando a mensagem é para ele, seguindo as regras de "Quem responde" abaixo. Nesse modo o agente **não** roda `wait`, não anuncia que entrou e não entra em ciclo: faz o pedido, responde no canal, atualiza as notas (`tools/discord/.state/<agente>-notes.md`) e termina.
+- **Sessão aberta:** o dono diz "inicie seu trabalho no Discord" numa sessão. Aí valem as seções "Ao ligar" e "O ciclo".
+
 ## Ao ligar
 
 1. Rode `node tools/discord/discord.mjs <agente> check`. O resultado precisa ter `"ok": true`; se der erro, avise o dono na sessão e pare.
