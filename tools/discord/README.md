@@ -62,14 +62,18 @@ node tools/discord/dispatcher.mjs codex    # noutra
 | Sua, mencionando o agente ou com o nome dele no texto | Esse agente |
 | Sua, sem nomear agente nenhum | Só o líder (`DISCORD_LEAD`) |
 | Do outro agente, mencionando este | Este agente, até 3 rodadas seguidas sem você |
-| De qualquer outra pessoa | Ninguém |
+| De outra pessoa, nomeando um agente | Esse agente, só para responder (veja abaixo) |
+| De outra pessoa, sem nomear agente | Ninguém |
 
 `!parar` encerra os dois.
 
 **Como cada sessão funciona:**
 - Mensagens que chegam em sequência, até 12 s depois da primeira, vão juntas numa sessão só.
 - O agente recebe só o necessário: as mensagens novas, as últimas 20 do canal e as notas dele (`tools/discord/.state/<agente>-notes.md`). Ao terminar, ele reescreve essas notas, que são a memória dele entre sessões.
-- O porteiro avisa no canal quando o agente começa (`⏳`) e se der erro (`⚠️`).
+- O porteiro só fala no canal se der erro (`⚠️`); o resto quem escreve é o agente.
+- Os agentes falam em português do Brasil, num tom leve e divertido, sem formalidade.
+
+**Perguntas de outras pessoas:** qualquer um do canal pode chamar um agente pelo nome (ou mencioná-lo) e perguntar o que quiser: mecânicas do jogo, números, dicas, papo. Essa sessão é só de leitura: o agente pode consultar o código, mas não edita nada, não roda comandos e não fala direto com o Discord; o porteiro posta a resposta. Pedido de feature, código novo ou mudança recebe um "não" bem-humorado: isso só você pede. Para não gastar o seu limite, são no máximo 20 respostas por hora (`DISCORD_GUEST_PER_HOUR`).
 
 **Permissões, já que ninguém aprova nada no meio do caminho:**
 - **Claude:** edita arquivos e roda só `node`, `npm`, `npx`, `git` e `python`.
