@@ -318,6 +318,77 @@ export class TierPicker {
   }
 }
 
+/** The arenas the tavern's portal can open onto, as the picker shows them. */
+export const ARENA_CHOICES: Array<{ id: string; name: string; text: string }> = [
+  { id: 'greenfield', name: 'Greenfield', text: 'Campos verdes, o templo em ruínas, o lago e o cemitério.' },
+  { id: 'snowfield', name: 'Campo Nevado', text: 'Neve e ruínas medievais: o castelo, o lago congelado e a capela.' }
+];
+
+/** At the portal: which arena to fight in (1–2 or click). The last one chosen is preselected. */
+export class ArenaPicker {
+  private readonly root: HTMLDivElement;
+
+  constructor(container: HTMLElement, private readonly onPick: (id: string) => void, private readonly onClose: () => void) {
+    this.root = document.createElement('div');
+    this.root.className = 'tavern-dialog tier-picker';
+    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('aria-label', 'Escolha a arena');
+    this.root.hidden = true;
+    container.appendChild(this.root);
+    window.addEventListener('keydown', (event) => {
+      if (this.root.hidden) return;
+      const index = Number(event.key) - 1;
+      if (Number.isInteger(index) && index >= 0) this.root.querySelectorAll<HTMLButtonElement>('.tier-option')[index]?.click();
+    });
+  }
+
+  get open(): boolean {
+    return !this.root.hidden;
+  }
+
+  show(current: string): void {
+    this.root.hidden = false;
+    const body = document.createElement('div');
+    body.className = 'dialog-body';
+    const title = document.createElement('p');
+    title.className = 'dialog-name';
+    title.textContent = 'Escolha a arena';
+    const hint = document.createElement('p');
+    hint.className = 'dialog-text';
+    hint.textContent = 'Para onde o portal leva desta vez?';
+    const list = document.createElement('div');
+    list.className = 'tier-list';
+    ARENA_CHOICES.forEach((arena, index) => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'tier-option';
+      option.setAttribute('aria-pressed', String(arena.id === current));
+      const name = document.createElement('strong');
+      name.textContent = `${index + 1}. ${arena.name}`;
+      const detail = document.createElement('span');
+      detail.textContent = arena.text;
+      option.append(name, detail);
+      option.addEventListener('click', () => this.onPick(arena.id));
+      list.append(option);
+    });
+    const actions = document.createElement('div');
+    actions.className = 'dialog-actions';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'ui-button';
+    back.textContent = 'Ainda não (Esc)';
+    back.addEventListener('click', () => this.onClose());
+    actions.append(back);
+    body.append(title, hint, list, actions);
+    this.root.replaceChildren(body);
+    this.root.querySelector<HTMLButtonElement>('.tier-option[aria-pressed="true"]')?.focus({ preventScroll: true });
+  }
+
+  hide(): void {
+    this.root.hidden = true;
+  }
+}
+
 /** Every enemy and guardian the bestiary knows, in the order it lists them. */
 const BESTIARY: Array<{ id: string; name: string; kind: 'horda' | 'guardião' | 'chefe' }> = [
   { id: 'skeleton', name: 'Esqueleto', kind: 'horda' },

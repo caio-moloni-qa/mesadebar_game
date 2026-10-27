@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ArenaTheme, activeArenaTheme } from './arenaTheme';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LAKE } from '../../config/arenaLayout';
 import { ArenaMap, lakeOutline } from '../../core/world/ArenaMap';
@@ -16,7 +17,7 @@ export class Water {
   /** The level on screen, easing towards the map's (the core refills the lake in one step; the water rises back). */
   private shownLevel = 1;
 
-  constructor(map: ArenaMap) {
+  constructor(map: ArenaMap, theme: ArenaTheme = activeArenaTheme()) {
     const outline = lakeOutline(96);
     // ShapeGeometry lives in XY; (X, -Z) there lands on (X, 0, Z) after the -90° X rotation.
     const shape = new THREE.Shape(outline.map((point) => new THREE.Vector2(point.x * WORLD_SCALE, -point.y * WORLD_SCALE)));
@@ -32,9 +33,9 @@ export class Water {
         uCenter: { value: new THREE.Vector2(LAKE.center.x * WORLD_SCALE, LAKE.center.y * WORLD_SCALE) },
         uRadius: { value: LAKE.radius * WORLD_SCALE },
         uHarmonics: { value: harmonics },
-        uShallow: { value: new THREE.Color(0x72bbaa) },
-        uDeep: { value: new THREE.Color(0x244f69) },
-        uFoam: { value: new THREE.Color(0xe6f2ec) },
+        uShallow: { value: new THREE.Color(theme.water.shallow) },
+        uDeep: { value: new THREE.Color(theme.water.deep) },
+        uFoam: { value: new THREE.Color(theme.water.foam) },
         uLevel: { value: 1 }
       },
       vertexShader: /* glsl */ `
@@ -102,7 +103,7 @@ export class Water {
     this.surface = surface;
     surface.receiveShadow = false;
     this.root.add(surface);
-    this.root.add(this.createReeds(map));
+    if (theme.water.reeds) this.root.add(this.createReeds(map));
   }
 
   /** Follows the map's lake level: the surface (and its shoreline) shrinks to the centre as it drains. */

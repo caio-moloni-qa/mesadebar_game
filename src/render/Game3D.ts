@@ -7,7 +7,7 @@ import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { ArenaMap } from '../core/world/ArenaMap';
 import { ProjectileKind, snapPrevious } from '../core/session/entities';
 import { HandAttack } from './models/clips';
-import { ZONES, ZoneKind } from '../config/arenaLayout';
+import { ARENA_LAYOUTS, ZONES, ZoneKind, useArenaLayout } from '../config/arenaLayout';
 import { CameraRig } from './CameraRig';
 import { ChoiceOverlay } from './ChoiceOverlay';
 import { Hud } from './Hud';
@@ -32,7 +32,7 @@ import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyConsumable, buy
 import { HeroKitViews } from './views/HeroKitViews';
 import { PowerViews } from './views/PowerViews';
 import { PowerBanner } from './ui/PowerBanner';
-import { RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
+import { ArenaPicker, RecordBook, SergioShop, TavernHeader, TierPicker } from './ui/TavernHub';
 import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
 import { GuardianIntro } from './GuardianIntro';
@@ -64,6 +64,8 @@ export interface Game3DOptions {
   seed?: number;
   stressEnemyCount?: number;
   invincible?: boolean;
+  /** The arena to start in (?arena=snowfield); the tavern's portal lets the player change it. */
+  arena?: string;
   /** Debug: start the hero in a zone instead of the spawn clearing (?at=ruins|lake|forest|graveyard|camp|meadow). */
   startZone?: ZoneKind;
   /** Debug: draw every collision shape (?debug=collision). */
@@ -90,9 +92,12 @@ export class Game3D {
   private readonly scene = new THREE.Scene();
   private readonly cameraRig: CameraRig;
   private readonly pipeline: PixelPipeline;
-  private readonly arena: Arena;
+  private arena: Arena;
   /** One map per page load: the authored layout with this load's detail seed, shared by every run (fixed zones). */
-  private readonly arenaMap: ArenaMap;
+  private arenaMap: ArenaMap;
+  /** The arena layout in play (config/arenaLayout), and the seed its detail is drawn from. */
+  private arenaId = 'greenfield';
+  private readonly arenaSeed: number;
   private readonly hud: Hud;
   private readonly screens: RunScreens;
   private readonly bossUi: BossUi;
@@ -128,6 +133,7 @@ export class Game3D {
   private readonly shop: SergioShop;
   private readonly tavernHeader: TavernHeader;
   private readonly tierPicker: TierPicker;
+  private readonly arenaPicker: ArenaPicker;
   private readonly recordBook: RecordBook;
   /** Difficulty tier for the next run (kept for "Tentar novamente"). */
   private tier = 1;
@@ -166,9 +172,13 @@ export class Game3D {
     container.appendChild(this.renderer.domElement);
     this.pipeline = new PixelPipeline(this.renderer);
     this.scene.background = new THREE.Color(PALETTE.background);
-    const arenaSeed = options.seed ?? randomSeed();
-    this.arenaMap = ArenaMap.generate(arenaSeed);
-    this.arena = new Arena(this.arenaMap, arenaSeed);
+    this.arenaSeed = options.seed ?? randomSeed();
+    if (options.arena && ARENA_LAYOUTS[options.arena]) {
+      this.arenaId = options.arena;
+      useArenaLayout(ARENA_LAYOUTS[options.arena]);
+    }
+    this.arenaMap = ArenaMap.generate(this.arenaSeed);
+    this.arena = new Arena(this.arenaMap, this.arenaSeed);
     if (options.showCollision) this.scene.add(createCollisionOverlay(this.arenaMap));
     this.bossEffects = new BossEffects(this.particles, this.bossViews);
     this.scene.add(this.bossEffects.root, this.bossViews.root);
@@ -281,6 +291,11 @@ export class Game3D {
       }
     });
     this.tavernHeader = new TavernHeader(container);
+    this.arenaPicker = new ArenaPicker(container, (id) => {
+      this.arenaPicker.hide();
+      this.useArena(id);
+      this.pickTierOrStart();
+    }, () => this.arenaPicker.hide());
     this.tierPicker = new TierPicker(container, (tier) => {
       this.tier = tier;
       this.tierPicker.hide();
@@ -313,6 +328,7 @@ export class Game3D {
     this.mode = 'run';
     this.shop.hide();
     this.tierPicker.hide();
+    this.arenaPicker.hide();
     this.recordBook.hide();
     this.run = choice;
     this.inMenu = false;
@@ -377,11 +393,28 @@ export class Game3D {
   private departFromTavern(choice: RunChoice): void {
     this.run = choice;
     this.menu.hide();
+    this.arenaPicker.show(this.arenaId);
+  }
+
+  private pickTierOrStart(): void {
     if (this.progress.tierUnlocked > 1) this.tierPicker.show(this.progress, Math.min(this.tier, this.progress.tierUnlocked));
     else {
       this.tier = 1;
-      this.startRun(choice);
+      this.startRun(this.run);
     }
+  }
+
+  /** Swaps the arena the runs are played in: the layout everything reads, the map and its scenery. */
+  private useArena(id: string): void {
+    const layout = ARENA_LAYOUTS[id];
+    if (!layout || id === this.arenaId) return;
+    this.arenaId = id;
+    useArenaLayout(layout);
+    this.scene.remove(this.arena.root);
+    disposeTree(this.arena.root);
+    this.arenaMap = ArenaMap.generate(this.arenaSeed);
+    this.arena = new Arena(this.arenaMap, this.arenaSeed);
+    this.scene.add(this.arena.root);
   }
 
   /** Holds the game under a tip; `after` runs once it's dismissed. */
@@ -969,10 +1002,11 @@ export class Game3D {
         }
         return;
       }
-      if (this.shop.open || this.tierPicker.open || this.recordBook.open) {
+      if (this.shop.open || this.tierPicker.open || this.arenaPicker.open || this.recordBook.open) {
         if (event.code === 'Escape') {
           this.shop.hide();
           this.tierPicker.hide();
+          this.arenaPicker.hide();
           this.recordBook.hide();
         }
         return;
@@ -1019,7 +1053,7 @@ export class Game3D {
   }
 
   private readMoveInput(): void {
-    if (this.inMenu || this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)) {
+    if (this.inMenu || this.shop.open || this.tierPicker.open || this.arenaPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)) {
       this.session.setMoveInput(0, 0);
       return;
     }
@@ -1104,7 +1138,7 @@ export class Game3D {
     }
     this.screens.update(this.session, this.inMenu, this.result);
     // Station prompts hide behind the tavern's panels.
-    if (this.mode !== 'menu') this.bossUi.setVisible(!(this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)));
+    if (this.mode !== 'menu') this.bossUi.setVisible(!(this.shop.open || this.tierPicker.open || this.arenaPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)));
     this.bossUi.update(this.session, this.projectToScreen);
     this.companionBars.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {
@@ -1117,10 +1151,23 @@ export class Game3D {
     });
     this.choices.update(this.session);
     this.tavernDialog.update(this.session, this.progress);
-    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId));
+    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.arenaPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId));
   }
 }
 
 function randomSeed(): number {
   return Math.floor(Math.random() * 2 ** 31);
+}
+
+/** Frees an object tree's GPU resources (geometries, materials and their textures). */
+function disposeTree(root: THREE.Object3D): void {
+  root.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    mesh.geometry?.dispose();
+    const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+    materials.forEach((material) => {
+      Object.values(material).forEach((value) => { if (value instanceof THREE.Texture) value.dispose(); });
+      material.dispose();
+    });
+  });
 }

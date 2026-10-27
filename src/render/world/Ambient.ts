@@ -3,6 +3,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const FIREFLY_COUNT = 70;
 const FIREFLY_RANGE = 18;
+/** Snowfall: more flakes than fireflies, falling through this many meters before wrapping back up. */
+const SNOWFLAKE_COUNT = 220;
+const SNOW_HEIGHT = 7;
 const EMBERS_PER_BRAZIER = 10;
 /** Point light per brazier. Physically based units (threejs-lighting): candela with inverse-square decay, so a
  *  small fire needs an intensity in the tens and a finite `distance` to keep it local and cheap. */
@@ -29,7 +32,7 @@ export class Ambient {
   private readonly matrix = new THREE.Matrix4();
   private readonly focus = new THREE.Vector3();
 
-  constructor(private readonly braziers: FireSpot[], private readonly rng: () => number) {
+  constructor(private readonly braziers: FireSpot[], private readonly rng: () => number, private readonly snow = false) {
     // Flame: two stacked tapered cones, inner bright, outer orange.
     const outerFlame = new THREE.ConeGeometry(0.3, 0.75, 5).translate(0, 0.37, 0).toNonIndexed();
     const outerCount = outerFlame.attributes.position.count;
@@ -57,10 +60,10 @@ export class Ambient {
       for (let index = 0; index < EMBERS_PER_BRAZIER; index += 1) this.emberState.push(this.newEmber(brazier, rng() * 1.6));
     });
 
-    this.fireflies = new THREE.InstancedMesh(cube, new THREE.MeshBasicMaterial({ color: 0xe8ff9a }), FIREFLY_COUNT);
+    this.fireflies = new THREE.InstancedMesh(cube, new THREE.MeshBasicMaterial({ color: snow ? 0xf4f8ff : 0xe8ff9a }), snow ? SNOWFLAKE_COUNT : FIREFLY_COUNT);
     this.fireflies.frustumCulled = false;
     for (let index = 0; index < FIREFLY_COUNT; index += 1) {
-      this.fireflyState.push({ x: (rng() - 0.5) * 2 * FIREFLY_RANGE, y: 0.4 + rng() * 2, z: (rng() - 0.5) * 2 * FIREFLY_RANGE, phase: rng() * 10, speed: 0.4 + rng() * 0.6 });
+      this.fireflyState.push({ x: (rng() - 0.5) * 2 * FIREFLY_RANGE, y: snow ? rng() * SNOW_HEIGHT : 0.4 + rng() * 2, z: (rng() - 0.5) * 2 * FIREFLY_RANGE, phase: rng() * 10, speed: 0.4 + rng() * 0.6 });
     }
 
     this.root.add(this.flames, this.embers, this.fireflies);
@@ -90,6 +93,21 @@ export class Ambient {
     this.embers.instanceMatrix.needsUpdate = true;
 
     // Fireflies live in a box that follows the camera focus (wrapping around), so there are always some on screen.
+    if (this.snow) {
+      // Snowflakes fall and sway, wrapping back to the top.
+      this.fireflyState.forEach((flake, index) => {
+        flake.phase += deltaSeconds * flake.speed;
+        flake.y -= deltaSeconds * (0.7 + flake.speed * 0.6);
+        if (flake.y < 0) flake.y += SNOW_HEIGHT;
+        const x = wrap(flake.x + Math.sin(flake.phase * 1.3) * 0.6 + time * 0.25 - this.focus.x, FIREFLY_RANGE) + this.focus.x;
+        const z = wrap(flake.z + Math.cos(flake.phase) * 0.4 - this.focus.z, FIREFLY_RANGE) + this.focus.z;
+        const size = 0.5 + (index % 3) * 0.2;
+        this.matrix.makeScale(size, size, size).setPosition(x, flake.y, z);
+        this.fireflies.setMatrixAt(index, this.matrix);
+      });
+      this.fireflies.instanceMatrix.needsUpdate = true;
+      return;
+    }
     this.fireflyState.forEach((fly, index) => {
       fly.phase += deltaSeconds * fly.speed;
       const x = wrap(fly.x + Math.sin(fly.phase * 0.7) * 1.5 - this.focus.x, FIREFLY_RANGE) + this.focus.x;
