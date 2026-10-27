@@ -1,0 +1,46 @@
+{
+  "id": "boss-winter-king",
+  "title": "Rei do Inverno",
+  "kind": "king",
+  "bpm": 128,
+  "bars": 80,
+  "meter": 4,
+  "key": "D harmonic minor",
+  "base": 38,
+  "loop": true,
+  "seconds": 150,
+  "noteCount": 2320,
+  "hitCount": 970,
+  "instruments": [
+    "drone",
+    "cello",
+    "strings",
+    "horn",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "rattle",
+    "gong"
+  ],
+  "seed": "boss-winter-king",
+  "rate": 44100,
+  "frames": 6615000,
+  "rawSeconds": 154,
+  "rawPeak": 0.24148988723754883,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.10731883543668956,
+  "gain": 3.47840652711767,
+  "seam": [
+    0.001551331952214241,
+    0.001300562173128128
+  ],
+  "end": [
+    -0.008943897671997547,
+    -0.039296992123126984
+  ],
+  "file": "boss-winter-king.wav",
+  "rawFile": "boss-winter-king-raw.wav"
+}

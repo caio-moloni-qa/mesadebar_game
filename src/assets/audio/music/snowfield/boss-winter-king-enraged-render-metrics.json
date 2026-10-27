@@ -1,0 +1,47 @@
+{
+  "id": "boss-winter-king-enraged",
+  "title": "Rei do Inverno ? Coroa Partida",
+  "kind": "king",
+  "bpm": 152,
+  "bars": 80,
+  "meter": 4,
+  "key": "D harmonic minor",
+  "base": 38,
+  "intense": true,
+  "loop": true,
+  "seconds": 126.3157894736842,
+  "noteCount": 3080,
+  "hitCount": 1130,
+  "instruments": [
+    "drone",
+    "strings",
+    "horn",
+    "glass",
+    "box",
+    "trumpet"
+  ],
+  "percussion": [
+    "frame",
+    "rattle",
+    "gong"
+  ],
+  "seed": "boss-winter-king-enraged",
+  "rate": 44100,
+  "frames": 5570526,
+  "rawSeconds": 130.31578231292517,
+  "rawPeak": 0.2148546576499939,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.15532541767944788,
+  "gain": 4.176700017419141,
+  "seam": [
+    0.0061973705887794495,
+    0.005079117603600025
+  ],
+  "end": [
+    0.04165242984890938,
+    -0.011149113066494465
+  ],
+  "file": "boss-winter-king-enraged.wav",
+  "rawFile": "boss-winter-king-enraged-raw.wav"
+}
