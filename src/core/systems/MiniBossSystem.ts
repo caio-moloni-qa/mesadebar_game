@@ -464,7 +464,27 @@ export class MiniBossSystem {
       return;
     }
     // Walks only roughly where it faces: get behind it and it has to turn first.
-    if (Math.abs(wrapAngle(toPlayer - boss.facing)) < Math.PI / 3 && distance > enemy.radius + player.radius) this.walkTowards(boss, player.x, player.y, enemy.movementSpeed, delta, false);
+    if (Math.abs(wrapAngle(toPlayer - boss.facing)) < Math.PI / 3 && distance > enemy.radius + player.radius) {
+      const expected = (enemy.movementSpeed * delta) / 1000;
+      const moved = this.walkTowards(boss, player.x, player.y, enemy.movementSpeed, delta, false);
+      if (moved < expected * 0.4) this.sidestep(boss, toPlayer, expected);
+    }
+  }
+
+  /** Blocked head-on by a pillar or wall: slides sideways along it (towards the side the player is on) instead of
+   *  standing still behind it. */
+  private sidestep(boss: MiniBossState, toPlayer: number, step: number): void {
+    const { enemy } = boss;
+    const side = wrapAngle(toPlayer - boss.facing) >= 0 ? 1 : -1;
+    for (const turn of [side, -side]) {
+      const angle = boss.facing + turn * (Math.PI / 2);
+      const beforeX = enemy.x;
+      const beforeY = enemy.y;
+      enemy.x += Math.cos(angle) * step;
+      enemy.y += Math.sin(angle) * step;
+      this.host.arena.resolve(enemy);
+      if (Math.hypot(enemy.x - beforeX, enemy.y - beforeY) >= step * 0.4) return;
+    }
   }
 
   private turnTowards(boss: MiniBossState, target: number, rate: number, delta: number): void {
