@@ -172,10 +172,10 @@ export function storeIcon(id: string): string {
 
 /** The merchant's item art, one static URL per file for Vite. */
 const ITEM_ICONS: Record<MerchantItemId, string> = {
-  'polar-stew': svg('<ellipse cx="32" cy="44" rx="26" ry="9" fill="#dcecf5"/><path d="M10 28h44q0 25-22 25T10 28" fill="#db8b39"/><ellipse cx="32" cy="28" rx="22" ry="7" fill="#82472b"/><path d="M22 10q-8 7 0 13m14-17q-8 9 0 16" stroke="#fff0cd" stroke-width="4" fill="none"/>'),
-  'glacier-fish': svg('<ellipse cx="32" cy="39" rx="28" ry="18" fill="#f3ecce"/><path d="M14 34q20-22 34 0-14 24-34 0m34 0 11-12v24z" fill="#65b8ca"/><circle cx="23" cy="31" r="3" fill="#243845"/>'),
-  'tundra-roast': svg('<ellipse cx="32" cy="44" rx="28" ry="14" fill="#f3ecce"/><path d="M13 40q-3-25 20-23 24 1 16 25z" fill="#965439"/><circle cx="47" cy="46" r="6" fill="#73a34a"/><circle cx="15" cy="45" r="5" fill="#e79b3c"/>'),
-  'berry-tea': svg('<path d="M13 25h31v25q-15 12-31 0z" fill="#e4b571"/><path d="M44 28q22-2 11 16H44" fill="none" stroke="#e4b571" stroke-width="5"/><ellipse cx="28" cy="25" rx="15" ry="5" fill="#943d54"/><path d="M22 5q-8 8 0 15m13-15q-8 8 0 15" stroke="#fff1d2" stroke-width="3" fill="none"/>'),
+  'polar-stew': new URL('../../assets/upgrades/merchant/igloo-polar-stew-icon.png', import.meta.url).href,
+  'glacier-fish': new URL('../../assets/upgrades/merchant/igloo-glacier-fish-icon.png', import.meta.url).href,
+  'tundra-roast': new URL('../../assets/upgrades/merchant/igloo-tundra-roast-icon.png', import.meta.url).href,
+  'berry-tea': new URL('../../assets/upgrades/merchant/igloo-berry-tea-icon.png', import.meta.url).href,
   'divine-blessing': new URL('../../assets/upgrades/merchant/merchant-divine-blessing-icon.png', import.meta.url).href,
   'arcane-curse': new URL('../../assets/upgrades/merchant/merchant-arcane-curse-icon.png', import.meta.url).href,
   heal: new URL('../../assets/upgrades/merchant/merchant-heal-potion-icon.png', import.meta.url).href,
