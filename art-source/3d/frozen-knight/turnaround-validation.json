@@ -1,0 +1,53 @@
+{
+  "id": "frozen-knight",
+  "source": "turnaround.png",
+  "width": 1536,
+  "height": 1024,
+  "views": [
+    {
+      "name": "front",
+      "path": "views/front.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        0,
+        0,
+        610,
+        1024
+      ],
+      "sha256": "7c79b41b160264c1800af25744570763d9c64d5be98aee6167d55abbe5c90077"
+    },
+    {
+      "name": "side",
+      "path": "views/side.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        610,
+        0,
+        930,
+        1024
+      ],
+      "sha256": "d51d978daa0927848e8b78f459233e0fe86a13e511db2e5e18a3ae1dd2a28c91"
+    },
+    {
+      "name": "back",
+      "path": "views/back.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        930,
+        0,
+        1536,
+        1024
+      ],
+      "sha256": "8d93d7d296b7b7aff4657acbc830ebb2f6866f2d7a6720cd86628a339da92013"
+    }
+  ]
+}

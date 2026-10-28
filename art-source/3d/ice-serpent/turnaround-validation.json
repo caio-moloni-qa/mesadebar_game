@@ -1,0 +1,53 @@
+{
+  "id": "ice-serpent",
+  "source": "turnaround.png",
+  "width": 1536,
+  "height": 1024,
+  "views": [
+    {
+      "name": "front",
+      "path": "views/front.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        0,
+        0,
+        544,
+        1024
+      ],
+      "sha256": "2ee72c76b0a085691e51d0ae6cd5781d16c7d1c5ec04d80c4b7172df293e5580"
+    },
+    {
+      "name": "side",
+      "path": "views/side.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        544,
+        0,
+        1022,
+        1024
+      ],
+      "sha256": "88c98cbfa1eec8efbef56c8028bc7dbb087fc3b1098db995428256f06fe8ce22"
+    },
+    {
+      "name": "back",
+      "path": "views/back.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        1022,
+        0,
+        1536,
+        1024
+      ],
+      "sha256": "85c426f18854b4e53ffb39a3a5951c9d90523e3b2a83053fa45d237fa96cba05"
+    }
+  ]
+}

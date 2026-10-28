@@ -1,0 +1,19 @@
+{
+  "kind": "bellringer",
+  "file": "art-source/3d/bellringer/front.png",
+  "raw": "art-source/3d/bellringer/front-raw.png",
+  "raw_size": [
+    1024,
+    1536
+  ],
+  "size": [
+    1024,
+    1536
+  ],
+  "mode": "RGB",
+  "alpha_required": false,
+  "version": 1,
+  "source_sha256": "d69538948b2718685265185ea9f3941f53ee012a724171f3391762eb2aa9696e",
+  "raw_sha256": "d69538948b2718685265185ea9f3941f53ee012a724171f3391762eb2aa9696e",
+  "notes": "Concept art only; no gameplay code changed. Original preserved byte-for-byte."
+}

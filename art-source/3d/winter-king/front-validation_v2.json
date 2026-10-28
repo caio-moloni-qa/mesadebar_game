@@ -1,0 +1,19 @@
+{
+  "kind": "winter-king",
+  "file": "art-source/3d/winter-king/front_v2.png",
+  "raw": "art-source/3d/winter-king/front-raw_v2.png",
+  "raw_size": [
+    1024,
+    1536
+  ],
+  "size": [
+    1024,
+    1536
+  ],
+  "mode": "RGB",
+  "alpha_required": false,
+  "version": 2,
+  "source_sha256": "f89b437a4ef74c55bec4dae55f9f34f317edb7c27ffbf93c229ef10fd2b07778",
+  "raw_sha256": "f89b437a4ef74c55bec4dae55f9f34f317edb7c27ffbf93c229ef10fd2b07778",
+  "notes": "Concept art only; no gameplay code changed. Original preserved byte-for-byte."
+}
