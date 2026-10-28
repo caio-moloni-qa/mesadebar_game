@@ -336,7 +336,7 @@ export class StartMenu {
     const details = document.createElement('div');
     details.className = 'hero-details';
     const role = HERO_ROLES[character.id];
-    details.innerHTML = `<p class="eyebrow">${role.trait}</p><h2>${character.name}</h2><p class="hero-role">${role.title}</p><p class="hero-description">${character.description}</p>
+    details.innerHTML = `<p class="eyebrow">${role.trait}</p><div class="hero-name-row"><h2>${character.name}</h2></div><p class="hero-role">${role.title}</p><p class="hero-description">${character.description}</p>
       <dl class="hero-attributes"><div><dt>Vida</dt><dd>${character.maxHealth}<small>HP</small></dd></div><div><dt>Movimento</dt><dd>${character.movementSpeed}</dd></div><div><dt>Armadura</dt><dd>${character.armor}</dd></div></dl>`;
     const advantages = document.createElement('ul');
     advantages.className = 'hero-abilities';
@@ -369,7 +369,29 @@ export class StartMenu {
     kit.className = 'hero-kit';
     kit.append(advantages, signature);
     details.append(this.detailTabs({ habilidades: kit, poderes: powers, maestria: this.masteryPanel(character) }), choose);
+    details.querySelector('.hero-name-row')!.append(this.masteryBadge(character, () => {
+      details.querySelector<HTMLButtonElement>('[role="tablist"] button:last-child')!.click();
+    }));
     return details;
+  }
+
+  /** Keep saved mastery visible while browsing any details tab. */
+  private masteryBadge(character: CharacterConfig, openDetails: () => void): HTMLButtonElement {
+    const xp = this.progress.save().mastery[character.id] ?? 0;
+    const level = masteryLevel(xp);
+    const maxed = level >= MAX_MASTERY;
+    const badge = document.createElement('button');
+    badge.type = 'button';
+    badge.className = 'hero-mastery-badge';
+    badge.classList.toggle('maxed', maxed);
+    const progress = Math.round(masteryProgress(xp) * 100);
+    const status = maxed ? 'Maestria máxima' : `${xp} / ${MASTERY_THRESHOLDS[level]} XP`;
+    badge.title = `${status}. Ver detalhes da maestria`;
+    badge.setAttribute('aria-label', `Maestria de ${character.name}, nível ${level}. ${status}. Ver detalhes`);
+    badge.style.setProperty('--mastery-progress', `${progress}%`);
+    badge.innerHTML = `<span class="hero-mastery-badge-label">Maestria</span><strong>Nv. ${level}</strong>${maxed ? '<span class="hero-mastery-badge-max">MÁX.</span>' : ''}<span class="hero-mastery-badge-track" aria-hidden="true"></span>`;
+    badge.addEventListener('click', openDetails);
+    return badge;
   }
 
   /** The kit, the run's powers and the mastery share one tabbed panel (its height fixed to the tallest), so the
