@@ -15,6 +15,11 @@ export class Hud {
   private readonly xpFill: HTMLDivElement;
   private readonly build: HTMLDivElement;
   private readonly rotten: HTMLDivElement;
+  private readonly cold: HTMLDivElement;
+  private readonly coldFill: HTMLDivElement;
+  private readonly frostVignette: HTMLDivElement;
+  /** The storm's whiteout thickening over the field while it blows. */
+  private readonly blizzardHaze: HTMLDivElement;
   private readonly questList: HTMLUListElement;
   private readonly last = new Map<string, string>();
 
@@ -30,6 +35,7 @@ export class Hud {
           <div class="hud-health-bar"><div class="hud-fill"></div><div class="hud-shield-fill"></div><span data-field="health"></span></div>
         </div>
         <div class="hud-rotten" hidden><img src="${LIFE_STEAL_ICON}" alt=""><span>Aura podre · cura reduzida</span></div>
+        <div class="hud-cold" hidden title="Frio: perto de uma tocha ele baixa"><span>FRIO</span><div class="hud-cold-bar"><div class="hud-fill"></div></div></div>
         <ul class="hud-quests" hidden></ul>
       </div>
       <div class="hud-timer"><span class="eyebrow">SOBREVIVA</span><strong data-field="time"></strong></div>
@@ -38,6 +44,13 @@ export class Hud {
       <div class="hud-xp" role="progressbar" aria-label="Experiência" aria-valuemin="0" aria-valuemax="100"><div class="hud-xp-track"><div class="hud-fill"></div></div></div>
       <div class="hud-stats" data-field="stats"${showStats ? '' : ' hidden'}></div>
     `;
+    // Under the HUD panels: the ice closes in on the play field, not on the readouts.
+    this.frostVignette = document.createElement('div');
+    this.frostVignette.className = 'frost-vignette';
+    this.frostVignette.hidden = true;
+    this.blizzardHaze = document.createElement('div');
+    this.blizzardHaze.className = 'blizzard-haze';
+    this.root.prepend(this.blizzardHaze, this.frostVignette);
     container.appendChild(this.root);
     const field = (name: string) => this.root.querySelector<HTMLElement>(`[data-field="${name}"]`)!;
     this.fields = { health: field('health'), level: field('level'), time: field('time'), kills: field('kills'), currency: field('currency'), stats: field('stats') };
@@ -46,6 +59,8 @@ export class Hud {
     this.xpFill = this.root.querySelector<HTMLDivElement>('.hud-xp .hud-fill')!;
     this.build = this.root.querySelector<HTMLDivElement>('.hud-build')!;
     this.rotten = this.root.querySelector<HTMLDivElement>('.hud-rotten')!;
+    this.cold = this.root.querySelector<HTMLDivElement>('.hud-cold')!;
+    this.coldFill = this.root.querySelector<HTMLDivElement>('.hud-cold-bar .hud-fill')!;
     this.questList = this.root.querySelector<HTMLUListElement>('.hud-quests')!;
     this.root.querySelector('.hud-pause')!.addEventListener('click', () => onPause?.());
   }
@@ -73,8 +88,38 @@ export class Hud {
       this.last.set('rotten', String(rotten));
       this.rotten.hidden = !rotten;
     }
+    this.updateCold(session);
     this.updateBuild(session);
     this.updateQuests(session);
+  }
+
+  /** The Nevasca's thermometer, and the ice creeping in from the screen's edges as the cold climbs (at full cold
+   *  only a hole in the middle is left). */
+  private updateCold(session: GameSession): void {
+    const { blizzard } = session;
+    const active = String(blizzard.active);
+    if (this.last.get('coldActive') !== active) {
+      this.last.set('coldActive', active);
+      this.cold.hidden = !blizzard.active;
+      if (!blizzard.active) this.frostVignette.hidden = true;
+    }
+    // Capped below full white: the field (and the counters with no panel behind them) must stay readable.
+    const haze = String(Math.round(blizzard.intensity * 14) / 20);
+    if (this.last.get('haze') !== haze) {
+      this.last.set('haze', haze);
+      this.blizzardHaze.style.opacity = haze;
+    }
+    if (!blizzard.active) return;
+    const cold = blizzard.cold / 100;
+    this.setWidth('coldPct', this.coldFill, cold);
+    // In 2% steps, so the style is only rewritten when the look changes.
+    const step = String(Math.round(cold * 50));
+    if (this.last.get('coldStep') === step) return;
+    this.last.set('coldStep', step);
+    this.cold.classList.toggle('danger', cold >= 0.75);
+    this.frostVignette.hidden = cold < 0.12;
+    this.frostVignette.style.setProperty('--clear', `${Math.round(80 - cold * 66)}%`);
+    this.frostVignette.style.opacity = String(Math.min(1, (cold - 0.08) * 1.8));
   }
 
   /** The tavern missions under way ("Barris Perdidos 1/3"), and the finished ones waiting at the tavern. */

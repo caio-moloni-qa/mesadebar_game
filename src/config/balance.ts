@@ -44,6 +44,19 @@ export const FROST_TRAIL = { dropEveryMs: 220, lifetimeMs: 3000, radius: 26, slo
  *  last one landed. Reaching `max` freezes the hero solid for `freezeMs` (no moving, no attacking), clears the stacks
  *  and leaves `immuneMs` of grace before frost can build again. */
 export const FROST_STACKS = { max: 5, slowPerStack: 0.06, decayMs: 4000, freezeMs: 1000, immuneMs: 1500 };
+/** Nevasca (Campo Nevado): a cold meter (0..100) the HUD shows as a thermometer. The storm comes in fronts on the run
+ *  clock: `firstFrontMs` of calm, then `stormMs` of blizzard and `calmMs` of lull, again and again (`rampMs` to blow
+ *  in/out). In the storm the cold rises `risePerSec`; within a lit torch's reach it falls `warmPerSec` and that torch
+ *  burns its fuel (`torchFuelMs` of use; its reach shrinks to `torchMinRadius` of `torchRadius` as it burns down). In
+ *  the lull the cold eases `calmDecayPerSec` and burnt-out torches relight with `relightFuel` of a full load. Each
+ *  stack of Congelamento adds `coldPerFrostStack`. Full cold freezes the hero `freezeMs` (`freezeDamage`), then the
+ *  meter drops to `afterFreeze`. */
+export const BLIZZARD_TUNING = {
+  firstFrontMs: 40_000, stormMs: 90_000, calmMs: 30_000, rampMs: 4000,
+  risePerSec: 2.2, warmPerSec: 9, calmDecayPerSec: 3, coldPerFrostStack: 6,
+  torchRadius: 140, torchMinRadius: 0.55, torchFuelMs: 45_000, relightFuel: 0.5,
+  freezeMs: 2000, freezeDamage: 8, afterFreeze: 60
+};
 /** Every hit from these lands one stack of Congelamento (the Nevado horde's touch). */
 export const FROST_TOUCH_VARIANTS: ReadonlySet<string> = new Set(['frostSkeleton', 'frostSpirit', 'iceTroll']);
 /** The Xamã keeps at most `perShaman` snowmen alive each, raised `minRadius..maxRadius` from it. A snowman bursts once

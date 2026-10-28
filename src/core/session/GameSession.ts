@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, FROST_TOUCH_VARIANTS, FROST_TRAIL, ICE_TROLL, PLAYER_CONFIG, ENEMY_VARIANTS, SNOWMAN, WOLF_PACK, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, NEUTRAL_VARIANTS, hordeFor, requiredExperience } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, BLIZZARD_TUNING, ENEMY_CONFIG,FROST_TOUCH_VARIANTS, FROST_TRAIL, ICE_TROLL, PLAYER_CONFIG, ENEMY_VARIANTS, SNOWMAN, WOLF_PACK, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, NEUTRAL_VARIANTS, hordeFor, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
@@ -19,6 +19,7 @@ import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, diffi
 import { CompanionKind, MINI_BOSSES, MiniBossEvents, MiniBossKind, MiniBossSystem, guardianRotation } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId, NeutralVariantId } from '../systems/EnemySpawnScheduler';
+import { BlizzardSystem } from '../systems/BlizzardSystem';
 import { FrostTrail } from '../systems/FrostTrail';
 import { IcicleField } from '../systems/IcicleField';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
@@ -176,6 +177,8 @@ export class GameSession implements WeaponHost {
   readonly frostTrail = new FrostTrail();
   /** The Trolls de Gelo's icicles, marked and falling. */
   readonly icicles = new IcicleField();
+  /** The Nevasca: cold meter, storm fronts and torches (inactive where the arena has no torches, and in the hub). */
+  readonly blizzard: BlizzardSystem;
   /** The Troll's frost aura adds a stack every ICE_TROLL.auraTickMs while the hero stands in it. */
   private frostAuraNextAt = -Infinity;
   /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
@@ -229,6 +232,7 @@ export class GameSession implements WeaponHost {
     this.player = new PlayerState(character);
     this.arena = options.arena ?? ArenaMap.generate(options.seed);
     this.arena.lakeLevel = 1;
+    this.blizzard = new BlizzardSystem(options.hub ? undefined : this.arena.layout.torches);
     this.player.x = this.arena.center.x;
     this.player.y = this.arena.center.y;
     snapPrevious(this.player);
@@ -675,6 +679,7 @@ export class GameSession implements WeaponHost {
     this.updateEnemies(deltaMs, now);
     this.updatePlayerStatus(deltaMs, now);
     this.updateFrostTrail(now);
+    this.updateBlizzard(deltaMs, now);
     this.weapons.update(deltaMs);
     this.companions.update(deltaMs);
     this.abilities.update(deltaMs);
@@ -814,7 +819,10 @@ export class GameSession implements WeaponHost {
 
   /** Adds Congelamento to the hero; the stack that fills it freezes them solid. */
   private frostPlayer(count: number, now: number): void {
-    if (!this.player.alive || !this.player.addFrost(count, now)) return;
+    if (!this.player.alive) return;
+    // Every stack also chills the blizzard's meter (it's one threat), even the ones the grace turns away.
+    this.blizzard.addFrost(count);
+    if (!this.player.addFrost(count, now)) return;
     this.events.emit('player-status', { text: 'CONGELADO!', tone: 'slow' });
     this.events.emit('player-frozen', {});
   }
@@ -975,6 +983,15 @@ export class GameSession implements WeaponHost {
     if (!frost) return;
     this.player.applySlow(FROST_TRAIL.slowPercent, FROST_TRAIL.slowMs, now);
     if (frost === 'entered') this.events.emit('player-status', { text: `GEADA -${Math.round(FROST_TRAIL.slowPercent * 100)}%`, tone: 'slow' });
+  }
+
+  /** The Nevasca's cold; when it fills, the hero freezes solid for a moment (a punishment, never a kill on its own). */
+  private updateBlizzard(deltaMs: number, now: number): void {
+    if (!this.player.alive || !this.blizzard.update(deltaMs, this.elapsedMs, this.player, this.player.isFrozen(now))) return;
+    this.player.freezeSolid(BLIZZARD_TUNING.freezeMs, now);
+    if (this.player.health > BLIZZARD_TUNING.freezeDamage) this.hurtPlayer(BLIZZARD_TUNING.freezeDamage, now);
+    this.events.emit('player-status', { text: 'CONGELADO!', tone: 'slow' });
+    this.events.emit('player-frozen', {});
   }
 
   // ── Sandbox (the F9 panel) ──────────────────────────────────────────────────────────────────────────────────

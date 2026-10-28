@@ -78,6 +78,8 @@ export interface ArenaLayout {
   guardians: string[];
   /** Neutral creatures living here (NeutralSystem): each group's variant, home and how many share it. */
   neutrals?: NeutralSpot[];
+  /** Blizzard torches (BlizzardSystem): an arena with them gets the Nevasca. Kept on the trails, clear of props. */
+  torches?: Point[];
 }
 
 /** A group of neutral creatures (NEUTRAL_VARIANTS id) around one home spot; the group wakes together. */
@@ -226,7 +228,15 @@ export const SNOWFIELD: ArenaLayout = {
   stoneCircle: { center: { x: 1380, y: 2060 }, radius: 130, stones: 7 },
   shrine: { x: 2560, y: 1060 },
   // The castle's Cavaleiro Congelado first; the lake and the chapel keep Greenfield's guardians until theirs arrive.
-  guardians: ['frostKnight', 'lakeSpirit', 'gravedigger']
+  guardians: ['frostKnight', 'lakeSpirit', 'gravedigger'],
+  // On the trails, a short walk out of the clearing and on towards every zone, so there's always another to move to.
+  torches: [
+    { x: 1460, y: 1730 }, { x: 1290, y: 1725 },
+    { x: 1640, y: 1460 }, { x: 1460, y: 1020 },
+    { x: 1970, y: 1320 }, { x: 2280, y: 1140 },
+    { x: 2060, y: 1700 }, { x: 2280, y: 1770 },
+    { x: 1720, y: 2180 }, { x: 1690, y: 2560 }
+  ]
 };
 
 export const ARENA_LAYOUTS: Record<string, ArenaLayout> = { greenfield: GREENFIELD, snowfield: SNOWFIELD };

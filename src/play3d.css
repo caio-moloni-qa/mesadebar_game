@@ -151,6 +151,21 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .hud-health-bar > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; font-weight: 600; }
 .hud-rotten { display: flex; align-items: center; gap: 6px; margin-top: 9px; color: #c6b0d0; font-size: 10px; }
 .hud-rotten img { width: 18px; height: 18px; }
+/* Nevasca: the thermometer under the health bar, and the ice closing in from the screen's edges (--clear = the hole). */
+.hud-cold { display: flex; align-items: center; gap: 9px; margin-top: 9px; color: #bfe3f5; font-size: 9px; font-weight: 600; letter-spacing: .12em; }
+.hud-cold-bar { flex: 1; height: 8px; background: #080f12; border: 1px solid #9fd8f230; border-radius: 3px; overflow: hidden; }
+.hud-cold-bar .hud-fill { height: 100%; background: linear-gradient(90deg, #5fb4e6, #dff6ff); transition: width .25s; }
+.hud-cold.danger { color: #f2fbff; animation: hud-cold-pulse .7s ease-in-out infinite alternate; }
+@keyframes hud-cold-pulse { to { opacity: .55; } }
+.frost-vignette { --clear: 80%; position: absolute; inset: 0; pointer-events: none; transition: opacity .4s;
+  background:
+    repeating-conic-gradient(from 8deg at 50% 50%, #ffffff00 0deg 5deg, #e9f8ff22 6deg 7deg, #ffffff00 8deg 13deg),
+    radial-gradient(ellipse at center, #d7f1ff00 var(--clear), #c9ebfbb0 calc(var(--clear) + 14%), #eefaffee calc(var(--clear) + 34%));
+  -webkit-mask: radial-gradient(ellipse at center, #0000 calc(var(--clear) - 4%), #000 calc(var(--clear) + 10%));
+  mask: radial-gradient(ellipse at center, #0000 calc(var(--clear) - 4%), #000 calc(var(--clear) + 10%)); }
+.frost-vignette[hidden] { display: none; }
+.blizzard-haze { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s;
+  background: radial-gradient(ellipse at center, #e6f3fb30 20%, #dcecf68c 75%, #eef7fcbb); }
 .hud-timer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; padding: 8px 32px 13px; background: linear-gradient(#101b1dce, #101b1d00); }
 .hud-timer .eyebrow { color: #e1d9be; font-size: 8px; }
 .hud-timer strong { font: 500 31px/1.2 var(--display); letter-spacing: .07em; }
