@@ -1,0 +1,19 @@
+{
+  "kind": "ice-serpent",
+  "file": "art-source/3d/ice-serpent/front.png",
+  "raw": "art-source/3d/ice-serpent/front-raw.png",
+  "raw_size": [
+    1024,
+    1536
+  ],
+  "size": [
+    1024,
+    1536
+  ],
+  "mode": "RGB",
+  "alpha_required": false,
+  "version": 1,
+  "source_sha256": "25b54f8102c22ff8b8a448a3767298047f9d086f7942167ec16b7bd93b47e03b",
+  "raw_sha256": "25b54f8102c22ff8b8a448a3767298047f9d086f7942167ec16b7bd93b47e03b",
+  "notes": "Concept art only; no gameplay code changed. Original preserved byte-for-byte."
+}

@@ -1,0 +1,53 @@
+{
+  "id": "winter-king",
+  "source": "turnaround.png",
+  "width": 1536,
+  "height": 1024,
+  "views": [
+    {
+      "name": "front",
+      "path": "views/front.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        0,
+        0,
+        580,
+        1024
+      ],
+      "sha256": "dc065d0ed0fbdf9bb9953d4743c12ecb247c8e106f15b1a4000a269e26bc3121"
+    },
+    {
+      "name": "side",
+      "path": "views/side.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        580,
+        0,
+        920,
+        1024
+      ],
+      "sha256": "4839185cfb6a521083547f940a0d581a416e5b3f28416a4576f6f7dfce78386a"
+    },
+    {
+      "name": "back",
+      "path": "views/back.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        920,
+        0,
+        1536,
+        1024
+      ],
+      "sha256": "ad58d999dfa49b477e11e53c75c9170453f87bf7b6d20651b37b43f9cc62fb9a"
+    }
+  ]
+}
