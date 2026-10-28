@@ -1,4 +1,4 @@
-# Mesa de Bar: Sobrevivência
+# Venivium: Sobrevivência
 
 Survivors-like de fantasia medieval em 3D low-poly feito com Three.js, TypeScript e Vite.
 

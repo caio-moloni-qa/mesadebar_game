@@ -1,4 +1,4 @@
-# Mesa de Bar — music prompts
+# Venivium — music prompts
 
 One track per moment of the game, written for an AI music generator (Suno, Udio or similar). Each entry has a short
 **style** line (paste it in the style/genre field) and a **description** (paste it in the song description, or merge

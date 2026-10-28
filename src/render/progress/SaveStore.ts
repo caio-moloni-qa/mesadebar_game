@@ -28,7 +28,7 @@ export const SaveStore = {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `mesa-de-bar-progresso-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `venivium-progresso-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
     link.remove();

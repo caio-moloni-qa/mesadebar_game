@@ -1,4 +1,4 @@
-/** Mesa de Bar original procedural score suite.
+/** Venivium original procedural score suite.
  * Acoustic-inspired synthesis, not recordings or AI-service downloads.
  * Kept outside game code; rendered by render-music-suite.mjs.
  */

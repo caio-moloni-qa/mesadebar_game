@@ -1,9 +1,9 @@
-# Mesa de Bar — art brief for Codex
+# Venivium — art brief for Codex
 
 One brief, worked through in stages. Finish a stage, check it against its checklist, then start the next. Each stage
 lists every file: what it is, its exact size or grid, and **exactly where it lands**.
 
-The game is a 3D survivors-like with a low-poly, pixelated look ("Mesa de Bar", working title VENIVIUM). Medieval dark
+The game is a 3D survivors-like with a low-poly, pixelated look ("Venivium"). Medieval dark
 fantasy, a tavern between runs. On-screen text in the game is Brazilian Portuguese; **no text, letters, numbers,
 logos or watermarks appear in any asset**.
 

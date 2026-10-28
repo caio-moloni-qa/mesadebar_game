@@ -1,0 +1,4 @@
+interface:
+  display_name: "Venivium: architecture"
+  short_description: "How the Venivium 3D game is built and where things go: the engine-free simulation in src/core, the Three.js renderer in src/render, config, events, the Host pattern, tests."
+  default_prompt: "Use $venivium-architecture for this task."

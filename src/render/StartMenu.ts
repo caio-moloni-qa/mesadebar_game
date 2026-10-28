@@ -152,7 +152,7 @@ export class StartMenu {
     const step = document.createElement('section');
     step.className = 'title-step';
     step.innerHTML = `
-      <div class="title-brand"><p class="eyebrow">MESA DE BAR APRESENTA</p>
+      <div class="title-brand">
         <h1 class="game-wordmark" aria-label="Venivium"><span aria-hidden="true">VENIVIUM</span></h1>
         <div class="brand-rule" aria-hidden="true"><i></i><b>◆</b><i></i></div>
         <p class="title-tagline">A última rodada é pela sobrevivência.</p></div>
@@ -264,7 +264,7 @@ export class StartMenu {
     step.className = 'start-step info-step';
     step.innerHTML = credits ? `
       <p class="eyebrow">POR TRÁS DA AVENTURA</p><h1>Créditos</h1>
-      <div class="info-panel"><h2>Venivium</h2><p>Mesa de Bar: Sobrevivência</p>
+      <div class="info-panel"><h2>Venivium</h2><p>Sobrevivência</p>
       <p>Uma aventura de fantasia medieval sobre enfrentar a escuridão, encontrar poder e sobreviver à próxima rodada.</p>
       <div class="info-divider"></div><p>Obrigado por jogar e fazer parte desta jornada.</p></div>` : `
       <p class="eyebrow">ANTES DA PRIMEIRA RODADA</p><h1>Como jogar</h1>
