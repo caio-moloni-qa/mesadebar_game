@@ -618,3 +618,14 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
   /* A soft fade at the bottom says there's more below. */
   .weapon-showcase > .weapon-list { -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), transparent); mask-image: linear-gradient(#000 calc(100% - 36px), transparent); padding-bottom: 28px; }
 }
+
+/* Saved mastery stays beside the hero name, independently of the open tab. */
+.hero-name-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; width: 100%; margin-top: 8px; }
+.hero-name-row h2 { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.hero-mastery-badge { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-height: 40px; padding: 8px 11px 11px; overflow: hidden; border: 1px solid #dec28a66; border-radius: 6px; background: linear-gradient(135deg, #dec28a1c, #101b1de6); color: var(--gold); }
+.hero-mastery-badge:hover { background: #dec28a26; border-color: var(--gold); }
+.hero-mastery-badge-label { font: 600 9px/1.4 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+.hero-mastery-badge strong { font: 600 16px/1.2 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hero-mastery-badge-max { font: 600 8px/1.4 var(--sans); }
+.hero-mastery-badge-track { position: absolute; inset: auto 0 0; height: 3px; background: linear-gradient(90deg, var(--gold) var(--mastery-progress), #dec28a18 var(--mastery-progress)); }
+.hero-mastery-badge.maxed { border-color: var(--gold); box-shadow: inset 0 0 14px #dec28a12; }
