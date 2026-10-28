@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, MINI_BOSS_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
 import { CharacterConfig } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -20,7 +20,7 @@ export function snapPrevious(body: Body): void {
 }
 
 /** Collision radii in game units, matching the Arcade bodies they replace (display-space radii). */
-export const BODY_RADIUS = { player: 18, enemy: 18, bolt: 7, boomerang: 17, thrownSword: 20, soul: 13, gem: 8, peel: 19, chest: 21, potion: 14, arrow: 9, coin: 10, pan: 14, bottle: 12, flask: 12 } as const;
+export const BODY_RADIUS = { player: 18, enemy: 18, honey: 14, bolt: 7, boomerang: 17, thrownSword: 20, soul: 13, gem: 8, peel: 19, chest: 21, potion: 14, arrow: 9, coin: 10, pan: 14, bottle: 12, flask: 12 } as const;
 
 /** Relíquia Divina's banked "risk/reward" bonus on the next hit taken is capped (GameScene AURA_DAMAGE_TAKEN_BONUS_CAP). */
 export const AURA_DAMAGE_TAKEN_BONUS_CAP = 15;
@@ -67,6 +67,9 @@ export class PlayerState implements Body, UpgradeTarget {
   lowHealthAttackSpeedBonus: number;
   /** Bênção Divina (merchant): flat HP/s, ticking independently of the character's own passive heal. */
   bonusPassiveHealPerSecond = 0;
+  /** Colmeia's honey: this much faster until then. */
+  hasteUntil = 0;
+  hastePercent = 0;
   private slows: Array<{ expiresAt: number; percent: number }> = [];
   private passiveHealElapsed = 0;
   private bonusPassiveHealElapsed = 0;
@@ -136,7 +139,8 @@ export class PlayerState implements Body, UpgradeTarget {
     const slowAmount = this.slows.reduce((total, slow) => total + slow.percent, 0);
     const slowMultiplier = Math.max(0.25, 1 - slowAmount);
     const lowHealthBonus = this.lowHealthAttackSpeedBonus > 0 ? this.lowHealthAttackSpeedBonus * this.lowHealthBonusRatio() : 0;
-    return this.movementSpeed * slowMultiplier * (1 + lowHealthBonus);
+    const haste = now < this.hasteUntil ? this.hastePercent : 0;
+    return this.movementSpeed * slowMultiplier * (1 + lowHealthBonus) * (1 + haste);
   }
 
   isSlowed(now: number): boolean {
@@ -217,6 +221,9 @@ export const ENEMY_HIT_STUN_MS = 200;
 export const ENEMY_SLIP_MS = 1000;
 
 export type EnemyPhase = 'active' | 'dying';
+/** calm: grazing at home · startled/fleeing: noticed the hero and runs · angry: hurt, fights · returning: lost
+ *  interest, walks home and heals. */
+export type NeutralMood = 'calm' | 'startled' | 'fleeing' | 'angry' | 'returning';
 
 export class EnemyState implements Body {
   x = 0;
@@ -267,6 +274,23 @@ export class EnemyState implements Body {
   nextSoulAt = 0;
   /** Sim time it appeared (the renderer plays a rise-from-the-ground). */
   spawnedAt = -Infinity;
+  // Neutral creatures (core/systems/NeutralSystem): their mood, the spot they live around, the group they wake with.
+  neutral = false;
+  mood: NeutralMood = 'calm';
+  homeX = 0;
+  homeY = 0;
+  /** Neutrals living together (a pack, a herd): hurting one angers them all. -1 = alone. */
+  packId = -1;
+  /** The "!" jump when a calm neutral notices the hero; it bolts after this. */
+  startledUntil = 0;
+  /** A neutral digging in before its attack (the renderer shakes and reddens it), and the lane it will charge down
+   *  (`windupReach` game units along `windupDirX/Y`; 0 = no lane, it attacks where it stands). */
+  windupUntil = 0;
+  windupDirX = 0;
+  windupDirY = 0;
+  windupReach = 0;
+  /** A mimic shivering as the hero walks up to it (the renderer shakes it in place). */
+  trembleUntil = 0;
 
   activate(variantId: EnemyVariantId, x: number, y: number, maxHealth: number, now: number): void {
     const base = ALL_ENEMY_VARIANTS[variantId];
@@ -280,12 +304,12 @@ export class EnemyState implements Body {
     this.contactDamage = base.contactDamage;
     this.reward = base.reward;
     this.currencyDrops = 'currencyDrops' in base ? base.currencyDrops : 1;
-    this.isStatic = variantId === 'necromancerWraith';
+    this.isStatic = variantId === 'necromancerWraith' || variantId === 'hive';
     this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'finalBoss' || variantId in MINI_BOSS_VARIANTS;
     this.hasRottenAura = variantId === 'superSkeleton' || variantId === 'finalBoss';
     this.rottenAuraSuppressed = false;
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
-    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : BODY_RADIUS.enemy;
+    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : variantId === 'boar' ? 22 : variantId === 'stag' ? 24 : variantId === 'hive' ? 20 : variantId === 'mimic' ? 22 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
@@ -296,6 +320,17 @@ export class EnemyState implements Body {
     this.gilded = false;
     this.nextSoulAt = now + ('soulCooldownMs' in base ? base.soulCooldownMs : 0);
     this.spawnedAt = now;
+    this.neutral = variantId in NEUTRAL_VARIANTS;
+    this.mood = 'calm';
+    this.homeX = x;
+    this.homeY = y;
+    this.packId = -1;
+    this.startledUntil = this.windupUntil = this.windupDirX = this.windupDirY = this.windupReach = this.trembleUntil = 0;
+  }
+
+  /** A neutral that hasn't been provoked: no contact damage, and aimed weapons look past it. */
+  get calmNeutral(): boolean {
+    return this.neutral && this.mood !== 'angry';
   }
 
   get alive(): boolean {
@@ -342,7 +377,15 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   templeGuardian: 150,
   frostKnight: 160,
   /** Grows to 230 as it drinks the lake (MiniBossSystem). */
-  lakeSpirit: 80
+  lakeSpirit: 80,
+  /** Low and long: about knee-high next to the hero. */
+  boar: 58,
+  /** Tall on long legs; the stag's antlers add more. */
+  stag: 82,
+  doe: 70,
+  hive: 46,
+  /** The same size as the loot chest it imitates. */
+  mimic: 52
 };
 
 export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword' | 'arrow' | 'coin' | 'pan' | 'bottle' | 'potion';
@@ -430,7 +473,7 @@ export class SoulState implements Body {
 
 export const SOUL_CONFIG = { damage: 17, slowPercent: 0.2, slowDurationMs: 5000, speed: 260, lifetimeMs: 6500 } as const;
 
-export type PickupKind = 'gem' | 'chest' | 'potion';
+export type PickupKind = 'gem' | 'chest' | 'potion' | 'honey';
 
 /** Gems (currency), loot chests and health potions all drift to the player inside pickupRange. */
 export class PickupState implements Body {

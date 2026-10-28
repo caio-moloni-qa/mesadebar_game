@@ -323,11 +323,16 @@ export class TierPicker {
 }
 
 /** Every enemy and guardian the bestiary knows, in the order it lists them. */
-const BESTIARY: Array<{ id: string; name: string; kind: 'horda' | 'guardião' | 'chefe' }> = [
+const BESTIARY: Array<{ id: string; name: string; kind: 'horda' | 'neutro' | 'guardião' | 'chefe' }> = [
   { id: 'skeleton', name: 'Esqueleto', kind: 'horda' },
   { id: 'apparitionWraith', name: 'Aparição', kind: 'horda' },
   { id: 'necromancerWraith', name: 'Necromante Espectral', kind: 'horda' },
   { id: 'superSkeleton', name: 'Super Esqueleto', kind: 'horda' },
+  { id: 'boar', name: 'Javali', kind: 'neutro' },
+  { id: 'stag', name: 'Cervo', kind: 'neutro' },
+  { id: 'doe', name: 'Corça', kind: 'neutro' },
+  { id: 'hive', name: 'Colmeia', kind: 'neutro' },
+  { id: 'mimic', name: 'Mímico', kind: 'neutro' },
   { id: 'gravedigger', name: 'O Coveiro', kind: 'guardião' },
   { id: 'templeGuardian', name: 'Guardião do Templo', kind: 'guardião' },
   { id: 'frostKnight', name: 'O Cavaleiro Congelado', kind: 'guardião' },

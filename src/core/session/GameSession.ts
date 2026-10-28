@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, PLAYER_CONFIG, ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, requiredExperience } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, PLAYER_CONFIG, ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, NEUTRAL_VARIANTS, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
@@ -11,13 +11,14 @@ import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffle
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
+import { NEUTRAL_TUNING, NeutralEvents, NeutralSystem } from '../systems/NeutralSystem';
 import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
 import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
 import { FLEE_SPEED_MULTIPLIER, PULL_SPEED, PowerTierEvents, PowerTierSystem } from '../systems/PowerTierSystem';
 import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MiniBossEvents, MiniBossKind, MiniBossSystem, guardianRotation } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
-import { EnemySpawnScheduler, EnemyVariantId } from '../systems/EnemySpawnScheduler';
+import { EnemySpawnScheduler, EnemyVariantId, NeutralVariantId } from '../systems/EnemySpawnScheduler';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponEvents, WeaponHost, WeaponSystem, WEAPON_TUNING } from '../systems/WeaponSystem';
 import { ArenaMap } from '../world/ArenaMap';
@@ -68,7 +69,7 @@ export type PendingChoice =
   /** The merchant's Tomo de Afinidade: unlock one weapon family's upgrade pool. */
   | { kind: 'affinity'; families: WeaponFamily[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents, PowerTierEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents, PowerTierEvents, NeutralEvents {
   /** A mission's upgrade reward: what was granted. */
   'quest-gifts': { names: string[] };
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
@@ -161,6 +162,8 @@ export class GameSession implements WeaponHost {
   readonly abilities: HeroAbilitySystem;
   /** The hero's in-run power tiers (levels 5/12/20). */
   readonly powers: PowerTierSystem;
+  /** Wildlife living on the map (calm until hurt). */
+  readonly neutrals: NeutralSystem;
   /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
   private jackpotPending = false;
   /** Sergio's Loja Portátil can open again at this sim time. */
@@ -251,6 +254,16 @@ export class GameSession implements WeaponHost {
         this.events.emit('player-status', { text: `LENTO +${Math.round(percent * 100)}%`, tone: 'slow' });
       }
     });
+    this.neutrals = new NeutralSystem({
+      player: this.player,
+      rng: this.rng,
+      arena: this.arena,
+      events: this.events,
+      now: () => this.clock.now,
+      spawnEnemy: (variantId, x, y) => this.spawnEnemy(variantId, x, y),
+      hurtPlayer: (amount) => this.hurtPlayer(amount, this.clock.now),
+      pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
+    });
     this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events }, options.questTiers);
     this.events.on('quest-claimed', () => { this.stats.missions += 1; });
     // A guardian's fight is about the guardian: the plain horde scatters down to the fight's cap — out of sight when
@@ -324,7 +337,7 @@ export class GameSession implements WeaponHost {
       isVariantSpawnEnabled: () => this.variantSpawnEnabled,
       hasActiveEncounter: () => this.bosses.hasActiveEncounter(),
       guardianFight: () => this.miniBosses.active,
-      liveEnemyCount: () => this.enemies.activeCount,
+      liveEnemyCount: () => this.enemies.activeCount - this.neutrals.liveCount,
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
     }, this.rng, this.arena.size);
@@ -333,6 +346,8 @@ export class GameSession implements WeaponHost {
       this.variantSpawnEnabled = false;
       this.merchant.enterHub();
     }
+    // Open test fields have no wildlife; tests populate it themselves.
+    if (!options.hub && this.arena.authored) this.neutrals.populate();
     const meta = options.meta ?? NO_META_BONUSES;
     this.applyMeta(meta);
     if (!options.skipStartingUpgrades && character.preferredWeaponId === startingWeapon.id && character.startingWeaponUpgradeChoices) {
@@ -632,6 +647,7 @@ export class GameSession implements WeaponHost {
     this.scheduleMiniBosses();
     this.bosses.update(deltaMs);
     this.miniBosses.update(deltaMs);
+    this.neutrals.update(deltaMs);
     this.merchant.update(deltaMs);
     this.quests.update(deltaMs);
     this.topUpStressEnemies();
@@ -715,7 +731,7 @@ export class GameSession implements WeaponHost {
       if (now < enemy.pullUntil && !enemy.isStatic) {
         // Zora's Eclipse drags it in, stunned or not.
         this.chase(enemy, { x: enemy.pullX, y: enemy.pullY }, deltaMs, PULL_SPEED);
-      } else if (!enemy.isStatic && !held && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy)) {
+      } else if (!enemy.isStatic && !held && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy) && !this.neutrals.controls(enemy)) {
         // The golem companion pulls nearby enemies off the hero (bosses ignore it).
         const taunt = enemy.isCommon ? this.companions.tauntTarget(enemy) : null;
         if (now < enemy.fleeUntil) this.flee(enemy, deltaMs, now);
@@ -724,8 +740,9 @@ export class GameSession implements WeaponHost {
       }
       if (this.enemySeparation && !enemy.isStatic && enemy.variantId !== 'finalBoss' && !this.miniBosses.controls(enemy)) this.separate(enemy);
       // Every walker - floating wraiths included - slides along walls and stays out of the lake.
-      // Mini-bosses resolve their own collisions (a lake spirit in the water, a Coveiro tunnelling under walls).
-      if (!enemy.isStatic && !this.miniBosses.controls(enemy)) this.arena.resolve(enemy);
+      // Mini-bosses resolve their own collisions (a lake spirit in the water, a Coveiro tunnelling under walls), and so
+      // do the neutrals (a charging boar needs to know it hit a tree).
+      if (!enemy.isStatic && !this.miniBosses.controls(enemy) && !this.neutrals.controls(enemy)) this.arena.resolve(enemy);
       // Lifted off the ground (the Mago's hurricane), it can't reach the hero.
       if (enemy.contactDamage > 0 && now >= enemy.liftedUntil && circlesOverlap(enemy, this.player)) {
         const shielded = this.player.damageBuffer > 0;
@@ -752,7 +769,8 @@ export class GameSession implements WeaponHost {
     });
     far.sort((a, b) => b.distance - a.distance);
     for (const { enemy } of far) {
-      if (this.enemies.activeCount <= cap) break;
+      // The wildlife doesn't count against the fight's cap.
+      if (this.enemies.activeCount - this.neutrals.liveCount <= cap) break;
       this.enemies.release(enemy);
     }
   }
@@ -1029,7 +1047,8 @@ export class GameSession implements WeaponHost {
     let cleared = 0;
     const now = this.clock.now;
     this.enemies.forEachActive((enemy) => {
-      if (keep(enemy) || !enemy.alive) return;
+      // The wildlife isn't part of the horde a boss sweeps away.
+      if (keep(enemy) || enemy.neutral || !enemy.alive) return;
       enemy.phase = 'dying';
       enemy.phaseEndsAt = now + ENEMY_DYING_MS;
       cleared += 1;
@@ -1067,6 +1086,7 @@ export class GameSession implements WeaponHost {
     enemy.hitStunUntil = now + ENEMY_HIT_STUN_MS;
     enemy.lastHitAt = now;
     this.events.emit('enemy-hit', { enemy, amount, critical, weaponId });
+    this.neutrals.onHit(enemy);
     this.powers.onHit(enemy, amount, weaponId);
     if (enemy.health <= 0 && enemy.alive) {
       this.defeatEnemy(enemy);
@@ -1122,6 +1142,9 @@ export class GameSession implements WeaponHost {
     }
     if ((enemy.variantId === 'superSkeleton' || enemy.variantId === 'necromancerWraith') && this.rng() < LOOT_CHEST_DROP_CHANCE) this.dropPickup('chest', enemy.x, enemy.y, 0);
     if (this.rng() < HEALTH_POTION_DROP_CHANCE) this.dropPickup('potion', enemy.x, enemy.y, HEALTH_POTION_HEAL_AMOUNT);
+    // Wildlife leaves its own loot: the deer a potion, the hive its honey, the mimic the chest it pretended to be.
+    const loot = enemy.neutral ? NEUTRAL_VARIANTS[enemy.variantId as NeutralVariantId].loot : null;
+    if (loot) this.dropPickup(loot, enemy.x, enemy.y, loot === 'chest' ? 0 : HEALTH_POTION_HEAL_AMOUNT);
     this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: this.weapons.has('amulet') });
     this.processExperience();
   }
@@ -1132,7 +1155,7 @@ export class GameSession implements WeaponHost {
     pickup.kind = kind;
     pickup.value = value;
     pickup.magnet = magnet;
-    pickup.radius = kind === 'gem' ? BODY_RADIUS.gem : kind === 'chest' ? BODY_RADIUS.chest : BODY_RADIUS.potion;
+    pickup.radius = BODY_RADIUS[kind];
     // Never inside a wall or the lake (a burst of gems from a kill next to a wall would otherwise be unreachable).
     const spot = this.arena.nearestWalkable(x, y, pickup.radius);
     pickup.x = spot.x;
@@ -1165,6 +1188,12 @@ export class GameSession implements WeaponHost {
     // Grimbo's Mão Leve: half as many coins again.
     if (pickup.kind === 'gem') this.currency += this.characterId === 'grimbo' ? Math.round(pickup.value * HERO_ABILITY_TUNING.grimboCoins) : pickup.value;
     if (pickup.kind === 'potion') this.healPlayer(pickup.value);
+    if (pickup.kind === 'honey') {
+      this.healPlayer(pickup.value);
+      this.player.hasteUntil = this.clock.now + NEUTRAL_TUNING.honeyHasteMs;
+      this.player.hastePercent = NEUTRAL_TUNING.honeyHastePercent;
+      this.events.emit('player-status', { text: `MEL! +${Math.round(NEUTRAL_TUNING.honeyHastePercent * 100)}% VELOCIDADE`, tone: 'heal' });
+    }
     if (pickup.kind === 'chest') {
       // Baú: one random upgrade from the same 5-option pool the bonus level-up screen offers, applied on pickup.
       const rolled = this.upgradeSystem.choices(this.weapons.primary.config, this.player, 5, this.secondaryWithAffinity());
@@ -1333,7 +1362,8 @@ export class GameSession implements WeaponHost {
     let bestSq = Number.POSITIVE_INFINITY;
     this.scratch.length = 0;
     for (const enemy of this.enemyHash.queryRadius(from, range + MAX_RANGE_PADDING, this.scratch)) {
-      if (!enemy.alive || exclude?.(enemy)) continue;
+      // Aimed shots look past calm wildlife; only area damage can pick that fight by accident.
+      if (!enemy.alive || enemy.calmNeutral || exclude?.(enemy)) continue;
       const reach = range + enemy.rangePadding;
       const distSq = (enemy.x - from.x) ** 2 + (enemy.y - from.y) ** 2;
       if (distSq <= reach * reach && distSq < bestSq) {
@@ -1347,7 +1377,7 @@ export class GameSession implements WeaponHost {
   nearestVisibleEnemy(from: Vec2, range: number): EnemyState | null {
     // Closest first, then the first with a clear line - usually the very first candidate.
     const distanceSq = (enemy: EnemyState) => (enemy.x - from.x) ** 2 + (enemy.y - from.y) ** 2;
-    const candidates = this.enemiesWithin(from, range).sort((a, b) => distanceSq(a) - distanceSq(b));
+    const candidates = this.enemiesWithin(from, range).filter((enemy) => !enemy.calmNeutral).sort((a, b) => distanceSq(a) - distanceSq(b));
     return candidates.find((enemy) => this.arena.hasLineOfSight(from, enemy)) ?? null;
   }
 

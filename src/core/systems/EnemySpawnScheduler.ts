@@ -1,4 +1,4 @@
-import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, GUARDIAN_FIGHT_SPAWNS, MINI_BOSS_VARIANTS } from '../../config/balance';
+import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, GUARDIAN_FIGHT_SPAWNS, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS } from '../../config/balance';
 import { WORLD_SIZE } from '../../config/world';
 import { Rng, Vec2, intBetween, randomPointAround } from '../math';
 import { DifficultyStage } from './DifficultySystem';
@@ -6,8 +6,9 @@ import { DifficultyStage } from './DifficultySystem';
 /** The variants the timed schedule spawns. */
 export type ScheduledVariantId = keyof typeof ENEMY_VARIANTS;
 export type MiniBossVariantId = keyof typeof MINI_BOSS_VARIANTS;
-/** Everything the 3D core can spawn: the schedule's variants plus the zone mini-bosses. */
-export type EnemyVariantId = ScheduledVariantId | MiniBossVariantId;
+export type NeutralVariantId = keyof typeof NEUTRAL_VARIANTS;
+/** Everything the 3D core can spawn: the schedule's variants, the zone mini-bosses and the neutral creatures. */
+export type EnemyVariantId = ScheduledVariantId | MiniBossVariantId | NeutralVariantId;
 
 /** One enemy the scheduler wants on the field. How it looks and which pooled object carries it is the caller's job. */
 export interface SpawnRequest {
