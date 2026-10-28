@@ -1,6 +1,6 @@
 ---
 name: venivium-ship
-description: "Ship work in Venivium: branch per change, conventional commits, worktrees when another agent shares the repo, PR title and description, patch notes, and reporting the result in the team channel with screenshots. Use when the owner asks to commit, push, open a PR, write patch notes or report a delivery."
+description: "Ship work in Venivium: branch per change, conventional commits, working and testing only in the main folder (no worktrees), PR title and description, patch notes, and reporting the result in the team channel with screenshots. Use when the owner asks to commit, push, open a PR, write patch notes or report a delivery."
 ---
 
 # Ship a change
@@ -15,10 +15,13 @@ learned working two agents in one repo.
 - **One responsibility per branch.**
 - **Commit, push or open a PR only when the owner asks.** No force push; no `reset --hard`, `clean`, `amend`,
   interactive rebase.
-- **Another agent works in this repo too.** Work in your own git worktree (`git worktree add ../mesadebar_game-<you>
-  -b <branch> origin/main`) and never touch files you didn't change — if the main folder has someone else's
-  uncommitted work, leave it alone. A new worktree has no `node_modules`: link the main one
-  (`mklink /J node_modules ..\mesadebar_game\node_modules` on Windows) and no `.env`: copy it if you need it.
+- **Work and test only in the main folder (`C:\mesadebar_game`), on the feature branch.** Owner's rule: never
+  create git worktrees, copies or temp folders (`tmp/<you>-*`, `../mesadebar_game-<you>`) to work, build or test.
+  Check out the feature branch right there (`git checkout <branch>`) and run the dev server from it, so the owner
+  tests exactly what you changed.
+- **Another agent works in this repo too.** Before switching branches, look at `git status` and say in the channel
+  which branch you are putting the folder on. Never touch files you didn't change; if someone else's uncommitted
+  work blocks a checkout, stash it with a clear message and say so — never drop it without the owner's ok.
 - Add specific files (`git add path/a path/b`), never `git add .` or `git add src`.
 - Commit messages: Conventional Commits, English, imperative subject; a body that says what changed and why; end
   with the attribution line your tool requires.

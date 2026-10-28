@@ -62,7 +62,7 @@ O objetivo é evitar que os dois façam a mesma coisa e que fiquem respondendo u
 
 - **Skills do projeto:** as regras da casa para cada tipo de trabalho ficam em `.agents/skills/` (arquitetura, verificação no jogo, guardiões, arenas, arte e entrega). Antes de uma tarefa, leia as que se aplicam e siga-as. O dispatcher já lista essas skills no prompt; numa sessão aberta, consulte a pasta.
 
-- **Cada agente na sua cópia:** o ideal é cada um ter o seu git worktree, por exemplo o Codex em `git worktree add ../mesadebar_game-codex`. Se os dois estiverem na mesma pasta, nunca editem os mesmos arquivos ao mesmo tempo, e avisem no canal antes de mexer.
+- **Tudo na pasta principal:** regra do dono: nada de git worktree, cópia ou pasta temporária pra trabalhar ou testar. Faça checkout da feature branch em `C:\mesadebar_game` e rode o jogo dali. Os dois agentes dividem a pasta: avisem no canal antes de trocar de branch e nunca editem os mesmos arquivos ao mesmo tempo.
 - **Branches:** um branch por tarefa, com o prefixo do agente: `feature/claude-...` ou `feature/codex-...`.
 - **Regras da casa:** siga as regras de git do repo (`.codex/skills/git-feature-flow`). Commit, push e PR só quando o dono pedir.
 - **Revisão cruzada:** quando um terminar, o outro pode revisar, se o dono quiser. Peça com uma menção.
