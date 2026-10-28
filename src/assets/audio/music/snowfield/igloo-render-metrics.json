@@ -1,0 +1,45 @@
+{
+  "id": "igloo",
+  "title": "Abrigo sob a Aurora",
+  "kind": "igloo",
+  "bpm": 80,
+  "bars": 40,
+  "meter": 4,
+  "key": "D major",
+  "base": 50,
+  "loop": true,
+  "seconds": 120,
+  "noteCount": 700,
+  "hitCount": 80,
+  "instruments": [
+    "drone",
+    "harp",
+    "cello",
+    "strings",
+    "recorder",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame"
+  ],
+  "seed": "igloo",
+  "rate": 44100,
+  "frames": 5292000,
+  "rawSeconds": 124,
+  "rawPeak": 0.07772400230169296,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.2256226130208607,
+  "gain": 10.807472275288418,
+  "seam": [
+    0.00037878192961215973,
+    0.004343394655734301
+  ],
+  "end": [
+    0.02302413433790207,
+    0.00812947005033493
+  ],
+  "file": "igloo.wav",
+  "rawFile": "igloo-raw.wav"
+}

@@ -1,5 +1,6 @@
 /** Original Snowfield compositions using the existing suite synthesis engine. No recordings or external service. */
 export const TRACKS = [
+{id:'igloo',title:'Abrigo sob a Aurora',kind:'igloo',bpm:80,bars:40,meter:4,key:'D major',base:50},
 {id:'guardian-frost-knight',title:'Cavaleiro Congelado',kind:'knight',bpm:112,bars:56,meter:4,key:'D minor',base:38},
 {id:'guardian-ice-serpent',title:'Serpente do Gelo',kind:'serpent',bpm:126,bars:48,meter:6,key:'F# minor',base:42},
 {id:'guardian-bellringer',title:'O Sineiro',kind:'bellringer',bpm:96,bars:64,meter:3,key:'C harmonic minor',base:36},
@@ -83,6 +84,7 @@ export function composeTrack(ctx,destination,track,renderWindow=null){
   const bell=(m,t,vol=.045)=>{note(m,t,.08,vol,'glass',-.22);note(m+19,t,.05,vol*.20,'box',.2,7);};
   // Each boss has a distinct rhythmic vocabulary and motif; both King phases share theirs.
   const themes={
+    igloo:[[7,1],[4,.5],[2,.5],[0,2],[2,1],[4,1],[9,1],[7,1]],
     knight:[[0,1],[7,.5],[5,.5],[3,1],[2,1],[0,1],[3,.5],[2,.5],[-1,1],[0,1]],
     serpent:[[0,.5],[3,.5],[7,1],[10,.5],[9,.5],[7,1],[5,.5],[3,.5],[2,1],[0,1]],
     bellringer:[[0,1],[7,1],[11,1],[12,1],[7,1],[0,1]],
@@ -90,6 +92,7 @@ export function composeTrack(ctx,destination,track,renderWindow=null){
     king:[[0,1],[7,.5],[11,.5],[12,1],[10,1],[7,1],[5,.5],[3,.5],[1,1],[-1,1]],
   };
   const progressions={
+    igloo:[[0,4,7],[0,4,7],[7,11,14],[9,12,16],[5,9,12],[0,4,7],[7,11,14],[7,11,14]],
     knight:[[0,3,7],[0,3,7],[8,12,15],[5,8,12],[0,3,7],[10,14,17],[7,11,14],[7,11,14]],
     serpent:[[0,3,7],[3,7,10],[5,8,12],[10,14,17],[8,12,15],[5,8,12],[7,11,14],[0,3,7]],
     bellringer:[[0,3,7],[0,3,7],[8,12,15],[7,11,14],[5,8,12],[1,5,8],[7,11,14],[7,11,14]],
@@ -101,7 +104,14 @@ export function composeTrack(ctx,destination,track,renderWindow=null){
     const t=b*bar,p=k=>t+k*beat,notes=progressions[track.kind][Math.floor(b/2)%8].map(n=>n+base);
     const intense=!!track.intense,answer=Math.floor(b/8)%2;
     note(notes[0]-12,t,bar-.2,.048,'drone');
-    if(track.kind==='knight'){
+    if(track.kind==='igloo'){
+      // Sparse hearth-side folk, with high glass notes suggesting the aurora outside.
+      for(let k=0;k<8;k++)note(notes[[0,2,1,2][k%4]]+12,p(k*.5),.20,.027,'harp',k%2?.35:-.35);
+      note(notes[0]-12,t,beat*2.8,.033,'cello',-.12);
+      chord(notes.map(n=>n+12),t,bar-.5,.013,'strings',.3);
+      hit(t,.065,'frame');hit(p(2),.043,'frame');
+      if(b%4===2)bell(notes[2]+24,p(3),.016);
+    }else if(track.kind==='knight'){
       for(let k=0;k<8;k++)note(notes[[0,2,1,2][k%4]],p(k*.5),beat*.33,.048,'cello',k%2?.3:-.3);
       for(const k of[0,1.5,2,3.5])hit(p(k),k===0?.30:.17,'frame');
       chord(notes,t,beat*1.4,.038,'horn');
@@ -145,7 +155,7 @@ export function composeTrack(ctx,destination,track,renderWindow=null){
       if(intense&&b%2===1)chord(notes.map(n=>n+12),p(2),beat*.65,.028,'trumpet',.3);
     }
     if(b%2===0){
-      const lead={knight:'horn',serpent:'recorder',bellringer:'box',yeti:'horn',king:'horn'}[track.kind];
+      const lead={igloo:'recorder',knight:'horn',serpent:'recorder',bellringer:'box',yeti:'horn',king:'horn'}[track.kind];
       let cursor=0;
       for(const[offset,len]of themes[track.kind]){
         if(cursor>=track.meter*2)break;
