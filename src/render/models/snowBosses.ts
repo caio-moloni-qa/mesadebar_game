@@ -3,7 +3,8 @@ import { toonMaterial } from '../materials';
 import { actorClips, ActorClipName } from './clips';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { buildRiggedModel, clipForBones, humanoidBones, RigPart } from './rig';
-import type { ActorModel } from './zoneActors';
+import { ANCIENT_YETI_HIP_HEIGHT, ANCIENT_YETI_JOINTS, BELLRINGER_HIP_HEIGHT, BELLRINGER_JOINTS, ICE_SERPENT_HIP_HEIGHT, ICE_SERPENT_JOINTS } from './importedBosses';
+import { ActorModel, imported } from './zoneActors';
 
 export type SnowModelId = 'iceSerpent' | 'bellringer' | 'ancientYeti' | 'winterKing';
 
@@ -73,7 +74,21 @@ export function snowBossParts(id: SnowModelId): RigPart[] {
   return parts;
 }
 
+const IMPORTED_SNOW_GUARDIANS = {
+  iceSerpent: { joints: ICE_SERPENT_JOINTS, hip: ICE_SERPENT_HIP_HEIGHT, height: 2.3 },
+  bellringer: { joints: BELLRINGER_JOINTS, hip: BELLRINGER_HIP_HEIGHT, height: 2.1 },
+  ancientYeti: { joints: ANCIENT_YETI_JOINTS, hip: ANCIENT_YETI_HIP_HEIGHT, height: 2.1 }
+} as const;
+
 export function createSnowGuardianModel(id: Exclude<SnowModelId, 'winterKing'>): ActorModel {
+  const art = IMPORTED_SNOW_GUARDIANS[id];
+  // The Sineiro's art has empty hands: he keeps his bell mallet.
+  const extras: RigPart[] = id === 'bellringer' ? [
+    { bone: 'handR', geometry: part(cylinder(0.045, 0.045, 0.7, 6), 0x765338, [0, -0.2, 0.04]) },
+    { bone: 'handR', geometry: part(ball(0.17, 1), 0xc29b55, [0, -0.57, 0.04]) }
+  ] : [];
+  const tripo = imported(id, [...art.joints], art.hip, art.height, extras);
+  if (tripo) return tripo;
   const material = toonMaterial({ vertexColors: true, flatShading: true });
   const model = buildRiggedModel(humanoidBones(), snowBossParts(id), material);
   const clips = Object.fromEntries(Object.entries(actorClips(0.82)).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<ActorClipName, THREE.AnimationClip>;
