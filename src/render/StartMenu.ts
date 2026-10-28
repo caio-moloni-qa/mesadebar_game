@@ -34,7 +34,7 @@ const AREA_TEXT: Record<string, string> = {
 };
 
 /** Arenas still being built: listed in the area picker, but they can't be played yet. */
-const AREAS_IN_DEVELOPMENT = new Set(['snowfield']);
+const AREAS_IN_DEVELOPMENT = new Set<string>();
 
 type MenuScreen = 'title' | 'areas' | 'characters' | 'weapons' | 'controls' | 'credits';
 

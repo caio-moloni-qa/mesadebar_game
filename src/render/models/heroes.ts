@@ -6,8 +6,8 @@ import { CHARACTERS, CharacterId } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { toonMaterial } from '../materials';
 import { HeroClipName, humanoidClips } from './clips';
-import { heroMesh } from './heroMeshes';
-import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, BROM_HIP_HEIGHT, BROM_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, GRIMBO_HIP_HEIGHT, GRIMBO_JOINTS, JointSpec, LYRA_HIP_HEIGHT, LYRA_JOINTS, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, SERGIO_HIP_HEIGHT, SERGIO_JOINTS, ZORA_HIP_HEIGHT, ZORA_JOINTS, rigImportedMesh } from './importedRig';
+import { MeshId, heroMesh } from './heroMeshes';
+import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, BEAST_HIP_HEIGHT, BEAST_JOINTS, BROM_HIP_HEIGHT, BROM_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, GRIMBO_HIP_HEIGHT, GRIMBO_JOINTS, JOE_HIP_HEIGHT, JOE_JOINTS, JointSpec, LYRA_HIP_HEIGHT, LYRA_JOINTS, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, SERGIO_HIP_HEIGHT, SERGIO_JOINTS, VOLY_HIP_HEIGHT, VOLY_JOINTS, ZORA_HIP_HEIGHT, ZORA_JOINTS, rigImportedMesh } from './importedRig';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { RigPart, RiggedModel, buildRiggedModel, clipForBones, humanoidBones } from './rig';
 import { WeaponModelId, heldWeapon } from './weapons';
@@ -140,7 +140,7 @@ const CLIPS = humanoidClips(HIP_HEIGHT);
 
 /** Heroes with an imported mesh: its joints, the hip height its clips use, rigid extras the mesh lacks, and the
  *  in-game scale (the rig is measured on the mesh at its processed height; scaling the model keeps them in sync). */
-const IMPORTED: Partial<Record<CharacterId, { joints: JointSpec[]; clips: Record<HeroClipName, THREE.AnimationClip>; extras: (accent: number) => RigPart[]; scale: number }>> = {
+const IMPORTED: Partial<Record<MeshId, { joints: JointSpec[]; clips: Record<HeroClipName, THREE.AnimationClip>; extras: (accent: number) => RigPart[]; scale: number }>> = {
   barbarian: { joints: BARBARIAN_JOINTS, clips: humanoidClips(BARBARIAN_HIP_HEIGHT), extras: () => [], scale: 1 },
   fabri: { joints: FABRI_JOINTS, clips: humanoidClips(FABRI_HIP_HEIGHT), extras: (accent) => fabriTail(accent), scale: 1 },
   mage: { joints: MAGE_JOINTS, clips: humanoidClips(MAGE_HIP_HEIGHT), extras: () => [], scale: 1 },
@@ -150,12 +150,16 @@ const IMPORTED: Partial<Record<CharacterId, { joints: JointSpec[]; clips: Record
   lyra: { joints: LYRA_JOINTS, clips: humanoidClips(LYRA_HIP_HEIGHT), extras: () => [], scale: 1 },
   grimbo: { joints: GRIMBO_JOINTS, clips: humanoidClips(GRIMBO_HIP_HEIGHT), extras: () => [], scale: 1 },
   zora: { joints: ZORA_JOINTS, clips: humanoidClips(ZORA_HIP_HEIGHT), extras: () => [], scale: 1 },
-  sergio: { joints: SERGIO_JOINTS, clips: humanoidClips(SERGIO_HIP_HEIGHT), extras: () => [], scale: 1 }
+  sergio: { joints: SERGIO_JOINTS, clips: humanoidClips(SERGIO_HIP_HEIGHT), extras: () => [], scale: 1 },
+  // Tavern-only regulars of the Campo Nevado: never the player, only importedHeroRig uses them.
+  voly: { joints: VOLY_JOINTS, clips: humanoidClips(VOLY_HIP_HEIGHT), extras: () => [], scale: 1 },
+  beast: { joints: BEAST_JOINTS, clips: humanoidClips(BEAST_HIP_HEIGHT), extras: () => [], scale: 1 },
+  joe: { joints: JOE_JOINTS, clips: humanoidClips(JOE_HIP_HEIGHT), extras: () => [], scale: 1 }
 };
 
 /** The imported mesh, rigged, with its clips (for figures that aren't the player, like the tavern regulars), or null
  *  when the hero has no imported mesh loaded. */
-export function importedHeroRig(characterId: CharacterId, material: THREE.Material): { model: RiggedModel; clips: Record<HeroClipName, THREE.AnimationClip> } | null {
+export function importedHeroRig(characterId: MeshId, material: THREE.Material): { model: RiggedModel; clips: Record<HeroClipName, THREE.AnimationClip> } | null {
   const imported = IMPORTED[characterId];
   const geometry = imported ? heroMesh(characterId) : null;
   if (!imported || !geometry) return null;
