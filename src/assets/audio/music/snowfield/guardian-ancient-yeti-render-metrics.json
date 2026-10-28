@@ -1,0 +1,44 @@
+{
+  "id": "guardian-ancient-yeti",
+  "title": "Yeti Anci?o",
+  "kind": "yeti",
+  "bpm": 100,
+  "bars": 56,
+  "meter": 4,
+  "key": "E phrygian",
+  "base": 40,
+  "loop": true,
+  "seconds": 134.4,
+  "noteCount": 730,
+  "hitCount": 392,
+  "instruments": [
+    "drone",
+    "cello",
+    "horn",
+    "glass"
+  ],
+  "percussion": [
+    "frame",
+    "stone",
+    "timpani"
+  ],
+  "seed": "guardian-ancient-yeti",
+  "rate": 44100,
+  "frames": 5927040,
+  "rawSeconds": 138.4,
+  "rawPeak": 0.2686404585838318,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.10262655114269555,
+  "gain": 3.1268558891990947,
+  "seam": [
+    0.0009475173428654671,
+    0.0003367327153682709
+  ],
+  "end": [
+    0.004854434635490179,
+    0.040034327656030655
+  ],
+  "file": "guardian-ancient-yeti.wav",
+  "rawFile": "guardian-ancient-yeti-raw.wav"
+}

@@ -1,0 +1,19 @@
+{
+  "kind": "frozen-knight",
+  "file": "art-source/3d/frozen-knight/front.png",
+  "raw": "art-source/3d/frozen-knight/front-raw.png",
+  "raw_size": [
+    1024,
+    1536
+  ],
+  "size": [
+    1024,
+    1536
+  ],
+  "mode": "RGB",
+  "alpha_required": false,
+  "version": 1,
+  "source_sha256": "90ff09f300f04717f1310b2d4f2780f44d32b197fb4e35b43edde97784503701",
+  "raw_sha256": "90ff09f300f04717f1310b2d4f2780f44d32b197fb4e35b43edde97784503701",
+  "notes": "Concept art only; no gameplay code changed. Original preserved byte-for-byte."
+}

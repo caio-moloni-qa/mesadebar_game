@@ -1,0 +1,65 @@
+[
+  {
+    "asset": "src/assets/textures/rooms/tavern_island_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "mode": "RGB",
+    "colors": 12,
+    "before_edge_mean_rgb": [
+      8.934895833333334,
+      28.950520833333332
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src/assets/textures/rooms/tavern_flagstone_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "mode": "RGB",
+    "colors": 12,
+    "before_edge_mean_rgb": [
+      8.2265625,
+      6.973958333333333
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src/assets/textures/rooms/tavern_fur_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "mode": "RGB",
+    "colors": 12,
+    "before_edge_mean_rgb": [
+      7.330729166666667,
+      9.979166666666666
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  }
+]

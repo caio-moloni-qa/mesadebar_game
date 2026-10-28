@@ -96,6 +96,26 @@ export function humanoidBones({ hipHeight = 0.82, shoulderWidth = 0.32, armLengt
   return bones;
 }
 
+/** Four-legged skeleton (javali, cervo, lobo), facing +Z: `hips` is the rear of the body, `chest` the shoulders,
+ *  each leg a hip/shoulder joint (`leg..`) and a knee (`shin..`); F/B = front/back, L/R = side. */
+export function quadrupedBones({ hipHeight = 0.5, bodyLength = 0.6, shoulderRise = 0.05, legSpread = 0.17, thighLength = 0.22, headReach = 0.3 }: { hipHeight?: number; bodyLength?: number; shoulderRise?: number; legSpread?: number; thighLength?: number; headReach?: number } = {}): BoneSpec[] {
+  const leg = (name: string, parent: string, x: number): BoneSpec[] => [
+    { name: `leg${name}`, parent, offset: [x, -0.07, 0] },
+    { name: `shin${name}`, parent: `leg${name}`, offset: [0, -thighLength, 0] }
+  ];
+  return [
+    { name: 'root', offset: [0, 0, 0] },
+    { name: 'hips', parent: 'root', offset: [0, hipHeight, -bodyLength / 2] },
+    { name: 'chest', parent: 'hips', offset: [0, shoulderRise, bodyLength] },
+    { name: 'head', parent: 'chest', offset: [0, 0.02, headReach] },
+    { name: 'tail', parent: 'hips', offset: [0, 0.12, -0.22] },
+    ...leg('FL', 'chest', legSpread),
+    ...leg('FR', 'chest', -legSpread),
+    ...leg('BL', 'hips', legSpread),
+    ...leg('BR', 'hips', -legSpread)
+  ];
+}
+
 /** Copy of `clip` with only the tracks whose bone exists in `bones` — shared clip sets cover every rig (e.g. the
  *  tail), and binding a track to a missing bone makes PropertyBinding warn. */
 export function clipForBones(clip: THREE.AnimationClip, bones: Record<string, THREE.Bone>): THREE.AnimationClip {

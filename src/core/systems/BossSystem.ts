@@ -1,3 +1,4 @@
+import { SnowfieldAttacks } from './SnowfieldAttacks';
 import { EventBus } from '../EventBus';
 import { Rng, Vec2, floatBetween } from '../math';
 import { EnemyState, PlayerState } from '../session/entities';
@@ -112,6 +113,7 @@ export interface MeteorState {
 
 /** A skeleton of the undead squad about to climb out of the ground. */
 export interface RisingState {
+  variantId?: EnemyVariantId;
   x: number;
   y: number;
   elapsedMs: number;
@@ -121,6 +123,8 @@ export type MeleePhase = 'telegraph' | 'sweep' | 'sweepBack';
 
 /** One boss encounter. Public so the renderer can draw and animate straight from it. */
 export interface BossState {
+  winter: boolean;
+  winterLanceElapsed: number;
   enemy: EnemyState;
   /** First boss of a timer wave: owns the arena-clear countdown. */
   isMain: boolean;
@@ -184,6 +188,9 @@ export interface BossEvents extends Record<string, unknown> {
 }
 
 export interface BossHost {
+  readonly snowfield?: boolean;
+  slowPlayer?(percent: number, ms: number): void;
+  frostPlayer?(stacks: number): void;
   readonly player: PlayerState;
   readonly rng: Rng;
   readonly arenaSize: number;
@@ -211,7 +218,18 @@ export class BossSystem {
   /** Counts down the warning banner before the wave spawns; null when no wave is pending. */
   private pendingSpawnIn: number | null = null;
 
-  constructor(private readonly host: BossHost) {}
+  readonly snow: SnowfieldAttacks;
+  readonly braziers: Array<{ owner: EnemyState; x: number; y: number; radius: number }> = [];
+  private winterTime = 0;
+  constructor(private readonly host: BossHost) {
+    this.snow = new SnowfieldAttacks({
+      player: host.player,
+      hurtPlayer: damage => host.hurtPlayer(damage),
+      slowPlayer: (p, ms) => host.slowPlayer?.(p, ms),
+      pushPlayer: (x, y) => host.pushPlayer(x, y),
+      frostPlayer: stacks => host.frostPlayer?.(stacks)
+    });
+  }
 
   /** Shows the warning and spawns `bossCount` wave bosses after it. Once per wave until rearm(). */
   warn(bossCount = 1): void {
@@ -266,6 +284,8 @@ export class BossSystem {
   }
 
   update(delta: number): void {
+    this.winterTime += delta;
+    this.snow.update(delta);
     if (this.pendingSpawnIn !== null) {
       this.pendingSpawnIn -= delta;
       if (this.pendingSpawnIn <= 0) this.spawnWave();
@@ -297,6 +317,7 @@ export class BossSystem {
     if (index === -1) return false;
     const [boss] = this.bosses.splice(index, 1);
     this.endChannel(boss);
+    this.snow.clear(enemy);
     boss.beamState = 'idle';
     boss.beams = [];
     boss.melee = null;
@@ -340,10 +361,13 @@ export class BossSystem {
     const size = this.host.arenaSize;
     const enemy = this.host.spawnEnemy('finalBoss', clamp(x, margin, size - margin), clamp(y, margin, size - margin));
     if (!enemy) return;
+    if (this.host.snowfield) { enemy.hasRottenAura = false; enemy.hasFrostAura = true; }
     const weakening = this.host.weakening();
     enemy.maxHealth = Math.round(enemy.maxHealth * Math.max(0.5, 1 - 0.05 * weakening));
     enemy.health = enemy.maxHealth;
     this.bosses.push({
+      winter: !!this.host.snowfield,
+      winterLanceElapsed: 0,
       enemy,
       isMain,
       isWaveBoss,
@@ -388,6 +412,7 @@ export class BossSystem {
   private updateBoss(boss: BossState, delta: number): void {
     if (!boss.enemy.alive) return;
     boss.summonPoseMs += delta;
+    if (boss.winter) this.updateWinter(boss, delta);
     this.updateCleanup(boss, delta);
     // A summoned sword and a dash in motion always play out.
     this.updateMelee(boss, delta);
@@ -413,7 +438,7 @@ export class BossSystem {
       // Visible channelling ended but the shield is still up: the boss waits for the deadline.
       boss.channelRuntimeElapsed += delta;
       this.updateShieldCountdown(boss);
-      if (boss.channelRuntimeElapsed >= BOSS_TUNING.shieldDeadlineMs) this.completeChannel(boss);
+      if (boss.channelRuntimeElapsed >= (boss.winter ? 15000 : BOSS_TUNING.shieldDeadlineMs)) this.completeChannel(boss);
       return;
     }
     if (boss.beamState !== 'idle') {
@@ -442,6 +467,21 @@ export class BossSystem {
   }
 
   /** The main boss's countdown: at zero the field empties and the boss enrages (faster, abilities sooner). */
+
+  private updateWinter(boss: BossState, delta: number): void {
+    if (boss.transitionMs > 0 || boss.staggerMs > 0) return;
+    const { player } = this.host;
+    if (boss.phaseTwo) {
+      const direction = Math.floor(this.winterTime / 8000) * Math.PI / 2;
+      this.host.pushPlayer(Math.cos(direction) * delta * 0.018, Math.sin(direction) * delta * 0.018);
+    }
+    boss.winterLanceElapsed += delta;
+    if (boss.winterLanceElapsed < 9000 || boss.shieldActive) return;
+    boss.winterLanceElapsed = 0;
+    const a = Math.atan2(player.y - boss.enemy.y, player.x - boss.enemy.x);
+    for (let i = 0; i < 6; i++) this.snow.add(boss.enemy, 'lance', player.x + Math.cos(a) * i * 75, player.y + Math.sin(a) * i * 75, 42, 20, 1100 + i * 180, 550);
+  }
+
   private updateCleanup(boss: BossState, delta: number): void {
     if (!boss.isMain || !boss.cleanupPending) return;
     boss.cleanupElapsed += delta;
@@ -462,7 +502,7 @@ export class BossSystem {
     for (let index = 0; index < count; index += 1) {
       const angle = (Math.PI * 2 * index) / count + floatBetween(rng, -0.12, 0.12);
       const radius = floatBetween(rng, 175, 255);
-      this.host.spawnEnemy('apparitionWraith', boss.enemy.x + Math.cos(angle) * radius, boss.enemy.y + Math.sin(angle) * radius);
+      this.host.spawnEnemy(boss.winter ? 'iceWolf' : 'apparitionWraith', boss.enemy.x + Math.cos(angle) * radius, boss.enemy.y + Math.sin(angle) * radius);
     }
   }
 
@@ -482,7 +522,7 @@ export class BossSystem {
       rising.elapsedMs += delta;
       if (rising.elapsedMs < BOSS_TUNING.undeadRiseMs) continue;
       this.risings.splice(index, 1);
-      this.host.spawnEnemy('skeleton', rising.x, rising.y);
+      this.host.spawnEnemy(rising.variantId ?? (this.host.snowfield ? 'frostSkeleton' : 'skeleton'), rising.x, rising.y);
     }
   }
 
@@ -534,6 +574,7 @@ export class BossSystem {
       if (melee.elapsedMs < BOSS_TUNING.meleeTelegraphMs) return;
       melee.phase = 'sweep';
       melee.elapsedMs = 0;
+      if (boss.winter) for (let i = 0; i < 9; i++) { const a = melee.startAngle + i * Math.PI * 2 / 9; this.snow.add(boss.enemy, 'iceTrail', boss.enemy.x + Math.cos(a) * 170, boss.enemy.y + Math.sin(a) * 170, 48, 4, 100, 4000); }
       if (boss.phaseTwo) this.centerBlast(boss);
     }
     const progress = Math.min(1, melee.elapsedMs / BOSS_TUNING.meleeSweepMs);
@@ -577,14 +618,19 @@ export class BossSystem {
         const progress = clamp(boss.beamLockOnElapsed / BOSS_TUNING.beamLockOnMs, 0, 1);
         boss.beamLockOnBlinkAt = boss.beamLockOnElapsed + BOSS_TUNING.beamLockOnBlinkStartMs + (BOSS_TUNING.beamLockOnBlinkEndMs - BOSS_TUNING.beamLockOnBlinkStartMs) * progress;
       }
-      if (boss.beamLockOnElapsed >= BOSS_TUNING.beamLockOnMs) this.activateBeam(boss);
+      if (boss.beamLockOnElapsed >= (boss.winter ? 2000 : BOSS_TUNING.beamLockOnMs)) this.activateBeam(boss);
       return;
     }
     boss.beamActiveElapsed += delta;
     if (boss.beamsLaunched < boss.beamCount && boss.beamActiveElapsed >= boss.beamsLaunched * BOSS_TUNING.beamLaunchStaggerMs) this.launchBeam(boss);
     const { player } = this.host;
     boss.beams.forEach((beam) => {
+      const before = beam.elapsedMs;
       beam.elapsedMs += delta;
+      if (boss.winter && Math.floor(before / 450) !== Math.floor(beam.elapsedMs / 450)) {
+        const length = Math.min(700, this.beamLength(beam));
+        this.snow.add(boss.enemy, 'iceTrail', boss.enemy.x + Math.cos(beam.angle) * length, boss.enemy.y + Math.sin(beam.angle) * length, 65, 5, 300, 4000);
+      }
       // Slowly swings toward the player's current spot (15°/s: walking across it gains real separation).
       const target = Math.atan2(player.y - boss.enemy.y, player.x - boss.enemy.x);
       beam.angle = rotateTowards(beam.angle, target, BOSS_TUNING.beamFollowTurnRate * (delta / 1000));
@@ -598,7 +644,7 @@ export class BossSystem {
   private activateBeam(boss: BossState): void {
     boss.beamState = 'active';
     boss.beamActiveElapsed = 0;
-    boss.beamCount = Math.max(1, Math.round(boss.phaseTwo ? BOSS_TUNING.beamCountPhase2 : BOSS_TUNING.beamCountPhase1) - boss.beamPenalty);
+    boss.beamCount = boss.winter ? (boss.phaseTwo ? 3 : 1) : Math.max(1, Math.round(boss.phaseTwo ? BOSS_TUNING.beamCountPhase2 : BOSS_TUNING.beamCountPhase1) - boss.beamPenalty);
     boss.beams = [];
     boss.beamsLaunched = 0;
     this.launchBeam(boss);
@@ -625,6 +671,9 @@ export class BossSystem {
   private startChannel(boss: BossState): void {
     boss.channelActive = true;
     boss.shieldActive = true;
+    if (boss.winter) {
+      this.braziers.splice(0, this.braziers.length, ...[0, 1, 2].map(i => ({ owner: boss.enemy, x: clamp(boss.enemy.x + Math.cos(i * Math.PI * 2 / 3) * 320, 180, this.host.arenaSize - 180), y: clamp(boss.enemy.y + Math.sin(i * Math.PI * 2 / 3) * 320, 180, this.host.arenaSize - 180), radius: 115 })));
+    }
     boss.channelRuntimeElapsed = 0;
     boss.maxShield = boss.enemy.maxHealth * BOSS_TUNING.shieldMaxHealthScaling;
     boss.shield = boss.maxShield;
@@ -650,9 +699,10 @@ export class BossSystem {
     }
     boss.channelRuntimeElapsed += delta;
     this.updateShieldCountdown(boss);
-    if (boss.channelRuntimeElapsed >= BOSS_TUNING.channelDurationMs) {
+    if (boss.channelRuntimeElapsed >= (boss.winter ? 15000 : BOSS_TUNING.channelDurationMs)) {
       boss.channelActive = false;
       boss.enemy.rottenAuraSuppressed = false;
+      if (boss.winter) this.completeChannel(boss);
     }
   }
 
@@ -661,16 +711,18 @@ export class BossSystem {
   private completeChannel(boss: BossState): void {
     if (boss.shield <= 0) { this.endChannel(boss); return; }
     const { player } = this.host;
-    const inRange = Math.hypot(boss.enemy.x - player.x, boss.enemy.y - player.y) <= BOSS_TUNING.explosionRadius;
-    const covered = inRange && !this.host.hasLineOfSight(boss.enemy, player);
+    const inRange = boss.winter || Math.hypot(boss.enemy.x - player.x, boss.enemy.y - player.y) <= BOSS_TUNING.explosionRadius;
+    const covered = boss.winter ? this.braziers.some(b => b.owner === boss.enemy && Math.hypot(player.x - b.x, player.y - b.y) <= b.radius) : inRange && !this.host.hasLineOfSight(boss.enemy, player);
     this.host.events.emit('boss-explosion', { x: boss.enemy.x, y: boss.enemy.y, radius: BOSS_TUNING.explosionRadius, kind: 'shield', blocked: covered });
     this.endChannel(boss);
     if (!inRange || covered) return;
+    if (boss.winter) this.host.frostPlayer?.(5);
     if (BOSS_TUNING.explosionDamageRatio >= 1) this.host.killPlayer();
     else this.host.hurtPlayer(player.maxHealth * BOSS_TUNING.explosionDamageRatio, true);
   }
 
   private endChannel(boss: BossState): void {
+    for (let i = this.braziers.length - 1; i >= 0; i--) if (this.braziers[i].owner === boss.enemy) this.braziers.splice(i, 1);
     boss.channelActive = false;
     boss.shieldActive = false;
     boss.shield = 0;
@@ -680,7 +732,7 @@ export class BossSystem {
   }
 
   private updateShieldCountdown(boss: BossState): void {
-    const remainingMs = BOSS_TUNING.shieldDeadlineMs - boss.channelRuntimeElapsed;
+    const remainingMs = (boss.winter ? 15000 : BOSS_TUNING.shieldDeadlineMs) - boss.channelRuntimeElapsed;
     if (remainingMs > 10000 || remainingMs < 0) return;
     const seconds = Math.ceil(remainingMs / 1000);
     if (seconds === boss.shieldCountdownLastShown) return;

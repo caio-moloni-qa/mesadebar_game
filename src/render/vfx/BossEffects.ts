@@ -8,6 +8,8 @@ import { ParticleView } from '../views/PickupAndProjectileViews';
 
 /** Necro-green palette plus the effects' accents. */
 const GREEN = { base: 0x45ff90, blink: 0xd6ffd0, ring: 0x8cff8c, beamCore: 0xd6ffd0, beamGlow: 0x35c96b, meteor: 0x2fe86a, shield: 0x48ff52, reticle: 0x8cffb0, flame: 0x6dff9a, deep: 0x1f8a46 };
+const globalGreen = GREEN;
+const FROZEN = { base: 0x91e6ff, blink: 0xf0fcff, ring: 0x82dfff, beamCore: 0xe2faff, beamGlow: 0x5ac6f2, meteor: 0x81d9f2, shield: 0x91e9ff, reticle: 0xb9f1ff, flame: 0x7cddff, deep: 0x28699e };
 const PORTAL_COLORS: Record<PortalKind, number> = { end: 0x9fb4ff, continue: 0x7dffa0 };
 const MAX_BEAMS = 20;
 const MAX_METEORS = 48;
@@ -237,8 +239,17 @@ export class BossEffects {
         return;
       }
       if (this.updateRig(rig, boss, bosses, session, alpha, deltaSeconds)) lockOn = true;
+      if (boss.winter) rig.root.traverse(object => {
+        if (!(object instanceof THREE.Mesh)) return;
+        const material = object.material;
+        if (material instanceof THREE.MeshBasicMaterial && material.color.g > material.color.r * 1.1) material.color.setHex(FROZEN.base);
+        if (material instanceof THREE.ShaderMaterial && material.uniforms.color) material.uniforms.color.value.setHex(FROZEN.shield);
+      });
     });
     if (!lockOn) this.reticle.visible = false;
+    const winter = session.arena.layout.id === 'snowfield';
+    (this.reticle.material as THREE.SpriteMaterial).color.setHex(winter ? FROZEN.reticle : GREEN.reticle);
+    for (const mesh of [this.meteorWarnings, this.meteorRings, this.meteorRocks]) (mesh.material as THREE.MeshBasicMaterial).color.setHex(winter ? FROZEN.meteor : GREEN.meteor);
     this.updateMeteors(bosses, deltaSeconds);
     this.updateCracks(bosses, deltaSeconds);
     this.updateScorches(deltaSeconds);
@@ -247,6 +258,7 @@ export class BossEffects {
 
   /** Returns whether this boss is showing a lock-on (the reticle is shared). */
   private updateRig(rig: BossRig, boss: BossState, bosses: BossSystem, session: GameSession, alpha: number, deltaSeconds: number): boolean {
+    const GREEN = boss.winter ? FROZEN : globalGreen;
     const { enemy } = boss;
     const bossX = enemy.prevX + (enemy.x - enemy.prevX) * alpha;
     const bossY = enemy.prevY + (enemy.y - enemy.prevY) * alpha;

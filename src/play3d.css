@@ -150,6 +150,21 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .hud-health-bar > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; font-weight: 600; }
 .hud-rotten { display: flex; align-items: center; gap: 6px; margin-top: 9px; color: #c6b0d0; font-size: 10px; }
 .hud-rotten img { width: 18px; height: 18px; }
+/* Nevasca: the thermometer under the health bar, and the ice closing in from the screen's edges (--clear = the hole). */
+.hud-cold { display: flex; align-items: center; gap: 9px; margin-top: 9px; color: #bfe3f5; font-size: 9px; font-weight: 600; letter-spacing: .12em; }
+.hud-cold-bar { flex: 1; height: 8px; background: #080f12; border: 1px solid #9fd8f230; border-radius: 3px; overflow: hidden; }
+.hud-cold-bar .hud-fill { height: 100%; background: linear-gradient(90deg, #5fb4e6, #dff6ff); transition: width .25s; }
+.hud-cold.danger { color: #f2fbff; animation: hud-cold-pulse .7s ease-in-out infinite alternate; }
+@keyframes hud-cold-pulse { to { opacity: .55; } }
+.frost-vignette { --clear: 80%; position: absolute; inset: 0; pointer-events: none; transition: opacity .4s;
+  background:
+    repeating-conic-gradient(from 8deg at 50% 50%, #ffffff00 0deg 5deg, #e9f8ff22 6deg 7deg, #ffffff00 8deg 13deg),
+    radial-gradient(ellipse at center, #d7f1ff00 var(--clear), #c9ebfbb0 calc(var(--clear) + 14%), #eefaffee calc(var(--clear) + 34%));
+  -webkit-mask: radial-gradient(ellipse at center, #0000 calc(var(--clear) - 4%), #000 calc(var(--clear) + 10%));
+  mask: radial-gradient(ellipse at center, #0000 calc(var(--clear) - 4%), #000 calc(var(--clear) + 10%)); }
+.frost-vignette[hidden] { display: none; }
+.blizzard-haze { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s;
+  background: radial-gradient(ellipse at center, #e6f3fb30 20%, #dcecf68c 75%, #eef7fcbb); }
 .hud-timer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; padding: 8px 32px 13px; background: linear-gradient(#101b1dce, #101b1d00); }
 .hud-timer .eyebrow { color: #e1d9be; font-size: 8px; }
 .hud-timer strong { font: 500 31px/1.2 var(--display); letter-spacing: .07em; }
@@ -615,3 +630,14 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
   /* A soft fade at the bottom says there's more below. */
   .weapon-showcase > .weapon-list { -webkit-mask-image: linear-gradient(#000 calc(100% - 36px), transparent); mask-image: linear-gradient(#000 calc(100% - 36px), transparent); padding-bottom: 28px; }
 }
+
+/* Saved mastery stays beside the hero name, independently of the open tab. */
+.hero-name-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; width: 100%; margin-top: 8px; }
+.hero-name-row h2 { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.hero-mastery-badge { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-height: 40px; padding: 8px 11px 11px; overflow: hidden; border: 1px solid #dec28a66; border-radius: 6px; background: linear-gradient(135deg, #dec28a1c, #101b1de6); color: var(--gold); }
+.hero-mastery-badge:hover { background: #dec28a26; border-color: var(--gold); }
+.hero-mastery-badge-label { font: 600 9px/1.4 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+.hero-mastery-badge strong { font: 600 16px/1.2 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hero-mastery-badge-max { font: 600 8px/1.4 var(--sans); }
+.hero-mastery-badge-track { position: absolute; inset: auto 0 0; height: 3px; background: linear-gradient(90deg, var(--gold) var(--mastery-progress), #dec28a18 var(--mastery-progress)); }
+.hero-mastery-badge.maxed { border-color: var(--gold); box-shadow: inset 0 0 14px #dec28a12; }

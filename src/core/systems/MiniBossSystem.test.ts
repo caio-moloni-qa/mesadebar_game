@@ -352,7 +352,7 @@ describe('the horde around a guardian fight', () => {
     run.spawnMiniBoss('gravedigger');
     const onField = new Set<unknown>();
     run.enemies.forEachActive((enemy) => onField.add(enemy));
-    expect(run.enemies.activeCount).toBe(GUARDIAN_FIGHT_SPAWNS.enemyCap);
+    expect(run.enemies.activeCount - run.neutrals.liveCount).toBe(GUARDIAN_FIGHT_SPAWNS.enemyCap);
     near.forEach((enemy) => expect(onField.has(enemy)).toBe(true));
     expect(onField.has(elite)).toBe(true);
     // The farthest went first.

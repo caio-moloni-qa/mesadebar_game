@@ -26,7 +26,7 @@ const STING_URLS = {
 };
 export type TrackName = keyof typeof TRACK_URLS;
 type StingName = keyof typeof STING_URLS;
-const GUARDIAN_TRACK: Record<MiniBossKind, TrackName> = { gravedigger: 'guardian-gravedigger', templeGuardian: 'guardian-temple', lakeSpirit: 'guardian-lake', frostKnight: 'guardian-temple' };
+const GUARDIAN_TRACK: Record<MiniBossKind, TrackName> = { gravedigger: 'guardian-gravedigger', templeGuardian: 'guardian-temple', lakeSpirit: 'guardian-lake', frostKnight: 'guardian-temple', iceSerpent: 'guardian-lake', bellringer: 'guardian-gravedigger', ancientYeti: 'guardian-temple' };
 const CROSSFADE_S = 1.6;
 
 /** What the music reads off the session (GameSession fits it). */
@@ -291,6 +291,14 @@ export class GameAudio {
       on('miniboss-warning', ({ kind }) => { this.sting('guardian'); this.preload(TRACK_URLS[GUARDIAN_TRACK[kind]]); }),
       on('miniboss-impact', ({ x, y, attack }) => this.play(attack === 'shockwave' || attack === 'geyser' ? 'explosion' : attack === 'wave' ? 'dash' : 'impact', { x, y }, attack === 'shockwave' ? .7 : attack === 'geyser' ? .45 : 1)),
       on('companion-heal', () => this.play('aura', undefined, .45)),
+      on('neutral-startled', ({ enemy }) => this.play('pickup', enemy, .3)),
+      on('neutral-provoked', ({ enemy }) => this.play('roar', enemy, .35)),
+      on('neutral-windup', ({ enemy }) => this.play('warning', enemy, .35)),
+      on('neutral-charge-hit', ({ enemy }) => this.play('impact', enemy, .9)),
+      on('neutral-dazed', ({ enemy }) => this.play('shield-break', enemy, .5)),
+      on('neutral-bite', ({ enemy, hit }) => this.play(hit ? 'critical' : 'impact', enemy, hit ? .9 : .5)),
+      on('swarm-released', ({ x, y }) => this.play('aura', { x, y }, .6)),
+      on('swarm-sting', ({ x, y }) => this.play('impact', { x, y }, .25)),
       on('miniboss-stunned', ({ enemy }) => this.play('shield-break', enemy, .6)),
       on('miniboss-defeated', ({ x, y }) => this.play('explosion', { x, y }, .8)),
       on('companion-joined', () => this.play('upgrade', undefined, .8, true)),

@@ -1,0 +1,6 @@
+﻿Pedido: novo ícone com V estilizado usando a mesma fonte do título do jogo.
+Método vetorial determinístico: Cinzel original 900, V em curvas, contornos sobrepostos unidos.
+Paleta do título: #f4d599, #e5a05d, #ba5441; contorno #f1cc80 e relevo vinho escuro.
+Fundo transparente, V centralizado em 1024x1024, sem moldura ou palavras extras.
+Final: venivium-v-icon_v2.svg e venivium-v-icon_v2.png. Rasterizado com resvg, sem IA de imagem.
+Fonte e licença OFL preservadas ao lado. Ícone atual do jogo preservado.

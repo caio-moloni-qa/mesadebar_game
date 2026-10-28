@@ -1,0 +1,785 @@
+[
+  {
+    "path": "art-source/3d/beast/turnaround-generation-prompt.txt",
+    "bytes": 2061,
+    "sha256": "a9743ec4c8eafbdd094e28af2bef59d44fa46065c30674d3be57536872ee2a1c"
+  },
+  {
+    "path": "art-source/3d/beast/turnaround-raw.png",
+    "bytes": 1918369,
+    "sha256": "82fa013631d21c33db587838fd826f516a147a8dba78ead2169370f7567ed837",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/beast/turnaround.png",
+    "bytes": 1918369,
+    "sha256": "82fa013631d21c33db587838fd826f516a147a8dba78ead2169370f7567ed837",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/beast/views/back.png",
+    "bytes": 650370,
+    "sha256": "d096862df409834af10a2553167c60cd96ab6909bbc76e17ae6345606cf031c1",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/beast/views/front.png",
+    "bytes": 694711,
+    "sha256": "6a10a29a9599621def5f4fb79112dbd8732fded6eeabf4aa63b90b8931361f86",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/beast/views/side.png",
+    "bytes": 477190,
+    "sha256": "bde47ddb6572d0203c0d8c430df052113cb29da4a08627f11438ffbabe92b94d",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/eskimo/turnaround-generation-prompt.txt",
+    "bytes": 1939,
+    "sha256": "99a5cf9dc45e9a4d9fda2aeda708863016eac9a4619f928ea45e1bf771aa638c"
+  },
+  {
+    "path": "art-source/3d/eskimo/turnaround-raw.png",
+    "bytes": 1697293,
+    "sha256": "62a70a700e5171a7ea9098676c3012dbeabf0203bf657b7435e742242389602c",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/eskimo/turnaround.png",
+    "bytes": 1697293,
+    "sha256": "62a70a700e5171a7ea9098676c3012dbeabf0203bf657b7435e742242389602c",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/eskimo/views/back.png",
+    "bytes": 719411,
+    "sha256": "9b75de1ba6be912caf3238f4e76e5c77f0dbc0e93e5849bc02ba35a7af999b84",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/eskimo/views/front.png",
+    "bytes": 779366,
+    "sha256": "e47b426f53aaee7e12591e431d582d762c59c35beb9499159fcd3a246ec632b1",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/eskimo/views/side.png",
+    "bytes": 499899,
+    "sha256": "14fafefc124e8faf282cd8cdeafe31fa91a0123790e866f857526ffecc0ba0ee",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/eskimo-lantern/sheet-generation-prompt.txt",
+    "bytes": 1032,
+    "sha256": "ecbb9de9d4d88408b3bf6bedbd06c9923f8d6d2903dd9048626bb8ed0a1950bf"
+  },
+  {
+    "path": "art-source/3d/eskimo-lantern/sheet-raw.png",
+    "bytes": 1553409,
+    "sha256": "d8b4fd6ac2a9f06f54b5039664b8dbf2252e80706f2c366511e7ef0f91387796",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/eskimo-lantern/sheet.png",
+    "bytes": 1553409,
+    "sha256": "d8b4fd6ac2a9f06f54b5039664b8dbf2252e80706f2c366511e7ef0f91387796",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/joe/turnaround-generation-prompt.txt",
+    "bytes": 1807,
+    "sha256": "d54373bc59cb3796a6535b33ee87db81b9561015232047c3f13429e9b03db28c"
+  },
+  {
+    "path": "art-source/3d/joe/turnaround-raw.png",
+    "bytes": 1648023,
+    "sha256": "c40e1d910333d475e414c489d6a3fbd76662dee8b3dcd4de833ea0e008bea80f",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/joe/turnaround.png",
+    "bytes": 1648023,
+    "sha256": "c40e1d910333d475e414c489d6a3fbd76662dee8b3dcd4de833ea0e008bea80f",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/joe/views/back.png",
+    "bytes": 898426,
+    "sha256": "af8562dac8efa5f34eae0614d103abf67263bb502feb67055b8d035c12d59e9d",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/joe/views/front.png",
+    "bytes": 943213,
+    "sha256": "7899d5791e58aba84d5220340adcff57a64ab11184110fa35b67c0c8645bf3fe",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/joe/views/side.png",
+    "bytes": 645143,
+    "sha256": "4ea64d153f74cc30a4177186f0d4ada1766ce718150297d36712aa2fa219c493",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/voly/turnaround-generation-prompt.txt",
+    "bytes": 2083,
+    "sha256": "a028c169c1a7bd5d30489644671ef7ab4ce03f77b0f858af178f3d82b87bff35"
+  },
+  {
+    "path": "art-source/3d/voly/turnaround-raw.png",
+    "bytes": 1959291,
+    "sha256": "395ef3c1330ef487f3ed20359423a0eacfa46bee71212aa995489d8bea582ef2",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/voly/turnaround.png",
+    "bytes": 1959291,
+    "sha256": "395ef3c1330ef487f3ed20359423a0eacfa46bee71212aa995489d8bea582ef2",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/voly/views/back.png",
+    "bytes": 821133,
+    "sha256": "35e29595c0fd8a078de01a8cb99ded74584e448fbd9510062534442782992e6c",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/voly/views/front.png",
+    "bytes": 893894,
+    "sha256": "cedd63db9b569a1d91e04d4d1dad2819700430ddc9e8324a7ce114d26e56d4d0",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/3d/voly/views/side.png",
+    "bytes": 522266,
+    "sha256": "65670a9bcf3ceba6758cfc307d7fb657768b24c9322436e8649173d2e9ab16c8",
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/characters/beast/beast-portrait-generation-prompt.txt",
+    "bytes": 1030,
+    "sha256": "b87ea3de4bff19a65387520dfcdb23985744481fa22e7b65217d45edfcd0638b"
+  },
+  {
+    "path": "art-source/characters/beast/beast-portrait-raw.png",
+    "bytes": 1432920,
+    "sha256": "743913893cd05c85e6091764a6966e126dacf99983668dc48462ad4603344e41",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/characters/beast/beast-portrait.png",
+    "bytes": 27431,
+    "sha256": "f30e6c7c5e2fbdb6a16c4459a902003b5cfe752e56a0d9e836eba0610d4d176b",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/characters/eskimo/eskimo-portrait-generation-prompt.txt",
+    "bytes": 977,
+    "sha256": "bf8c3c0c05c2d732fc32924f3c8ba9ca5e260232e131621c7a0ba3c8d7f3d78f"
+  },
+  {
+    "path": "art-source/characters/eskimo/eskimo-portrait-raw.png",
+    "bytes": 1223027,
+    "sha256": "04aaf5aa17d0c22818d756557f131922e4b12f2c3066d0c537880fb57a6a105e",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/characters/eskimo/eskimo-portrait.png",
+    "bytes": 24229,
+    "sha256": "dfa094d4a0271ce1e0b2fff6a4310f175662df8a80e0228a22700ebc26777e74",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/characters/joe/joe-portrait-generation-prompt.txt",
+    "bytes": 1046,
+    "sha256": "7c5d70369b82832d667c67f70f434dc247e709b7be1cb1f72017f16062925e8c"
+  },
+  {
+    "path": "art-source/characters/joe/joe-portrait-raw.png",
+    "bytes": 1708952,
+    "sha256": "3963ba8dbd67da4dfa3b475ce3596785706d85503c3f2726216e7e8ca6351514",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/characters/joe/joe-portrait.png",
+    "bytes": 30335,
+    "sha256": "de960dc453579a0995eb1793658d2b038c8b6d4ad65ee731bc5f673db18d93de",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/characters/voly/voly-portrait-generation-prompt.txt",
+    "bytes": 1028,
+    "sha256": "ee4496d6f56dd577f4cd251f5bbcee91d4e100f0d33fa9e39fff7db8cbc089a4"
+  },
+  {
+    "path": "art-source/characters/voly/voly-portrait-raw.png",
+    "bytes": 1944784,
+    "sha256": "55a945c8281875a7367984fa3c5574be7918508ae1c4cf2ae0817b5d72bbd831",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/characters/voly/voly-portrait.png",
+    "bytes": 36474,
+    "sha256": "315ae9ea0ff80c36e627ba40268dee61b593a3146673b0e9ccbc45fcad0440d0",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ]
+  },
+  {
+    "path": "art-source/igloo-art/igloo-heroes-art-mosaic_v2.png",
+    "bytes": 1093957,
+    "sha256": "8bc493f3878e1d18b6b5d2823377769a54c0718d9eda056d3008b7f43d737361",
+    "size": [
+      1600,
+      1440
+    ],
+    "mode": "RGB"
+  },
+  {
+    "path": "art-source/weapons/bear-claws/bear-claws-icon-generation-prompt.txt",
+    "bytes": 1004,
+    "sha256": "881d724799c84755a21d64a8358bebeb2d12e44478b16677527196565b0713b0"
+  },
+  {
+    "path": "art-source/weapons/bear-claws/bear-claws-icon-raw.png",
+    "bytes": 872100,
+    "sha256": "fc294d4b0922f5327d3b4c2c965c4f151f1cebbdffb6f86642b85376eb1580a1",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/weapons/bear-claws/bear-claws-icon.png",
+    "bytes": 2420,
+    "sha256": "0cbe6ccfb95ba810649ffc7d184da21260a339b08d2044952548b76b3c2818ec",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/weapons/beast-amulet/beast-amulet-icon-generation-prompt.txt",
+    "bytes": 1058,
+    "sha256": "7f51226a3b533b87dbde1149f96cb803062cf1caa3765787096b85dd3cee0b3d"
+  },
+  {
+    "path": "art-source/weapons/beast-amulet/beast-amulet-icon-generation-prompt_v2.txt",
+    "bytes": 1263,
+    "sha256": "570cdc6c1f809d8d3f38c58c0fdf01340a093da67677171a380a957264fc2a50"
+  },
+  {
+    "path": "art-source/weapons/beast-amulet/beast-amulet-icon-raw.png",
+    "bytes": 531275,
+    "sha256": "e47cab0d79f10f81eb23ddcfa73b3b54ec4d7369de84a95c8b1d3af7b816cb93",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/weapons/beast-amulet/beast-amulet-icon-raw_v2.png",
+    "bytes": 531275,
+    "sha256": "e47cab0d79f10f81eb23ddcfa73b3b54ec4d7369de84a95c8b1d3af7b816cb93",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/weapons/beast-amulet/beast-amulet-icon.png",
+    "bytes": 1694,
+    "sha256": "ae489d47989a22c949ab53fd5f6f4618ba43fcb7bc63d2c4dbcf9cc20d6d0389",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/weapons/beast-amulet/beast-amulet-icon_v2.png",
+    "bytes": 1565,
+    "sha256": "7a602342fec1c3d1d0aec7baae0a9d0ecf19598e8e1db17be95f27fb5041bc5e",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/weapons/psychic-fists/psychic-fists-icon-generation-prompt.txt",
+    "bytes": 1036,
+    "sha256": "7ee7107d49ce45a3a817b6fecdd2c4e2e0ba8ad30c3e40426b0d88185aa85e22"
+  },
+  {
+    "path": "art-source/weapons/psychic-fists/psychic-fists-icon-raw.png",
+    "bytes": 669667,
+    "sha256": "fbbeebdcfb2212b8bda12fc62d64195687765a019c40fa76999a1cf8b505a08c",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "art-source/weapons/psychic-fists/psychic-fists-icon.png",
+    "bytes": 2077,
+    "sha256": "efc763a8607fcdbf22267267980d0373302a569cafe13b5fc830667e3c29f3f4",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/beast-portrait-generation-prompt.txt",
+    "bytes": 1030,
+    "sha256": "b87ea3de4bff19a65387520dfcdb23985744481fa22e7b65217d45edfcd0638b"
+  },
+  {
+    "path": "src/assets/characters/npcs/beast-portrait-raw.png",
+    "bytes": 1432920,
+    "sha256": "743913893cd05c85e6091764a6966e126dacf99983668dc48462ad4603344e41",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/beast-portrait.png",
+    "bytes": 27431,
+    "sha256": "f30e6c7c5e2fbdb6a16c4459a902003b5cfe752e56a0d9e836eba0610d4d176b",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/eskimo-portrait-generation-prompt.txt",
+    "bytes": 977,
+    "sha256": "bf8c3c0c05c2d732fc32924f3c8ba9ca5e260232e131621c7a0ba3c8d7f3d78f"
+  },
+  {
+    "path": "src/assets/characters/npcs/eskimo-portrait-raw.png",
+    "bytes": 1223027,
+    "sha256": "04aaf5aa17d0c22818d756557f131922e4b12f2c3066d0c537880fb57a6a105e",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/eskimo-portrait.png",
+    "bytes": 24229,
+    "sha256": "dfa094d4a0271ce1e0b2fff6a4310f175662df8a80e0228a22700ebc26777e74",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/joe-portrait-generation-prompt.txt",
+    "bytes": 1046,
+    "sha256": "7c5d70369b82832d667c67f70f434dc247e709b7be1cb1f72017f16062925e8c"
+  },
+  {
+    "path": "src/assets/characters/npcs/joe-portrait-raw.png",
+    "bytes": 1708952,
+    "sha256": "3963ba8dbd67da4dfa3b475ce3596785706d85503c3f2726216e7e8ca6351514",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/joe-portrait.png",
+    "bytes": 30335,
+    "sha256": "de960dc453579a0995eb1793658d2b038c8b6d4ad65ee731bc5f673db18d93de",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/voly-portrait-generation-prompt.txt",
+    "bytes": 1028,
+    "sha256": "ee4496d6f56dd577f4cd251f5bbcee91d4e100f0d33fa9e39fff7db8cbc089a4"
+  },
+  {
+    "path": "src/assets/characters/npcs/voly-portrait-raw.png",
+    "bytes": 1944784,
+    "sha256": "55a945c8281875a7367984fa3c5574be7918508ae1c4cf2ae0817b5d72bbd831",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/characters/npcs/voly-portrait.png",
+    "bytes": 36474,
+    "sha256": "315ae9ea0ff80c36e627ba40268dee61b593a3146673b0e9ccbc45fcad0440d0",
+    "size": [
+      128,
+      128
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ]
+  },
+  {
+    "path": "src/assets/weapons/bear-claws-icon-generation-prompt.txt",
+    "bytes": 1004,
+    "sha256": "881d724799c84755a21d64a8358bebeb2d12e44478b16677527196565b0713b0"
+  },
+  {
+    "path": "src/assets/weapons/bear-claws-icon-raw.png",
+    "bytes": 872100,
+    "sha256": "fc294d4b0922f5327d3b4c2c965c4f151f1cebbdffb6f86642b85376eb1580a1",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/weapons/bear-claws-icon.png",
+    "bytes": 2420,
+    "sha256": "0cbe6ccfb95ba810649ffc7d184da21260a339b08d2044952548b76b3c2818ec",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/weapons/beast-amulet-icon-generation-prompt.txt",
+    "bytes": 1058,
+    "sha256": "7f51226a3b533b87dbde1149f96cb803062cf1caa3765787096b85dd3cee0b3d"
+  },
+  {
+    "path": "src/assets/weapons/beast-amulet-icon-generation-prompt_v2.txt",
+    "bytes": 1263,
+    "sha256": "570cdc6c1f809d8d3f38c58c0fdf01340a093da67677171a380a957264fc2a50"
+  },
+  {
+    "path": "src/assets/weapons/beast-amulet-icon-raw.png",
+    "bytes": 531275,
+    "sha256": "e47cab0d79f10f81eb23ddcfa73b3b54ec4d7369de84a95c8b1d3af7b816cb93",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/weapons/beast-amulet-icon-raw_v2.png",
+    "bytes": 531275,
+    "sha256": "e47cab0d79f10f81eb23ddcfa73b3b54ec4d7369de84a95c8b1d3af7b816cb93",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/weapons/beast-amulet-icon.png",
+    "bytes": 1694,
+    "sha256": "ae489d47989a22c949ab53fd5f6f4618ba43fcb7bc63d2c4dbcf9cc20d6d0389",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/weapons/beast-amulet-icon_v2.png",
+    "bytes": 1565,
+    "sha256": "7a602342fec1c3d1d0aec7baae0a9d0ecf19598e8e1db17be95f27fb5041bc5e",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/weapons/psychic-fists-icon-generation-prompt.txt",
+    "bytes": 1036,
+    "sha256": "7ee7107d49ce45a3a817b6fecdd2c4e2e0ba8ad30c3e40426b0d88185aa85e22"
+  },
+  {
+    "path": "src/assets/weapons/psychic-fists-icon-raw.png",
+    "bytes": 669667,
+    "sha256": "fbbeebdcfb2212b8bda12fc62d64195687765a019c40fa76999a1cf8b505a08c",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "path": "src/assets/weapons/psychic-fists-icon.png",
+    "bytes": 2077,
+    "sha256": "efc763a8607fcdbf22267267980d0373302a569cafe13b5fc830667e3c29f3f4",
+    "size": [
+      64,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ]
+  }
+]

@@ -1,3 +1,7 @@
+import { SnowAttackEffects } from './vfx/SnowAttackEffects';
+import { BlizzardView } from './views/BlizzardView';
+import { EskimoView } from './views/EskimoView';
+import { SnowfieldView } from './views/SnowfieldView';
 import * as THREE from 'three';
 import { GameAudio } from '../audio/GameAudio';
 import { SANDBOX_SPAWN_CAPS } from '../config/balance';
@@ -6,6 +10,7 @@ import { WEAPONS, WeaponConfig } from '../config/weapons';
 import { GameSession, STEP_MS } from '../core/session/GameSession';
 import { ArenaMap } from '../core/world/ArenaMap';
 import { ProjectileKind, snapPrevious } from '../core/session/entities';
+import { EnemyVariantId } from '../core/systems/EnemySpawnScheduler';
 import { HandAttack } from './models/clips';
 import { ARENA_LAYOUTS, ZoneKind, useArenaLayout } from '../config/arenaLayout';
 import { CameraRig } from './CameraRig';
@@ -37,7 +42,7 @@ import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
 import { GuardianIntro } from './GuardianIntro';
 import { AREAS } from '../config/areas';
-import { QUEST_NPCS, QuestNpcId } from '../core/systems/QuestSystem';
+import { ALL_QUEST_NPCS, QuestNpcId } from '../core/systems/QuestSystem';
 import { Tip, TipDialog } from './ui/TipDialog';
 import { FIRST_RUN_TIP, GUARDIAN_TIP, welcomeTip } from './ui/tips';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
@@ -66,6 +71,8 @@ export interface Game3DOptions {
   invincible?: boolean;
   /** Debug: start the hero in a zone instead of the spawn clearing (?at=ruins|lake|forest|graveyard|camp|meadow). */
   startZone?: ZoneKind;
+  /** Test URLs: play in this arena (?arena=snowfield) instead of Greenfield. */
+  arena?: string;
   /** Debug: draw every collision shape (?debug=collision). */
   showCollision?: boolean;
   /** Debug close-up camera (1 = normal gameplay framing). */
@@ -79,6 +86,8 @@ export interface Game3DOptions {
 /** The hero's attack for each projectile: the bolt is cast, an arrow drawn and loosed, a coin flipped, whatever comes
  *  out of Sergio's pack lobbed overarm; boomerangs and the thrown sword go sidearm. */
 const PROJECTILE_ATTACKS: Record<ProjectileKind, HandAttack> = { bolt: 'cast', arrow: 'shoot', coin: 'toss', pan: 'hurl', bottle: 'hurl', potion: 'hurl', boomerang: 'throw', banana: 'throw', thrownSword: 'throw' };
+/** The puff an enemy dies in (anything not listed bursts spectral violet). */
+const DEATH_BURST_COLORS: Partial<Record<EnemyVariantId, number>> = { skeleton: PALETTE.bone, superSkeleton: PALETTE.bone, frostSkeleton: 0xbfe6ff, frostSpirit: 0xdff6ff, snowShaman: 0x73dfff, snowman: 0xffffff, iceTroll: 0x91dcff, iceWolf: 0xdfeaf2 };
 const STATUS_COLORS: Record<'heal-cut' | 'slow' | 'rot' | 'heal', string> = { 'heal-cut': '#ffb347', slow: '#8bbcff', rot: '#b98bff', heal: '#8effa0' };
 
 /** The Three.js run: owns the WebGL renderer, the fixed-step loop and the views over one GameSession. */
@@ -89,6 +98,9 @@ export class Game3D {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly cameraRig: CameraRig;
+  private readonly roomFocus = new THREE.Vector3();
+  private readonly tavernBackground = new THREE.Color(0x352c24);
+  private readonly arenaBackground = new THREE.Color(PALETTE.background);
   private readonly pipeline: PixelPipeline;
   private arena: Arena;
   /** One map per page load: the authored layout with this load's detail seed, shared by every run (fixed zones). */
@@ -102,6 +114,7 @@ export class Game3D {
   private readonly sandbox: SandboxPanel;
   private readonly bossViews = new BossViews();
   private readonly bossEffects: BossEffects;
+  private readonly snowAttackEffects = new SnowAttackEffects();
   private readonly miniBossViews = new MiniBossViews();
   private readonly guardianIntro: GuardianIntro;
   private readonly tipDialog: TipDialog;
@@ -111,6 +124,11 @@ export class Game3D {
   /** Sandbox: every hero playable, without touching the save. */
   private allHeroesUnlocked = false;
   private merchantRoom?: MerchantRoom;
+  /** The Nevasca's torches and storm snow, rebuilt with every session (empty where the arena has no blizzard). */
+  private blizzardView?: BlizzardView;
+  /** The Esquimó on his rounds and Joe's memory fragments (recreated with each session). */
+  private eskimoView?: EskimoView;
+  private readonly journeyFade = document.createElement('div');
   private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
@@ -139,6 +157,7 @@ export class Game3D {
   private playerView!: HeroView;
   /** Sized for the sandbox's highest spawn limit, so raising it never outgrows the instanced batches. */
   private readonly enemyView = new EnemyHordeView(SANDBOX_SPAWN_CAPS[SANDBOX_SPAWN_CAPS.length - 1]);
+  private readonly snowfieldView = new SnowfieldView(SANDBOX_SPAWN_CAPS[SANDBOX_SPAWN_CAPS.length - 1]);
   private readonly projectileView = new ProjectileView(400);
   private readonly pickupView = new PickupView(600);
   private readonly hazardView = new HazardView(80);
@@ -167,6 +186,9 @@ export class Game3D {
     this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.renderer.info.autoReset = false;
     container.appendChild(this.renderer.domElement);
+    this.journeyFade.style.cssText = 'position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:10000';
+    this.journeyFade.setAttribute('aria-hidden', 'true');
+    container.appendChild(this.journeyFade);
     this.pipeline = new PixelPipeline(this.renderer);
     this.scene.background = new THREE.Color(PALETTE.background);
     this.arenaSeed = options.seed ?? randomSeed();
@@ -178,7 +200,7 @@ export class Game3D {
     this.sheetEffects = new SheetEffects(this.cameraRig.camera);
     this.scene.add(this.sheetEffects.root);
     this.miniBossEffects = new MiniBossEffects(this.particles, this.miniBossViews);
-    this.scene.add(this.miniBossEffects.root, this.miniBossViews.root, this.companionViews.root);
+    this.scene.add(this.snowAttackEffects.root, this.miniBossEffects.root, this.miniBossViews.root, this.companionViews.root);
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
     this.floating = new FloatingTexts(container);
     this.hud = new Hud(container, Boolean(options.debug), () => {
@@ -230,7 +252,7 @@ export class Game3D {
     this.choices = new ChoiceOverlay(container);
     this.tavernDialog = new TavernDialog(container, (hero) => this.menu.showCharacters(hero));
     this.companionBars = new CompanionBars(container);
-    this.scene.add(this.questBarrels.root, this.heroKitViews.root, this.powerViews.root);
+    this.scene.add(this.snowfieldView.root, this.questBarrels.root, this.heroKitViews.root, this.powerViews.root);
     this.chestRoll = new ChestRoll(container);
     this.tipDialog = new TipDialog(container);
     this.powerBanner = new PowerBanner(container, () => this.audio.fanfare());
@@ -258,6 +280,7 @@ export class Game3D {
         const { session } = this;
         if (this.mode !== 'run' || !session.merchant.inside || session.merchant.hub) return null;
         return {
+          igloo: session.merchant.igloo,
           coins: session.currency,
           offers: session.merchant.offers,
           buy: (index) => {
@@ -306,6 +329,7 @@ export class Game3D {
       closeToTavern: () => this.menu.hide(),
       roster: () => this.roster()
     });
+    if (options.arena) this.useArena(options.arena);
     if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
     this.bindInput();
@@ -439,7 +463,7 @@ export class Game3D {
   private regularsAway(): QuestNpcId[] {
     const here = AREAS.find((area) => area.id === this.arenaMap.layout.id)?.regulars ?? [];
     const roster = rosterFor(this.progress);
-    return QUEST_NPCS.map((npc) => npc.id).filter((id) => !here.includes(id) || roster.includes(id));
+    return ALL_QUEST_NPCS.map((npc) => npc.id).filter((id) => !here.includes(id) || (roster as string[]).includes(id));
   }
 
   private createSession({ skipStartingUpgrades, attract, hub = false }: { skipStartingUpgrades: boolean; attract: boolean; hub?: boolean }): void {
@@ -478,6 +502,19 @@ export class Game3D {
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
     this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);
+    if (this.blizzardView) {
+      this.scene.remove(this.blizzardView.root);
+      disposeTree(this.blizzardView.root);
+    }
+    this.blizzardView = new BlizzardView(this.session.blizzard);
+    this.scene.add(this.blizzardView.root);
+    if (this.eskimoView) {
+      this.scene.remove(this.eskimoView.root, this.eskimoView.glow);
+      disposeTree(this.eskimoView.root);
+      disposeTree(this.eskimoView.glow);
+    }
+    this.eskimoView = new EskimoView(this.session.shelter, this.session.quests);
+    this.scene.add(this.eskimoView.root, this.eskimoView.glow);
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
       this.session.variantSpawnEnabled = false;
@@ -530,7 +567,7 @@ export class Game3D {
     const at = (x: number, y: number) => simToWorld(x, y, 0, this.scratch);
     events.on('enemy-defeated', ({ x, y, variantId, divineRelic }) => {
       const point = at(x, y);
-      this.particles.burst(point.x, point.z, variantId === 'skeleton' || variantId === 'superSkeleton' ? PALETTE.bone : 0xb98cff, 10);
+      this.particles.burst(point.x, point.z, DEATH_BURST_COLORS[variantId] ?? 0xb98cff, 10);
       if (divineRelic) {
         this.particles.burst(point.x, point.z, 0x4dff7a, 4, 1.6, 0.6);
         this.floating.spawn(simToWorld(x, y, 1.6, this.scratch), '▲', { color: '#4dff7a', size: 26, rise: 46, durationMs: 620 }, performance.now());
@@ -547,6 +584,12 @@ export class Game3D {
       this.floating.spawn(head, `- ${Math.round(amount)}`, { color: '#ff5c5c', delayMs: critical ? 150 : 0 }, now);
       if (this.session.weapons.has('amulet')) this.floatAboveHero('DANO +', '#8effa0');
     });
+    // The bees lose the hero at the water's edge; a mimic's snap throws splinters.
+    events.on('swarm-dispersed', ({ x, y, byWater }) => {
+      if (byWater) this.floatAboveHero('Despistou as abelhas!', '#ffd23a');
+      this.particles.burst(x * WORLD_SCALE, y * WORLD_SCALE, 0xffd23a, 8, 1, 1.2);
+    });
+    events.on('neutral-bite', ({ enemy, hit }) => { if (hit) this.particles.burst(enemy.x * WORLD_SCALE, enemy.y * WORLD_SCALE, 0x8a5a2b, 10, 1, 1.4); });
     events.on('pickup-collected', ({ kind }) => {
       const color = kind === 'gem' ? PALETTE.gem : kind === 'potion' ? 0xff6b6b : 0xffd868;
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, color, kind === 'gem' ? 3 : 14, 0.8, 1.8);
@@ -575,6 +618,9 @@ export class Game3D {
     });
     events.on('player-status', ({ text, tone }) => this.floatAboveHero(text, STATUS_COLORS[tone]));
     events.on('player-died', () => this.playerView.die());
+    events.on('snowman-burst', ({ x, y }) => { const p = at(x, y); this.particles.burst(p.x, p.z, 0xf1faff, 14); });
+    events.on('troll-slam', ({ x, y }) => this.effects.pulse(x, y, 65, 0x75d9ff, 0.4, 0.6));
+    events.on('icicle-landed', ({ x, y }) => { const p = at(x, y); this.particles.burst(p.x, p.z, 0x91dcff, 12); });
     events.on('aura-pulse', ({ radius, multiStrike, buffUnlocked }) => {
       const { player } = this.session;
       this.sheetEffects.ring(player.x, player.y, radius);
@@ -595,11 +641,12 @@ export class Game3D {
       if (kind === 'bolt') this.particles.burst(point.x, point.z, PALETTE.boltCore, 4, 1.1, 2.2);
     });
     events.on('boss-explosion', ({ x, y, radius, kind, blocked }) => {
+      const winter = this.session.arena.layout.id === 'snowfield';
       const point = at(x, y);
       const big = kind === 'shield';
-      this.effects.burst(x, y, radius, 0x52ff45, big ? 0.6 : 0.36, 0.35);
-      this.effects.pulse(x, y, radius, 0xd8ffd0, big ? 0.6 : 0.32, 0.9);
-      this.particles.burst(point.x, point.z, 0x8cff8c, big ? 60 : 12, 1.2, big ? 10 : 3);
+      this.effects.burst(x, y, radius, (winter ? 0x79dfff : 0x52ff45), big ? 0.6 : 0.36, 0.35);
+      this.effects.pulse(x, y, radius, (winter ? 0xe8f8ff : 0xd8ffd0), big ? 0.6 : 0.32, 0.9);
+      this.particles.burst(point.x, point.z, (winter ? 0x9fe5ff : 0x8cff8c), big ? 60 : 12, 1.2, big ? 10 : 3);
       if (kind === 'meteor') {
         this.bossEffects.scorch(x, y, radius);
         this.particles.emit(point.x, 0.4, point.z, 0x6b5a46, 10, { spread: 4, rise: 5, gravity: 16, life: 0.6, size: 1.2 });
@@ -617,25 +664,28 @@ export class Game3D {
       }
     });
     events.on('boss-shield-broken', ({ enemy }) => {
+      const winter = this.session.arena.layout.id === 'snowfield';
       const point = at(enemy.x, enemy.y);
       // The dome shatters into shards; the boss drops to a knee.
-      this.particles.emit(point.x, 4, point.z, 0x8cff8c, 70, { spread: 9, rise: 5, gravity: 14, life: 0.9, size: 1.3, jitter: 4 });
+      this.particles.emit(point.x, 4, point.z, (winter ? 0x9fe5ff : 0x8cff8c), 70, { spread: 9, rise: 5, gravity: 14, life: 0.9, size: 1.3, jitter: 4 });
       this.effects.pulse(enemy.x, enemy.y, 230, 0xffffff, 0.45, 0.9);
       this.floating.spawn(simToWorld(enemy.x, enemy.y, 9, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 32, rise: 50, durationMs: 1200 }, performance.now());
       this.cameraRig.shake(0.35, 0.35);
     });
     events.on('boss-phase-two', ({ enemy }) => {
-      this.floating.spawn(simToWorld(enemy.x, enemy.y, 10, this.scratch), 'O NECROMANTE DESPERTA!', { color: '#8cff8c', size: 30, rise: 40, durationMs: 1800 }, performance.now());
+      const winter = this.session.arena.layout.id === 'snowfield';
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 10, this.scratch), winter ? 'O REI DO INVERNO DESPERTA!' : 'O NECROMANTE DESPERTA!', { color: winter ? '#9fe5ff' : '#8cff8c', size: 30, rise: 40, durationMs: 1800 }, performance.now());
       this.cameraRig.shake(0.15, 1.2);
     });
     events.on('boss-shockwave', ({ x, y, radius }) => {
+      const winter = this.session.arena.layout.id === 'snowfield';
       const point = at(x, y);
-      this.effects.pulse(x, y, radius, 0xd8ffd0, 0.5, 1);
-      this.effects.burst(x, y, radius, 0x1f8a46, 0.6, 0.4);
+      this.effects.pulse(x, y, radius, (winter ? 0xe8f8ff : 0xd8ffd0), 0.5, 1);
+      this.effects.burst(x, y, radius, (winter ? 0x286a9b : 0x1f8a46), 0.6, 0.4);
       for (let index = 0; index < 24; index += 1) {
         const angle = (index / 24) * Math.PI * 2;
         const reach = radius * 0.7 * WORLD_SCALE;
-        this.particles.emit(point.x + Math.cos(angle) * reach, 0.3, point.z + Math.sin(angle) * reach, 0x6dff9a, 2, { spread: 3, rise: 3, gravity: 8, life: 0.6, size: 1.3 });
+        this.particles.emit(point.x + Math.cos(angle) * reach, 0.3, point.z + Math.sin(angle) * reach, (winter ? 0x7ce6ff : 0x6dff9a), 2, { spread: 3, rise: 3, gravity: 8, life: 0.6, size: 1.3 });
       }
       this.cameraRig.shake(0.6, 0.6);
     });
@@ -1059,7 +1109,7 @@ export class Game3D {
     if (code === 'KeyB') session.triggerBossWave();
     if (code === 'KeyV') {
       // One of each scheduled variant in a ring around the hero, for reviewing models/animations.
-      const variants = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith'] as const;
+      const variants = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith', 'frostSkeleton', 'frostSpirit', 'snowShaman', 'snowman', 'iceTroll', 'iceWolf'] as const;
       variants.forEach((variant, index) => {
         const angle = (index / variants.length) * Math.PI * 2;
         session.spawnEnemy(variant, session.player.x + Math.cos(angle) * 150, session.player.y + Math.sin(angle) * 150);
@@ -1105,28 +1155,58 @@ export class Game3D {
         this.accumulator -= STEP_MS;
       }
     }
+    this.journeyFade.style.opacity = String(this.session.frozen ? 0 : this.session.journeyOpacity);
+    this.journeyFade.style.pointerEvents = this.session.journey && !this.session.frozen ? 'auto' : 'none';
     const alpha = running ? Math.min(1, this.accumulator / STEP_MS) : 1;
     const simNow = this.session.clock.now + (running ? this.accumulator : 0);
     const deltaSeconds = running || this.inMenu ? frameMs / 1000 : 0;
 
     // The hero keeps animating after death (the fall plays out) but freezes with pause / choice screens.
-    this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000, this.session.journey?.kind === 'igloo' && this.session.journey.ms >= 1400 && !this.session.journey.arrived);
+    const journey = this.session.journey;
+    if (journey?.kind === 'igloo' && !journey.arrived) {
+      const t = Math.min(1, journey.ms / 1400);
+      this.playerView.root.position.y += Math.sin(t * Math.PI) * 0.45 - t * 0.25;
+    }
     this.syncHeldWeapons();
-    this.enemyView.update(this.session.enemies, alpha, simNow, deltaSeconds);
+    this.enemyView.update(this.session.enemies, alpha, simNow, journey ? 0 : deltaSeconds);
+    this.enemyView.updateSwarms(this.session.neutrals.swarms, alpha, simNow);
+    this.enemyView.updateFrostTrail(this.session.frostTrail.patches, simNow);
+    this.snowfieldView.update(this.session, alpha, simNow);
+    this.blizzardView?.update(this.cameraRig.focus, deltaSeconds);
+    this.eskimoView?.update(this.session.frozen ? 0 : deltaSeconds);
     this.projectileView.update(this.session.projectiles, alpha, simNow, this.cameraRig.camera);
     this.pickupView.update(this.session.pickups, alpha, simNow);
     this.hazardView.update(this.session.souls, this.session.peels, alpha, simNow);
     this.particles.update(deltaSeconds);
     this.effects.update(deltaSeconds);
     this.sheetEffects.update(deltaSeconds);
+    const inTavern = this.session.merchant.inside;
+    this.cameraRig.setRoomZoom(inTavern ? 1.65 : 1);
+    this.scene.background = inTavern ? this.tavernBackground : this.arenaBackground;
     const sceneFocus = this.guardianIntro.update(frameMs / 1000, this.playerView.worldPosition);
     if (sceneFocus) {
       this.cameraRig.cut();
       this.cameraRig.follow(sceneFocus, frameMs / 1000);
     } else {
-      this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
+      // Keep the framing inside the hall while still tracking the hero near tables and the doorway.
+      let focus = this.playerView.worldPosition;
+      if (inTavern) {
+        simToWorld(this.session.merchant.room.x, this.session.merchant.room.y, 0, this.roomFocus);
+        const dx = focus.x - this.roomFocus.x, dz = focus.z - this.roomFocus.z;
+        // On narrow/tall screens, follow farther so the hero stays within the central 65% of the view.
+        const across = Math.abs((dx - dz) / Math.SQRT2);
+        const vertical = Math.abs((dx + dz) / 2);
+        const tracking = Math.max(0.45,
+          1 - this.cameraRig.camera.right * 0.65 / Math.max(across, 0.001),
+          1 - this.cameraRig.camera.top * 0.65 / Math.max(vertical, 0.001));
+        focus = this.roomFocus.lerp(focus, tracking);
+      }
+      this.cameraRig.follow(focus, frameMs / 1000);
     }
     this.arena.setSceneryVisible(!this.session.merchant.inside);
+    // Out of the wind in the igloo (or the tavern): no storm, no torches.
+    if (this.blizzardView) this.blizzardView.root.visible = this.blizzardView.glow.visible = !this.session.merchant.inside;
     this.arena.followFocus(this.cameraRig.focus);
     this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
@@ -1136,14 +1216,15 @@ export class Game3D {
     this.heroKitViews.update(this.session, alpha, simNow);
     this.powerViews.update(this.session, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.companionViews.update(this.session.companions.companions, this.session.companions.skeletons, alpha, this.session.frozen ? 0 : frameMs / 1000);
+    this.snowAttackEffects.update([...this.session.miniBosses.snow.hazards, ...this.session.bosses.snow.hazards], this.session.bosses.braziers);
     this.miniBossEffects.update(this.session.miniBosses, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
     this.questBarrels.update(this.session.quests, this.session.frozen ? 0 : frameMs / 1000);
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
-      [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
+      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), ...(this.eskimoView ? [this.eskimoView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, ...(this.merchantRoom ? this.merchantRoom.ambience.glows : []), this.bossEffects.root, this.miniBossEffects.root, this.snowAttackEffects.root, this.playerView.effects],
+      [this.playerView.root, this.snowfieldView.heroIce, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters, this.merchantRoom.questMarkers] : [])]);
 
     this.fps.frames += 1;
     if (now - this.fps.since >= 500) {

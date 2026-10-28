@@ -1,0 +1,135 @@
+[
+  {
+    "asset": "src\\assets\\textures\\rooms\\igloo_fur_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "before_edge_mean_rgb": [
+      9.71,
+      10.57
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src\\assets\\textures\\rooms\\igloo_ice_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "before_edge_mean_rgb": [
+      16.9,
+      46.8
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src\\assets\\textures\\rooms\\igloo_snow_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "before_edge_mean_rgb": [
+      4.61,
+      7.31
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src\\assets\\textures\\rooms\\tavern_counter_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "before_edge_mean_rgb": [
+      4.8,
+      8.61
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src\\assets\\textures\\rooms\\tavern_planks_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "before_edge_mean_rgb": [
+      20.94,
+      6.44
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src\\assets\\textures\\rooms\\tavern_rug_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "before_edge_mean_rgb": [
+      12.32,
+      26.28
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  },
+  {
+    "asset": "src\\assets\\textures\\rooms\\tavern_wall_v2.png",
+    "raw_size": [
+      1254,
+      1254
+    ],
+    "final_size": [
+      128,
+      128
+    ],
+    "before_edge_mean_rgb": [
+      8.26,
+      7.86
+    ],
+    "after_edge_max_rgb": [
+      0,
+      0
+    ]
+  }
+]

@@ -1,0 +1,53 @@
+{
+  "id": "ancient-yeti",
+  "source": "turnaround.png",
+  "width": 1536,
+  "height": 1024,
+  "views": [
+    {
+      "name": "front",
+      "path": "views/front.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        0,
+        0,
+        590,
+        1024
+      ],
+      "sha256": "fdcd721f37aff19186a45b929c3517a7866a739ca6e6059971e33e10f0b919d8"
+    },
+    {
+      "name": "side",
+      "path": "views/side.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        590,
+        0,
+        928,
+        1024
+      ],
+      "sha256": "801bdb0eccab8d484fc392d72d32af594f903b6d68ddeb2299d377245545f3fb"
+    },
+    {
+      "name": "back",
+      "path": "views/back.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        928,
+        0,
+        1536,
+        1024
+      ],
+      "sha256": "f9ede3f60e41aa4b45dbe1aaee6744bf5b91e3e2a4ea12b6afda7916a0d385c1"
+    }
+  ]
+}

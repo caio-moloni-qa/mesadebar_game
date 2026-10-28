@@ -76,7 +76,7 @@ const COMPANION_ICONS: Record<CompanionKind, string> = {
 };
 
 /** The tavern regulars' portraits (dialogue panel). */
-const NPC_FACES: Record<QuestNpcId, string> = {
+const NPC_FACES: Partial<Record<QuestNpcId, string>> = {
   // Brom: iron cap, red braided beard.
   brom: svg('<path d="M12 26 Q32 4 52 26 Z" fill="#8a8f99"/><rect x="10" y="24" width="44" height="5" fill="#6f737c"/><circle cx="32" cy="34" r="13" fill="#e0a882"/><rect x="25" y="31" width="4" height="4" fill="#1a1410"/><rect x="35" y="31" width="4" height="4" fill="#1a1410"/><path d="M17 36 Q32 70 47 36 Q40 44 32 44 Q24 44 17 36 Z" fill="#c0502a"/><rect x="24" y="40" width="16" height="3" fill="#c0502a"/><rect x="26" y="52" width="3" height="9" fill="#c0502a"/><rect x="35" y="52" width="3" height="9" fill="#c0502a"/>'),
   // Lyra: green hood, golden hair, long ears.
@@ -91,12 +91,12 @@ const NPC_FACES: Record<QuestNpcId, string> = {
  *  stand in for any that don't yet. */
 const NPC_PORTRAITS = import.meta.glob<string>('../../assets/characters/npcs/*-portrait.png', { query: '?url', import: 'default', eager: true });
 
-export function npcPortrait(name: QuestNpcId | 'sergio'): string | undefined {
+export function npcPortrait(name: QuestNpcId | 'sergio' | 'eskimo'): string | undefined {
   return NPC_PORTRAITS[`../../assets/characters/npcs/${name}-portrait.png`];
 }
 
 export function npcFace(id: QuestNpcId): string {
-  return npcPortrait(id) ?? NPC_FACES[id];
+  return npcPortrait(id) ?? NPC_FACES[id] ?? '';
 }
 
 export function companionIcon(kind: CompanionKind): string {
@@ -115,7 +115,7 @@ export function upgradeIcon(id: string): string {
 export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
 
 /** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
-export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'frostKnight' | 'end' | 'continue' | 'merchant' | 'barrel';
+export type MarkerKind = 'iceSerpent' | 'bellringer' | 'ancientYeti' | 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'frostKnight' | 'end' | 'continue' | 'merchant' | 'barrel' | 'fragment' | 'eskimo';
 const MARKER_FACES: Record<MarkerKind, string> = {
   // The Necromancer and the zone guardians: their heads, cut from the concept art (art-source/3d/<boss>/views/front.png).
   boss: new URL('../../assets/ui/markers/boss-head.png', import.meta.url).href,
@@ -123,12 +123,19 @@ const MARKER_FACES: Record<MarkerKind, string> = {
   templeGuardian: new URL('../../assets/ui/markers/templeGuardian-head.png', import.meta.url).href,
   lakeSpirit: new URL('../../assets/ui/markers/lakeSpirit-head.png', import.meta.url).href,
   // O Cavaleiro Congelado: a frosted great helm, a cyan visor slit, a crest of ice.
+  iceSerpent: svg('<path d="M10 50q35 20 36-4T25 27q-10-15 9-17l14 6-10 9" stroke="#90d9ef" stroke-width="10" fill="none"/><circle cx="36" cy="13" r="3" fill="#ffcf61"/>'),
+  bellringer: svg('<path d="M12 45q8-5 8-20 0-20 12-20t12 20q0 15 8 20z" fill="#c4a05c"/><rect x="10" y="44" width="44" height="6" fill="#f4cc78"/><circle cx="32" cy="55" r="6" fill="#805c36"/>'),
+  ancientYeti: svg('<circle cx="32" cy="31" r="26" fill="#dfedf2"/><path d="M10 20 4 6l18 9m32 5 6-14-18 9" fill="#80a5bc"/><ellipse cx="32" cy="34" rx="17" ry="16" fill="#68889d"/><path d="M20 29h7m10 0h7" stroke="#88edff" stroke-width="4"/><path d="M21 40h22l-5 12-4-10-5 10z" fill="#fff"/>'),
   frostKnight: svg('<path d="M32 4 L38 14 L32 12 L26 14 Z" fill="#e8f3fb"/><path d="M14 22 Q14 10 32 10 Q50 10 50 22 L50 46 Q50 56 32 58 Q14 56 14 46 Z" fill="#9fc3dc"/><path d="M14 30 L50 30 L50 34 L14 34 Z" fill="#5f7d96"/><rect x="20" y="30" width="24" height="5" fill="#7fe3ff"/><path d="M31 38 L33 38 L33 54 L31 54 Z" fill="#5f7d96"/><path d="M14 22 Q14 10 32 10 L32 14 Q18 14 18 24 Z" fill="#e8f3fb" opacity=".8"/>'),
   end: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#9fb4ff" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#9fb4ff" opacity=".6"/><path d="M26 32 h12 m-5 -5 l5 5 l-5 5" stroke="#ffffff" stroke-width="3" fill="none"/>'),
   // Sergio, the merchant: a wide hat over a grey beard, a gold coin at the brim.
   merchant: svg('<rect x="8" y="22" width="48" height="5" rx="2" fill="#3a2a1e"/><path d="M20 22 L32 6 L44 22 Z" fill="#3a2a1e"/><circle cx="32" cy="34" r="11" fill="#d9a77e"/><rect x="26" y="31" width="4" height="4" fill="#1a1410"/><rect x="34" y="31" width="4" height="4" fill="#1a1410"/><path d="M21 38 L43 38 L32 58 Z" fill="#cfc8bb"/><circle cx="46" cy="18" r="5" fill="#ffc65a" stroke="#b8923a" stroke-width="2"/>'),
   // One of Brom's lost barrels.
   barrel: svg('<ellipse cx="32" cy="14" rx="16" ry="5" fill="#c9963f"/><path d="M16 14 Q12 32 16 50 L48 50 Q52 32 48 14 Z" fill="#8a5a32"/><rect x="13" y="22" width="38" height="4" fill="#4a4a52"/><rect x="13" y="40" width="38" height="4" fill="#4a4a52"/><ellipse cx="32" cy="50" rx="16" ry="5" fill="#6a4226"/>'),
+  // One of Joe's memory fragments: a shard of glowing blue ice.
+  fragment: svg('<path d="M32 6 L46 26 L38 58 L26 58 L18 26 Z" fill="#7fe3ff"/><path d="M32 6 L38 58 L26 58 Z" fill="#c9f4ff"/><path d="M18 26 L46 26" stroke="#3aa8d8" stroke-width="2"/><circle cx="32" cy="30" r="5" fill="#ffffff" opacity=".8"/>'),
+  // The Esquimó: a fur-ringed hood around a round face, his lantern glowing beside it.
+  eskimo: svg('<circle cx="30" cy="32" r="20" fill="#e8dcc4"/><circle cx="30" cy="32" r="15" fill="#8a5a32"/><circle cx="30" cy="34" r="10" fill="#d9a77e"/><rect x="25" y="31" width="3" height="3" fill="#1a1410"/><rect x="32" y="31" width="3" height="3" fill="#1a1410"/><rect x="48" y="36" width="8" height="12" rx="2" fill="#ffc65a" stroke="#6a4a2a" stroke-width="2"/><path d="M52 30 v6" stroke="#6a4a2a" stroke-width="2"/>'),
   continue: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#7dffa0" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#7dffa0" opacity=".6"/><path d="M32 24 v16 M24 32 h16" stroke="#ffffff" stroke-width="3"/>')
 };
 
@@ -159,6 +166,10 @@ export function storeIcon(id: string): string {
 
 /** The merchant's item art, one static URL per file for Vite. */
 const ITEM_ICONS: Record<MerchantItemId, string> = {
+  'polar-stew': svg('<ellipse cx="32" cy="44" rx="26" ry="9" fill="#dcecf5"/><path d="M10 28h44q0 25-22 25T10 28" fill="#db8b39"/><ellipse cx="32" cy="28" rx="22" ry="7" fill="#82472b"/><path d="M22 10q-8 7 0 13m14-17q-8 9 0 16" stroke="#fff0cd" stroke-width="4" fill="none"/>'),
+  'glacier-fish': svg('<ellipse cx="32" cy="39" rx="28" ry="18" fill="#f3ecce"/><path d="M14 34q20-22 34 0-14 24-34 0m34 0 11-12v24z" fill="#65b8ca"/><circle cx="23" cy="31" r="3" fill="#243845"/>'),
+  'tundra-roast': svg('<ellipse cx="32" cy="44" rx="28" ry="14" fill="#f3ecce"/><path d="M13 40q-3-25 20-23 24 1 16 25z" fill="#965439"/><circle cx="47" cy="46" r="6" fill="#73a34a"/><circle cx="15" cy="45" r="5" fill="#e79b3c"/>'),
+  'berry-tea': svg('<path d="M13 25h31v25q-15 12-31 0z" fill="#e4b571"/><path d="M44 28q22-2 11 16H44" fill="none" stroke="#e4b571" stroke-width="5"/><ellipse cx="28" cy="25" rx="15" ry="5" fill="#943d54"/><path d="M22 5q-8 8 0 15m13-15q-8 8 0 15" stroke="#fff1d2" stroke-width="3" fill="none"/>'),
   'divine-blessing': new URL('../../assets/upgrades/merchant/merchant-divine-blessing-icon.png', import.meta.url).href,
   'arcane-curse': new URL('../../assets/upgrades/merchant/merchant-arcane-curse-icon.png', import.meta.url).href,
   heal: new URL('../../assets/upgrades/merchant/merchant-heal-potion-icon.png', import.meta.url).href,

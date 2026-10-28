@@ -37,6 +37,7 @@ export class HeroView {
   private readonly actions: Record<HeroClipName, THREE.AnimationAction>;
   private locomotion: 'idle' | 'run' = 'idle';
   private dead = false;
+  private wasSeated = false;
   private yaw = 0;
   private readonly position = new THREE.Vector3();
   private aimYaw = 0;
@@ -93,14 +94,14 @@ export class HeroView {
   }
 
   /** `deltaSeconds` drives the mixer (0 while the run is frozen, so animations pause with it). */
-  update(player: PlayerState, alpha: number, nowMs: number, deltaSeconds: number): void {
+  update(player: PlayerState, alpha: number, nowMs: number, deltaSeconds: number, seated = false): void {
     const x = player.prevX + (player.x - player.prevX) * alpha;
     const y = player.prevY + (player.y - player.prevY) * alpha;
     simToWorld(x, y, 0, this.position);
     this.root.position.copy(this.position);
 
     const stepDistance = Math.hypot(player.x - player.prevX, player.y - player.prevY);
-    const moving = stepDistance > 0.01;
+    const moving = !seated && stepDistance > 0.01;
     this.setLocomotion(moving ? 'run' : 'idle');
     if (moving && deltaSeconds > 0) this.actions.run.timeScale = Math.max(0.6, (stepDistance * 60) / RUN_REFERENCE_SPEED);
 
@@ -116,7 +117,18 @@ export class HeroView {
     }
     this.aimSeconds = Math.max(0, this.aimSeconds - deltaSeconds);
 
-    this.mixer.update(deltaSeconds);
+    // Idle has no leg tracks: release the passenger pose explicitly on arrival.
+    if (this.wasSeated && !seated) {
+      for (const name of ['thighL', 'thighR', 'shinL', 'shinR']) this.model.bones[name]?.rotation.set(0, 0, 0);
+    }
+    this.wasSeated = seated;
+    this.mixer.update(player.isFrozen(nowMs) ? 0 : deltaSeconds);
+    if (seated) {
+      for (const side of ['L', 'R']) {
+        if (this.model.bones[`thigh${side}`]) this.model.bones[`thigh${side}`].rotation.x = -1.25;
+        if (this.model.bones[`shin${side}`]) this.model.bones[`shin${side}`].rotation.x = 1.2;
+      }
+    }
     // The clips never key the spine, so the twist is written straight onto it after the mixer.
     const twistTarget = aiming ? THREE.MathUtils.clamp(wrapAngle(this.aimYaw - this.yaw), -MAX_TWIST, MAX_TWIST) : 0;
     this.twist += (twistTarget - this.twist) * (1 - Math.exp(-TWIST_SHARPNESS * deltaSeconds));

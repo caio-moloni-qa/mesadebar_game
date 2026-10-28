@@ -62,7 +62,7 @@ export class BossUi {
     // A freshly opened merchant portal gets a few seconds of banner too.
     const portal = session.merchant.portal;
     const portalNews = !!portal && !session.merchant.inside && portal.remainingMs > MERCHANT_TUNING.portalOpenMs - 3500;
-    const banner = bosses.warningActive ? FINAL_WARNING : pending ? `${pending.name} desperta ${pending.where}!` : portalNews ? MERCHANT_NEWS : '';
+    const banner = bosses.warningActive ? (session.arena.layout.id === 'snowfield' ? 'O Rei do Inverno se aproxima. Prepare-se para o frio eterno!' : FINAL_WARNING) : pending ? `${pending.name} desperta ${pending.where}!` : portalNews ? MERCHANT_NEWS : '';
     if (this.last.get('bannerText') !== banner) {
       this.last.set('bannerText', banner);
       if (banner) this.banner.textContent = banner;
@@ -90,7 +90,7 @@ export class BossUi {
     const guardianKey = guardians.map((boss) => `${boss.kind}:${Math.ceil(boss.enemy.health)}/${Math.ceil(boss.enemy.maxHealth)}`).join(';');
     const key = guardianKey + '#' + shown.map((boss) => {
       const countdown = boss.isMain && boss.cleanupPending ? Math.ceil(Math.max(0, BOSS_TUNING.cleanupMs - boss.cleanupElapsed) / 1000) : -1;
-      return `${Math.ceil(boss.enemy.health)}/${boss.enemy.maxHealth}|${boss.shieldActive ? Math.ceil(boss.shield) : -1}/${Math.ceil(boss.maxShield)}|${countdown}`;
+      return `${boss.winter}:${Math.ceil(boss.enemy.health)}/${boss.enemy.maxHealth}|${boss.shieldActive ? Math.ceil(boss.shield) : -1}/${Math.ceil(boss.maxShield)}|${countdown}`;
     }).join(';');
     if (this.last.get('bars') === key) return;
     this.last.set('bars', key);
@@ -108,6 +108,7 @@ export class BossUi {
       const shield = boss.shieldActive && boss.maxShield > 0 ? (boss.shield / boss.maxShield) * 100 : 0;
       const countdown = boss.isMain && boss.cleanupPending ? Math.ceil(Math.max(0, BOSS_TUNING.cleanupMs - boss.cleanupElapsed) / 1000) : null;
       bar.innerHTML = `
+        ${boss.winter ? '<p class="boss-countdown">Rei do Inverno</p>' : ''}
         ${countdown !== null ? `<p class="boss-countdown">A escuridão consome a arena em ${countdown}s</p>` : ''}
         <div class="boss-health"><div style="width:${health}%"></div><span>${Math.ceil(Math.max(0, boss.enemy.health))} / ${boss.enemy.maxHealth}</span></div>
         ${boss.shieldActive ? `<div class="boss-shield"><div style="width:${shield}%"></div></div>` : ''}`;
@@ -149,19 +150,21 @@ export class BossUi {
   private merchantPrompt(session: GameSession): { x: number; y: number; text: string; poor: boolean } | null {
     const { merchant } = session;
     if (merchant.portalInReach && merchant.portal) return { ...merchant.portal, text: 'Pressione E para entrar no portal', poor: false };
+    const eskimo = session.shelter.eskimo;
+    if (eskimo && session.shelterInReach) return { x: eskimo.x, y: eskimo.y, text: '“Precisa de abrigo?” — Pressione E para aceitar', poor: false };
     const spot = merchant.roomSpot;
     if (!spot) return null;
     if (spot.kind === 'exit') return { x: merchant.room.x + MERCHANT_ROOM.exit.x, y: merchant.room.y + MERCHANT_ROOM.exit.y, text: merchant.hub ? 'Pressione E para escolher o herói e partir' : 'Pressione E para voltar à arena', poor: false };
     if (spot.kind === 'records') {
-      return { x: merchant.room.x + MERCHANT_ROOM.records.x, y: merchant.room.y + MERCHANT_ROOM.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
+      return { x: merchant.room.x + merchant.layout.records.x, y: merchant.room.y + merchant.layout.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
     }
     if (spot.kind === 'sergio') {
       if (session.dialogue !== null) return null;
-      return { x: merchant.room.x + MERCHANT_ROOM.merchant.x, y: merchant.room.y + MERCHANT_ROOM.merchant.y, text: 'Pressione E para ver a loja do Sergio', poor: false };
+      return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text: merchant.igloo ? 'Pressione E para ver o cardápio do Esquimó' : 'Pressione E para ver a loja do Sergio', poor: false };
     }
     if (spot.kind === 'npc') {
       if (session.dialogue !== null) return null;
-      const npc = MERCHANT_ROOM.npcs[spot.index];
+      const npc = merchant.layout.npcs[spot.index];
       return { x: merchant.room.x + npc.x, y: merchant.room.y + npc.y, text: `Pressione E para falar com ${session.quests.quests[spot.index].npc.name}`, poor: false };
     }
     return null;
@@ -186,6 +189,8 @@ export class BossUi {
     const prophecy = session.merchant.inside ? null : session.prophecy();
     if (prophecy) targets.push({ x: prophecy.x, y: prophecy.y, kind: prophecy.kind, tier: 'prophecy' });
     if (!session.merchant.inside) session.quests.barrels.forEach((barrel) => targets.push({ ...barrel, kind: 'barrel', tier: 'quest' }));
+    if (!session.merchant.inside && session.quests.fragmentsShowing) session.quests.fragments.forEach((fragment) => targets.push({ ...fragment, kind: 'fragment', tier: 'quest' }));
+    if (session.shelter.eskimo && !session.merchant.inside) targets.push({ x: session.shelter.eskimo.x, y: session.shelter.eskimo.y, kind: 'eskimo', tier: 'merchant' });
     const { player } = session;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;

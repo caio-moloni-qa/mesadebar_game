@@ -1,0 +1,53 @@
+{
+  "id": "bellringer",
+  "source": "turnaround.png",
+  "width": 1536,
+  "height": 1024,
+  "views": [
+    {
+      "name": "front",
+      "path": "views/front.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        0,
+        0,
+        545,
+        1024
+      ],
+      "sha256": "69899a316de8326a4b3fdbd118fc729b7f19d58325c82cc748d3fe45b82587d4"
+    },
+    {
+      "name": "side",
+      "path": "views/side.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        545,
+        0,
+        925,
+        1024
+      ],
+      "sha256": "919177a7022987ae9610178488097709f1c5bc88db2aa73b9aced55647759010"
+    },
+    {
+      "name": "back",
+      "path": "views/back.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sourceCrop": [
+        925,
+        0,
+        1536,
+        1024
+      ],
+      "sha256": "51048777a91e5438ba15b0ba660e48c78614be87fbeb4cc0b38a194eb25fb05b"
+    }
+  ]
+}

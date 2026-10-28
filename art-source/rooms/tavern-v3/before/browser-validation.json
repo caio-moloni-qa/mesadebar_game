@@ -1,0 +1,196 @@
+{
+  "errors": [],
+  "hub": {
+    "calls": 71,
+    "passes": [
+      {
+        "scene": "world",
+        "calls": 41
+      },
+      {
+        "scene": "world",
+        "calls": 22
+      },
+      {
+        "scene": "world",
+        "calls": 7
+      },
+      {
+        "scene": "composite",
+        "calls": 1
+      }
+    ],
+    "markers": [
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "visit": {
+    "calls": 85,
+    "passes": [
+      {
+        "scene": "world",
+        "calls": 50
+      },
+      {
+        "scene": "world",
+        "calls": 27
+      },
+      {
+        "scene": "world",
+        "calls": 7
+      },
+      {
+        "scene": "composite",
+        "calls": 1
+      }
+    ]
+  },
+  "checks": {
+    "collision": [
+      {
+        "angle": 0,
+        "radius": 103,
+        "error": 0
+      },
+      {
+        "angle": 0.39269908169872414,
+        "radius": 103.00000000000075,
+        "error": 7.531752999057062e-13
+      },
+      {
+        "angle": 0.7853981633974483,
+        "radius": 103.00000000000051,
+        "error": 5.115907697472721e-13
+      },
+      {
+        "angle": 1.1780972450961724,
+        "radius": 103.00000000000023,
+        "error": 2.2737367544323206e-13
+      },
+      {
+        "angle": 1.5707963267948966,
+        "radius": 103,
+        "error": 0
+      },
+      {
+        "angle": 1.9634954084936207,
+        "radius": 103.00000000000023,
+        "error": 2.2737367544323206e-13
+      },
+      {
+        "angle": 2.356194490192345,
+        "radius": 103.00000000000051,
+        "error": 5.115907697472721e-13
+      },
+      {
+        "angle": 2.748893571891069,
+        "radius": 103.00000000000075,
+        "error": 7.531752999057062e-13
+      },
+      {
+        "angle": 3.141592653589793,
+        "radius": 103,
+        "error": 0
+      },
+      {
+        "angle": 3.5342917352885173,
+        "radius": 103.00000000000075,
+        "error": 7.531752999057062e-13
+      },
+      {
+        "angle": 3.9269908169872414,
+        "radius": 103.00000000000051,
+        "error": 5.115907697472721e-13
+      },
+      {
+        "angle": 4.319689898685965,
+        "radius": 103.00000000000023,
+        "error": 2.2737367544323206e-13
+      },
+      {
+        "angle": 4.71238898038469,
+        "radius": 103,
+        "error": 0
+      },
+      {
+        "angle": 5.105088062083414,
+        "radius": 103.00000000000023,
+        "error": 2.2737367544323206e-13
+      },
+      {
+        "angle": 5.497787143782138,
+        "radius": 103.00000000000051,
+        "error": 5.115907697472721e-13
+      },
+      {
+        "angle": 5.890486225480862,
+        "radius": 103.00000000000075,
+        "error": 7.531752999057062e-13
+      }
+    ],
+    "arrival": {
+      "spot": {
+        "kind": "sergio"
+      },
+      "offset": {
+        "x": 0,
+        "y": -73
+      }
+    },
+    "sergio": true,
+    "regulars": [
+      {
+        "index": 0,
+        "spot": {
+          "kind": "npc",
+          "index": 0
+        },
+        "dialogue": 0
+      },
+      {
+        "index": 1,
+        "spot": {
+          "kind": "npc",
+          "index": 1
+        },
+        "dialogue": 1
+      },
+      {
+        "index": 2,
+        "spot": {
+          "kind": "npc",
+          "index": 2
+        },
+        "dialogue": 2
+      },
+      {
+        "index": 3,
+        "spot": {
+          "kind": "npc",
+          "index": 3
+        },
+        "dialogue": 3
+      }
+    ],
+    "exit": {
+      "kind": "exit"
+    },
+    "shop": true,
+    "island": {
+      "x": 0,
+      "y": 30,
+      "outer": 85,
+      "inner": 58
+    },
+    "playerRadius": 18,
+    "markers": [
+      true,
+      true,
+      true,
+      true
+    ]
+  }
+}

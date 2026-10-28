@@ -1,0 +1,13 @@
+Character turnaround concept sheet for image-to-3D conversion (Tripo3D), for a low-poly, pixelated 3D dark-fantasy
+survivors-like. Stylized, chunky, readable shapes, hand-painted flat colours, simple large forms — NOT pixel art, NOT
+photorealistic. Exactly THREE full-body views side by side on one 1536×1024 canvas: FRONT (left), RIGHT SIDE (middle),
+BACK (right). Same character, same scale, feet on one baseline, orthographic (no perspective), each view centred in
+its third with clear empty space between views. Pose: neutral A-pose, arms ~30° down and away from the body, legs
+slightly apart, clear gaps between arms and torso and between the legs. Hands EMPTY and open (weapons are made
+separately). Flat, even, shadowless lighting. Plain flat light-grey background (#d9d9d9). No text, no labels, no
+arrows, no ground plane.
+
+
+Joe, a living translucent pale-blue ice CUBE, dwarf height 1.2m, squat box body and short thick ice arms/legs, sympathetic serious face INSIDE the ice, blue-violet psychic eyes, fine luminous forehead cracks expressing powerful mind, snow tuft on top like hair, short navy scarf, no clothes.
+Match joe-portrait.png identity and cube shape. Image 1: Joe portrait is IDENTITY reference. Image 2: Brom turnaround is STYLE/LAYOUT reference only. Exactly THREE full-body views: front left, RIGHT-facing true side profile middle, back right. A-pose, short arms away from cube torso, open empty hands, same body proportions and navy scarf in every view. Natural solid faceted pale blue ice with mild translucent appearance, NO floating effects, no spiritual fists. Entire cube body, short legs and snow tuft visible in all views; no human torso or separate human head. Uniform #d9d9d9 backdrop. No text.
+Tool: built-in image_gen; raw preserved unchanged.

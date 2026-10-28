@@ -1,0 +1,19 @@
+{
+  "kind": "ancient-yeti",
+  "file": "art-source/3d/ancient-yeti/front.png",
+  "raw": "art-source/3d/ancient-yeti/front-raw.png",
+  "raw_size": [
+    1024,
+    1536
+  ],
+  "size": [
+    1024,
+    1536
+  ],
+  "mode": "RGB",
+  "alpha_required": false,
+  "version": 1,
+  "source_sha256": "30814affe37dd5925bf8aa70c5c2cd105ba229023e4367b61d6454ceba2d11eb",
+  "raw_sha256": "30814affe37dd5925bf8aa70c5c2cd105ba229023e4367b61d6454ceba2d11eb",
+  "notes": "Concept art only; no gameplay code changed. Original preserved byte-for-byte."
+}

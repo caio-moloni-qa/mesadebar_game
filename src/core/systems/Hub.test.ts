@@ -32,7 +32,7 @@ describe('the tavern between runs', () => {
     run.events.on('hub-sergio', () => heard.push('sergio'));
     standAt(run, MERCHANT_ROOM.exit);
     run.interact();
-    standAt(run, MERCHANT_ROOM.sergioSpot);
+    standAt(run, run.merchant.layout.sergioSpot);
     run.interact();
     expect(heard).toEqual(['exit', 'sergio']);
     expect(run.merchant.inside).toBe(true);
@@ -40,7 +40,7 @@ describe('the tavern between runs', () => {
 
   it('the regulars talk but hand out no missions here', () => {
     const run = hub();
-    const npc = MERCHANT_ROOM.npcs[0];
+    const npc = run.merchant.layout.npcs[0];
     standAt(run, { x: npc.x + 40, y: npc.y });
     run.interact();
     expect(run.dialogue).toBe(0);
@@ -55,7 +55,7 @@ describe('regulars who joined the roster', () => {
   it('have left the bar: no one to talk to, nothing in the way', () => {
     const run = new GameSession({ characterId: 'barbarian', seed: 1, skipStartingUpgrades: true, arena: ArenaMap.generate(11), hub: true, regularsAway: ['brom'] });
     expect(run.merchant.away.has(0)).toBe(true);
-    const spot = MERCHANT_ROOM.npcs[0];
+    const spot = run.merchant.layout.npcs[0];
     standAt(run, spot);
     expect(run.merchant.roomSpot).not.toEqual({ kind: 'npc', index: 0 });
     // Standing on the spot is allowed (nobody pushes the hero away).

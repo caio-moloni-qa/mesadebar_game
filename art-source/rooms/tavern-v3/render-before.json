@@ -1,0 +1,11 @@
+{
+  "errors": [],
+  "metrics": [
+    {
+      "room": "tavern",
+      "calls": 27,
+      "triangles": 9578,
+      "textures": 11
+    }
+  ]
+}

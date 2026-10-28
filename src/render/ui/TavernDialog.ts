@@ -36,8 +36,8 @@ export class TavernDialog {
     if (!quest) return;
     const spec = session.quests.spec(quest);
     const { npc } = quest;
-    if (hub) {
-      this.renderProgress(quest.npc.id, hub);
+    if (hub && quest.npc.id in REGULAR_UNLOCKS) {
+      this.renderProgress(quest.npc.id as keyof typeof REGULAR_UNLOCKS, hub);
       return;
     }
     const said = quest.status === 'offer' ? spec.pitch

@@ -23,6 +23,16 @@ export class CameraRig {
   private initialized = false;
   /** Debug close-up (?zoom=3): fewer meters per texel, same pixel look — for reviewing models up close. */
   private readonly metersPerTexel: number;
+  private roomZoom = 1;
+  private internalWidth = MAX_INTERNAL_WIDTH;
+  private internalHeight = MAX_INTERNAL_HEIGHT;
+
+  /** Room framing also changes the snap grid, keeping the pixel upscale aligned. */
+  setRoomZoom(zoom: number): void {
+    if (zoom === this.roomZoom) return;
+    this.roomZoom = zoom;
+    this.setViewSize(this.internalWidth, this.internalHeight);
+  }
 
   constructor(zoom = 1) {
     this.metersPerTexel = METERS_PER_TEXEL / zoom;
@@ -43,8 +53,10 @@ export class CameraRig {
 
   /** Sizes the frustum to the pipeline's internal resolution (plus its padding border) at a fixed meters-per-texel. */
   setViewSize(internalWidth: number, internalHeight: number): void {
-    const halfWidth = ((internalWidth + INTERNAL_PADDING * 2) * this.metersPerTexel) / 2;
-    const halfHeight = ((internalHeight + INTERNAL_PADDING * 2) * this.metersPerTexel) / 2;
+    this.internalWidth = internalWidth;
+    this.internalHeight = internalHeight;
+    const halfWidth = ((internalWidth + INTERNAL_PADDING * 2) * this.metersPerTexel) / (2 * this.roomZoom);
+    const halfHeight = ((internalHeight + INTERNAL_PADDING * 2) * this.metersPerTexel) / (2 * this.roomZoom);
     this.camera.left = -halfWidth;
     this.camera.right = halfWidth;
     this.camera.top = halfHeight;
@@ -88,7 +100,7 @@ export class CameraRig {
     // Snap the target's position along the camera's screen axes to whole texels.
     const alongRight = shaken.dot(this.right);
     const alongUp = shaken.dot(this.up);
-    const texel = this.metersPerTexel;
+    const texel = this.metersPerTexel / this.roomZoom;
     const snappedRight = Math.round(alongRight / texel) * texel;
     const snappedUp = Math.round(alongUp / texel) * texel;
     this.subTexelOffset.set((alongRight - snappedRight) / texel, (alongUp - snappedUp) / texel);

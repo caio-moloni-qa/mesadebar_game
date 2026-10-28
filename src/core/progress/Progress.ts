@@ -7,7 +7,10 @@ import { QuestNpcId } from '../systems/QuestSystem';
 // roster. Pure data and functions — the renderer owns where the save lives (browser storage) and when to write it.
 
 /** Every hero the roster can hold: the four starting ones, the four regulars, and Sergio. */
-export type HeroId = CharacterId | QuestNpcId | 'sergio';
+export type HeroId = CharacterId;
+
+/** The regulars who are already heroes (the Campo Nevado's join once their kits exist). */
+export type RegularHeroId = Extract<QuestNpcId, CharacterId>;
 
 export const STARTING_HEROES: HeroId[] = ['barbarian', 'mage', 'reliquia', 'fabri'];
 
@@ -300,7 +303,7 @@ export const MISSIONS_PER_REGULAR = 3;
 
 /** Each regular joins once all their missions are done (across runs) and a mastery level is reached with the hero
  *  closest to them. */
-export const REGULAR_UNLOCKS: Record<QuestNpcId, { hero: CharacterId; level: number }> = {
+export const REGULAR_UNLOCKS: Record<RegularHeroId, { hero: CharacterId; level: number }> = {
   brom: { hero: 'barbarian', level: 5 },
   lyra: { hero: 'fabri', level: 5 },
   grimbo: { hero: 'reliquia', level: 5 },
@@ -323,12 +326,12 @@ export function heroesToWelcome(save: SaveData): HeroId[] {
 /** Every hero the save has unlocked, in roster order. */
 export function rosterFor(save: SaveData): HeroId[] {
   const roster: HeroId[] = [...STARTING_HEROES];
-  (Object.keys(REGULAR_UNLOCKS) as QuestNpcId[]).forEach((npc) => {
+  (Object.keys(REGULAR_UNLOCKS) as RegularHeroId[]).forEach((npc) => {
     const rule = REGULAR_UNLOCKS[npc];
     if ((save.regularMissions[npc] ?? 0) >= MISSIONS_PER_REGULAR && masteryLevel(save.mastery[rule.hero] ?? 0) >= rule.level) roster.push(npc);
   });
   AREAS.forEach((area) => {
-    if (area.regulars.every((hero) => roster.includes(hero)) && totalMastery(save) >= SERGIO_TOTAL_MASTERY) roster.push(area.finale);
+    if (area.finale && area.regulars.every((hero) => (roster as string[]).includes(hero)) && totalMastery(save) >= SERGIO_TOTAL_MASTERY) roster.push(area.finale);
   });
   return roster;
 }
@@ -344,7 +347,7 @@ export interface UnlockStep {
  *  closest to them; Sergio, every regular and a mastery total. */
 export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
   if (hero in REGULAR_UNLOCKS) {
-    const npc = hero as QuestNpcId;
+    const npc = hero as RegularHeroId;
     const rule = REGULAR_UNLOCKS[npc];
     return [
       { label: `Concluir as missões de ${CHARACTERS[npc].name} na taverna`, current: Math.min(MISSIONS_PER_REGULAR, save.regularMissions[npc] ?? 0), needed: MISSIONS_PER_REGULAR },
@@ -355,7 +358,7 @@ export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
   if (finaleOf) {
     const roster = rosterFor(save);
     return [
-      { label: `Conquistar todos os frequentadores de ${finaleOf.name}`, current: finaleOf.regulars.filter((regular) => roster.includes(regular)).length, needed: finaleOf.regulars.length },
+      { label: `Conquistar todos os frequentadores de ${finaleOf.name}`, current: finaleOf.regulars.filter((regular) => (roster as string[]).includes(regular)).length, needed: finaleOf.regulars.length },
       { label: `Somar ${SERGIO_TOTAL_MASTERY} níveis de maestria entre todos os heróis`, current: Math.min(SERGIO_TOTAL_MASTERY, totalMastery(save)), needed: SERGIO_TOTAL_MASTERY }
     ];
   }
@@ -365,8 +368,8 @@ export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
 /** How far an area is: its heroes won over — the regulars (each only joins from that area's tavern), then its finale. */
 export function areaCompletion(save: SaveData, area: AreaConfig): { joined: number; total: number } {
   const roster = rosterFor(save);
-  const heroes = [...area.regulars, area.finale];
-  return { joined: heroes.filter((hero) => roster.includes(hero)).length, total: heroes.length };
+  const heroes: string[] = [...area.regulars, ...(area.finale ? [area.finale] : [])];
+  return { joined: heroes.filter((hero) => (roster as string[]).includes(hero)).length, total: heroes.length };
 }
 
 /** What the area picker shows for one arena: the missions done for its regulars (none yet where no area config
@@ -377,7 +380,7 @@ export function arenaProgress(save: SaveData, arenaId: string, guardians: string
   guardians: Array<{ kind: string; defeated: boolean }>;
 } {
   const area = AREAS.find((entry) => entry.id === arenaId);
-  const missions = area ? area.regulars.reduce((sum, npc) => sum + Math.min(MISSIONS_PER_REGULAR, save.regularMissions[npc as QuestNpcId] ?? 0), 0) : 0;
+  const missions = area ? area.regulars.reduce((sum, npc) => sum + Math.min(MISSIONS_PER_REGULAR, save.regularMissions[npc] ?? 0), 0) : 0;
   return {
     missions: { done: missions, total: (area?.regulars.length ?? 0) * MISSIONS_PER_REGULAR },
     heroes: area ? areaCompletion(save, area) : { joined: 0, total: 0 },

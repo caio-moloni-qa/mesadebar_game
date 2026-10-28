@@ -1,0 +1,44 @@
+{
+  "id": "guardian-bellringer",
+  "title": "O Sineiro",
+  "kind": "bellringer",
+  "bpm": 96,
+  "bars": 64,
+  "meter": 3,
+  "key": "C harmonic minor",
+  "base": 36,
+  "loop": true,
+  "seconds": 120,
+  "noteCount": 928,
+  "hitCount": 208,
+  "instruments": [
+    "drone",
+    "organ",
+    "cello",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "rattle",
+    "scrape"
+  ],
+  "seed": "guardian-bellringer",
+  "rate": 44100,
+  "frames": 5292000,
+  "rawSeconds": 124,
+  "rawPeak": 0.09667318314313889,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.21805853391804844,
+  "gain": 8.689069426381215,
+  "seam": [
+    0.0015810318291187286,
+    0.0007699877023696899
+  ],
+  "end": [
+    -0.035727888345718384,
+    -0.08974441885948181
+  ],
+  "file": "guardian-bellringer.wav",
+  "rawFile": "guardian-bellringer-raw.wav"
+}
