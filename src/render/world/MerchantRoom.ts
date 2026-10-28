@@ -11,6 +11,7 @@ import { MerchantPortal } from './MerchantPortal';
 import { PartSpec, REGULAR_FIGURES, REGULAR_FIGURE_LOOK, RegularFigureId } from '../models/regulars';
 import { buildRiggedModel, clipForBones, humanoidBones } from '../models/rig';
 import { WORLD_SCALE, simToWorld } from '../space';
+import { CHARACTER_LAYER } from '../PixelPipeline';
 
 
 const HIP = 0.82;
@@ -44,23 +45,55 @@ function figure(id: RegularFigureId): Character {
 /** "!" (mission on offer), "?" (come claim it), "…" (under way) over a regular's head. */
 function markerTexture(symbol: string, background: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 64;
+  canvas.width = canvas.height = 256;
   const context = canvas.getContext('2d')!;
-  context.fillStyle = background;
+  // A dark enamel quest badge, with a bright metal rim and an oversized glyph.
+  // Draw at high resolution; the character pass keeps the silhouette readable in-game.
+  context.shadowColor = '#100b08';
+  context.shadowBlur = 12;
+  context.shadowOffsetY = 6;
   context.beginPath();
-  context.arc(32, 32, 26, 0, Math.PI * 2);
+  context.moveTo(128, 15);
+  context.lineTo(222, 63);
+  context.lineTo(222, 170);
+  context.lineTo(128, 235);
+  context.lineTo(34, 170);
+  context.lineTo(34, 63);
+  context.closePath();
+  context.fillStyle = '#21150e';
   context.fill();
-  context.lineWidth = 5;
-  context.strokeStyle = '#2a1a10';
+  context.shadowBlur = context.shadowOffsetY = 0;
+  context.lineWidth = 10;
+  context.strokeStyle = background;
   context.stroke();
-  context.fillStyle = '#2a1a10';
-  context.font = 'bold 40px Georgia, serif';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(symbol, 32, 35);
+  context.lineWidth = 2;
+  context.strokeStyle = '#fff2bc';
+  context.stroke();
+  const ink = context.createLinearGradient(0, 50, 0, 195);
+  ink.addColorStop(0, '#fff8da');
+  ink.addColorStop(1, background);
+  context.fillStyle = ink;
+  if (symbol === '!') {
+    // Custom silhouette avoids thin serif strokes and font-dependent rendering.
+    context.beginPath();
+    context.moveTo(106, 57);
+    context.lineTo(150, 57);
+    context.lineTo(143, 143);
+    context.lineTo(113, 143);
+    context.closePath();
+    context.fill();
+    context.beginPath();
+    context.arc(128, 176, 18, 0, Math.PI * 2);
+    context.fill();
+  } else {
+    context.font = '900 160px Arial, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(symbol, 128, 132);
+  }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.magFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.LinearFilter;
   return texture;
 }
 
@@ -71,6 +104,7 @@ function markerTexture(symbol: string, background: string): THREE.CanvasTexture 
 export class MerchantRoom {
   readonly root = new THREE.Group();
   readonly characters = new THREE.Group();
+  readonly questMarkers = new THREE.Group();
   private readonly arenaPortal = new MerchantPortal();
   private readonly exitPortal = new MerchantPortal();
   /** Sergio behind his bar, or the Esquimó in his igloo. */
@@ -94,6 +128,7 @@ export class MerchantRoom {
     this.regulars = quests.quests.map((quest) => figure(quest.npc.id as RegularFigureId));
     const center = simToWorld(system.room.x, system.room.y, 0, new THREE.Vector3());
     const room = new THREE.Group();
+    room.add(this.questMarkers);
     room.position.copy(center);
     const { flames, fireLight } = buildRoomDecor(room, system.igloo);
     this.flames = flames;
@@ -122,10 +157,13 @@ export class MerchantRoom {
       regular.root.position.copy(at(spot.x, spot.y).add(center));
       regular.root.rotation.y = layout.island ? facing(spot, layout.island) : -Math.PI / 2;
       this.characters.add(regular.root);
-      const marker = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
-      marker.scale.setScalar(0.7);
-      marker.position.copy(at(spot.x, spot.y, 2.5));
-      room.add(marker);
+      // The composite needs sprite depth, too; alphaTest keeps the transparent corners out of it.
+      const marker = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.2, depthWrite: true, toneMapped: false, fog: false }));
+      // Only draw in the finer character pass, avoiding a second coarse world copy.
+      marker.layers.set(CHARACTER_LAYER);
+      marker.scale.setScalar(1.05);
+      marker.position.copy(at(spot.x, spot.y, 2.9));
+      this.questMarkers.add(marker);
       this.markers.push(marker);
     });
     this.root.add(room, this.arenaPortal);
@@ -161,7 +199,9 @@ export class MerchantRoom {
         marker.material.map = texture;
         marker.material.needsUpdate = true;
       }
-      marker.position.y = 2.5 + Math.sin(this.time * 3 + index) * 0.08;
+      const emphasis = quest.status === 'active' ? 0.78 : 1.05;
+      marker.scale.setScalar(emphasis);
+      marker.position.y = 2.9 + Math.sin(this.time * 2.4 + index) * 0.06;
     });
   }
 }
