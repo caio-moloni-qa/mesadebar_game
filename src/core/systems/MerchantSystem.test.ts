@@ -28,6 +28,30 @@ function standAt(run: GameSession, offset: { x: number; y: number }): void {
 }
 
 describe('merchant', () => {
+  it('cleanses harmful statuses on arrival and keeps them gone after leaving', () => {
+    const run = session();
+    const { player } = run;
+    const now = run.clock.now;
+    player.applySlow(0.5, 60_000, now);
+    player.refreshRottenAura(now);
+    player.updateRotten(500, now);
+    player.freezeSolid(60_000, now);
+    player.hasteUntil = now + 60_000;
+    player.hastePercent = 0.2;
+    const health = player.health;
+    enter(run);
+    expect(player.isFrozen(run.clock.now)).toBe(false);
+    expect(player.isSlowed(run.clock.now)).toBe(false);
+    expect(player.frostStacksAt(run.clock.now)).toBe(0);
+    expect(player.isRotten(run.clock.now)).toBe(false);
+    expect(player.effectiveMovementSpeed(run.clock.now)).toBeCloseTo(player.movementSpeed * 1.2);
+    expect(player.health).toBe(health);
+    run.merchant.leave();
+    expect(player.isRotten(run.clock.now)).toBe(false);
+    expect(player.isFrozen(run.clock.now)).toBe(false);
+    expect(player.updateRotten(2000, run.clock.now)).toBe(0);
+  });
+
   it('opens a portal on its interval, and it closes again if nobody steps in', () => {
     const run = session();
     advance(run, MERCHANT_TUNING.intervalMs + 100);

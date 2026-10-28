@@ -357,6 +357,10 @@ export class GameSession implements WeaponHost {
       encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice,
       igloo: !options.hub && blizzard.active
     });
+    this.events.on('merchant-entered', () => {
+      this.player.clearNegativeEffects();
+      this.blizzard.resetCold();
+    });
     // Tables without a regular of this area (the igloo has three) stand empty.
     this.merchant.layout.npcs.forEach((_, index) => {
       const quest = this.quests.quests[index];

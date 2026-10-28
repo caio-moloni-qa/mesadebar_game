@@ -210,10 +210,9 @@ export class MerchantRoom {
     this.arenaPortal.visible = !system.igloo && !!portal && !system.inside;
     if (portal) {
       simToWorld(portal.x, portal.y, 0, this.arenaPortal.position);
-      // Fades in as it opens and flickers in its last seconds.
-      const closing = portal.remainingMs < 3000 ? 0.6 + 0.4 * Math.sin(this.time * 25) : 1;
+      // Grow in once, then keep the doorway steady until it closes.
       const opening = Math.min(1, (MERCHANT_TUNING.portalOpenMs - portal.remainingMs) / 400);
-      this.arenaPortal.scale.setScalar(opening * closing);
+      this.arenaPortal.scale.setScalar(opening);
     }
     this.arenaPortal.animate(this.time);
     this.exitPortal.animate(this.time);

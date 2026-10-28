@@ -405,6 +405,9 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 /* The merchant: gold banner and marker, prompts that keep the item's description on a second line. */
 .boss-banner.merchant { color: #ffd98a; }
 .offscreen-marker[data-tier="merchant"] { --tier: #ffc65a; }
+.portal-countdown { position: absolute; top: 0; left: 0; pointer-events: none; padding: 5px 10px; border: 1px solid #dec28a70; border-radius: 5px; background: #101b1ded; color: var(--gold); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.portal-countdown[hidden] { display: none; }
+.portal-countdown.urgent { color: #ffb080; border-color: #ffb080; }
 .portal-prompt { white-space: pre-line; }
 .portal-prompt.poor { color: #d7a0a0; border-color: #d7a0a070; }
 

@@ -23,6 +23,7 @@ export class BossUi {
   private readonly banner: HTMLDivElement;
   private readonly bars: HTMLDivElement;
   private readonly prompt: HTMLButtonElement;
+  private readonly portalCountdown: HTMLDivElement;
   private readonly arrows: HTMLDivElement[] = [];
   private readonly last = new Map<string, string>();
   private readonly world = new THREE.Vector3();
@@ -34,10 +35,12 @@ export class BossUi {
     this.root.innerHTML = `
       <div class="boss-banner" hidden>O sobrevivente sente uma presença maligna no ar!</div>
       <div class="boss-bars"></div>
-      <button type="button" class="portal-prompt" hidden></button>`;
+      <button type="button" class="portal-prompt" hidden></button>
+      <div class="portal-countdown" hidden></div>`;
     this.banner = this.root.querySelector('.boss-banner')!;
     this.bars = this.root.querySelector('.boss-bars')!;
     this.prompt = this.root.querySelector('.portal-prompt')!;
+    this.portalCountdown = this.root.querySelector('.portal-countdown')!;
     this.prompt.addEventListener('click', onInteract);
     for (let index = 0; index < MAX_ARROWS; index += 1) {
       // A portrait of whoever it points to, in a ring, with the arrow riding the ring's rim, and the distance.
@@ -55,7 +58,7 @@ export class BossUi {
     this.root.hidden = !visible;
   }
 
-  update(session: GameSession, project: Projector): void {
+  update(session: GameSession, project: Projector, presenting = false): void {
     const { bosses, miniBosses } = session;
     // The Necromancer's warning, or a zone guardian's ("O Coveiro desperta no cemitério!").
     const pending = miniBosses.pending ? MINI_BOSSES[miniBosses.pending.kind] : null;
@@ -78,10 +81,25 @@ export class BossUi {
       this.banner.classList.toggle('mini', !bosses.warningActive && !!pending);
       this.banner.classList.toggle('merchant', banner === MERCHANT_NEWS);
     }
-    this.toggle('banner', this.banner, banner !== '');
+    this.toggle('banner', this.banner, !session.merchant.inside && !presenting && banner !== '');
+    this.toggle('barsVisible', this.bars, !session.merchant.inside && !presenting);
     this.updateBars(session);
+    this.updatePortalCountdown(session, project);
     this.updatePrompt(session, project);
     this.updateArrows(session, project);
+  }
+
+  private updatePortalCountdown(session: GameSession, project: Projector): void {
+    const { merchant } = session;
+    const portal = merchant.portal;
+    const shown = !!portal && !merchant.inside && !merchant.igloo
+      && project(simToWorld(portal.x, portal.y, 4.3, this.world), this.screen);
+    this.toggle('portalCountdown', this.portalCountdown, shown);
+    if (!shown || !portal) return;
+    const text = `Fecha em ${Math.ceil(Math.max(0, portal.remainingMs) / 1000)}s`;
+    if (this.portalCountdown.textContent !== text) this.portalCountdown.textContent = text;
+    this.portalCountdown.classList.toggle('urgent', portal.remainingMs <= 3000);
+    this.portalCountdown.style.transform = `translate(${this.screen.x}px, ${this.screen.y}px) translate(-50%, -100%)`;
   }
 
   private updateBars(session: GameSession): void {
@@ -131,6 +149,10 @@ export class BossUi {
       return;
     }
     this.prompt.classList.remove('poor');
+    if (session.merchant.inside) {
+      this.toggle('prompt', this.prompt, false);
+      return;
+    }
     const kind = session.portalInReach;
     const portal = kind ? session.portals?.[kind] : undefined;
     if (!kind || !portal || !project(simToWorld(portal.x, portal.y, 3.6, this.world), this.screen)) {
@@ -179,6 +201,11 @@ export class BossUi {
   /** A marker at the screen edge for every boss, guardian (or the zone of one being announced) and portal that's
    *  off screen: their face in a ring, an arrow on the rim pointing the way, and how far it is. */
   private updateArrows(session: GameSession, project: Projector): void {
+    // Hide every arena target, including guardians and portals, while in a safe room.
+    if (session.merchant.inside) {
+      this.arrows.forEach((arrow) => { arrow.hidden = true; });
+      return;
+    }
     // Nothing out there to point at from the merchant's room.
     const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = session.merchant.inside ? [] : session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' as const, tier: 'boss' }));
     session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.kind, tier: 'miniboss' }));
