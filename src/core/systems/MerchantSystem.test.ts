@@ -20,6 +20,7 @@ function enter(run: GameSession): void {
   run.player.x = run.merchant.portal!.x;
   run.player.y = run.merchant.portal!.y;
   run.interact();
+  while (run.journey) run.step(STEP_MS);
 }
 function standAt(run: GameSession, offset: { x: number; y: number }): void {
   run.player.x = run.player.prevX = run.merchant.room.x + offset.x;
@@ -63,6 +64,7 @@ describe('merchant', () => {
     entry.x = run.player.x = run.merchant.portal!.x;
     entry.y = run.player.y = run.merchant.portal!.y;
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     run.currency = 1000;
     const curse = run.merchant.offers[1];
     expect(curse.id).toBe('arcane-curse');
@@ -75,6 +77,7 @@ describe('merchant', () => {
     expect(run.merchant.offers[0].cost).toBe(blessingCost * MERCHANT_TUNING.priceInflation);
     standAt(run, MERCHANT_ROOM.exit);
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     expect(run.merchant.inside).toBe(false);
     expect(run.merchant.portal).toBeNull();
     expect(run.player.x).toBeCloseTo(entry.x);
@@ -89,6 +92,7 @@ describe('merchant', () => {
     standAt(run, run.merchant.layout.sergioSpot);
     expect(run.merchant.roomSpot).toEqual({ kind: 'sergio' });
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     expect(heard).toEqual(['shop']);
     expect(run.merchant.offers).toHaveLength(4);
   });
@@ -115,6 +119,7 @@ describe('merchant', () => {
     expect(run.affinities.has(choice.families[0])).toBe(true);
     standAt(run, MERCHANT_ROOM.exit);
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     enter(run);
     expect(run.merchant.offers[3].id).toBe('max-health');
   });
@@ -128,6 +133,7 @@ describe('merchant', () => {
     expect(run.merchant.offers[3].id).toBe('affinity-tome');
     standAt(run, MERCHANT_ROOM.exit);
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     run.grantAffinity(run.merchant.availableFamilies()[0]);
     enter(run);
     expect(run.merchant.offers[3].id).toBe('max-health');
@@ -202,6 +208,7 @@ describe('merchant', () => {
       run.merchant.confine(run.player);
       expect(run.merchant.roomSpot).toEqual({ kind: 'npc', index });
       run.interact();
+      while (run.journey) run.step(STEP_MS);
       expect(run.dialogue).toBe(index);
       run.closeDialogue();
     });

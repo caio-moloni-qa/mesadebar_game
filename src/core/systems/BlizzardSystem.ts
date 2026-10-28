@@ -27,6 +27,7 @@ export class BlizzardSystem {
   readonly torches: Torch[];
   /** 0..100. */
   cold = 0;
+  private wasFrozen = false;
   /** 0..1: how hard the storm blows right now (ramps in and out) — the fog, the snow, the wind. */
   intensity = 0;
   phase: BlizzardPhase = 'calm';
@@ -57,13 +58,15 @@ export class BlizzardSystem {
     return best;
   }
 
+  resetCold(): void { this.cold = 0; this.wasFrozen = false; }
+
   /** Congelamento's stacks feed the same meter. */
   addFrost(stacks: number): void {
-    if (this.active) this.cold = Math.min(100, this.cold + stacks * BLIZZARD_TUNING.coldPerFrostStack);
+    if (this.active && !this.wasFrozen) this.cold = Math.min(100, this.cold + stacks * BLIZZARD_TUNING.coldPerFrostStack);
   }
 
   /** Advances the fronts, the cold and the torches. `frozen` holds the meter (the hero is already an ice block).
-   *  Returns true when the cold just filled: the caller freezes the hero; the meter has already dropped. */
+   *  Returns true when the cold just filled: the caller freezes the hero; the meter stays full until the hero thaws. */
   update(deltaMs: number, elapsedMs: number, hero: Vec2, frozen: boolean): boolean {
     if (!this.active) return false;
     const { phase, intoMs } = blizzardPhaseAt(elapsedMs);
@@ -74,10 +77,16 @@ export class BlizzardSystem {
     }
     this.phase = phase;
     this.intensity = phase === 'storm' ? Math.min(1, intoMs / rampMs, (stormMs - intoMs) / rampMs) : 0;
-    if (frozen) return false;
+    if (frozen) { this.wasFrozen = true; this.cold = 100; return false; }
+    if (this.wasFrozen) {
+      this.wasFrozen = false;
+      this.cold = afterFreeze;
+      return false;
+    }
     // Frost stacks can fill it between steps; the warmth mustn't melt that away unnoticed.
     if (this.cold >= 100) {
-      this.cold = afterFreeze;
+      this.cold = 100;
+      this.wasFrozen = true;
       return true;
     }
     const seconds = deltaMs / 1000;
@@ -92,7 +101,8 @@ export class BlizzardSystem {
     }
     this.cold = Math.max(0, this.cold);
     if (this.cold < 100) return false;
-    this.cold = afterFreeze;
+    this.cold = 100;
+    this.wasFrozen = true;
     return true;
   }
 }

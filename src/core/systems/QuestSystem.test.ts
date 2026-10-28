@@ -31,6 +31,7 @@ function enter(run: GameSession): void {
   run.player.x = run.merchant.portal!.x;
   run.player.y = run.merchant.portal!.y;
   run.interact();
+  while (run.journey) run.step(STEP_MS);
 }
 function standAt(run: GameSession, offset: { x: number; y: number }): void {
   run.player.x = run.player.prevX = run.merchant.room.x + offset.x;
@@ -41,13 +42,16 @@ function talkTo(run: GameSession, index: number): void {
   const npc = run.merchant.layout.npcs[index];
   standAt(run, { x: npc.x + 40, y: npc.y });
   run.interact();
+  while (run.journey) run.step(STEP_MS);
   expect(run.dialogue).toBe(index);
   run.interact();
+  while (run.journey) run.step(STEP_MS);
   expect(run.dialogue).toBeNull();
 }
 function leave(run: GameSession): void {
   standAt(run, MERCHANT_ROOM.exit);
   run.interact();
+  while (run.journey) run.step(STEP_MS);
   expect(run.merchant.inside).toBe(false);
 }
 const npcIndex = (id: string) => QUEST_NPCS.findIndex((npc) => npc.id === id);
@@ -155,6 +159,7 @@ describe('tavern missions', () => {
     const npc = run.merchant.layout.npcs[0];
     standAt(run, { x: npc.x + 40, y: npc.y });
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     const { x } = run.player;
     run.setMoveInput(1, 0);
     advance(run, 500);

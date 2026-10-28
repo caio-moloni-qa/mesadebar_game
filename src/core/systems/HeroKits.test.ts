@@ -122,6 +122,7 @@ describe('the regulars as heroes', () => {
     run.player.x = run.merchant.portal!.x;
     run.player.y = run.merchant.portal!.y;
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     expect(run.merchant.offers[0].cost).toBe(Math.round(150 * HERO_ABILITY_TUNING.grimboPrices));
   });
 
@@ -151,6 +152,7 @@ describe('the regulars as heroes', () => {
     expect(run.openPortableShop()).toBe(true);
     expect(run.merchant.portal).toMatchObject({ x: run.player.x, y: run.player.y });
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     expect(run.merchant.offers[0].cost).toBe(Math.round(150 * HERO_ABILITY_TUNING.portableShopMarkup));
     expect(run.openPortableShop()).toBe(false);
     expect(MERCHANT_TUNING.portalOpenMs).toBeGreaterThan(0);
@@ -163,6 +165,7 @@ describe('the regulars as heroes', () => {
     expect(run.merchant.freeItems).toBe(1);
     run.openPortableShop();
     run.interact();
+    while (run.journey) run.step(STEP_MS);
     expect(run.merchant.offers.some((offer) => offer.cost === 0)).toBe(true);
   });
 });

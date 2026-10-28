@@ -60,17 +60,22 @@ describe('Nevasca', () => {
     system.cold = 50;
     run(system, 0, 2000);
     expect(system.cold).toBeCloseTo(50 - BLIZZARD_TUNING.calmDecayPerSec * 2, 0);
-    const held = system.cold;
     run(system, STORM, 2000, FAR, true);
-    expect(system.cold).toBe(held);
+    expect(system.cold).toBe(100);
+    system.update(STEP_MS, STORM, FAR, false);
+    expect(system.cold).toBe(50);
   });
 
-  it('fills to a freeze, then drops to afterFreeze; Congelamento stacks feed the same meter', () => {
+  it('holds full while frozen, then drops to afterFreeze; Congelamento stacks feed the same meter', () => {
     const system = new BlizzardSystem([{ x: 0, y: 0 }]);
     system.addFrost(2);
     expect(system.cold).toBe(BLIZZARD_TUNING.coldPerFrostStack * 2);
     system.cold = 99.99;
     expect(system.update(STEP_MS, STORM, FAR, false)).toBe(true);
+    expect(system.cold).toBe(100);
+    system.update(5000, STORM, FAR, true);
+    expect(system.cold).toBe(100);
+    system.update(STEP_MS, STORM, FAR, false);
     expect(system.cold).toBe(BLIZZARD_TUNING.afterFreeze);
     // Stacks filling it in the calm still freeze (the lull's thaw doesn't hide it).
     system.addFrost(100);
@@ -95,6 +100,23 @@ describe('Nevasca na sessão', () => {
     expect(session.player.isFrozen(session.clock.now)).toBe(true);
     expect(session.player.frozenUntil - session.clock.now).toBeCloseTo(BLIZZARD_TUNING.freezeMs, -2);
     expect(session.player.health).toBe(3);
+  });
+
+  it('thaws after 5 seconds at half cold with 90% slow easing over 6 seconds', () => {
+    const session = snowSession();
+    session.player.health = session.player.maxHealth;
+    session.player.lowHealthAttackSpeedBonus = 0;
+    session.adjustElapsedMs(STORM);
+    session.blizzard.cold = 100;
+    session.step();
+    const end = session.player.frozenUntil;
+    expect(end - session.clock.now).toBe(5000);
+    expect(session.player.effectiveMovementSpeed(end - 1)).toBe(0);
+    expect(session.player.effectiveMovementSpeed(end)).toBeCloseTo(session.player.movementSpeed * 0.1);
+    expect(session.player.effectiveMovementSpeed(end + 3000)).toBeCloseTo(session.player.movementSpeed * 0.55);
+    expect(session.player.effectiveMovementSpeed(end + 6000)).toBe(session.player.movementSpeed);
+    while (session.clock.now < end) session.step();
+    expect(session.blizzard.cold).toBe(50);
   });
 
   it('is off in Greenfield', () => {

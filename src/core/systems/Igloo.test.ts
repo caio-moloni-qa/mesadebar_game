@@ -41,6 +41,16 @@ describe('O Esquimó e o Iglu', () => {
     expect(until(session, () => session.shelterInReach, stormMs - 10_000)).toBe(true);
     session.blizzard.cold = 70;
     session.interact();
+    const clock = session.clock.now, elapsed = session.elapsedMs;
+    expect(session.journey?.kind).toBe('igloo');
+    advance(session, 3200);
+    expect(session.journeyOpacity).toBe(1);
+    expect(session.merchant.inside).toBe(false);
+    advance(session, 1900);
+    expect(session.merchant.inside).toBe(false);
+    while (session.journey) session.step();
+    expect(session.clock.now).toBe(clock);
+    expect(session.elapsedMs).toBe(elapsed);
     expect(session.merchant.inside).toBe(true);
     expect(session.blizzard.cold).toBe(0);
     // Only the regulars talk: the Esquimó's bar has nothing on sale.
@@ -51,6 +61,7 @@ describe('O Esquimó e o Iglu', () => {
     session.player.x = session.merchant.room.x + MERCHANT_ROOM.exit.x;
     session.player.y = session.merchant.room.y + MERCHANT_ROOM.exit.y;
     session.interact();
+    while (session.journey) session.step();
     expect(session.merchant.inside).toBe(false);
     const torch = session.blizzard.warmingTorch(session.player);
     expect(torch?.fuelMs).toBe(BLIZZARD_TUNING.torchFuelMs);

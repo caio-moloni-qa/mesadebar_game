@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, FROST_STACKS, ICE_TROLL, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, BLIZZARD_TUNING, FROST_STACKS, ICE_TROLL, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
 import { CharacterConfig } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -72,6 +72,7 @@ export class PlayerState implements Body, UpgradeTarget {
   hastePercent = 0;
   /** Congelamento (Campo Nevado): stacks building towards a freeze, and the frozen-solid moment itself. */
   frozenUntil = -Infinity;
+  private thawStartsAt = -Infinity;
   private frostStacks = 0;
   private frostStacksMeltAt = -Infinity;
   private frostImmuneUntil = -Infinity;
@@ -122,6 +123,7 @@ export class PlayerState implements Body, UpgradeTarget {
   /** The water fairy's cleanse (Congelamento's stacks melt too). */
   clearSlows(): void {
     this.slows.length = 0;
+    this.thawStartsAt = -Infinity;
     this.frostStacks = 0;
   }
 
@@ -150,6 +152,7 @@ export class PlayerState implements Body, UpgradeTarget {
   freezeSolid(durationMs: number, now: number): void {
     this.frostStacks = 0;
     this.frozenUntil = now + durationMs;
+    this.thawStartsAt = this.frozenUntil;
     this.frostImmuneUntil = this.frozenUntil + FROST_STACKS.immuneMs;
   }
 
@@ -173,14 +176,15 @@ export class PlayerState implements Body, UpgradeTarget {
     if (this.isFrozen(now)) return 0;
     this.slows = this.slows.filter((slow) => slow.expiresAt > now);
     const slowAmount = this.slows.reduce((total, slow) => total + slow.percent, 0) + this.frostStacksAt(now) * FROST_STACKS.slowPerStack;
-    const slowMultiplier = Math.max(0.25, 1 - slowAmount);
+    const thawSlow = BLIZZARD_TUNING.thawSlow * Math.max(0, 1 - (now - this.thawStartsAt) / BLIZZARD_TUNING.thawMs);
+    const slowMultiplier = Math.min(Math.max(0.25, 1 - slowAmount), 1 - thawSlow);
     const lowHealthBonus = this.lowHealthAttackSpeedBonus > 0 ? this.lowHealthAttackSpeedBonus * this.lowHealthBonusRatio() : 0;
     const haste = now < this.hasteUntil ? this.hastePercent : 0;
     return this.movementSpeed * slowMultiplier * (1 + lowHealthBonus) * (1 + haste);
   }
 
   isSlowed(now: number): boolean {
-    return this.slows.some((slow) => slow.expiresAt > now);
+    return (now >= this.thawStartsAt && now < this.thawStartsAt + BLIZZARD_TUNING.thawMs) || this.slows.some((slow) => slow.expiresAt > now);
   }
 
   /** Character passive heal + Bênção Divina. Returns the total the Aura Podre prevented this step. */
