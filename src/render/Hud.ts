@@ -1,5 +1,6 @@
 import { GameSession } from '../core/session/GameSession';
 import { COMPANIONS } from '../core/systems/CompanionSystem';
+import { SNOWFIELD_QUEST_NPCS } from '../core/systems/QuestSystem';
 import { HUD_ART, LIFE_STEAL_ICON, companionIcon, upgradeIcon, weaponIcon } from './ui/icons';
 import { progressText } from './ui/questText';
 
@@ -127,7 +128,7 @@ export class Hud {
     const { quests } = session;
     const items = quests.tracked.map((quest) => ({
       ready: quest.status === 'ready',
-      text: `${quests.spec(quest).title} — ${quest.status === 'ready' ? 'volte à taverna' : progressText(quests, quest)}`
+      text: `${quests.spec(quest).title} — ${quest.status === 'ready' ? (SNOWFIELD_QUEST_NPCS.includes(quest.npc) ? 'ache o Esquimó na nevasca' : 'volte à taverna') : progressText(quests, quest)}`
     }));
     const key = items.map((item) => item.text).join('|');
     if (this.last.get('quests') === key) return;

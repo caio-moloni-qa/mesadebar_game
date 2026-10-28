@@ -243,6 +243,20 @@ function hiveParts(): RigPart[] {
   ];
 }
 
+/** Bloco de Gelo (Voly's mission): a chunk of blue ice, cracked, with a frosted cap and a couple of shards at its foot.
+ *  It never moves: everything sits on `root`. */
+const ICE_BLOCK = { ice: 0x9fd4ec, deep: 0x5f9fc4, frost: 0xeef8ff };
+function iceBlockParts(): RigPart[] {
+  return [
+    { bone: 'root', geometry: part(box(0.7, 0.62, 0.6), ICE_BLOCK.ice, [0, 0.31, 0], [0, 0.3, 0]) },
+    { bone: 'root', geometry: part(box(0.5, 0.42, 0.44), ICE_BLOCK.deep, [0.12, 0.62, -0.04], [0.1, -0.2, 0.08]) },
+    { bone: 'root', geometry: part(box(0.74, 0.07, 0.64), ICE_BLOCK.frost, [0, 0.63, 0], [0, 0.3, 0]) },
+    { bone: 'root', geometry: part(box(0.04, 0.5, 0.62), ICE_BLOCK.frost, [-0.1, 0.32, 0.02], [0, 0.3, 0.25]) },
+    { bone: 'root', geometry: part(cone(0.1, 0.36, 4), ICE_BLOCK.ice, [0.42, 0.16, 0.2], [0.3, 0, -0.5]) },
+    { bone: 'root', geometry: part(cone(0.08, 0.28, 4), ICE_BLOCK.deep, [-0.4, 0.12, -0.22], [-0.3, 0, 0.6]) }
+  ];
+}
+
 /** Mímico: the loot chest's own box and rounded lid (same size and wood), with a row of teeth along the rim, a
  *  long red tongue and two little eyes that only show once it opens. */
 const MIMIC = { wood: 0x8a5a2b, dark: 0x5e3a18, metal: 0xc9a24a, mouth: 0x3a0c0c, tooth: 0xf4ecd8, tongue: 0xc8323a, eye: 0xffe14a };
@@ -480,6 +494,8 @@ export function createEnemyModels(): Record<EnemyVariantId, BakedEnemyModel> {
     doe: deer(false),
     // A hive never walks: it sways at its own pace, so it plays like a hoverer.
     hive: { geometry: bake(buildRiggedModel(hiveBones, hiveParts(), material()), sway, WALK_FRAMES), frames: WALK_FRAMES, cycleSeconds: sway.duration, hovers: true },
-    mimic: { geometry: bake(buildRiggedModel(mimicBones, mimicParts(), material()), chomp, WALK_FRAMES), frames: WALK_FRAMES, cycleSeconds: chomp.duration, hovers: false, stillWhileCalm: true }
+    mimic: { geometry: bake(buildRiggedModel(mimicBones, mimicParts(), material()), chomp, WALK_FRAMES), frames: WALK_FRAMES, cycleSeconds: chomp.duration, hovers: false, stillWhileCalm: true },
+    // Static and not a hoverer: the horde view holds it on one frame.
+    iceBlock: { geometry: bake(buildRiggedModel(hiveBones, iceBlockParts(), material()), sway, WALK_FRAMES), frames: WALK_FRAMES, cycleSeconds: sway.duration, hovers: false }
   };
 }

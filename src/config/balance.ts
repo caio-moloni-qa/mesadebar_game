@@ -19,7 +19,9 @@ export const ENEMY_VARIANTS = {
   /** Troll de Gelo: the Super Esqueleto's numbers, a frost aura instead of the rot and a telegraphed icicle slam. */
   iceTroll: { maxHealth: 500, movementSpeed: 35, contactDamage: 50, reward: 25, castCooldownMs: 7000 },
   /** Lobo do Gelo: mixed into the Nevado's base drip in packs (WOLF_PACK) - quicker than the skeleton, frailer. */
-  iceWolf: { maxHealth: 26, movementSpeed: 110, contactDamage: 8, reward: 3 }
+  iceWolf: { maxHealth: 26, movementSpeed: 110, contactDamage: 8, reward: 3 },
+  /** Bloco de Gelo: breakable scenery Voly's mission raises around the Nevado. Never moves or hurts, worth nothing. */
+  iceBlock: { maxHealth: 60, movementSpeed: 0, contactDamage: 0, reward: 0, currencyDrops: 0 }
 };
 export type HordeVariantId = keyof typeof ENEMY_VARIANTS;
 /** The horde's four roles: the base drip, the standing summoner, the fast swarm from the borders, the elite wave. */

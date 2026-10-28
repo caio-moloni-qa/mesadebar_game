@@ -176,6 +176,7 @@ export class SandboxPanel {
       toggle('Spawn variantes', 'variants', (value) => { run().variantSpawnEnabled = value; }),
       toggle('Mercador', 'merchant', (value) => { run().merchant.enabled = value; }),
       { label: () => 'Abrir portal do mercador', run: () => run().openMerchantPortal() },
+      { label: () => 'Chamar o Esquimó (Nevado)', run: () => run().summonEskimo() },
       { label: () => 'Liberar todos os heróis', run: () => this.host.unlockAllHeroes() },
       { label: () => 'Progresso: +500 Fichas', run: () => this.host.addFichas(500) },
       { label: () => 'Progresso: +1 nível de maestria', run: () => this.host.addMasteryLevel() },

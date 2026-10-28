@@ -10,9 +10,10 @@ import { circlesOverlap } from '../collision';
 import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffled } from '../math';
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
-import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
+import { MERCHANT_ROOM, MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
 import { NEUTRAL_TUNING, NeutralEvents, NeutralSystem } from '../systems/NeutralSystem';
-import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem } from '../systems/QuestSystem';
+import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem, questNpcsFor } from '../systems/QuestSystem';
+import { SHELTER_TUNING, ShelterEvents, ShelterSystem } from '../systems/ShelterSystem';
 import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
 import { FLEE_SPEED_MULTIPLIER, PULL_SPEED, PowerTierEvents, PowerTierSystem } from '../systems/PowerTierSystem';
 import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
@@ -72,7 +73,9 @@ export type PendingChoice =
   /** The merchant's Tomo de Afinidade: unlock one weapon family's upgrade pool. */
   | { kind: 'affinity'; families: WeaponFamily[] };
 
-export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents, PowerTierEvents, NeutralEvents {
+export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents, CompanionEvents, MerchantEvents, QuestEvents, HeroAbilityEvents, PowerTierEvents, NeutralEvents, ShelterEvents {
+  /** Every wolf of one horde pack is down (Beast's mission). */
+  'wolf-pack-defeated': Record<string, never>;
   /** A mission's upgrade reward: what was granted. */
   'quest-gifts': { names: string[] };
   'enemy-hit': { enemy: EnemyState; amount: number; critical: boolean; weaponId: WeaponConfig['id'] | null };
@@ -179,6 +182,10 @@ export class GameSession implements WeaponHost {
   readonly icicles = new IcicleField();
   /** The Nevasca: cold meter, storm fronts and torches (inactive where the arena has no torches, and in the hub). */
   readonly blizzard: BlizzardSystem;
+  /** The Esquimó walking the blizzard with his offer of shelter (only where there's a blizzard). */
+  readonly shelter: ShelterSystem;
+  /** Horde wolf packs still on the field: pack id -> wolves left. */
+  private readonly packsAlive = new Map<number, number>();
   /** The Troll's frost aura adds a stack every ICE_TROLL.auraTickMs while the hero stands in it. */
   private frostAuraNextAt = -Infinity;
   /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
@@ -282,7 +289,15 @@ export class GameSession implements WeaponHost {
       hurtPlayer: (amount) => this.hurtPlayer(amount, this.clock.now),
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
     });
-    this.quests = new QuestSystem({ player: this.player, rng: this.rng, arena: this.arena, events: this.events }, options.questTiers);
+    const { blizzard } = this;
+    this.quests = new QuestSystem({
+      player: this.player,
+      rng: this.rng,
+      arena: this.arena,
+      events: this.events,
+      weather: blizzard.active ? { storm: () => blizzard.phase === 'storm', warmed: () => !!blizzard.warmingTorch(this.player) } : undefined,
+      raiseIceBlocks: (count) => this.raiseIceBlocks(count)
+    }, options.questTiers, options.hub ? QUEST_NPCS : questNpcsFor(this.arena.layout.id));
     this.events.on('quest-claimed', () => { this.stats.missions += 1; });
     // A guardian's fight is about the guardian: the plain horde scatters down to the fight's cap — out of sight when
     // it's announced, then all but the hero's closest when it rises (the camera is on the guardian by then).
@@ -335,9 +350,24 @@ export class GameSession implements WeaponHost {
       events: this.events,
       affinities: () => this.affinities,
       priceMultiplier: () => (this.characterId === 'grimbo' ? HERO_ABILITY_TUNING.grimboPrices : 1),
-      encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
+      encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice,
+      igloo: !options.hub && blizzard.active
     });
-    QUEST_NPCS.forEach((npc, index) => { if (options.regularsAway?.includes(npc.id)) this.merchant.away.add(index); });
+    // Tables without a regular of this area (the igloo has three) stand empty.
+    MERCHANT_ROOM.npcs.forEach((_, index) => {
+      const quest = this.quests.quests[index];
+      if (!quest || options.regularsAway?.includes(quest.npc.id)) this.merchant.away.add(index);
+    });
+    this.shelter = new ShelterSystem({
+      player: this.player,
+      rng: this.rng,
+      arena: this.arena,
+      blizzard,
+      events: this.events,
+      now: () => this.clock.now,
+      blocked: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice
+    });
+    this.events.on('neutral-tamed', () => this.events.emit('player-status', { text: 'DOMADO!', tone: 'heal' }));
     this.companions = new CompanionSystem({
       player: this.player,
       arena: this.arena,
@@ -359,6 +389,10 @@ export class GameSession implements WeaponHost {
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
       spawn: (request) => {
         const enemy = this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth);
+        if (enemy && request.pack) {
+          enemy.wolfPack = request.pack;
+          this.packsAlive.set(request.pack, (this.packsAlive.get(request.pack) ?? 0) + 1);
+        }
         if (enemy && request.flankAngle !== undefined) {
           enemy.flankAngle = request.flankAngle;
           enemy.flankUntil = this.clock.now + WOLF_PACK.flankMs;
@@ -671,8 +705,11 @@ export class GameSession implements WeaponHost {
     this.scheduleMiniBosses();
     this.bosses.update(deltaMs);
     this.miniBosses.update(deltaMs);
+    // Beast's taming missions: the wildlife lets the hero walk up.
+    this.neutrals.taming = !!this.quests.activeWith('tame');
     this.neutrals.update(deltaMs);
     this.merchant.update(deltaMs);
+    this.shelter.update(deltaMs, this.elapsedMs);
     this.quests.update(deltaMs);
     this.topUpStressEnemies();
     this.rebuildEnemyHash();
@@ -1112,6 +1149,10 @@ export class GameSession implements WeaponHost {
       if (spot?.kind === 'npc') this.dialogue = spot.index;
       return;
     }
+    if (this.shelterInReach) {
+      this.takeShelter();
+      return;
+    }
     if (this.merchant.portalInReach) {
       this.merchant.enter();
       return;
@@ -1119,6 +1160,47 @@ export class GameSession implements WeaponHost {
     const portal = this.portalInReach;
     if (portal === 'end') this.finish(true);
     if (portal === 'continue') this.continueToNextCycle();
+  }
+
+  /** The Esquimó is offering shelter and the hero is still by him. */
+  get shelterInReach(): boolean {
+    const eskimo = this.shelter.eskimo;
+    return !!eskimo && this.shelter.offering && !this.merchant.inside && Math.hypot(this.player.x - eskimo.x, this.player.y - eskimo.y) <= SHELTER_TUNING.offerReach * 1.5 + this.player.radius;
+  }
+
+  /** Into the igloo: warm through (the cold gone, the ice off), and back out later by a fresh, fully lit torch. */
+  private takeShelter(): void {
+    if (!this.shelter.accept(this.elapsedMs)) return;
+    const { blizzard, player } = this;
+    let torch = blizzard.torches[0];
+    blizzard.torches.forEach((candidate) => {
+      if (Math.hypot(candidate.x - player.x, candidate.y - player.y) < Math.hypot(torch.x - player.x, torch.y - player.y)) torch = candidate;
+    });
+    torch.fuelMs = BLIZZARD_TUNING.torchFuelMs;
+    blizzard.cold = 0;
+    player.frozenUntil = -Infinity;
+    this.merchant.enterShelter(this.arena.nearestWalkable(torch.x + 50, torch.y + 30, player.radius));
+  }
+
+  /** Sandbox: the Esquimó walks up offering shelter (only where there's a blizzard). */
+  summonEskimo(): void {
+    if (this.blizzard.active && !this.merchant.inside) this.shelter.summon(this.elapsedMs);
+  }
+
+  /** Voly's mission: ice blocks over the map, well spread, away from the hero, the trails' torches and the water. */
+  private raiseIceBlocks(count: number): number {
+    const { arena, rng, player } = this;
+    const placed: Vec2[] = [];
+    for (let attempt = 0; attempt < 400 && placed.length < count; attempt += 1) {
+      const x = floatBetween(rng, 250, arena.size - 250);
+      const y = floatBetween(rng, 250, arena.size - 250);
+      const spread = attempt < 300 ? 320 : 160;
+      if (Math.hypot(x - player.x, y - player.y) < 400) continue;
+      if (placed.some((other) => Math.hypot(x - other.x, y - other.y) < spread)) continue;
+      if (!arena.isWalkable(x, y, 40) || arena.shoreDistance(x, y) < 60) continue;
+      if (this.spawnEnemy('iceBlock', x, y)) placed.push({ x, y });
+    }
+    return placed.length;
   }
 
   private onBossWaveCleared(): void {
@@ -1248,6 +1330,19 @@ export class GameSession implements WeaponHost {
   private defeatEnemy(enemy: EnemyState): void {
     enemy.phase = 'dying';
     enemy.phaseEndsAt = this.clock.now + ENEMY_DYING_MS;
+    if (enemy.variantId === 'iceBlock') {
+      // Scenery: broken, not a kill — no experience, no drops.
+      this.events.emit('enemy-defeated', { x: enemy.x, y: enemy.y, variantId: enemy.variantId, divineRelic: false });
+      return;
+    }
+    if (enemy.wolfPack > 0) {
+      const left = (this.packsAlive.get(enemy.wolfPack) ?? 1) - 1;
+      if (left > 0) this.packsAlive.set(enemy.wolfPack, left);
+      else {
+        this.packsAlive.delete(enemy.wolfPack);
+        this.events.emit('wolf-pack-defeated', {});
+      }
+    }
     this.kills += 1;
     this.abilities.onDefeated(enemy);
     this.stats.killsByVariant[enemy.variantId] = (this.stats.killsByVariant[enemy.variantId] ?? 0) + 1;

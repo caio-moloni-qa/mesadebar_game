@@ -149,6 +149,8 @@ export class BossUi {
   private merchantPrompt(session: GameSession): { x: number; y: number; text: string; poor: boolean } | null {
     const { merchant } = session;
     if (merchant.portalInReach && merchant.portal) return { ...merchant.portal, text: 'Pressione E para entrar no portal', poor: false };
+    const eskimo = session.shelter.eskimo;
+    if (eskimo && session.shelterInReach) return { x: eskimo.x, y: eskimo.y, text: '“Precisa de abrigo?” — Pressione E para aceitar', poor: false };
     const spot = merchant.roomSpot;
     if (!spot) return null;
     if (spot.kind === 'exit') return { x: merchant.room.x + MERCHANT_ROOM.exit.x, y: merchant.room.y + MERCHANT_ROOM.exit.y, text: merchant.hub ? 'Pressione E para escolher o herói e partir' : 'Pressione E para voltar à arena', poor: false };
@@ -186,6 +188,8 @@ export class BossUi {
     const prophecy = session.merchant.inside ? null : session.prophecy();
     if (prophecy) targets.push({ x: prophecy.x, y: prophecy.y, kind: prophecy.kind, tier: 'prophecy' });
     if (!session.merchant.inside) session.quests.barrels.forEach((barrel) => targets.push({ ...barrel, kind: 'barrel', tier: 'quest' }));
+    if (!session.merchant.inside && session.quests.fragmentsShowing) session.quests.fragments.forEach((fragment) => targets.push({ ...fragment, kind: 'fragment', tier: 'quest' }));
+    if (session.shelter.eskimo && !session.merchant.inside) targets.push({ x: session.shelter.eskimo.x, y: session.shelter.eskimo.y, kind: 'eskimo', tier: 'merchant' });
     const { player } = session;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MERCHANT_ROOM, MERCHANT_TUNING, MerchantSystem } from '../../core/systems/MerchantSystem';
 import { QuestStatus, QuestSystem } from '../../core/systems/QuestSystem';
+import type { CharacterId } from '../../config/characters';
 import { importedHeroRig } from '../models/heroes';
 import { toonMaterial } from '../materials';
 import { humanoidClips } from '../models/clips';
@@ -45,7 +46,7 @@ function rigged(parts: PartSpec[], scale: number, phase: number): Character {
 /** A tavern figure idling: their imported mesh when it's loaded, otherwise the procedural one (with what they hold). */
 function figure(id: RegularFigureId): Character {
   const look = REGULAR_FIGURE_LOOK[id];
-  const imported = importedHeroRig(id, toonMaterial({ vertexColors: true, flatShading: true }));
+  const imported = importedHeroRig(id as CharacterId, toonMaterial({ vertexColors: true, flatShading: true }));
   if (!imported) return rigged(REGULAR_FIGURES[id](true), look.scale, look.phase);
   const mixer = new THREE.AnimationMixer(imported.model.root);
   const idle = mixer.clipAction(imported.clips.idle);
@@ -54,9 +55,9 @@ function figure(id: RegularFigureId): Character {
   return { root: imported.model.root, mixer };
 }
 
-const sergioModel = () => figure('sergio');
-/** QUEST_NPCS order. */
-const REGULAR_MODELS = [() => figure('brom'), () => figure('lyra'), () => figure('grimbo'), () => figure('zora')];
+/** The tavern's colours, and the igloo's (the Campo Nevado's room: snow and ice where the tavern has wood and stone). */
+const TAVERN_LOOK = { floor: 0x6b4a2e, seam: 0x4a3220, rug: [0x7a2a2a, 0xb8863a], wall: 0x6f6458, counter: 0x7a4a28, counterTop: 0x4a2c18, shelf: 0x5a3a22, barrel: 0x8a5a32, hoop: 0x4a4a52, table: 0x8a5a32, tableLeg: 0x5a3a22, hearth: 0x5a524a, lantern: 0xffc27a };
+const IGLOO_LOOK = { floor: 0xdfe9f2, seam: 0xb9cfe0, rug: [0x8a6a4a, 0xeee2c8], wall: 0xcfe4f4, counter: 0xa9d4ee, counterTop: 0xe8f4fc, shelf: 0x8fbfdc, barrel: 0xbfe0f2, hoop: 0x8fbfdc, table: 0xbfe0f2, tableLeg: 0x8fbfdc, hearth: 0x6a6460, lantern: 0xffb46a };
 
 /** "!" (mission on offer), "?" (come claim it), "…" (under way) over a regular's head. */
 function markerTexture(symbol: string, background: string): THREE.CanvasTexture {
@@ -90,8 +91,10 @@ export class MerchantRoom {
   readonly characters = new THREE.Group();
   private readonly arenaPortal = portalMesh();
   private readonly exitPortal = portalMesh();
-  private readonly sergio = sergioModel();
-  private readonly regulars = REGULAR_MODELS.map((build) => build());
+  /** Sergio behind his bar, or the Esquimó in his igloo. */
+  private readonly sergio: Character;
+  /** The area's regulars, in table order. */
+  private readonly regulars: Character[];
   private readonly markers: THREE.Sprite[] = [];
   private readonly markerTextures: Record<Exclude<QuestStatus, 'done'>, THREE.Texture> = {
     offer: markerTexture('!', '#ffd25a'),
@@ -103,6 +106,9 @@ export class MerchantRoom {
   private time = 0;
 
   constructor(private readonly system: MerchantSystem, private readonly quests: QuestSystem) {
+    const look = system.igloo ? IGLOO_LOOK : TAVERN_LOOK;
+    this.sergio = figure(system.igloo ? 'eskimo' : 'sergio');
+    this.regulars = quests.quests.map((quest) => figure(quest.npc.id as RegularFigureId));
     const center = simToWorld(system.room.x, system.room.y, 0, new THREE.Vector3());
     const room = new THREE.Group();
     room.position.copy(center);
@@ -120,16 +126,16 @@ export class MerchantRoom {
     const half = size / 2;
 
     // Floor, plank seams and a rug in the middle.
-    solid(new THREE.BoxGeometry(size, 0.2, size), 0x6b4a2e, new THREE.Vector3(0, -0.1, 0));
-    for (let index = 1; index < 14; index += 1) glow(new THREE.BoxGeometry(0.05, 0.01, size), 0x4a3220, new THREE.Vector3(-half + (index * size) / 14, 0.005, 0));
-    solid(new THREE.BoxGeometry(5, 0.02, 3.4), 0x7a2a2a, at(10, 20, 0.01));
-    solid(new THREE.BoxGeometry(4.4, 0.025, 2.8), 0xb8863a, at(10, 20, 0.012));
-    solid(new THREE.BoxGeometry(4, 0.03, 2.4), 0x7a2a2a, at(10, 20, 0.014));
+    solid(new THREE.BoxGeometry(size, 0.2, size), look.floor, new THREE.Vector3(0, -0.1, 0));
+    for (let index = 1; index < 14; index += 1) glow(new THREE.BoxGeometry(0.05, 0.01, size), look.seam, new THREE.Vector3(-half + (index * size) / 14, 0.005, 0));
+    solid(new THREE.BoxGeometry(5, 0.02, 3.4), look.rug[0], at(10, 20, 0.01));
+    solid(new THREE.BoxGeometry(4.4, 0.025, 2.8), look.rug[1], at(10, 20, 0.012));
+    solid(new THREE.BoxGeometry(4, 0.03, 2.4), look.rug[0], at(10, 20, 0.014));
 
     // Walls, with the gap in the north wall for the exit portal.
     const thick = 0.5;
     const gap = 3.2;
-    const wall = (width: number, depth: number, x: number, z: number) => solid(new THREE.BoxGeometry(width, 1.6, depth), 0x6f6458, new THREE.Vector3(x, 0.8, z));
+    const wall = (width: number, depth: number, x: number, z: number) => solid(new THREE.BoxGeometry(width, 1.6, depth), look.wall, new THREE.Vector3(x, 0.8, z));
     wall(thick, size + thick, -half, 0);
     wall(thick, size + thick, half, 0);
     wall(size + thick, thick, 0, half);
@@ -139,26 +145,26 @@ export class MerchantRoom {
     // The bar: counter with a darker top, the bottle shelves behind Sergio, a stack of barrels in the corner.
     const counter = MERCHANT_ROOM.counter;
     const counterSize = new THREE.Vector3(counter.halfWidth * 2 * WORLD_SCALE, 1.1, counter.halfHeight * 2 * WORLD_SCALE);
-    solid(new THREE.BoxGeometry(counterSize.x, counterSize.y, counterSize.z), 0x7a4a28, at(counter.x, counter.y, 0.55));
-    solid(new THREE.BoxGeometry(counterSize.x + 0.2, 0.1, counterSize.z + 0.2), 0x4a2c18, at(counter.x, counter.y, 1.12));
+    solid(new THREE.BoxGeometry(counterSize.x, counterSize.y, counterSize.z), look.counter, at(counter.x, counter.y, 0.55));
+    solid(new THREE.BoxGeometry(counterSize.x + 0.2, 0.1, counterSize.z + 0.2), look.counterTop, at(counter.x, counter.y, 1.12));
     const shelfX = -305;
     const bottleColors = [0x3a8a4a, 0x8a2a3a, 0x2a5a9a, 0xc9963f, 0x6a3a8a];
     for (let level = 0; level < 3; level += 1) {
-      solid(new THREE.BoxGeometry(0.45, 0.06, 9), 0x5a3a22, at(shelfX, 0, 0.7 + level * 0.6));
+      solid(new THREE.BoxGeometry(0.45, 0.06, 9), look.shelf, at(shelfX, 0, 0.7 + level * 0.6));
       for (let index = 0; index < 12; index += 1) {
         const height = 0.3 + ((index * 7 + level * 3) % 4) * 0.06;
         solid(cylinder(0.07, 0.09, height, 6), bottleColors[(index + level * 2) % bottleColors.length], at(shelfX, -130 + index * 23, 0.73 + level * 0.6 + height / 2));
       }
     }
     [[-280, 280], [-250, 285], [-282, 250]].forEach(([x, y]) => {
-      solid(cylinder(0.42, 0.42, 0.95, 10), 0x8a5a32, at(x, y, 0.48));
-      solid(cylinder(0.44, 0.44, 0.06, 10), 0x4a4a52, at(x, y, 0.2));
-      solid(cylinder(0.44, 0.44, 0.06, 10), 0x4a4a52, at(x, y, 0.76));
+      solid(cylinder(0.42, 0.42, 0.95, 10), look.barrel, at(x, y, 0.48));
+      solid(cylinder(0.44, 0.44, 0.06, 10), look.hoop, at(x, y, 0.2));
+      solid(cylinder(0.44, 0.44, 0.06, 10), look.hoop, at(x, y, 0.76));
     });
 
     // The fireplace in the south wall.
     const hearth = at(-20, 300);
-    solid(new THREE.BoxGeometry(2.6, 2.2, 0.9), 0x5a524a, hearth.clone().setY(1.1));
+    solid(new THREE.BoxGeometry(2.6, 2.2, 0.9), look.hearth, hearth.clone().setY(1.1));
     glow(new THREE.BoxGeometry(1.5, 1.0, 0.2), 0x1a0e08, hearth.clone().add(new THREE.Vector3(0, 0.55, -0.4)));
     ([[-0.3, 0xff7a2a], [0.05, 0xffb04a], [0.32, 0xff7a2a]] as const).forEach(([offset, color]) => {
       const flame = new THREE.Mesh(cone(0.22, 0.6, 5).translate(0, 0.3, 0), new THREE.MeshBasicMaterial({ color }));
@@ -178,7 +184,7 @@ export class MerchantRoom {
 
     // Lanterns over the bar and over the tables.
     [[counter.x, -100], [counter.x, 120], [130, -90], [130, 190]].forEach(([x, y]) => {
-      const light = new THREE.PointLight(0xffc27a, 14, 9, 2);
+      const light = new THREE.PointLight(look.lantern, 14, 9, 2);
       light.position.copy(at(x, y, 3));
       room.add(light);
       glow(new THREE.BoxGeometry(0.3, 0.4, 0.3), 0xffd894, light.position);
@@ -187,12 +193,12 @@ export class MerchantRoom {
     // The regulars' tables: a round top on one leg, mugs and a candle (a crystal ball on Zora's).
     MERCHANT_ROOM.tables.forEach((table, index) => {
       const radius = MERCHANT_ROOM.tableRadius * WORLD_SCALE;
-      solid(cylinder(radius, radius, 0.08, 10), 0x8a5a32, at(table.x, table.y, 0.85));
-      solid(cylinder(0.1, 0.12, 0.85, 6), 0x5a3a22, at(table.x, table.y, 0.42));
-      solid(cylinder(0.45, 0.5, 0.06, 8), 0x5a3a22, at(table.x, table.y, 0.03));
+      solid(cylinder(radius, radius, 0.08, 10), look.table, at(table.x, table.y, 0.85));
+      solid(cylinder(0.1, 0.12, 0.85, 6), look.tableLeg, at(table.x, table.y, 0.42));
+      solid(cylinder(0.45, 0.5, 0.06, 8), look.tableLeg, at(table.x, table.y, 0.03));
       solid(cylinder(0.1, 0.1, 0.2, 8), 0x9a6a3a, at(table.x - 10, table.y - 10, 0.99));
       solid(cylinder(0.1, 0.1, 0.2, 8), 0x9a6a3a, at(table.x + 12, table.y + 8, 0.99));
-      if (index === 3) {
+      if (index === 3 && !system.igloo) {
         glow(ball(0.24, 1), 0x9fe8ff, at(table.x, table.y, 1.14));
         solid(cylinder(0.15, 0.2, 0.08, 8), 0xc9963f, at(table.x, table.y, 0.93));
       } else {

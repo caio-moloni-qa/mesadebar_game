@@ -76,7 +76,7 @@ const COMPANION_ICONS: Record<CompanionKind, string> = {
 };
 
 /** The tavern regulars' portraits (dialogue panel). */
-const NPC_FACES: Record<QuestNpcId, string> = {
+const NPC_FACES: Partial<Record<QuestNpcId, string>> = {
   // Brom: iron cap, red braided beard.
   brom: svg('<path d="M12 26 Q32 4 52 26 Z" fill="#8a8f99"/><rect x="10" y="24" width="44" height="5" fill="#6f737c"/><circle cx="32" cy="34" r="13" fill="#e0a882"/><rect x="25" y="31" width="4" height="4" fill="#1a1410"/><rect x="35" y="31" width="4" height="4" fill="#1a1410"/><path d="M17 36 Q32 70 47 36 Q40 44 32 44 Q24 44 17 36 Z" fill="#c0502a"/><rect x="24" y="40" width="16" height="3" fill="#c0502a"/><rect x="26" y="52" width="3" height="9" fill="#c0502a"/><rect x="35" y="52" width="3" height="9" fill="#c0502a"/>'),
   // Lyra: green hood, golden hair, long ears.
@@ -96,7 +96,7 @@ export function npcPortrait(name: QuestNpcId | 'sergio'): string | undefined {
 }
 
 export function npcFace(id: QuestNpcId): string {
-  return npcPortrait(id) ?? NPC_FACES[id];
+  return npcPortrait(id) ?? NPC_FACES[id] ?? '';
 }
 
 export function companionIcon(kind: CompanionKind): string {
@@ -115,7 +115,7 @@ export function upgradeIcon(id: string): string {
 export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
 
 /** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
-export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'frostKnight' | 'end' | 'continue' | 'merchant' | 'barrel';
+export type MarkerKind = 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'frostKnight' | 'end' | 'continue' | 'merchant' | 'barrel' | 'fragment' | 'eskimo';
 const MARKER_FACES: Record<MarkerKind, string> = {
   // The Necromancer and the zone guardians: their heads, cut from the concept art (art-source/3d/<boss>/views/front.png).
   boss: new URL('../../assets/ui/markers/boss-head.png', import.meta.url).href,
@@ -129,6 +129,10 @@ const MARKER_FACES: Record<MarkerKind, string> = {
   merchant: svg('<rect x="8" y="22" width="48" height="5" rx="2" fill="#3a2a1e"/><path d="M20 22 L32 6 L44 22 Z" fill="#3a2a1e"/><circle cx="32" cy="34" r="11" fill="#d9a77e"/><rect x="26" y="31" width="4" height="4" fill="#1a1410"/><rect x="34" y="31" width="4" height="4" fill="#1a1410"/><path d="M21 38 L43 38 L32 58 Z" fill="#cfc8bb"/><circle cx="46" cy="18" r="5" fill="#ffc65a" stroke="#b8923a" stroke-width="2"/>'),
   // One of Brom's lost barrels.
   barrel: svg('<ellipse cx="32" cy="14" rx="16" ry="5" fill="#c9963f"/><path d="M16 14 Q12 32 16 50 L48 50 Q52 32 48 14 Z" fill="#8a5a32"/><rect x="13" y="22" width="38" height="4" fill="#4a4a52"/><rect x="13" y="40" width="38" height="4" fill="#4a4a52"/><ellipse cx="32" cy="50" rx="16" ry="5" fill="#6a4226"/>'),
+  // One of Joe's memory fragments: a shard of glowing blue ice.
+  fragment: svg('<path d="M32 6 L46 26 L38 58 L26 58 L18 26 Z" fill="#7fe3ff"/><path d="M32 6 L38 58 L26 58 Z" fill="#c9f4ff"/><path d="M18 26 L46 26" stroke="#3aa8d8" stroke-width="2"/><circle cx="32" cy="30" r="5" fill="#ffffff" opacity=".8"/>'),
+  // The Esquimó: a fur-ringed hood around a round face, his lantern glowing beside it.
+  eskimo: svg('<circle cx="30" cy="32" r="20" fill="#e8dcc4"/><circle cx="30" cy="32" r="15" fill="#8a5a32"/><circle cx="30" cy="34" r="10" fill="#d9a77e"/><rect x="25" y="31" width="3" height="3" fill="#1a1410"/><rect x="32" y="31" width="3" height="3" fill="#1a1410"/><rect x="48" y="36" width="8" height="12" rx="2" fill="#ffc65a" stroke="#6a4a2a" stroke-width="2"/><path d="M52 30 v6" stroke="#6a4a2a" stroke-width="2"/>'),
   continue: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#7dffa0" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#7dffa0" opacity=".6"/><path d="M32 24 v16 M24 32 h16" stroke="#ffffff" stroke-width="3"/>')
 };
 

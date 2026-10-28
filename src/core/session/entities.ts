@@ -324,6 +324,8 @@ export class EnemyState implements Body {
   homeY = 0;
   /** Neutrals living together (a pack, a herd): hurting one angers them all. -1 = alone. */
   packId = -1;
+  /** The horde wolf pack it came in with (0: none). */
+  wolfPack = 0;
   /** The "!" jump when a calm neutral notices the hero; it bolts after this. */
   startledUntil = 0;
   /** A neutral digging in before its attack (the renderer shakes and reddens it), and the lane it will charge down
@@ -347,13 +349,13 @@ export class EnemyState implements Body {
     this.contactDamage = base.contactDamage;
     this.reward = base.reward;
     this.currencyDrops = 'currencyDrops' in base ? base.currencyDrops : 1;
-    this.isStatic = variantId === 'necromancerWraith' || variantId === 'snowShaman' || variantId === 'hive';
+    this.isStatic = variantId === 'necromancerWraith' || variantId === 'snowShaman' || variantId === 'hive' || variantId === 'iceBlock';
     this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'iceTroll' || variantId === 'finalBoss' || variantId in MINI_BOSS_VARIANTS;
     this.hasRottenAura = variantId === 'superSkeleton' || variantId === 'finalBoss';
     this.rottenAuraSuppressed = false;
     this.hasFrostAura = variantId === 'iceTroll';
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
-    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : variantId === 'boar' ? 22 : variantId === 'stag' ? 24 : variantId === 'hive' ? 20 : variantId === 'mimic' ? 22 : variantId === 'iceTroll' ? 26 : variantId === 'snowman' ? 14 : variantId === 'iceWolf' ? 16 : BODY_RADIUS.enemy;
+    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : variantId === 'boar' ? 22 : variantId === 'stag' ? 24 : variantId === 'hive' ? 20 : variantId === 'mimic' ? 22 : variantId === 'iceTroll' ? 26 : variantId === 'snowman' ? 14 : variantId === 'iceWolf' ? 16 : variantId === 'iceBlock' ? 24 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
@@ -372,6 +374,7 @@ export class EnemyState implements Body {
     this.homeX = x;
     this.homeY = y;
     this.packId = -1;
+    this.wolfPack = 0;
     this.startledUntil = this.windupUntil = this.windupDirX = this.windupDirY = this.windupReach = this.trembleUntil = 0;
   }
 
@@ -443,7 +446,8 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   doe: 70,
   hive: 46,
   /** The same size as the loot chest it imitates. */
-  mimic: 52
+  mimic: 52,
+  iceBlock: 54
 };
 
 export type ProjectileKind = 'bolt' | 'boomerang' | 'banana' | 'thrownSword' | 'arrow' | 'coin' | 'pan' | 'bottle' | 'potion';

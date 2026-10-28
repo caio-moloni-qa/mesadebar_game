@@ -14,6 +14,12 @@ export function blizzardPhaseAt(elapsedMs: number): { phase: BlizzardPhase; into
   return cycle < stormMs ? { phase: 'storm', intoMs: cycle } : { phase: 'calm', intoMs: cycle - stormMs };
 }
 
+/** Which storm front the run clock is in (0 = the first), or -1 before the first one blows. */
+export function blizzardFrontAt(elapsedMs: number): number {
+  const { firstFrontMs, stormMs, calmMs } = BLIZZARD_TUNING;
+  return elapsedMs < firstFrontMs ? -1 : Math.floor((elapsedMs - firstFrontMs) / (stormMs + calmMs));
+}
+
 /** Nevasca (Campo Nevado): the cold meter, the storm fronts and the torches. The fronts follow the run clock (so the
  *  sandbox's time skip moves them too); the cold and the torches' fuel are state. Without torches there's no
  *  blizzard: `active` is false and nothing ever changes. */
