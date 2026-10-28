@@ -1,10 +1,11 @@
+import { SnowfieldAttacks, SnowAttackKind } from './SnowfieldAttacks';
 import { ArenaLayout, ZoneKind } from '../../config/arenaLayout';
 import { MINI_BOSS_VARIANTS } from '../../config/balance';
 import { EventBus } from '../EventBus';
 import { Rng, Vec2, floatBetween, pickOne } from '../math';
 import { EnemyState, PlayerState } from '../session/entities';
 import { ArenaMap } from '../world/ArenaMap';
-import { MiniBossVariantId } from './EnemySpawnScheduler';
+import { EnemyVariantId, MiniBossVariantId } from './EnemySpawnScheduler';
 
 // Zone mini-bosses: one guardian per area, two per cycle (see GameSession's schedule), each testing one skill on its
 // own terrain and paying out a companion from that zone. Like BossSystem, everything runs on the sim clock inside
@@ -33,6 +34,9 @@ export const MINI_BOSSES: Record<MiniBossKind, MiniBossSpec> = {
   templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', anchor: ({ temple }) => temple.center, leashRadius: 720, companion: 'stoneGolem' },
   lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', anchor: ({ lake }) => lake.center, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true },
   // In the open courtyard south of the keep's inner sanctum (the sanctum itself is too tight to fight in).
+  iceSerpent: { name: 'Serpente do Gelo', where: 'no lago congelado', zone: 'lake', anchor: ({ lake }) => ({ x: lake.center.x - lake.radius - 130, y: lake.center.y }), leashRadius: 1000, companion: 'waterFairy' },
+  bellringer: { name: 'O Sineiro', where: 'na capela', zone: 'graveyard', anchor: ({ graveyard }) => graveyard.center, leashRadius: 780, companion: 'gravedigger' },
+  ancientYeti: { name: 'Yeti Ancião', where: 'nos pinheiros', zone: 'forest', anchor: ({ zones }) => { const forest = zones.find(z => z.kind === 'forest')!.blobs[0]; return { x: forest.x, y: forest.y }; }, leashRadius: 850, companion: 'stoneGolem' },
   frostKnight: { name: 'O Cavaleiro Congelado', where: 'na fortaleza', zone: 'ruins', anchor: ({ temple }) => ({ x: temple.center.x, y: temple.center.y + temple.halfHeight * 0.5 }), leashRadius: 760, companion: 'stoneGolem' }
 };
 
@@ -152,7 +156,7 @@ export const MINI_BOSS_TUNING = {
   enragedDamageTaken: 1.2
 };
 
-export type MiniBossAttackType = 'raise' | 'slam' | 'burrow' | 'charge' | 'shockwave' | 'drain' | 'wave' | 'geyser' | 'whirlpool' | 'iceSlash' | 'iceWall';
+export type MiniBossAttackType = SnowAttackKind | 'raise' | 'slam' | 'burrow' | 'charge' | 'shockwave' | 'drain' | 'wave' | 'geyser' | 'whirlpool' | 'iceSlash' | 'iceWall';
 
 export interface MiniBossAttack {
   type: MiniBossAttackType;
@@ -188,6 +192,7 @@ export interface GeyserState {
 /** One live mini-boss. Public for the renderer (poses, telegraphs). */
 export interface MiniBossState {
   kind: MiniBossKind;
+  snowCasts?: number;
   enemy: EnemyState;
   anchor: Vec2;
   leashing: boolean;
@@ -220,7 +225,7 @@ export interface MiniBossHost {
   spawnEnemy(variantId: MiniBossKind, x: number, y: number, maxHealth: number): EnemyState | null;
   hurtPlayer(amount: number): void;
   /** A skeleton climbing out of the ground here shortly (the boss fight's rising, reused). */
-  queueRising(x: number, y: number): void;
+  queueRising(x: number, y: number, variantId?: EnemyVariantId): void;
   /** Difficulty-stage health multiplier right now. */
   healthMultiplier(): number;
   /** Lake fill, 0..1 (the session reroutes the horde when it drains or refills). */
@@ -229,6 +234,7 @@ export interface MiniBossHost {
   pushPlayer(dx: number, dy: number): void;
   /** Slows the player by `percent` for `ms`. */
   slowPlayer(percent: number, ms: number): void;
+  frostPlayer?(stacks: number): void;
 }
 
 export class MiniBossSystem {
@@ -239,7 +245,8 @@ export class MiniBossSystem {
   /** Announced, spawning when the countdown ends. */
   pending: { kind: MiniBossKind; inMs: number } | null = null;
 
-  constructor(private readonly host: MiniBossHost) {}
+  readonly snow: SnowfieldAttacks;
+  constructor(private readonly host: MiniBossHost) { this.snow = new SnowfieldAttacks(host); }
 
   get active(): boolean {
     return this.pending !== null || this.bosses.length > 0;
@@ -266,6 +273,12 @@ export class MiniBossSystem {
   damageTakenMultiplier(enemy: EnemyState): number {
     const boss = this.bossFor(enemy);
     if (!boss) return 1;
+    if (boss.kind === 'iceSerpent' && boss.stunnedMs <= 0) return 0.5;
+    if (boss.kind === 'ancientYeti' && boss.enraged && boss.stunnedMs <= 0) return 0.6;
+    if (boss.kind === 'bellringer' && boss.attack?.type === 'bellWave' && boss.attack.phase === 'telegraph') {
+      const angle = Math.atan2(this.host.player.y - enemy.y, this.host.player.x - enemy.x);
+      if (Math.abs(wrapAngle(angle - boss.facing)) > Math.PI * 0.65) { boss.stunnedMs = 1500; boss.attack = null; this.snow.clear(enemy); this.host.events.emit('miniboss-stunned', { kind: boss.kind, enemy }); }
+    }
     if (boss.attack?.type === 'drain') return 0;
     if (boss.attack?.type === 'burrow' && (boss.attack.phase === 'sink' || boss.attack.phase === 'tunnel' || boss.attack.phase === 'emerge')) return 0;
     if (boss.stunnedMs > 0) return MINI_BOSS_TUNING.stunDamageMultiplier;
@@ -298,10 +311,12 @@ export class MiniBossSystem {
     this.bosses.forEach((boss) => this.forget(boss));
     this.bosses.length = 0;
     this.pending = null;
+    this.snow.clear();
   }
 
   /** Cleanup when a mini-boss leaves the field: the lake spirit's water comes back, the ice walls melt. */
   private forget(boss: MiniBossState): void {
+    this.snow.clear(boss.enemy);
     if (boss.kind === 'frostKnight') this.icePillars.length = 0;
     if (boss.kind !== 'lakeSpirit') return;
     this.geysers.length = 0;
@@ -314,6 +329,7 @@ export class MiniBossSystem {
       this.forget(this.bosses[index]);
       this.bosses.splice(index, 1);
     }
+    this.snow.update(delta);
     this.updateGeysers(delta);
     this.updateIcePillars(delta);
     if (this.pending) {
@@ -329,19 +345,22 @@ export class MiniBossSystem {
       const cooling = boss.enraged ? delta * MINI_BOSS_TUNING.enragedCooldownRate : delta;
       (Object.keys(boss.cooldowns) as Array<keyof MiniBossState['cooldowns']>).forEach((key) => { boss.cooldowns[key] += cooling; });
       if (boss.kind === 'frostKnight') this.checkKnightArmour(boss);
+      if (isSnowGuardian(boss.kind) && !boss.enraged && boss.enemy.health <= boss.enemy.maxHealth * 0.5) { boss.enraged = true; this.host.events.emit('miniboss-enraged', { kind: boss.kind, enemy: boss.enemy }); }
       if (boss.stunnedMs > 0) {
         boss.stunnedMs = Math.max(0, boss.stunnedMs - delta);
         return;
       }
       if (boss.attack) {
-        if (boss.kind === 'gravedigger') this.updateCoveiroAttack(boss, delta);
+        if (isSnowGuardian(boss.kind)) this.updateSnowAttack(boss, delta);
+        else if (boss.kind === 'gravedigger') this.updateCoveiroAttack(boss, delta);
         else if (boss.kind === 'templeGuardian') this.updateGuardianAttack(boss, delta);
         else if (boss.kind === 'frostKnight') this.updateKnightAttack(boss, delta);
         else this.updateSpiritAttack(boss, delta);
         return;
       }
       if (this.updateLeash(boss, delta)) return;
-      if (boss.kind === 'gravedigger') this.thinkCoveiro(boss, delta);
+      if (isSnowGuardian(boss.kind)) this.thinkSnow(boss, delta);
+      else if (boss.kind === 'gravedigger') this.thinkCoveiro(boss, delta);
       else if (boss.kind === 'templeGuardian') this.thinkGuardian(boss, delta);
       else if (boss.kind === 'frostKnight') this.thinkKnight(boss, delta);
       else this.thinkSpirit(boss, delta);
@@ -383,6 +402,7 @@ export class MiniBossSystem {
     if (!boss.leashing && playerFromHome > leash) {
       boss.leashing = true;
       boss.leashHealed = 0;
+      this.snow.clear(boss.enemy);
     }
     if (boss.leashing && playerFromHome <= leash * 0.85) boss.leashing = false;
     if (!boss.leashing) return false;
@@ -424,6 +444,75 @@ export class MiniBossSystem {
   }
 
   // ── O Coveiro: raises the dead from the graves, shovel slams, burrows under you ──────────────────────────────
+
+
+  private thinkSnow(boss: MiniBossState, delta: number): void {
+    const { enemy } = boss;
+    const { player } = this.host;
+    const dx = player.x - enemy.x, dy = player.y - enemy.y;
+    boss.facing = Math.atan2(dy, dx);
+    const keys = ['slam', 'burrow', 'charge', 'raise'] as const;
+    const cooldowns = [5500, 10000, 13500, 18000];
+    const slot = keys.findIndex((key, i) => boss.cooldowns[key] >= cooldowns[i]);
+    if (slot < 0) { this.walkTowards(boss, player.x, player.y, enemy.movementSpeed * (boss.enraged ? 1.3 : 1), delta, true); return; }
+    boss.cooldowns[keys[slot]] = 0;
+    const kind: SnowAttackKind = boss.kind === 'iceSerpent' ? ['eruption', 'breath', 'constrict', 'shard'][slot] as SnowAttackKind
+      : boss.kind === 'bellringer' ? ['bellWave', 'bell', 'resonance', 'roar'][slot] as SnowAttackKind
+      : ['snowball', 'leap', 'avalanche', 'roar'][slot] as SnowAttackKind;
+    const warning = kind === 'bellWave' ? 1500 : kind === 'leap' ? 1100 : 1200;
+    this.start(boss, kind, 'telegraph', player.x, player.y, Math.cos(boss.facing), Math.sin(boss.facing));
+    const add = (type: SnowAttackKind, x: number, y: number, radius: number, damage: number, delay = warning, life = 450, angle = boss.facing, length = 0, speed = 0) => this.snow.add(enemy, type, x, y, radius, damage, delay, life, angle, length, speed);
+    if (kind === 'eruption') {
+      add(kind, player.x, player.y, 110, 22, warning, 6000);
+      if (boss.enraged) add(kind, player.x + 150 * Math.cos(boss.facing), player.y + 150 * Math.sin(boss.facing), 110, 22, warning + 700, 6000);
+    } else if (kind === 'breath') {
+      for (let i = -2; i <= 2; i++) add(kind, enemy.x, enemy.y, 28, 8, warning + (i + 2) * 140, 400, boss.facing + i * 0.22, 420);
+      if (boss.enraged) for (let i = 0; i < 8; i++) add(kind, enemy.x, enemy.y, 25, 8, warning + i * 150, 300, i * Math.PI / 4, 360);
+    } else if (kind === 'constrict') add(kind, player.x, player.y, 210, 30, warning, 2500, boss.facing + Math.PI);
+    else if (kind === 'shard') for (let i = -2; i <= 2; i++) add(kind, enemy.x, enemy.y, 18, 16, warning, 2200, boss.facing + i * 0.19, 0, 330);
+    else if (kind === 'bellWave') {
+      add(kind, enemy.x, enemy.y, 440, 15, warning, 1200);
+      if (boss.enraged) add(kind, enemy.x, enemy.y, 440, 15, warning + 600, 1200);
+      // Every third peal raises frost ghosts, with the existing rising telegraph.
+      boss.snowCasts = (boss.snowCasts ?? 0) + 1;
+      boss.attack!.count = boss.snowCasts;
+      if (boss.attack!.count % 3 === 0) for (let i = 0; i < 4; i++) this.host.queueRising(enemy.x + Math.cos(i * Math.PI / 2) * 160, enemy.y + Math.sin(i * Math.PI / 2) * 160, 'frostSpirit');
+    } else if (kind === 'bell') {
+      // At most five solid bells, with the oldest retiring before another drop.
+      const old = this.snow.hazards.filter(h => h.owner === enemy && h.kind === 'bell');
+      old.slice(0, Math.max(0, old.length - 1)).forEach(h => this.snow.hazards.splice(this.snow.hazards.indexOf(h), 1));
+      for (let i = 0; i < 4; i++) add(kind, player.x + Math.cos(i * Math.PI / 2) * (i ? 130 : 0), player.y + Math.sin(i * Math.PI / 2) * 130, 48, 25, warning + i * 100, 60000);
+    } else if (kind === 'resonance') {
+      const bells = this.snow.hazards.filter(h => h.owner === enemy && h.kind === 'bell' && h.elapsed >= h.warning);
+      for (let i = 1; i < bells.length; i++) { const a = bells[i - 1], b = bells[i]; add(kind, a.x, a.y, 20, 18, warning, 2000, Math.atan2(b.y - a.y, b.x - a.x), Math.hypot(b.x - a.x, b.y - a.y)); }
+      if (bells.length < 2) add('bellWave', enemy.x, enemy.y, 360, 15, warning, 1000);
+    } else if (kind === 'snowball') add(kind, enemy.x, enemy.y, 30, 22, warning, 3000, boss.facing, 0, 250);
+    else if (kind === 'leap') {
+      add(kind, player.x, player.y, 130, 28);
+      add('iceTrail', player.x, player.y, 130, 0, warning + 400, 4500);
+      if (boss.enraged) add(kind, player.x + 110 * Math.cos(boss.facing), player.y + 110 * Math.sin(boss.facing), 130, 28, warning + 1000);
+    } else if (kind === 'avalanche') {
+      for (let i = 0; i < 6; i++) { const angle = i * Math.PI / 3; add(kind, player.x + Math.cos(angle) * 160, player.y + Math.sin(angle) * 160, 75, 18, warning + i * 150); }
+    } else add(kind, enemy.x, enemy.y, 250, 12, warning, 400);
+  }
+
+  private updateSnowAttack(boss: MiniBossState, delta: number): void {
+    const attack = boss.attack!;
+    attack.elapsedMs += delta;
+    const warning = attack.type === 'bellWave' ? 1500 : attack.type === 'leap' ? 1100 : 1200;
+    if (attack.elapsedMs >= warning && attack.phase === 'telegraph') {
+      attack.phase = 'active';
+      if (attack.type === 'eruption' || attack.type === 'leap') {
+        const spot = this.host.arena.nearestWalkable(attack.x, attack.y, boss.enemy.radius);
+        boss.enemy.x = spot.x; boss.enemy.y = spot.y;
+      }
+      this.host.events.emit('miniboss-impact', { kind: boss.kind, attack: attack.type, x: attack.x, y: attack.y, radius: 110 });
+    }
+    if (attack.elapsedMs >= warning + 1600) {
+      if (attack.type === 'eruption' || attack.type === 'leap') { boss.stunnedMs = 1100; this.host.events.emit('miniboss-stunned', { kind: boss.kind, enemy: boss.enemy }); }
+      boss.attack = null;
+    }
+  }
 
   private thinkCoveiro(boss: MiniBossState, delta: number): void {
     const T = MINI_BOSS_TUNING;
@@ -863,3 +952,5 @@ export function icePillarSpots(x: number, y: number, dirX: number, dirY: number)
 function wrapAngle(angle: number): number {
   return Math.atan2(Math.sin(angle), Math.cos(angle));
 }
+
+export function isSnowGuardian(kind: MiniBossKind): boolean { return kind === 'iceSerpent' || kind === 'bellringer' || kind === 'ancientYeti'; }

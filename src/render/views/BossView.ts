@@ -30,8 +30,8 @@ export class BossView {
   private readonly headWorld = new THREE.Vector3();
   private readonly emissive = new THREE.Color();
 
-  constructor(readonly enemy: EnemyState) {
-    this.model = createBossModel();
+  constructor(readonly enemy: EnemyState, winter = false) {
+    this.model = createBossModel(winter);
     this.root.add(this.model.root);
     this.mixer = new THREE.AnimationMixer(this.model.root);
     this.actions = Object.fromEntries(Object.entries(this.model.clips).map(([name, clip]) => [name, this.mixer.clipAction(clip)])) as Record<BossClipName, THREE.AnimationAction>;
@@ -168,7 +168,7 @@ export class BossViews {
         this.views.delete(enemy);
       }
       if (this.views.has(enemy)) return;
-      const view = new BossView(enemy);
+      const view = new BossView(enemy, _boss.winter);
       this.views.set(enemy, view);
       this.root.add(view.root);
     });

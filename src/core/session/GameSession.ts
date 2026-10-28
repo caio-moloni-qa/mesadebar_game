@@ -251,6 +251,9 @@ export class GameSession implements WeaponHost {
     // The starting weapon is the one family the character has affinity with for free.
     this.affinities.add(weaponFamily(startingWeapon));
     this.bosses = new BossSystem({
+      snowfield: this.arena.layout.id === 'snowfield',
+      slowPlayer: (p, ms) => this.player.applySlow(p, ms, this.clock.now),
+      frostPlayer: (stacks) => this.frostPlayer(stacks, this.clock.now),
       player: this.player,
       rng: this.rng,
       arenaSize: this.arena.size,
@@ -270,10 +273,11 @@ export class GameSession implements WeaponHost {
       events: this.events,
       spawnEnemy: (variantId, x, y, maxHealth) => this.spawnEnemy(variantId, x, y, maxHealth),
       hurtPlayer: (amount) => this.hurtPlayer(amount, this.clock.now),
-      queueRising: (x, y) => { this.bosses.risings.push({ x, y, elapsedMs: 0 }); },
+      queueRising: (x, y, variantId) => { this.bosses.risings.push({ x, y, variantId, elapsedMs: 0 }); },
       healthMultiplier: () => this.difficulty.stageFor(this.elapsedMs).healthMultiplier,
       setLakeLevel: (level) => this.setLakeLevel(level),
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy),
+      frostPlayer: (stacks) => this.frostPlayer(stacks, this.clock.now),
       slowPlayer: (percent, ms) => {
         this.player.applySlow(percent, ms, this.clock.now);
         this.events.emit('player-status', { text: `LENTO +${Math.round(percent * 100)}%`, tone: 'slow' });
@@ -518,7 +522,7 @@ export class GameSession implements WeaponHost {
   /** Zora's Previsão: the next zone guardian and where it will rise, shown this long before it's announced. */
   prophecy(): { kind: MiniBossKind; x: number; y: number } | null {
     if (this.characterId !== 'zora' || this.miniBosses.active || this.miniBosses.pending) return null;
-    const slots = this.bossCycle >= 3 ? 3 : 2;
+    const slots = this.arena.layout.id === 'snowfield' ? 4 : this.bossCycle >= 3 ? 3 : 2;
     if (this.miniBossSlotsThisPhase >= slots) return null;
     const slotMs = this.phaseDurationMs() / (slots + 1);
     const untilNext = (this.miniBossSlotsThisPhase + 1) * slotMs - (this.elapsedMs - this.phaseStartedAtMs);
@@ -546,6 +550,10 @@ export class GameSession implements WeaponHost {
     switch (offer.id) {
       case 'divine-blessing': player.addDivineBlessing(); break;
       case 'arcane-curse': player.addArcaneCurse(); break;
+      case 'polar-stew': player.maxHealth += 20; this.healPlayer(40); break;
+      case 'glacier-fish': player.damageMultiplier += 0.15; break;
+      case 'tundra-roast': player.addMealRegeneration(); break;
+      case 'berry-tea': player.movementSpeed += 15; break;
       case 'heal': this.healPlayer(40); break;
       case 'damage': player.damageMultiplier += 0.15; break;
       case 'speed': player.movementSpeed += 15; break;
@@ -1283,7 +1291,7 @@ export class GameSession implements WeaponHost {
   /** Slots at 1:00 and 2:00 of every phase (and 3:00 from cycle 3): the next guardian in the rotation is announced
    *  — never while the Necromancer's wave is coming or up, nor over another live guardian (that slot is skipped). */
   private scheduleMiniBosses(): void {
-    const slots = this.bossCycle >= 3 ? 3 : 2;
+    const slots = this.arena.layout.id === 'snowfield' ? 4 : this.bossCycle >= 3 ? 3 : 2;
     // Spread evenly over the phase (a 5-minute first phase: 1:40 and 3:20).
     const slotMs = this.phaseDurationMs() / (slots + 1);
     const due = Math.min(slots, Math.floor((this.elapsedMs - this.phaseStartedAtMs) / slotMs));
@@ -1402,7 +1410,8 @@ export class GameSession implements WeaponHost {
     }
     this.kills += 1;
     this.abilities.onDefeated(enemy);
-    this.stats.killsByVariant[enemy.variantId] = (this.stats.killsByVariant[enemy.variantId] ?? 0) + 1;
+    const recordId = this.bosses.bossFor(enemy)?.winter ? 'winterKing' : enemy.variantId;
+    this.stats.killsByVariant[recordId] = (this.stats.killsByVariant[recordId] ?? 0) + 1;
     if (this.miniBosses.bossFor(enemy)) {
       // A zone guardian: a chest and a burst of crystals, a level's worth of experience, a companion to pick, and the
       // Necromancer weakens.

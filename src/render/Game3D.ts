@@ -1,3 +1,4 @@
+import { SnowAttackEffects } from './vfx/SnowAttackEffects';
 import { BlizzardView } from './views/BlizzardView';
 import { EskimoView } from './views/EskimoView';
 import { SnowfieldView } from './views/SnowfieldView';
@@ -113,6 +114,7 @@ export class Game3D {
   private readonly sandbox: SandboxPanel;
   private readonly bossViews = new BossViews();
   private readonly bossEffects: BossEffects;
+  private readonly snowAttackEffects = new SnowAttackEffects();
   private readonly miniBossViews = new MiniBossViews();
   private readonly guardianIntro: GuardianIntro;
   private readonly tipDialog: TipDialog;
@@ -198,7 +200,7 @@ export class Game3D {
     this.sheetEffects = new SheetEffects(this.cameraRig.camera);
     this.scene.add(this.sheetEffects.root);
     this.miniBossEffects = new MiniBossEffects(this.particles, this.miniBossViews);
-    this.scene.add(this.miniBossEffects.root, this.miniBossViews.root, this.companionViews.root);
+    this.scene.add(this.snowAttackEffects.root, this.miniBossEffects.root, this.miniBossViews.root, this.companionViews.root);
     this.scene.add(this.arena.root, this.enemyView.root, this.projectileView.root, this.pickupView.root, this.hazardView.root, this.particles.mesh, this.effects.root);
     this.floating = new FloatingTexts(container);
     this.hud = new Hud(container, Boolean(options.debug), () => {
@@ -278,6 +280,7 @@ export class Game3D {
         const { session } = this;
         if (this.mode !== 'run' || !session.merchant.inside || session.merchant.hub) return null;
         return {
+          igloo: session.merchant.igloo,
           coins: session.currency,
           offers: session.merchant.offers,
           buy: (index) => {
@@ -638,11 +641,12 @@ export class Game3D {
       if (kind === 'bolt') this.particles.burst(point.x, point.z, PALETTE.boltCore, 4, 1.1, 2.2);
     });
     events.on('boss-explosion', ({ x, y, radius, kind, blocked }) => {
+      const winter = this.session.arena.layout.id === 'snowfield';
       const point = at(x, y);
       const big = kind === 'shield';
-      this.effects.burst(x, y, radius, 0x52ff45, big ? 0.6 : 0.36, 0.35);
-      this.effects.pulse(x, y, radius, 0xd8ffd0, big ? 0.6 : 0.32, 0.9);
-      this.particles.burst(point.x, point.z, 0x8cff8c, big ? 60 : 12, 1.2, big ? 10 : 3);
+      this.effects.burst(x, y, radius, (winter ? 0x79dfff : 0x52ff45), big ? 0.6 : 0.36, 0.35);
+      this.effects.pulse(x, y, radius, (winter ? 0xe8f8ff : 0xd8ffd0), big ? 0.6 : 0.32, 0.9);
+      this.particles.burst(point.x, point.z, (winter ? 0x9fe5ff : 0x8cff8c), big ? 60 : 12, 1.2, big ? 10 : 3);
       if (kind === 'meteor') {
         this.bossEffects.scorch(x, y, radius);
         this.particles.emit(point.x, 0.4, point.z, 0x6b5a46, 10, { spread: 4, rise: 5, gravity: 16, life: 0.6, size: 1.2 });
@@ -660,25 +664,28 @@ export class Game3D {
       }
     });
     events.on('boss-shield-broken', ({ enemy }) => {
+      const winter = this.session.arena.layout.id === 'snowfield';
       const point = at(enemy.x, enemy.y);
       // The dome shatters into shards; the boss drops to a knee.
-      this.particles.emit(point.x, 4, point.z, 0x8cff8c, 70, { spread: 9, rise: 5, gravity: 14, life: 0.9, size: 1.3, jitter: 4 });
+      this.particles.emit(point.x, 4, point.z, (winter ? 0x9fe5ff : 0x8cff8c), 70, { spread: 9, rise: 5, gravity: 14, life: 0.9, size: 1.3, jitter: 4 });
       this.effects.pulse(enemy.x, enemy.y, 230, 0xffffff, 0.45, 0.9);
       this.floating.spawn(simToWorld(enemy.x, enemy.y, 9, this.scratch), 'ATORDOADO!', { color: '#ffe45c', size: 32, rise: 50, durationMs: 1200 }, performance.now());
       this.cameraRig.shake(0.35, 0.35);
     });
     events.on('boss-phase-two', ({ enemy }) => {
-      this.floating.spawn(simToWorld(enemy.x, enemy.y, 10, this.scratch), 'O NECROMANTE DESPERTA!', { color: '#8cff8c', size: 30, rise: 40, durationMs: 1800 }, performance.now());
+      const winter = this.session.arena.layout.id === 'snowfield';
+      this.floating.spawn(simToWorld(enemy.x, enemy.y, 10, this.scratch), winter ? 'O REI DO INVERNO DESPERTA!' : 'O NECROMANTE DESPERTA!', { color: winter ? '#9fe5ff' : '#8cff8c', size: 30, rise: 40, durationMs: 1800 }, performance.now());
       this.cameraRig.shake(0.15, 1.2);
     });
     events.on('boss-shockwave', ({ x, y, radius }) => {
+      const winter = this.session.arena.layout.id === 'snowfield';
       const point = at(x, y);
-      this.effects.pulse(x, y, radius, 0xd8ffd0, 0.5, 1);
-      this.effects.burst(x, y, radius, 0x1f8a46, 0.6, 0.4);
+      this.effects.pulse(x, y, radius, (winter ? 0xe8f8ff : 0xd8ffd0), 0.5, 1);
+      this.effects.burst(x, y, radius, (winter ? 0x286a9b : 0x1f8a46), 0.6, 0.4);
       for (let index = 0; index < 24; index += 1) {
         const angle = (index / 24) * Math.PI * 2;
         const reach = radius * 0.7 * WORLD_SCALE;
-        this.particles.emit(point.x + Math.cos(angle) * reach, 0.3, point.z + Math.sin(angle) * reach, 0x6dff9a, 2, { spread: 3, rise: 3, gravity: 8, life: 0.6, size: 1.3 });
+        this.particles.emit(point.x + Math.cos(angle) * reach, 0.3, point.z + Math.sin(angle) * reach, (winter ? 0x7ce6ff : 0x6dff9a), 2, { spread: 3, rise: 3, gravity: 8, life: 0.6, size: 1.3 });
       }
       this.cameraRig.shake(0.6, 0.6);
     });
@@ -1174,7 +1181,7 @@ export class Game3D {
     this.particles.update(deltaSeconds);
     this.effects.update(deltaSeconds);
     this.sheetEffects.update(deltaSeconds);
-    const inTavern = this.session.merchant.inside && !this.session.merchant.igloo;
+    const inTavern = this.session.merchant.inside;
     this.cameraRig.setRoomZoom(inTavern ? 1.65 : 1);
     this.scene.background = inTavern ? this.tavernBackground : this.arenaBackground;
     const sceneFocus = this.guardianIntro.update(frameMs / 1000, this.playerView.worldPosition);
@@ -1209,13 +1216,14 @@ export class Game3D {
     this.heroKitViews.update(this.session, alpha, simNow);
     this.powerViews.update(this.session, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.companionViews.update(this.session.companions.companions, this.session.companions.skeletons, alpha, this.session.frozen ? 0 : frameMs / 1000);
+    this.snowAttackEffects.update([...this.session.miniBosses.snow.hazards, ...this.session.bosses.snow.hazards], this.session.bosses.braziers);
     this.miniBossEffects.update(this.session.miniBosses, alpha, this.session.frozen ? 0 : frameMs / 1000);
     this.merchantRoom?.update(this.session.frozen ? 0 : frameMs / 1000);
     this.questBarrels.update(this.session.quests, this.session.frozen ? 0 : frameMs / 1000);
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), ...(this.eskimoView ? [this.eskimoView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, ...(this.merchantRoom ? this.merchantRoom.ambience.glows : []), this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), ...(this.eskimoView ? [this.eskimoView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, ...(this.merchantRoom ? this.merchantRoom.ambience.glows : []), this.bossEffects.root, this.miniBossEffects.root, this.snowAttackEffects.root, this.playerView.effects],
       [this.playerView.root, this.snowfieldView.heroIce, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters, this.merchantRoom.questMarkers] : [])]);
 
     this.fps.frames += 1;

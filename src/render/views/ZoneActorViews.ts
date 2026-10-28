@@ -1,3 +1,4 @@
+import { createSnowGuardianModel } from '../models/snowBosses';
 import * as THREE from 'three';
 import { AllySkeletonState, CompanionState } from '../../core/systems/CompanionSystem';
 import { MINI_BOSS_TUNING, MiniBossState } from '../../core/systems/MiniBossSystem';
@@ -92,7 +93,7 @@ class MiniBossView {
   entrance = -1;
 
   constructor(readonly state: MiniBossState) {
-    this.actor = new RiggedActor(state.kind === 'gravedigger' ? createGravediggerModel() : state.kind === 'lakeSpirit' ? createLakeSpiritModel() : state.kind === 'frostKnight' ? createFrostKnightModel() : createStoneGolemModel());
+    this.actor = new RiggedActor(state.kind === 'iceSerpent' || state.kind === 'bellringer' || state.kind === 'ancientYeti' ? createSnowGuardianModel(state.kind) : state.kind === 'gravedigger' ? createGravediggerModel() : state.kind === 'lakeSpirit' ? createLakeSpiritModel() : state.kind === 'frostKnight' ? createFrostKnightModel() : createStoneGolemModel());
     this.yaw = yawFromSimDirection(Math.cos(state.facing), Math.sin(state.facing));
   }
 
@@ -138,7 +139,14 @@ class MiniBossView {
       return;
     }
     const attack = state.attack;
-    if (state.kind === 'gravedigger') {
+    if (state.kind === 'iceSerpent' || state.kind === 'bellringer' || state.kind === 'ancientYeti') {
+      if (state.stunnedMs > 0) actor.set('stagger');
+      else if (attack?.phase === 'telegraph') actor.set(attack.type === 'leap' ? 'chargeWindup' : 'shockWindup');
+      else if (attack) actor.set('channel');
+      else actor.set(moved ? 'walk' : 'idle');
+      if (state.kind === 'iceSerpent' && attack?.type === 'eruption' && attack.phase === 'telegraph') actor.root.position.y = -2 * actor.root.scale.y;
+      if (attack?.type === 'leap' && attack.phase === 'telegraph') actor.root.position.y = Math.sin(Math.min(1, attack.elapsedMs / 1100) * Math.PI) * 3;
+    } else if (state.kind === 'gravedigger') {
       if (attack?.type === 'burrow') {
         // Digs down, travels unseen (the crack trail shows where), bursts out at the exit.
         if (attack.phase === 'sink') {
