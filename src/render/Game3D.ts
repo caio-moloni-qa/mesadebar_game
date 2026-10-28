@@ -97,6 +97,9 @@ export class Game3D {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly cameraRig: CameraRig;
+  private readonly roomFocus = new THREE.Vector3();
+  private readonly tavernBackground = new THREE.Color(0x352c24);
+  private readonly arenaBackground = new THREE.Color(PALETTE.background);
   private readonly pipeline: PixelPipeline;
   private arena: Arena;
   /** One map per page load: the authored layout with this load's detail seed, shared by every run (fixed zones). */
@@ -1160,12 +1163,28 @@ export class Game3D {
     this.particles.update(deltaSeconds);
     this.effects.update(deltaSeconds);
     this.sheetEffects.update(deltaSeconds);
+    const inTavern = this.session.merchant.inside && !this.session.merchant.igloo;
+    this.cameraRig.setRoomZoom(inTavern ? 1.65 : 1);
+    this.scene.background = inTavern ? this.tavernBackground : this.arenaBackground;
     const sceneFocus = this.guardianIntro.update(frameMs / 1000, this.playerView.worldPosition);
     if (sceneFocus) {
       this.cameraRig.cut();
       this.cameraRig.follow(sceneFocus, frameMs / 1000);
     } else {
-      this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
+      // Keep the framing inside the hall while still tracking the hero near tables and the doorway.
+      let focus = this.playerView.worldPosition;
+      if (inTavern) {
+        simToWorld(this.session.merchant.room.x, this.session.merchant.room.y, 0, this.roomFocus);
+        const dx = focus.x - this.roomFocus.x, dz = focus.z - this.roomFocus.z;
+        // On narrow/tall screens, follow farther so the hero stays within the central 65% of the view.
+        const across = Math.abs((dx - dz) / Math.SQRT2);
+        const vertical = Math.abs((dx + dz) / 2);
+        const tracking = Math.max(0.45,
+          1 - this.cameraRig.camera.right * 0.65 / Math.max(across, 0.001),
+          1 - this.cameraRig.camera.top * 0.65 / Math.max(vertical, 0.001));
+        focus = this.roomFocus.lerp(focus, tracking);
+      }
+      this.cameraRig.follow(focus, frameMs / 1000);
     }
     this.arena.setSceneryVisible(!this.session.merchant.inside);
     // Out of the wind in the igloo (or the tavern): no storm, no torches.
@@ -1185,7 +1204,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), ...(this.eskimoView ? [this.eskimoView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), ...(this.eskimoView ? [this.eskimoView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, ...(this.merchantRoom ? this.merchantRoom.ambience.glows : []), this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.snowfieldView.heroIce, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;

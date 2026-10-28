@@ -24,30 +24,68 @@ export const MERCHANT_TUNING = {
   randomBuffCost: 100
 };
 
-/** The tavern: far outside the arena so nothing in it can reach. */
+/** The room: far outside the arena so nothing in it can reach. Offsets are from the room's centre, `-y` is north. */
 export const MERCHANT_ROOM = {
   /** Square side, game units. */
   size: 640,
-  /** Offsets from the room's centre: the exit portal in the north wall, the bar down the west side with Sergio
-   *  behind it, the regulars' tables to the east. */
+  /** The exit portal in the north wall, and where you land coming in. */
   exit: { x: 0, y: -280 },
   arrival: { x: 0, y: -185 },
-  merchant: { x: -255, y: 0 },
-  counter: { x: -195, y: 10, halfWidth: 28, halfHeight: 200 },
-  /** The regulars (QUEST_NPCS order) and their tables. */
-  npcs: [{ x: 120, y: -130 }, { x: 255, y: -40 }, { x: 120, y: 160 }, { x: 255, y: 230 }],
-  tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
   tableRadius: 34,
   npcRadius: 18,
-  /** Where you talk to Sergio (his store: the run's items during a visit, his upgrades between runs). */
-  sergioSpot: { x: -140, y: 0 },
   sergioReach: 110,
-  /** Between runs: the lectern with the record book, by the fireplace. */
-  records: { x: -110, y: 235 },
   recordsReach: 70,
   /** Talk from this close (tables sit between you and them). */
   talkReach: 110
 };
+
+/** Where things stand in one room. */
+export interface RoomLayout {
+  /** Sergio (or the Esquimó) behind the bar. */
+  merchant: Vec2;
+  /** The tavern's round bartender island: the hero collides with `outer`, everything inside `inner` is Sergio's side. */
+  island?: { x: number; y: number; outer: number; inner: number };
+  /** The igloo's straight counter (a box the hero collides with). */
+  counter?: { x: number; y: number; halfWidth: number; halfHeight: number };
+  /** The tall bottle shelf inside the island. */
+  bottleTower?: Vec2;
+  /** The regulars (QUEST_NPCS order) and their tables. */
+  npcs: Vec2[];
+  tables: Vec2[];
+  /** Where you talk to Sergio (his store: the run's items during a visit, his upgrades between runs). */
+  sergioSpot: Vec2;
+  /** Between runs: the lectern with the record book, by the fireplace. */
+  records: Vec2;
+  fireplace: Vec2;
+}
+
+/** The tavern: a round bartender island in the middle of the hall with Sergio inside it, and the regulars at tables on
+ *  the diagonals, standing on the far side and facing the island across a ~2 m walkway. */
+export const TAVERN_LAYOUT: RoomLayout = {
+  merchant: { x: 0, y: 15 },
+  island: { x: 0, y: 30, outer: 85, inner: 58 },
+  bottleTower: { x: 0, y: 55 },
+  npcs: [{ x: -170, y: -140 }, { x: 170, y: -140 }, { x: -170, y: 200 }, { x: 170, y: 200 }],
+  tables: [{ x: -130, y: -100 }, { x: 130, y: -100 }, { x: -130, y: 160 }, { x: 130, y: 160 }],
+  sergioSpot: { x: 0, y: -75 },
+  records: { x: 60, y: 262 },
+  fireplace: { x: -20, y: 300 }
+};
+
+/** The Esquimó's igloo keeps the old tavern layout: the counter down the west side, the tables to the east. */
+export const IGLOO_LAYOUT: RoomLayout = {
+  merchant: { x: -255, y: 0 },
+  counter: { x: -195, y: 10, halfWidth: 28, halfHeight: 200 },
+  npcs: [{ x: 120, y: -130 }, { x: 255, y: -40 }, { x: 120, y: 160 }, { x: 255, y: 230 }],
+  tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
+  sergioSpot: { x: -140, y: 0 },
+  records: { x: -110, y: 235 },
+  fireplace: { x: -20, y: 300 }
+};
+
+export function roomLayout(igloo: boolean): RoomLayout {
+  return igloo ? IGLOO_LAYOUT : TAVERN_LAYOUT;
+}
 
 /** The Tomo de Afinidade is sold until the hero has this many weapon-family affinities (the starting weapon's
  *  counts), however many weapons they carry. */
@@ -139,6 +177,11 @@ export class MerchantSystem {
     return !!this.host.igloo;
   }
 
+  /** Where the bar, the regulars and the lectern stand in this room. */
+  get layout(): RoomLayout {
+    return roomLayout(this.igloo);
+  }
+
   /** The arena portal is within reach. */
   get portalInReach(): boolean {
     const { portal } = this;
@@ -153,11 +196,12 @@ export class MerchantSystem {
     const near = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y)) <= MERCHANT_TUNING.reach;
     if (near(MERCHANT_ROOM.exit)) return { kind: 'exit' };
     const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
-    if (!this.host.igloo && distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
-    if (this.hub && distance(MERCHANT_ROOM.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
+    const { layout } = this;
+    if (!this.host.igloo && distance(layout.merchant) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+    if (this.hub && distance(layout.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
     let npc = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
-    MERCHANT_ROOM.npcs.forEach((spot, index) => {
+    layout.npcs.forEach((spot, index) => {
       if (this.away.has(index)) return;
       const distance = Math.hypot(player.x - (this.room.x + spot.x), player.y - (this.room.y + spot.y));
       if (distance <= MERCHANT_ROOM.talkReach && distance < bestDistance) { npc = index; bestDistance = distance; }
@@ -245,25 +289,29 @@ export class MerchantSystem {
     this.host.events.emit('merchant-left', {});
   }
 
-  /** Keeps the hero inside the room's walls and off the counter (in place). */
+  /** Keeps the hero inside the room's walls and off the bar (in place). */
   confine(body: { x: number; y: number; radius: number }): void {
     const half = MERCHANT_ROOM.size / 2;
     body.x = Math.min(this.room.x + half - body.radius, Math.max(this.room.x - half + body.radius, body.x));
     body.y = Math.min(this.room.y + half - body.radius, Math.max(this.room.y - half + body.radius, body.y));
-    const counter = MERCHANT_ROOM.counter;
-    const dx = body.x - (this.room.x + counter.x);
-    const dy = body.y - (this.room.y + counter.y);
-    const overlapX = counter.halfWidth + body.radius - Math.abs(dx);
-    const overlapY = counter.halfHeight + body.radius - Math.abs(dy);
-    if (overlapX > 0 && overlapY > 0) {
-      if (overlapX < overlapY) body.x += Math.sign(dx || 1) * overlapX;
-      else body.y += Math.sign(dy || 1) * overlapY;
+    const { layout } = this;
+    const counter = layout.counter;
+    if (counter) {
+      const dx = body.x - (this.room.x + counter.x);
+      const dy = body.y - (this.room.y + counter.y);
+      const overlapX = counter.halfWidth + body.radius - Math.abs(dx);
+      const overlapY = counter.halfHeight + body.radius - Math.abs(dy);
+      if (overlapX > 0 && overlapY > 0) {
+        if (overlapX < overlapY) body.x += Math.sign(dx || 1) * overlapX;
+        else body.y += Math.sign(dy || 1) * overlapY;
+      }
     }
-    // Tables and the regulars standing by them.
+    // The island, the tables and the regulars standing by them.
     const circles = [
-      ...MERCHANT_ROOM.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
-      ...MERCHANT_ROOM.npcs.filter((_, index) => !this.away.has(index)).map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
-      { ...MERCHANT_ROOM.records, radius: 16 }
+      ...(layout.island ? [{ x: layout.island.x, y: layout.island.y, radius: layout.island.outer }] : []),
+      ...layout.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
+      ...layout.npcs.filter((_, index) => !this.away.has(index)).map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
+      { ...layout.records, radius: 16 }
     ];
     circles.forEach((circle) => {
       const cx = this.room.x + circle.x;

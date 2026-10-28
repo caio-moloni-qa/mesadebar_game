@@ -38,7 +38,7 @@ function standAt(run: GameSession, offset: { x: number; y: number }): void {
 }
 /** Walks up to regular `index` (beside their table) and presses E twice: talk, then answer. */
 function talkTo(run: GameSession, index: number): void {
-  const npc = MERCHANT_ROOM.npcs[index];
+  const npc = run.merchant.layout.npcs[index];
   standAt(run, { x: npc.x + 40, y: npc.y });
   run.interact();
   expect(run.dialogue).toBe(index);
@@ -152,7 +152,7 @@ describe('tavern missions', () => {
   it('you can’t walk off mid-conversation or through the tables', () => {
     const run = session();
     enter(run);
-    const npc = MERCHANT_ROOM.npcs[0];
+    const npc = run.merchant.layout.npcs[0];
     standAt(run, { x: npc.x + 40, y: npc.y });
     run.interact();
     const { x } = run.player;
@@ -160,7 +160,7 @@ describe('tavern missions', () => {
     advance(run, 500);
     expect(run.player.x).toBe(x);
     run.closeDialogue();
-    const table = MERCHANT_ROOM.tables[0];
+    const table = run.merchant.layout.tables[0];
     standAt(run, { x: table.x, y: table.y + 120 });
     run.setMoveInput(0, -1);
     advance(run, 2000);

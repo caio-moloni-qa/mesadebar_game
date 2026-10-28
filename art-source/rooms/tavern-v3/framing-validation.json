@@ -1,0 +1,44 @@
+{
+  "errors": [],
+  "samples": [
+    {
+      "name": "arrival",
+      "zoom": 1.65,
+      "background": "352c24",
+      "width": 18.333333333333336
+    },
+    {
+      "name": "northwest",
+      "zoom": 1.65,
+      "background": "352c24",
+      "width": 18.333333333333336
+    },
+    {
+      "name": "southeast",
+      "zoom": 1.65,
+      "background": "352c24",
+      "width": 18.333333333333336
+    },
+    {
+      "name": "southwest",
+      "zoom": 1.65,
+      "background": "352c24",
+      "width": 18.333333333333336
+    },
+    {
+      "name": "northeast",
+      "zoom": 1.65,
+      "background": "352c24",
+      "width": 18.333333333333336
+    }
+  ],
+  "entered": {
+    "inside": true,
+    "zoom": 1.65
+  },
+  "left": {
+    "inside": false,
+    "zoom": 1,
+    "background": "2a2140"
+  }
+}

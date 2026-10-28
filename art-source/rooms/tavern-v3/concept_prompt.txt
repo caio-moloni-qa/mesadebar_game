@@ -1,0 +1,19 @@
+Low-poly 3D game environment, pixelated textures with nearest-neighbour look, stylized toon shading, seen from a
+45-degree isometric three-quarter top-down camera, the whole room in frame, the south wall cut away toward the camera.
+A grand high-fantasy tavern hall where warriors gather to drink ale, warm, cozy and beautiful.
+In the exact centre of the square room stands a round bartender island: a ring-shaped counter of thick carved dark
+oak with a polished amber top and a brass band, a brass foot rail around its base, three brass ale taps, and inside
+the ring a tall round bottle tower with shelves of glowing honey, emerald and ruby bottles and small oak kegs stacked
+at its foot. A stout bearded barkeep stands inside the ring.
+Above the island hangs a large wrought-iron chandelier of antlers and candles, the main source of warm light.
+Around the island, four round wooden tables with benches on the diagonals, each with one warrior standing behind it
+facing the bar: a dwarf with a raised horn tankard, an elf archer in a green cloak, a knight in dented armour, a
+hooded mystic with a glowing crystal ball. Wide clear walkway of floor between the island and the tables.
+Architecture: flagstone floor with worn wooden planks under the tables, round fur rugs, low stone-and-timber walls
+with dark half-timber posts, heraldic cloth banners without any symbols that look like letters, round wooden shields
+and crossed swords on the walls, dried herbs hanging from beams, a big stone fireplace on the south side with a
+roaring fire, a stack of barrels in one corner, a gap in the north wall with a glowing golden portal ring.
+Lighting: golden candle and fire light, deep warm shadows, a few dust motes in the light.
+Palette: amber, deep brown, copper, brass, forest green, with small accents of ruby and emerald.
+Clean readable silhouettes, game-ready level, no characters in the walkway, no text, no letters, no logos, no
+watermark, no modern objects, no neon.

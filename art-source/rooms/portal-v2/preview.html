@@ -1,0 +1,12 @@
+﻿<!doctype html><html><head><link rel="icon" href="data:,"><style>body{margin:0;background:#252034}canvas{image-rendering:pixelated}</style></head><body><script type="module">
+import * as THREE from '/mesadebar_game/node_modules/three/build/three.module.js';
+import { MerchantPortal } from '/mesadebar_game/src/render/world/MerchantPortal.ts';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x252034);
+scene.add(new THREE.HemisphereLight(0xffe7bd,0x6f7fa3,1.5));
+const sun=new THREE.DirectionalLight(0xffd4a5,2);sun.position.set(-10,20,12);scene.add(sun);
+const portal=new MerchantPortal();scene.add(portal);
+const renderer=new THREE.WebGLRenderer({antialias:false,preserveDrawingBuffer:true});renderer.setSize(480,400);renderer.setPixelRatio(1);document.body.append(renderer.domElement);renderer.domElement.style.width='960px';renderer.domElement.style.height='800px';
+const camera=new THREE.OrthographicCamera(-2.6,2.6,4.166/2,-4.166/2,0.1,200);camera.position.set(7,8.8,7);camera.lookAt(0,1.9,0);
+function render(){portal.animate(performance.now()/1000);renderer.render(scene,camera);requestAnimationFrame(render)}render();
+window.review={scene,portal,renderer};
+</script></body></html>

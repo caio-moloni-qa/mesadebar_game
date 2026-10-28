@@ -1,0 +1,17 @@
+{
+  "errors": [],
+  "metrics": [
+    {
+      "room": "tavern",
+      "calls": 21,
+      "triangles": 8426,
+      "textures": 10
+    },
+    {
+      "room": "igloo",
+      "calls": 19,
+      "triangles": 6950,
+      "textures": 8
+    }
+  ]
+}
