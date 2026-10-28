@@ -33,6 +33,10 @@ export const NEUTRAL_TUNING = {
   /** A slain group comes back this long later, once the hero is far from its home. */
   respawnMs: 120_000,
   respawnClearance: 700,
+  /** Taming (Beast's missions): while it's on, calm creatures don't bolt; stand this close to one this long and it's
+   *  yours — it never runs from the hero again, until hurt. */
+  tameReach: 110,
+  tameMs: 3000,
   /** Hurt does keep running this much longer than a plain scare. */
   provokedFleeMultiplier: 2.5,
   // ── Javali ──
@@ -103,6 +107,9 @@ export interface NeutralCreature {
   baseContactDamage: number;
   /** A hive's next swarm. */
   nextSwarmAt: number;
+  /** Tamed: calm around the hero for good (until hurt). `tameMs`: how long the hero has stood by it so far. */
+  tamed: boolean;
+  tameMs: number;
 }
 
 /** A Colmeia's swarm: a cloud of bees chasing the hero. */
@@ -124,6 +131,8 @@ export interface NeutralEvents extends Record<string, unknown> {
   'neutral-provoked': { enemy: EnemyState };
   /** Lost interest and is heading home. */
   'neutral-calmed': { enemy: EnemyState };
+  /** Won over (Beast's missions): it stays calm by the hero. */
+  'neutral-tamed': { enemy: EnemyState; variant: NeutralVariantId };
   'neutral-windup': { enemy: EnemyState; dirX: number; dirY: number };
   'neutral-charge-hit': { enemy: EnemyState };
   /** Charged into a tree or a wall. */
@@ -161,6 +170,8 @@ export class NeutralSystem {
   readonly creatures: NeutralCreature[] = [];
   readonly swarms: Swarm[] = [];
   private readonly byEnemy = new Map<EnemyState, NeutralCreature>();
+  /** Set by the session while a taming mission is under way: calm creatures let the hero walk up. */
+  taming = false;
 
   constructor(private readonly host: NeutralHost) {}
 
@@ -178,7 +189,7 @@ export class NeutralSystem {
       const creature: NeutralCreature = {
         variant, spot, packId, enemy: null, respawnAt: 0, moodEndsAt: 0, lastNearAt: 0, nextWanderAt: 0,
         wanderX: spot.home.x, wanderY: spot.home.y, attack: 'none', attackEndsAt: 0, dirX: 0, dirY: 1, hitThisCharge: false,
-        baseContactDamage: 0, nextSwarmAt: 0
+        baseContactDamage: 0, nextSwarmAt: 0, tamed: false, tameMs: 0
       };
       this.creatures.push(creature);
       this.spawn(creature, index);
@@ -272,12 +283,16 @@ export class NeutralSystem {
     creature.attack = 'none';
     creature.nextWanderAt = 0;
     creature.moodEndsAt = 0;
+    creature.tamed = false;
+    creature.tameMs = 0;
     this.byEnemy.set(enemy, creature);
   }
 
   private provoke(creature: NeutralCreature): void {
     const enemy = creature.enemy!;
     const now = this.host.now();
+    creature.tamed = false;
+    creature.tameMs = 0;
     if (creature.variant === 'doe') {
       // A doe never fights: hurt, it runs further than a plain scare.
       if (enemy.mood !== 'fleeing' && enemy.mood !== 'startled') this.host.events.emit('neutral-startled', { enemy });
@@ -309,7 +324,15 @@ export class NeutralSystem {
       else if (distance <= T.mimicTrembleRadius) enemy.trembleUntil = now + 120;
       return;
     }
-    if (distance <= T.noticeRadius) {
+    if (creature.tamed || this.taming) {
+      if (!creature.tamed && distance <= T.tameReach) {
+        creature.tameMs += deltaMs;
+        if (creature.tameMs >= T.tameMs) {
+          creature.tamed = true;
+          this.host.events.emit('neutral-tamed', { enemy, variant: creature.variant });
+        }
+      } else creature.tameMs = 0;
+    } else if (distance <= T.noticeRadius) {
       enemy.mood = 'startled';
       enemy.startledUntil = now + T.startleMs;
       this.host.events.emit('neutral-startled', { enemy });

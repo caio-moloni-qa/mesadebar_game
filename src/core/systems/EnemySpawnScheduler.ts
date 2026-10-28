@@ -18,6 +18,8 @@ export interface SpawnRequest {
   maxHealth: number;
   /** A pack member's side of the hero (radians, world x/y): it circles out there before biting (WOLF_PACK). */
   flankAngle?: number;
+  /** Which pack it runs with (1, 2, ...): the session counts a pack wiped out when its last member falls. */
+  pack?: number;
 }
 
 /** Everything the scheduler reads from the running game, exposed narrowly (same Host pattern as the other systems). */
@@ -45,6 +47,7 @@ const BORDER_SPAWN_EDGE = 40;
 export class EnemySpawnScheduler {
   private skeletonSpawnElapsed = 0;
   private packSpawnElapsed = 0;
+  private packsSpawned = 0;
   private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.role, 0]));
   /** Fast horde size/health both grow with this — see spawnFastHorde. */
   private apparitionHordeLevel = 0;
@@ -108,13 +111,15 @@ export class EnemySpawnScheduler {
    *  of the hero: evenly over WOLF_PACK.flankArc either way of the line the pack comes in on. */
   spawnPack(center: Vec2, count: number, healthMultiplier = 1): void {
     const variantId = this.horde.pack ?? 'iceWolf';
+    this.packsSpawned += 1;
+    const pack = this.packsSpawned;
     const player = this.host.getPlayerPosition();
     const approach = Math.atan2(center.y - player.y, center.x - player.x);
     for (let index = 0; index < count; index += 1) {
       const position = randomPointAround(this.rng, center, 0, WOLF_PACK.spread);
       const share = count === 1 ? 0 : index / (count - 1) * 2 - 1;
       const flankAngle = approach + share * WOLF_PACK.flankArc + floatBetween(this.rng, -0.15, 0.15);
-      this.host.spawn({ variantId, ...position, maxHealth: ENEMY_VARIANTS[variantId].maxHealth * healthMultiplier, flankAngle });
+      this.host.spawn({ variantId, ...position, maxHealth: ENEMY_VARIANTS[variantId].maxHealth * healthMultiplier, flankAngle, pack });
     }
   }
 

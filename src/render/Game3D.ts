@@ -1,4 +1,5 @@
 import { BlizzardView } from './views/BlizzardView';
+import { EskimoView } from './views/EskimoView';
 import { SnowfieldView } from './views/SnowfieldView';
 import * as THREE from 'three';
 import { GameAudio } from '../audio/GameAudio';
@@ -40,7 +41,7 @@ import { heroName } from './progress/heroNames';
 import { SaveStore } from './progress/SaveStore';
 import { GuardianIntro } from './GuardianIntro';
 import { AREAS } from '../config/areas';
-import { QUEST_NPCS, QuestNpcId } from '../core/systems/QuestSystem';
+import { ALL_QUEST_NPCS, QuestNpcId } from '../core/systems/QuestSystem';
 import { Tip, TipDialog } from './ui/TipDialog';
 import { FIRST_RUN_TIP, GUARDIAN_TIP, welcomeTip } from './ui/tips';
 import { MiniBossEffects } from './vfx/MiniBossEffects';
@@ -120,6 +121,8 @@ export class Game3D {
   private merchantRoom?: MerchantRoom;
   /** The Nevasca's torches and storm snow, rebuilt with every session (empty where the arena has no blizzard). */
   private blizzardView?: BlizzardView;
+  /** The Esquimó on his rounds and Joe's memory fragments (recreated with each session). */
+  private eskimoView?: EskimoView;
   private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
@@ -450,7 +453,7 @@ export class Game3D {
   private regularsAway(): QuestNpcId[] {
     const here = AREAS.find((area) => area.id === this.arenaMap.layout.id)?.regulars ?? [];
     const roster = rosterFor(this.progress);
-    return QUEST_NPCS.map((npc) => npc.id).filter((id) => !here.includes(id) || roster.includes(id));
+    return ALL_QUEST_NPCS.map((npc) => npc.id).filter((id) => !here.includes(id) || (roster as string[]).includes(id));
   }
 
   private createSession({ skipStartingUpgrades, attract, hub = false }: { skipStartingUpgrades: boolean; attract: boolean; hub?: boolean }): void {
@@ -495,6 +498,13 @@ export class Game3D {
     }
     this.blizzardView = new BlizzardView(this.session.blizzard);
     this.scene.add(this.blizzardView.root);
+    if (this.eskimoView) {
+      this.scene.remove(this.eskimoView.root, this.eskimoView.glow);
+      disposeTree(this.eskimoView.root);
+      disposeTree(this.eskimoView.glow);
+    }
+    this.eskimoView = new EskimoView(this.session.shelter, this.session.quests);
+    this.scene.add(this.eskimoView.root, this.eskimoView.glow);
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
       this.session.variantSpawnEnabled = false;
@@ -1143,6 +1153,7 @@ export class Game3D {
     this.enemyView.updateFrostTrail(this.session.frostTrail.patches, simNow);
     this.snowfieldView.update(this.session, alpha, simNow);
     this.blizzardView?.update(this.cameraRig.focus, deltaSeconds);
+    this.eskimoView?.update(this.session.frozen ? 0 : deltaSeconds);
     this.projectileView.update(this.session.projectiles, alpha, simNow, this.cameraRig.camera);
     this.pickupView.update(this.session.pickups, alpha, simNow);
     this.hazardView.update(this.session.souls, this.session.peels, alpha, simNow);
@@ -1157,6 +1168,8 @@ export class Game3D {
       this.cameraRig.follow(this.playerView.worldPosition, frameMs / 1000);
     }
     this.arena.setSceneryVisible(!this.session.merchant.inside);
+    // Out of the wind in the igloo (or the tavern): no storm, no torches.
+    if (this.blizzardView) this.blizzardView.root.visible = this.blizzardView.glow.visible = !this.session.merchant.inside;
     this.arena.followFocus(this.cameraRig.focus);
     this.arena.update(deltaSeconds, this.cameraRig.focus, this.playerView.worldPosition, this.cameraRig.viewDirection);
 
@@ -1172,7 +1185,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), ...(this.eskimoView ? [this.eskimoView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.snowfieldView.heroIce, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;

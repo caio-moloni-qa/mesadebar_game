@@ -132,7 +132,7 @@ describe('Greenfield', () => {
   it('ends with Sergio: its four regulars, then him', () => {
     const save = emptySave();
     expect(areaCompletion(save, CURRENT_AREA)).toEqual({ joined: 0, total: 5 });
-    expect(unlockSteps(save, CURRENT_AREA.finale)[0].label).toContain('Greenfield');
+    expect(unlockSteps(save, CURRENT_AREA.finale!)[0].label).toContain('Greenfield');
   });
 });
 
@@ -144,10 +144,10 @@ describe('the area picker', () => {
     expect(greenfield.missions).toEqual({ done: MISSIONS_PER_REGULAR + 1, total: 4 * MISSIONS_PER_REGULAR });
     expect(greenfield.heroes).toEqual({ joined: 0, total: 5 });
     expect(greenfield.guardians).toEqual([{ kind: 'gravedigger', defeated: true }, { kind: 'lakeSpirit', defeated: false }]);
-    // An arena with no tavern regulars yet: nothing to count but its guardians.
+    // The Campo Nevado: the igloo's three regulars, no finale yet.
     const snowfield = arenaProgress(save, 'snowfield', ['frostKnight']);
-    expect(snowfield.missions).toEqual({ done: 0, total: 0 });
-    expect(snowfield.heroes).toEqual({ joined: 0, total: 0 });
+    expect(snowfield.missions).toEqual({ done: 0, total: 3 * MISSIONS_PER_REGULAR });
+    expect(snowfield.heroes).toEqual({ joined: 0, total: 3 });
   });
 
   it('counts a guardian only in the arena it was beaten in', () => {

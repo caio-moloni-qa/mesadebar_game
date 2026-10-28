@@ -5,9 +5,10 @@ import { ArenaMap } from '../world/ArenaMap';
 
 // The tavern's regulars (the merchant's room is a fantasy bar): each one hands out a mission to do out on the arena.
 // Accept it at their table, finish it out there, then come back through the portal and talk to them again to claim the
-// reward. Three missions each, harder every time, then they've nothing left for you this run.
+// reward. Three missions each, harder every time, then they've nothing left for you this run. Every area has its own
+// regulars: Greenfield's at the tavern, the Campo Nevado's (Joe, Beast and Voly) in the Esquimó's igloo.
 
-export type QuestNpcId = 'brom' | 'lyra' | 'grimbo' | 'zora';
+export type QuestNpcId = 'brom' | 'lyra' | 'grimbo' | 'zora' | 'joe' | 'beast' | 'voly';
 
 export type QuestGoal =
   /** Walk over this many lost barrels scattered on the arena (they appear when the mission is accepted). */
@@ -17,7 +18,18 @@ export type QuestGoal =
   /** Go this long without taking damage (counts only out on the arena; a hit resets it). */
   | { type: 'untouched'; ms: number }
   /** Defeat this many zone guardians. */
-  | { type: 'guardians'; count: number };
+  | { type: 'guardians'; count: number }
+  /** Walk over this many memory fragments (Joe's), scattered like the barrels. `storm`: they only shine (and can only
+   *  be picked up) while a blizzard front blows. `unfrozen`: freezing solid scatters them all again, from zero. */
+  | { type: 'fragments'; count: number; storm?: boolean; unfrozen?: boolean }
+  /** Tame this many calm neutrals (stand by one while the mission is on); `distinct`: of that many kinds. */
+  | { type: 'tame'; count: number; distinct?: boolean }
+  /** Bring down this many wolf packs, every last wolf of each. */
+  | { type: 'packs'; count: number }
+  /** Break this many ice blocks (they rise around the map when the mission is accepted). */
+  | { type: 'ice-blocks'; count: number }
+  /** Ride out this long of blizzard away from the torches (warming at one starts it over). */
+  | { type: 'cold-endurance'; ms: number };
 
 export type QuestReward =
   | { type: 'currency'; amount: number }
@@ -97,6 +109,53 @@ export const QUEST_NPCS: QuestNpc[] = [
   }
 ];
 
+/** The Campo Nevado's regulars, at the igloo's tables. */
+export const SNOWFIELD_QUEST_NPCS: QuestNpc[] = [
+  {
+    id: 'joe',
+    name: 'Joe',
+    epithet: 'Cubo de Gelo Mágico',
+    thanks: 'Ahh... lembrei! Obrigado, amigo. Toma, um pedacinho da minha mente.',
+    done: 'Minha mente está inteira de novo. Clarinha como gelo.',
+    quests: [
+      { title: 'Pensamentos Perdidos', pitch: 'A nevasca partiu minha mente em pedacinhos... Tem 3 fragmentos de memória brilhando lá fora. Traz pra mim?', goal: { type: 'fragments', count: 3 }, reward: { type: 'upgrades', count: 1 } },
+      { title: 'Memórias na Tempestade', pitch: 'Os fragmentos mais fundos só brilham quando a nevasca sopra. Traga 5, no meio da tempestade.', goal: { type: 'fragments', count: 5, storm: true }, reward: { type: 'upgrades', count: 2 } },
+      { title: 'Mente Clara', pitch: 'Os últimos 7. Mas cuidado: se você congelar, eles se espalham de novo. Mente fria, corpo quente!', goal: { type: 'fragments', count: 7, unfrozen: true }, reward: { type: 'upgrades', count: 3 } }
+    ]
+  },
+  {
+    id: 'beast',
+    name: 'Beast',
+    epithet: 'Domadora de Feras',
+    thanks: 'Isso! Os bichos já te respeitam.',
+    done: 'A alcateia te chama de irmão agora. Não tenho mais nada pra te ensinar.',
+    quests: [
+      { title: 'A Domadora', pitch: 'Bicho calmo não morde quem chega devagar. Enquanto essa missão durar, eles não fogem de você: fique pertinho de um até ele confiar. Dome 1.', goal: { type: 'tame', count: 1 }, reward: { type: 'damage', percent: 10 } },
+      { title: 'A Matilha', pitch: 'Uma matilha de Lobos do Gelo anda caçando no campo. Derrube a matilha inteira, até o último lobo.', goal: { type: 'packs', count: 1 }, reward: { type: 'damage', percent: 15 } },
+      { title: 'Coração Selvagem', pitch: 'Agora três bichos diferentes, na mesma corrida. Mostre que qualquer fera te segue.', goal: { type: 'tame', count: 3, distinct: true }, reward: { type: 'damage', percent: 20 } }
+    ]
+  },
+  {
+    id: 'voly',
+    name: 'Voly',
+    epithet: 'Urso Polar de Armadura',
+    thanks: 'Grrr... bom trabalho. Urso não esquece favor.',
+    done: 'Minha dívida com você está paga. Por enquanto.',
+    quests: [
+      { title: 'Gelo Quebrado', pitch: 'Uns blocos de gelo brotaram pelo campo inteiro e travam o meu caminho. Quebre 10 deles.', goal: { type: 'ice-blocks', count: 10 }, reward: { type: 'max-health', amount: 30 } },
+      { title: 'Dois Guardiões', pitch: 'Os guardiões deste campo me devem. Derrube 2 numa corrida só e eu te pago a parte deles.', goal: { type: 'guardians', count: 2 }, reward: { type: 'max-health', amount: 50 } },
+      { title: 'A Revanche', pitch: 'Encare a nevasca de peito aberto: 60 segundos de tempestade sem chegar perto de uma tocha.', goal: { type: 'cold-endurance', ms: 60_000 }, reward: { type: 'max-health', amount: 80 } }
+    ]
+  }
+];
+
+export const ALL_QUEST_NPCS: QuestNpc[] = [...QUEST_NPCS, ...SNOWFIELD_QUEST_NPCS];
+
+/** The regulars of the area an arena belongs to (Greenfield's tavern for anything else). */
+export function questNpcsFor(arenaId: string): QuestNpc[] {
+  return arenaId === 'snowfield' ? SNOWFIELD_QUEST_NPCS : QUEST_NPCS;
+}
+
 /** Every NPC's mission: on offer, under way, done and waiting to be claimed, or no more missions. */
 export type QuestStatus = 'offer' | 'active' | 'ready' | 'done';
 
@@ -115,12 +174,16 @@ export interface QuestEvents extends Record<string, unknown> {
   'quest-completed': { npc: QuestNpcId; title: string };
   'quest-claimed': { npc: QuestNpcId; reward: QuestReward };
   'barrel-collected': { x: number; y: number };
+  'fragment-collected': { x: number; y: number };
 }
 
 interface QuestTrigger {
-  'enemy-defeated': unknown;
+  'enemy-defeated': { variantId: string };
   'player-damaged': unknown;
   'miniboss-defeated': unknown;
+  'player-frozen': unknown;
+  'neutral-tamed': { variant: string };
+  'wolf-pack-defeated': unknown;
 }
 
 export interface QuestHost {
@@ -128,33 +191,78 @@ export interface QuestHost {
   readonly rng: Rng;
   readonly arena: ArenaMap;
   readonly events: Pick<EventBus<QuestEvents & QuestTrigger>, 'emit' | 'on'>;
+  /** The Nevasca, where there is one: a front blowing now, and the hero warming at a torch. */
+  readonly weather?: { storm(): boolean; warmed(): boolean };
+  /** Voly's mission: raise this many ice blocks around the map; returns how many it could place. */
+  raiseIceBlocks?(count: number): number;
 }
 
-/** Walk this close to a barrel to pick it up. */
+/** Walk this close to a barrel (or a memory fragment) to pick it up. */
 const BARREL_REACH = 45;
+/** Ice blocks are breakable scenery, not a kill. */
+const ICE_BLOCK = 'iceBlock';
+
+/** Goals counted in milliseconds (the tracker shows seconds). */
+export const isTimedGoal = (goal: QuestGoal): goal is Extract<QuestGoal, { ms: number }> => goal.type === 'untouched' || goal.type === 'cold-endurance';
 
 export function goalAmount(goal: QuestGoal): number {
-  return goal.type === 'untouched' ? goal.ms : goal.count;
+  return isTimedGoal(goal) ? goal.ms : goal.count;
 }
 
 export class QuestSystem {
-  readonly quests: QuestState[] = QUEST_NPCS.map((npc) => ({ npc, tier: 0, status: 'offer', progress: 0 }));
+  readonly quests: QuestState[];
   /** Brom's barrels still lying on the arena. */
   barrels: Vec2[] = [];
+  /** Joe's memory fragments still lying on the arena. */
+  fragments: Vec2[] = [];
+  /** Kinds tamed for the mission under way (a `distinct` one counts each kind once). */
+  private readonly tamedKinds = new Set<string>();
 
-  /** `startTiers`: missions already done with each regular in earlier runs — they offer the next one (or nothing). */
-  constructor(private readonly host: QuestHost, startTiers: Partial<Record<QuestNpcId, number>> = {}) {
+  /** `startTiers`: missions already done with each regular in earlier runs — they offer the next one (or nothing).
+   *  `npcs`: the area's regulars (Greenfield's by default). */
+  constructor(private readonly host: QuestHost, startTiers: Partial<Record<QuestNpcId, number>> = {}, npcs: QuestNpc[] = QUEST_NPCS) {
+    this.quests = npcs.map((npc) => ({ npc, tier: 0, status: 'offer', progress: 0 }));
     this.quests.forEach((quest) => {
       quest.tier = Math.min(quest.npc.quests.length, Math.max(0, Math.floor(startTiers[quest.npc.id] ?? 0)));
       if (quest.tier >= quest.npc.quests.length) quest.status = 'done';
     });
-    host.events.on('enemy-defeated', () => this.advance('kills', 1));
+    host.events.on('enemy-defeated', ({ variantId }) => this.advance(variantId === ICE_BLOCK ? 'ice-blocks' : 'kills', 1));
     host.events.on('miniboss-defeated', () => this.advance('guardians', 1));
+    host.events.on('wolf-pack-defeated', () => this.advance('packs', 1));
+    host.events.on('neutral-tamed', ({ variant }) => {
+      const quest = this.activeWith('tame');
+      const goal = quest && this.spec(quest).goal;
+      if (!quest || goal?.type !== 'tame' || (goal.distinct && this.tamedKinds.has(variant))) return;
+      this.tamedKinds.add(variant);
+      this.addProgress(quest, 1);
+    });
     host.events.on('player-damaged', () => {
       this.quests.forEach((quest) => {
         if (quest.status === 'active' && this.spec(quest).goal.type === 'untouched') quest.progress = 0;
       });
     });
+    // Mente Clara: frozen solid, the memories scatter all over again.
+    host.events.on('player-frozen', () => {
+      const quest = this.activeWith('fragments');
+      const goal = quest && this.spec(quest).goal;
+      if (!quest || goal?.type !== 'fragments' || !goal.unfrozen) return;
+      quest.progress = 0;
+      this.fragments = [];
+      this.scatter(goal.count, 'fragments');
+      this.host.events.emit('quest-progress', { npc: quest.npc.id, progress: 0, goal: goal.count });
+    });
+  }
+
+  /** The mission under way with this kind of goal, if any. */
+  activeWith(type: QuestGoal['type']): QuestState | null {
+    return this.quests.find((quest) => quest.status === 'active' && this.spec(quest).goal.type === type) ?? null;
+  }
+
+  /** Joe's fragments shine now (a storm-only mission's only while a front blows). */
+  get fragmentsShowing(): boolean {
+    const quest = this.activeWith('fragments');
+    const goal = quest && this.spec(quest).goal;
+    return this.fragments.length > 0 && !(goal?.type === 'fragments' && goal.storm && !this.host.weather?.storm());
   }
 
   spec(quest: QuestState): QuestSpec {
@@ -172,7 +280,14 @@ export class QuestSystem {
     quest.status = 'active';
     quest.progress = 0;
     const spec = this.spec(quest);
-    if (spec.goal.type === 'barrels') this.scatterBarrels(spec.goal.count);
+    if (spec.goal.type === 'barrels') this.scatter(spec.goal.count, 'barrels');
+    if (spec.goal.type === 'fragments') this.scatter(spec.goal.count, 'fragments');
+    if (spec.goal.type === 'tame') this.tamedKinds.clear();
+    if (spec.goal.type === 'ice-blocks') {
+      // Whatever couldn't be raised (a crowded map) doesn't block the mission.
+      const raised = this.host.raiseIceBlocks?.(spec.goal.count) ?? 0;
+      if (raised < spec.goal.count) this.addProgress(quest, spec.goal.count - raised);
+    }
     this.host.events.emit('quest-accepted', { npc: quest.npc.id, title: spec.title });
     return true;
   }
@@ -192,6 +307,7 @@ export class QuestSystem {
   /** Sandbox: finish every mission under way. */
   completeActive(): void {
     this.barrels = [];
+    this.fragments = [];
     this.quests.forEach((quest) => {
       if (quest.status === 'active') this.addProgress(quest, goalAmount(this.spec(quest).goal));
     });
@@ -202,16 +318,23 @@ export class QuestSystem {
     this.quests.forEach((quest) => {
       if (quest.status === 'active' && this.spec(quest).goal.type === 'untouched') this.addProgress(quest, delta);
     });
-    if (this.barrels.length === 0) return;
+    const enduring = this.activeWith('cold-endurance');
+    const weather = this.host.weather;
+    if (enduring && weather?.storm()) {
+      // A torch's warmth starts it over; out in the cold, it counts.
+      if (weather.warmed()) enduring.progress = 0;
+      else this.addProgress(enduring, delta);
+    }
     const { player } = this.host;
     const reach = BARREL_REACH + player.radius;
-    const left = this.barrels.filter((barrel) => {
-      if (Math.hypot(player.x - barrel.x, player.y - barrel.y) > reach) return true;
-      this.host.events.emit('barrel-collected', barrel);
-      this.advance('barrels', 1);
+    const pickUp = (spots: Vec2[], type: 'barrels' | 'fragments') => spots.filter((spot) => {
+      if (Math.hypot(player.x - spot.x, player.y - spot.y) > reach) return true;
+      this.host.events.emit(type === 'barrels' ? 'barrel-collected' : 'fragment-collected', spot);
+      this.advance(type, 1);
       return false;
     });
-    this.barrels = left;
+    if (this.barrels.length > 0) this.barrels = pickUp(this.barrels, 'barrels');
+    if (this.fragmentsShowing) this.fragments = pickUp(this.fragments, 'fragments');
   }
 
   private advance(type: QuestGoal['type'], amount: number): void {
@@ -226,7 +349,7 @@ export class QuestSystem {
     const before = quest.progress;
     quest.progress = Math.min(goal, quest.progress + amount);
     // Timers report whole seconds, counters every step.
-    if (spec.goal.type !== 'untouched' || Math.floor(before / 1000) !== Math.floor(quest.progress / 1000)) {
+    if (!isTimedGoal(spec.goal) || Math.floor(before / 1000) !== Math.floor(quest.progress / 1000)) {
       this.host.events.emit('quest-progress', { npc: quest.npc.id, progress: quest.progress, goal });
     }
     if (quest.progress < goal) return;
@@ -234,8 +357,8 @@ export class QuestSystem {
     this.host.events.emit('quest-completed', { npc: quest.npc.id, title: spec.title });
   }
 
-  /** Walkable spots well spread over the arena, away from the hero and the water. */
-  private scatterBarrels(count: number): void {
+  /** Walkable spots well spread over the arena, away from the hero and the water: Brom's barrels, Joe's fragments. */
+  private scatter(count: number, type: 'barrels' | 'fragments'): void {
     const { arena, rng, player } = this.host;
     const placed: Vec2[] = [];
     for (let attempt = 0; attempt < 400 && placed.length < count; attempt += 1) {
@@ -247,9 +370,9 @@ export class QuestSystem {
       if (!arena.isWalkable(x, y, 30) || arena.shoreDistance(x, y) < 60) continue;
       placed.push({ x, y });
     }
-    this.barrels.push(...placed);
+    this[type].push(...placed);
     // Whatever couldn't be placed (a tiny or crowded arena) doesn't block the mission.
-    const quest = this.quests.find((candidate) => candidate.status === 'active' && this.spec(candidate).goal.type === 'barrels');
+    const quest = this.activeWith(type);
     if (quest && placed.length < count) this.addProgress(quest, count - placed.length);
   }
 }

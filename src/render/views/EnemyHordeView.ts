@@ -20,9 +20,9 @@ const RISE_MS = 420;
 const HIT_FLASH_MS = 110;
 /** Game-units/s at which the baked walk cycle plays at 1× (slow Super Esqueletos shuffle, Aparições glide). */
 const WALK_REFERENCE_SPEED = 120;
-const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith', 'frostSkeleton', 'frostSpirit', 'snowShaman', 'snowman', 'iceTroll', 'iceWolf', 'boar', 'stag', 'doe', 'hive', 'mimic'];
+const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith', 'frostSkeleton', 'frostSpirit', 'snowShaman', 'snowman', 'iceTroll', 'iceWolf', 'boar', 'stag', 'doe', 'hive', 'mimic', 'iceBlock'];
 /** finalBoss is drawn by BossView (its mesh entry here is never used). */
-const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', frostSkeleton: 'frostSkeleton', frostSpirit: 'frostSpirit', snowShaman: 'snowShaman', snowman: 'snowman', iceTroll: 'iceTroll', iceWolf: 'iceWolf', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton', frostKnight: 'superSkeleton', lakeSpirit: 'superSkeleton', boar: 'boar', stag: 'stag', doe: 'doe', hive: 'hive', mimic: 'mimic' };
+const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', frostSkeleton: 'frostSkeleton', frostSpirit: 'frostSpirit', snowShaman: 'snowShaman', snowman: 'snowman', iceTroll: 'iceTroll', iceWolf: 'iceWolf', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton', frostKnight: 'superSkeleton', lakeSpirit: 'superSkeleton', boar: 'boar', stag: 'stag', doe: 'doe', hive: 'hive', mimic: 'mimic', iceBlock: 'iceBlock' };
 
 /** The "!" over a neutral: yellow when it has just noticed the hero, red while it's angry. */
 const ALERT_COLORS = { startled: new THREE.Color(0xffd23a), angry: new THREE.Color(0xff3a2a) };

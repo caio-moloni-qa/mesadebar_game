@@ -5,7 +5,7 @@ import { ball, box, cone, cylinder, part } from './parts';
 // leg 0.4, the heroes' rig). The tavern stands them up idling; once a regular joins the roster the same figure is
 // their hero model (with `props` off: the mug or coin in their hand gives way to the weapon).
 
-export type RegularFigureId = 'sergio' | 'brom' | 'lyra' | 'grimbo' | 'zora';
+export type RegularFigureId = 'sergio' | 'brom' | 'lyra' | 'grimbo' | 'zora' | 'eskimo' | 'joe' | 'beast' | 'voly';
 export type PartSpec = { bone: string; geometry: THREE.BufferGeometry };
 
 /** The shared humanoid body: limbs, hips/spine/chest and a head, in the given colours. */
@@ -108,6 +108,88 @@ export const REGULAR_FIGURES: Record<RegularFigureId, (props: boolean) => PartSp
       { bone: 'head', geometry: part(new THREE.TorusGeometry(0.06, 0.012, 4, 10), 0xffd25a, [-0.22, 0.14, 0]) },
       { bone: 'head', geometry: part(box(0.32, 0.04, 0.04), 0x2a1a2a, [0, 0.33, 0.21]) }
   ];
+  },
+  // ── The igloo: the Esquimó and the Campo Nevado's regulars ──
+  eskimo: (props) => {
+    const parka = 0x6b4226;
+    const fur = 0xeee2c8;
+    return [
+      ...body({ skin: 0xe0a07a, shirt: parka, sleeve: parka, pants: 0x4a2e1a, boots: 0x3a2414 }, { chestWidth: 0.62, headSize: 0.22 }),
+      { bone: 'hips', geometry: part(cylinder(0.34, 0.4, 0.4, 8), parka, [0, -0.14, 0]) },
+      { bone: 'hips', geometry: part(cylinder(0.41, 0.41, 0.1, 8), fur, [0, -0.34, 0]) },
+      { bone: 'spine', geometry: part(box(0.6, 0.08, 0.34), 0xa8342a, [0, 0.0, 0]) },
+      { bone: 'foreArmL', geometry: part(cylinder(0.11, 0.11, 0.08, 6), fur, [0, -0.26, 0]) },
+      { bone: 'foreArmR', geometry: part(cylinder(0.11, 0.11, 0.08, 6), fur, [0, -0.26, 0]) },
+      { bone: 'shinL', geometry: part(cylinder(0.1, 0.1, 0.08, 6), fur, [0, -0.08, 0]) },
+      { bone: 'shinR', geometry: part(cylinder(0.1, 0.1, 0.08, 6), fur, [0, -0.08, 0]) },
+      // The hood: brown shell, a thick fur ring framing the face, a white moustache.
+      { bone: 'head', geometry: part(ball(0.3, 1), parka, [0, 0.26, -0.06]) },
+      { bone: 'head', geometry: part(new THREE.TorusGeometry(0.24, 0.08, 5, 10), fur, [0, 0.25, 0.12]) },
+      { bone: 'head', geometry: part(box(0.16, 0.04, 0.04), 0xf5f0e6, [0, 0.18, 0.21]) },
+      { bone: 'head', geometry: part(ball(0.04), 0xd8705a, [0, 0.23, 0.23]) },
+      // The lantern, hanging from his right hand.
+      ...(props ? [
+        { bone: 'handR', geometry: part(cylinder(0.01, 0.01, 0.14, 4), 0x3a2414, [0, -0.08, 0]) },
+        { bone: 'handR', geometry: part(box(0.14, 0.18, 0.14), 0x4a3a2a, [0, -0.24, 0]) },
+        { bone: 'handR', geometry: part(box(0.1, 0.13, 0.15), 0xffc65a, [0, -0.24, 0]) }
+      ] : [])
+    ];
+  },
+  joe: () => {
+    const ice = 0x8fcdf0;
+    const deep = 0x5aa6d8;
+    const scarf = 0x232a5a;
+    return [
+      ...body({ skin: ice, shirt: ice, sleeve: deep, pants: deep, boots: ice }, { chestWidth: 0.6, headSize: 0.05 }),
+      // A block of ice for a body and head in one, snow on top, a navy scarf and glowing violet eyes.
+      { bone: 'chest', geometry: part(box(0.66, 0.9, 0.5), ice, [0, 0.3, 0]) },
+      { bone: 'chest', geometry: part(box(0.4, 0.5, 0.52), deep, [0.12, 0.2, 0.01]) },
+      { bone: 'chest', geometry: part(box(0.68, 0.08, 0.52), 0xf2f8ff, [0, 0.78, 0]) },
+      { bone: 'chest', geometry: part(ball(0.12), 0xf2f8ff, [0.12, 0.84, 0.05]) },
+      { bone: 'chest', geometry: part(new THREE.TorusGeometry(0.33, 0.07, 4, 10), scarf, [0, 0.06, 0], [Math.PI / 2, 0, 0]) },
+      { bone: 'chest', geometry: part(box(0.12, 0.34, 0.06), scarf, [0.2, -0.16, 0.27]) },
+      { bone: 'chest', geometry: part(box(0.07, 0.05, 0.03), 0xb48cff, [0.12, 0.46, 0.26]) },
+      { bone: 'chest', geometry: part(box(0.07, 0.05, 0.03), 0xb48cff, [-0.12, 0.46, 0.26]) },
+      { bone: 'chest', geometry: part(box(0.2, 0.03, 0.03), 0x3a78a8, [0, 0.3, 0.26]) }
+    ];
+  },
+  beast: () => {
+    const pelt = 0xd8dde4;
+    const hair = 0x3a2a22;
+    return [
+      ...body({ skin: 0xe8b894, shirt: 0x6a4a32, sleeve: 0xe8b894, pants: 0x4a3a2a, boots: 0x2a1d14 }, { chestWidth: 0.42, headSize: 0.21 }),
+      // The wolf pelt: its head as her hood (ears, snout over the brow) and the hide down her back.
+      { bone: 'head', geometry: part(new THREE.SphereGeometry(0.25, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), pelt, [0, 0.28, -0.02]) },
+      { bone: 'head', geometry: part(box(0.16, 0.12, 0.2), pelt, [0, 0.42, 0.18]) },
+      { bone: 'head', geometry: part(box(0.06, 0.05, 0.05), 0x1a1a1a, [0, 0.42, 0.29]) },
+      { bone: 'head', geometry: part(cone(0.06, 0.16, 4), pelt, [0.13, 0.56, 0]) },
+      { bone: 'head', geometry: part(cone(0.06, 0.16, 4), pelt, [-0.13, 0.56, 0]) },
+      { bone: 'head', geometry: part(box(0.34, 0.36, 0.1), hair, [0, 0.12, -0.16]) },
+      { bone: 'chest', geometry: part(box(0.56, 0.9, 0.06), pelt, [0, -0.16, -0.19]) },
+      { bone: 'spine', geometry: part(box(0.46, 0.06, 0.3), 0x8a6a3a, [0, 0.02, 0]) },
+      { bone: 'chest', geometry: part(ball(0.05), 0x7fe3ff, [0, 0.0, 0.17]) }
+    ];
+  },
+  voly: () => {
+    const fur = 0xeef0f0;
+    const steel = 0x7a8796;
+    return [
+      ...body({ skin: fur, shirt: steel, sleeve: fur, pants: fur, boots: fur }, { chestWidth: 0.72, headSize: 0.24 }),
+      { bone: 'hips', geometry: part(box(0.62, 0.3, 0.42), fur, [0, -0.05, 0]) },
+      { bone: 'spine', geometry: part(box(0.66, 0.36, 0.44), fur, [0, 0.12, 0]) },
+      // Armour: a steel breastplate with a gold trim and pauldrons.
+      { bone: 'chest', geometry: part(box(0.76, 0.42, 0.46), steel, [0, 0.1, 0]) },
+      { bone: 'chest', geometry: part(box(0.78, 0.05, 0.48), 0xc9963f, [0, -0.1, 0]) },
+      { bone: 'upperArmL', geometry: part(ball(0.15, 1), steel, [0, 0.02, 0]) },
+      { bone: 'upperArmR', geometry: part(ball(0.15, 1), steel, [0, 0.02, 0]) },
+      // The bear's head: round ears, a muzzle with a black nose.
+      { bone: 'head', geometry: part(ball(0.08), fur, [0.18, 0.44, 0]) },
+      { bone: 'head', geometry: part(ball(0.08), fur, [-0.18, 0.44, 0]) },
+      { bone: 'head', geometry: part(box(0.18, 0.12, 0.14), 0xdfe2e2, [0, 0.18, 0.24]) },
+      { bone: 'head', geometry: part(box(0.08, 0.05, 0.04), 0x1a1a1a, [0, 0.22, 0.31]) },
+      { bone: 'handL', geometry: part(cone(0.03, 0.08, 4), 0x2a2a2a, [0, -0.08, 0.05], [Math.PI, 0, 0]) },
+      { bone: 'handR', geometry: part(cone(0.03, 0.08, 4), 0x2a2a2a, [0, -0.08, 0.05], [Math.PI, 0, 0]) }
+    ];
   }
 };
 
@@ -117,5 +199,9 @@ export const REGULAR_FIGURE_LOOK: Record<RegularFigureId, { scale: number; phase
   brom: { scale: 0.78, phase: 0.2 },
   lyra: { scale: 1.02, phase: 0.45 },
   grimbo: { scale: 0.64, phase: 0.7 },
-  zora: { scale: 0.96, phase: 0.9 }
+  zora: { scale: 0.96, phase: 0.9 },
+  eskimo: { scale: 0.92, phase: 0.1 },
+  joe: { scale: 0.95, phase: 0.3 },
+  beast: { scale: 0.9, phase: 0.55 },
+  voly: { scale: 1.3, phase: 0.8 }
 };

@@ -96,6 +96,9 @@ export interface MerchantHost {
   encounterActive(): boolean;
   /** Grimbo's Mão Leve makes everything cheaper. */
   priceMultiplier(): number;
+  /** The Campo Nevado: the room is the Esquimó's igloo, reached through his offer of shelter (ShelterSystem), never
+   *  a portal of its own; nothing on sale. */
+  readonly igloo?: boolean;
 }
 
 /** What the hero is at in the tavern: the exit portal, Sergio, one of the regulars, or nothing — and between runs,
@@ -131,6 +134,11 @@ export class MerchantSystem {
     this.room = { x: host.arena.size * 2.5, y: host.arena.size / 2 };
   }
 
+  /** The Campo Nevado's room: the Esquimó's igloo. */
+  get igloo(): boolean {
+    return !!this.host.igloo;
+  }
+
   /** The arena portal is within reach. */
   get portalInReach(): boolean {
     const { portal } = this;
@@ -145,7 +153,7 @@ export class MerchantSystem {
     const near = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y)) <= MERCHANT_TUNING.reach;
     if (near(MERCHANT_ROOM.exit)) return { kind: 'exit' };
     const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
-    if (distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+    if (!this.host.igloo && distance(MERCHANT_ROOM.sergioSpot) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
     if (this.hub && distance(MERCHANT_ROOM.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
     let npc = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -170,7 +178,7 @@ export class MerchantSystem {
       if (this.portal.remainingMs <= 0 || !this.enabled || this.host.encounterActive()) this.closePortal();
       return;
     }
-    if (!this.enabled || this.host.encounterActive()) return;
+    if (!this.enabled || this.host.igloo || this.host.encounterActive()) return;
     this.elapsedMs += delta;
     if (this.elapsedMs >= MERCHANT_TUNING.intervalMs) this.openPortal();
   }
@@ -198,6 +206,18 @@ export class MerchantSystem {
     this.returnTo = { x: player.x, y: player.y };
     this.inside = true;
     this.offers = this.buildOffers();
+    player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
+    player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y;
+    this.host.events.emit('merchant-entered', {});
+  }
+
+  /** Into the Esquimó's igloo (his offer of shelter); `returnTo` is where the hero comes back out on the arena. */
+  enterShelter(returnTo: Vec2): void {
+    if (this.inside) return;
+    const { player } = this.host;
+    this.returnTo = { ...returnTo };
+    this.inside = true;
+    this.offers = [];
     player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
     player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y;
     this.host.events.emit('merchant-entered', {});
