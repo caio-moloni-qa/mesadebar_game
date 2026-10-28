@@ -64,7 +64,7 @@ function markerTexture(symbol: string, background: string): THREE.CanvasTexture 
   return texture;
 }
 
-/** The tavern behind Sergio's portal (a plank floor and stone walls with a gap for the exit portal, the bar down the
+/** The tavern behind Sergio's portal (a plank floor and walls behind the freestanding exit portal, the bar down the
  *  west side with his items over it and bottles behind him, a fireplace, the regulars at their tables), plus the
  *  portal that opens on the arena. Lives in the same scene as the arena, far outside it — the arena's land is hidden
  *  while you're in here. */
