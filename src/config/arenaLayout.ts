@@ -76,6 +76,17 @@ export interface ArenaLayout {
   shrine: Point;
   /** The zone guardians that rise here, in the order the stage's slots call them (MiniBossKind ids). */
   guardians: string[];
+  /** Neutral creatures living here (NeutralSystem): each group's variant, home and how many share it. */
+  neutrals?: NeutralSpot[];
+}
+
+/** A group of neutral creatures (NEUTRAL_VARIANTS id) around one home spot; the group wakes together. */
+export interface NeutralSpot {
+  variant: string;
+  home: Point;
+  count: number;
+  /** The first of the group is this variant instead (a stag leading does). */
+  leader?: string;
 }
 
 /** 110 m across. Grown from the 2D build's 2800 so every zone fits with grassland between them. */
@@ -132,7 +143,20 @@ export const GREENFIELD: ArenaLayout = {
   // In the meadow's south-west quarter.
   stoneCircle: { center: { x: 1450, y: 2160 }, radius: 150, stones: 8 },
   shrine: { x: 2520, y: 1440 },
-  guardians: ['gravedigger', 'lakeSpirit', 'templeGuardian']
+  guardians: ['gravedigger', 'lakeSpirit', 'templeGuardian'],
+  // Boars root around the dead forest's edges, off the trails; deer graze the open grass between the zones; hives
+  // hang in the forest; a mimic waits in the ruins and another by the camp, passing for loot.
+  neutrals: [
+    { variant: 'boar', home: { x: 560, y: 1020 }, count: 2 },
+    { variant: 'boar', home: { x: 1120, y: 620 }, count: 1 },
+    { variant: 'boar', home: { x: 1560, y: 420 }, count: 2 },
+    { variant: 'doe', leader: 'stag', home: { x: 2240, y: 1980 }, count: 3 },
+    { variant: 'doe', leader: 'stag', home: { x: 1180, y: 2560 }, count: 2 },
+    { variant: 'hive', home: { x: 900, y: 520 }, count: 1 },
+    { variant: 'hive', home: { x: 380, y: 760 }, count: 1 },
+    { variant: 'mimic', home: { x: 520, y: 2120 }, count: 1 },
+    { variant: 'mimic', home: { x: 2140, y: 3060 }, count: 1 }
+  ]
 };
 
 /** Campo Nevado: a snow field of medieval ruins worn down by time, from the approved concept

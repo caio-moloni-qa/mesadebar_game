@@ -237,6 +237,46 @@ function rightHandedClips(hipHeight: number): Record<'idle' | 'run' | HandAttack
   };
 }
 
+/** Four-legged trot (javali, cervo, lobo): diagonal pairs swing together, the far shin folds on the back stroke,
+ *  the body bobs twice a cycle and the head nods with it. Bones: quadrupedBones. */
+export function quadrupedTrotClip(hipsRest: Vec3Tuple, duration = 0.5): THREE.AnimationClip {
+  const stride = (forward: number): Vec3Tuple => [-forward * 28, 0, 0];
+  const fold = (lifting: boolean): Vec3Tuple => [lifting ? 45 : 5, 0, 0];
+  const key = (t: number, phase: 1 | -1, bob: number): Key => ({
+    t,
+    pose: {
+      legFL: stride(phase), legBR: stride(phase), legFR: stride(-phase), legBL: stride(-phase),
+      shinFL: fold(phase < 0), shinBR: fold(phase < 0), shinFR: fold(phase > 0), shinBL: fold(phase > 0),
+      chest: [bob * 3, 0, 0], head: [-bob * 6, 0, 0], tail: [20 + bob * 10, phase * 15, 0]
+    },
+    hips: [0, bob * 0.03, 0]
+  });
+  const half = duration / 2;
+  return poseClip('trot', duration, [
+    key(0, 1, 0), key(half * 0.5, 1, 1), key(half, -1, 0), key(half * 1.5, -1, 1), key(duration, 1, 0)
+  ], hipsRest, { includeRest: false, loop: true });
+}
+
+/** Mímico hop: the lid (`head`) gapes and snaps shut while the box hops forward. Phase 0 is shut and still, which
+ *  is how it rests passing for a chest. Bones: root → hips (the box) → head (the lid, hinged at the back). */
+export function mimicChompClip(hipsRest: Vec3Tuple, duration = 0.55): THREE.AnimationClip {
+  return poseClip('chomp', duration, [
+    { t: 0, pose: { hips: [0, 0, 0], head: [0, 0, 0] }, hips: [0, 0, 0] },
+    { t: duration * 0.35, pose: { hips: [-8, 0, 0], head: [-58, 0, 0] }, hips: [0, 0.16, 0.03] },
+    { t: duration * 0.7, pose: { hips: [4, 0, 0], head: [-10, 0, 0] }, hips: [0, 0.03, 0.05] },
+    { t: duration, pose: { hips: [0, 0, 0], head: [0, 0, 0] }, hips: [0, 0, 0] }
+  ], hipsRest, { includeRest: false, loop: true });
+}
+
+/** Colmeia: hanging from its branch it sways and swells a little, as if humming. Bones: root → hips (the comb). */
+export function hiveSwayClip(hipsRest: Vec3Tuple, duration = 1.6): THREE.AnimationClip {
+  return poseClip('sway', duration, [
+    { t: 0, pose: { hips: [0, 0, 5] }, hips: [0, 0, 0] },
+    { t: duration / 2, pose: { hips: [3, 0, -5] }, hips: [0, -0.02, 0] },
+    { t: duration, pose: { hips: [0, 0, 5] }, hips: [0, 0, 0] }
+  ], hipsRest, { includeRest: false, loop: true });
+}
+
 /** Wraith float: hovering bob, beckoning arms, swaying robe — the necromancer and apparition share it. */
 export function wraithFloatClip(): THREE.AnimationClip {
   return poseClip('float', 1.2, [

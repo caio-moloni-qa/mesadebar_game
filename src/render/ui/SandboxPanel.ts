@@ -1,3 +1,4 @@
+import { NeutralSpot } from '../../config/arenaLayout';
 import { DIFFICULTY_STAGES, SANDBOX_SPAWN_CAPS } from '../../config/balance';
 import { WEAPONS } from '../../config/weapons';
 import { GameSession } from '../../core/session/GameSession';
@@ -155,6 +156,11 @@ export class SandboxPanel {
       run: () => { s[key] = !s[key]; apply(s[key]); this.save(); }
     });
     const spawn = (label: string, variant: EnemyVariantId, count: number): Control => ({ label: () => label, run: () => run().spawnNearPlayer(variant, count) });
+    // A group of wildlife a little to the hero's right, living there from now on.
+    const neutral = (label: string, group: Omit<NeutralSpot, 'home'>): Control => ({
+      label: () => label,
+      run: () => { const { x, y } = run().player; run().neutrals.addGroup({ ...group, home: { x: x + 260, y } }); }
+    });
     const upgrade = (label: string, kind: 'weapon' | 'attribute'): Control => ({
       label: () => label,
       run: () => {
@@ -191,6 +197,10 @@ export class SandboxPanel {
       spawn('+1 Necromante', 'necromancerWraith', 1),
       spawn('+5 Aparições', 'apparitionWraith', 5),
       spawn('+1 Super Esqueleto', 'superSkeleton', 1),
+      neutral('+2 Javalis (perto)', { variant: 'boar', count: 2 }),
+      neutral('+Cervo e 2 Corças (perto)', { variant: 'doe', leader: 'stag', count: 3 }),
+      neutral('+1 Colmeia (perto)', { variant: 'hive', count: 1 }),
+      neutral('+1 Mímico (perto)', { variant: 'mimic', count: 1 }),
       { label: () => '+1 Boss Extra', run: () => run().bosses.spawnExtraBoss() },
       { label: () => 'Boss da onda agora', run: () => run().triggerBossWave() },
       { label: () => 'Mini-boss: O Coveiro', run: () => { run().spawnMiniBoss('gravedigger'); } },

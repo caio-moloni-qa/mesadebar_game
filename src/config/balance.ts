@@ -18,8 +18,22 @@ export const MINI_BOSS_VARIANTS = {
   // Campo Nevado
   frostKnight: { maxHealth: 1600, movementSpeed: 70, contactDamage: 14, reward: 0 }
 };
+/** Neutral creatures: they live at fixed spots of the map (ArenaLayout.neutrals), leave the hero alone until hurt,
+ *  and don't count toward the horde's cap. `contactDamage` only bites while angry (NeutralSystem). */
+export const NEUTRAL_VARIANTS = {
+  boar: { maxHealth: 180, movementSpeed: 85, contactDamage: 12, reward: 12, currencyDrops: 3, loot: null },
+  /** Cervo: the stag leads the herd and charges; the does only ever run. Each drops a small potion. */
+  stag: { maxHealth: 220, movementSpeed: 110, contactDamage: 10, reward: 14, currencyDrops: 3, loot: 'potion' },
+  doe: { maxHealth: 90, movementSpeed: 125, contactDamage: 0, reward: 8, currencyDrops: 2, loot: 'potion' },
+  /** Colmeia: never moves; hurt, it sends out a swarm. Drops honey (a potion that also quickens the hero). */
+  hive: { maxHealth: 70, movementSpeed: 0, contactDamage: 0, reward: 10, currencyDrops: 2, loot: 'honey' },
+  /** Mímico: a chest that bites. Beaten, it leaves a real chest. */
+  mimic: { maxHealth: 320, movementSpeed: 120, contactDamage: 0, reward: 20, currencyDrops: 4, loot: 'chest' }
+} satisfies Record<string, { maxHealth: number; movementSpeed: number; contactDamage: number; reward: number; currencyDrops: number; loot: NeutralLoot }>;
+/** What a neutral leaves besides its crystals. */
+export type NeutralLoot = 'potion' | 'honey' | 'chest' | null;
 /** Every variant the 3D core can spawn. */
-export const ALL_ENEMY_VARIANTS = { ...ENEMY_VARIANTS, ...MINI_BOSS_VARIANTS };
+export const ALL_ENEMY_VARIANTS = { ...ENEMY_VARIANTS, ...MINI_BOSS_VARIANTS, ...NEUTRAL_VARIANTS };
 export const WEAPON_CONFIG = { damage: 10, cooldownMs: 700, projectileSpeed: 450, range: 600, lifetimeMs: 1500, pierces: 0 };
 /** Level-up rewards: the larger selection and the guaranteed extra-weapon card occur every fifth level. */
 export const LEVEL_UPGRADE_CONFIG = { bonusChoiceInterval: 5, defaultChoiceAmount: 3, bonusChoiceAmount: 5 };

@@ -147,7 +147,13 @@ export class PickupView {
       new THREE.IcosahedronGeometry(0.22, 0).translate(0, 0.22, 0),
       new THREE.CylinderGeometry(0.07, 0.09, 0.18, 5).translate(0, 0.5, 0)
     ].map(nonIndexed))!;
+    // A squat honey pot with a lid.
+    const honey = mergeGeometries([
+      new THREE.CylinderGeometry(0.2, 0.17, 0.32, 7).translate(0, 0.16, 0),
+      new THREE.CylinderGeometry(0.22, 0.22, 0.06, 7).translate(0, 0.35, 0)
+    ].map(nonIndexed))!;
     this.batch = new InstancedBatch<PickupKind>({
+      honey: { geometry: honey, material: toonMaterial({ color: 0xf2a81d, emissive: 0x4a2a00, flatShading: true }), castShadow: true },
       gem: { geometry: new THREE.OctahedronGeometry(0.2, 0), material: toonMaterial({ color: PALETTE.gem, emissive: 0x1d6b4c, flatShading: true }), castShadow: true },
       chest: { geometry: chest, material: toonMaterial({ color: 0x8a5a2b, emissive: 0x3a2400, flatShading: true }), castShadow: true },
       potion: { geometry: potion, material: toonMaterial({ color: 0xe0413c, emissive: 0x4a0d0b, flatShading: true }), castShadow: true }

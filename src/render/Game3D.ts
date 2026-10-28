@@ -547,6 +547,12 @@ export class Game3D {
       this.floating.spawn(head, `- ${Math.round(amount)}`, { color: '#ff5c5c', delayMs: critical ? 150 : 0 }, now);
       if (this.session.weapons.has('amulet')) this.floatAboveHero('DANO +', '#8effa0');
     });
+    // The bees lose the hero at the water's edge; a mimic's snap throws splinters.
+    events.on('swarm-dispersed', ({ x, y, byWater }) => {
+      if (byWater) this.floatAboveHero('Despistou as abelhas!', '#ffd23a');
+      this.particles.burst(x * WORLD_SCALE, y * WORLD_SCALE, 0xffd23a, 8, 1, 1.2);
+    });
+    events.on('neutral-bite', ({ enemy, hit }) => { if (hit) this.particles.burst(enemy.x * WORLD_SCALE, enemy.y * WORLD_SCALE, 0x8a5a2b, 10, 1, 1.4); });
     events.on('pickup-collected', ({ kind }) => {
       const color = kind === 'gem' ? PALETTE.gem : kind === 'potion' ? 0xff6b6b : 0xffd868;
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, color, kind === 'gem' ? 3 : 14, 0.8, 1.8);
@@ -1113,6 +1119,7 @@ export class Game3D {
     this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
     this.syncHeldWeapons();
     this.enemyView.update(this.session.enemies, alpha, simNow, deltaSeconds);
+    this.enemyView.updateSwarms(this.session.neutrals.swarms, alpha, simNow);
     this.projectileView.update(this.session.projectiles, alpha, simNow, this.cameraRig.camera);
     this.pickupView.update(this.session.pickups, alpha, simNow);
     this.hazardView.update(this.session.souls, this.session.peels, alpha, simNow);
@@ -1142,7 +1149,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;
