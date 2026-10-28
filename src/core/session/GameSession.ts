@@ -10,7 +10,7 @@ import { circlesOverlap } from '../collision';
 import { Rng, Vec2, createRng, floatBetween, pickOne, randomPointAround, shuffled } from '../math';
 import { BossEvents, BossSystem } from '../systems/BossSystem';
 import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS } from '../systems/CompanionSystem';
-import { MERCHANT_ROOM, MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
+import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
 import { NEUTRAL_TUNING, NeutralEvents, NeutralSystem } from '../systems/NeutralSystem';
 import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem, questNpcsFor } from '../systems/QuestSystem';
 import { SHELTER_TUNING, ShelterEvents, ShelterSystem } from '../systems/ShelterSystem';
@@ -354,7 +354,7 @@ export class GameSession implements WeaponHost {
       igloo: !options.hub && blizzard.active
     });
     // Tables without a regular of this area (the igloo has three) stand empty.
-    MERCHANT_ROOM.npcs.forEach((_, index) => {
+    this.merchant.layout.npcs.forEach((_, index) => {
       const quest = this.quests.quests[index];
       if (!quest || options.regularsAway?.includes(quest.npc.id)) this.merchant.away.add(index);
     });

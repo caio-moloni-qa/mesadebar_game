@@ -1,8 +1,9 @@
+import { BODY_RADIUS } from '../session/entities';
 import { describe, expect, it } from 'vitest';
 import { WORLD_SIZE } from '../../config/world';
 import { GameSession, STEP_MS } from '../session/GameSession';
 import { ArenaMap } from '../world/ArenaMap';
-import { MERCHANT_ROOM, MERCHANT_TUNING } from './MerchantSystem';
+import { MERCHANT_ROOM, MERCHANT_TUNING, TAVERN_LAYOUT } from './MerchantSystem';
 
 function session(): GameSession {
   const run = new GameSession({ characterId: 'mage', seed: 9, skipStartingUpgrades: true, arena: ArenaMap.open(WORLD_SIZE) });
@@ -85,7 +86,7 @@ describe('merchant', () => {
     enter(run);
     const heard: string[] = [];
     run.events.on('merchant-shop', () => heard.push('shop'));
-    standAt(run, MERCHANT_ROOM.sergioSpot);
+    standAt(run, run.merchant.layout.sergioSpot);
     expect(run.merchant.roomSpot).toEqual({ kind: 'sergio' });
     run.interact();
     expect(heard).toEqual(['shop']);
@@ -132,16 +133,77 @@ describe('merchant', () => {
     expect(run.merchant.offers[3].id).toBe('max-health');
   });
 
-  it('the room’s walls and counter hold the hero in', () => {
+  it('the room’s walls and the island hold the hero in', () => {
     const run = session();
     enter(run);
     run.setMoveInput(-1, 0);
     advance(run, 4000);
     const half = MERCHANT_ROOM.size / 2;
     expect(run.player.x).toBeGreaterThanOrEqual(run.merchant.room.x - half);
-    standAt(run, { x: MERCHANT_ROOM.counter.x, y: MERCHANT_ROOM.counter.y });
+    const island = TAVERN_LAYOUT.island!;
+    standAt(run, { x: island.x + 10, y: island.y });
     run.setMoveInput(0, 0);
     advance(run, 100);
-    expect(Math.abs(run.player.x - (run.merchant.room.x + MERCHANT_ROOM.counter.x))).toBeGreaterThanOrEqual(MERCHANT_ROOM.counter.halfWidth);
+    const fromCentre = Math.hypot(run.player.x - (run.merchant.room.x + island.x), run.player.y - (run.merchant.room.y + island.y));
+    expect(fromCentre).toBeGreaterThanOrEqual(island.outer + run.player.radius - 0.5);
+  });
+
+  it('walking into the island stops at its rim, without clipping in or stopping short', () => {
+    const run = session();
+    enter(run);
+    const island = TAVERN_LAYOUT.island!;
+    // From the arrival point, straight south toward the island.
+    run.setMoveInput(0, 1);
+    advance(run, 4000);
+    const fromCentre = Math.hypot(run.player.x - (run.merchant.room.x + island.x), run.player.y - (run.merchant.room.y + island.y));
+    expect(fromCentre).toBeCloseTo(island.outer + run.player.radius, 0);
+  });
+
+  it('the tavern’s regulars stand behind their tables, facing the island across a clear walkway', () => {
+    const island = TAVERN_LAYOUT.island!;
+    const { npcs, tables, sergioSpot, merchant, bottleTower } = TAVERN_LAYOUT;
+    const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+    tables.forEach((table, index) => {
+      // About 2 m (64 units) of free floor between the island and every table.
+      expect(distance(table, island) - island.outer - MERCHANT_ROOM.tableRadius).toBeGreaterThanOrEqual(60);
+      // The regular is on the far side of the table from the island, clear of it.
+      const npc = npcs[index];
+      expect(distance(npc, island)).toBeGreaterThan(distance(table, island));
+      expect(distance(npc, table)).toBeGreaterThanOrEqual(MERCHANT_ROOM.tableRadius + MERCHANT_ROOM.npcRadius);
+      // And can be talked to from the island side of the table.
+      expect(distance(npc, table) + MERCHANT_ROOM.tableRadius + BODY_RADIUS.player).toBeLessThanOrEqual(MERCHANT_ROOM.talkReach);
+    });
+    // Sergio and his bottles are inside the ring; you talk to him from outside it.
+    expect(distance(merchant, island)).toBeLessThan(island.inner);
+    expect(distance(bottleTower!, island)).toBeLessThan(island.inner);
+    expect(distance(sergioSpot, island)).toBeGreaterThan(island.outer + BODY_RADIUS.player);
+    expect(distance(sergioSpot, merchant)).toBeLessThanOrEqual(MERCHANT_ROOM.sergioReach);
+  });
+
+  it('the arrival point walks straight to Sergio’s spot', () => {
+    const run = session();
+    enter(run);
+    standAt(run, MERCHANT_ROOM.arrival);
+    run.setMoveInput(0, 1);
+    advance(run, 1500);
+    expect(run.merchant.roomSpot).toEqual({ kind: 'sergio' });
+    expect(run.player.x).toBeCloseTo(run.merchant.room.x + TAVERN_LAYOUT.sergioSpot.x, 0);
+  });
+
+  it('talks to every regular from the island side of their table, without Sergio taking the interaction', () => {
+    const run = session();
+    enter(run);
+    const { island, tables } = run.merchant.layout;
+    tables.forEach((table, index) => {
+      const dx = island!.x - table.x, dy = island!.y - table.y;
+      const distance = Math.hypot(dx, dy);
+      const radius = MERCHANT_ROOM.tableRadius + run.player.radius + 0.1;
+      standAt(run, { x: table.x + dx / distance * radius, y: table.y + dy / distance * radius });
+      run.merchant.confine(run.player);
+      expect(run.merchant.roomSpot).toEqual({ kind: 'npc', index });
+      run.interact();
+      expect(run.dialogue).toBe(index);
+      run.closeDialogue();
+    });
   });
 });

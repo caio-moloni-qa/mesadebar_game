@@ -155,15 +155,15 @@ export class BossUi {
     if (!spot) return null;
     if (spot.kind === 'exit') return { x: merchant.room.x + MERCHANT_ROOM.exit.x, y: merchant.room.y + MERCHANT_ROOM.exit.y, text: merchant.hub ? 'Pressione E para escolher o herói e partir' : 'Pressione E para voltar à arena', poor: false };
     if (spot.kind === 'records') {
-      return { x: merchant.room.x + MERCHANT_ROOM.records.x, y: merchant.room.y + MERCHANT_ROOM.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
+      return { x: merchant.room.x + merchant.layout.records.x, y: merchant.room.y + merchant.layout.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
     }
     if (spot.kind === 'sergio') {
       if (session.dialogue !== null) return null;
-      return { x: merchant.room.x + MERCHANT_ROOM.merchant.x, y: merchant.room.y + MERCHANT_ROOM.merchant.y, text: 'Pressione E para ver a loja do Sergio', poor: false };
+      return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text: 'Pressione E para ver a loja do Sergio', poor: false };
     }
     if (spot.kind === 'npc') {
       if (session.dialogue !== null) return null;
-      const npc = MERCHANT_ROOM.npcs[spot.index];
+      const npc = merchant.layout.npcs[spot.index];
       return { x: merchant.room.x + npc.x, y: merchant.room.y + npc.y, text: `Pressione E para falar com ${session.quests.quests[spot.index].npc.name}`, poor: false };
     }
     return null;

@@ -1,0 +1,22 @@
+{
+  "errors": [],
+  "detail": {
+    "calls": 4,
+    "triangles": 1169,
+    "rotation": 0.7853981633974483
+  },
+  "exitRotation": 0,
+  "hubCalls": 72,
+  "visitCalls": 83,
+  "arena": {
+    "visible": true,
+    "calls": 107
+  },
+  "entry": true,
+  "exit": {
+    "spot": {
+      "kind": "exit"
+    },
+    "inside": false
+  }
+}
