@@ -142,7 +142,25 @@ export class MerchantRoom {
     // The doorway belongs to the north wall (X/Y plane), rather than facing the camera.
     // Its threshold must follow the wall's diagonal in the isometric view.
     this.exitPortal.rotation.y = 0;
-    room.add(this.exitPortal);
+    if (!system.igloo) room.add(this.exitPortal);
+    else {
+      // The igloo has a snow tunnel, rather than a magic portal.
+      const mouth = new THREE.Mesh(new THREE.CircleGeometry(1.15, 24), new THREE.MeshBasicMaterial({ color: 0x142d3c }));
+      mouth.position.copy(at(MERCHANT_ROOM.exit.x, MERCHANT_ROOM.exit.y + 8, 0.9));
+      mouth.scale.set(1.15, 1.45, 1);
+      mouth.position.y = 1.4;
+      room.add(mouth);
+      const arch = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.35, 6, 20, Math.PI), new THREE.MeshToonMaterial({ color: 0xd9f1f7 }));
+      arch.position.copy(mouth.position);
+      arch.scale.y = 1.45;
+      room.add(arch);
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.6, 0.85), new THREE.MeshToonMaterial({ color: 0xd9f1f7 }));
+      lintel.position.copy(mouth.position).add(new THREE.Vector3(0, 2.15, -0.15)); room.add(lintel);
+      for (const side of [-1, 1]) {
+        const jamb = new THREE.Mesh(new THREE.BoxGeometry(0.65, 2.8, 1.4), lintel.material);
+        jamb.position.copy(mouth.position).add(new THREE.Vector3(side * 1.65, 0, 0)); room.add(jamb);
+      }
+    }
 
     // Sergio faces the spot you talk to him from, across his bar; the regulars face the island over their tables
     // (west, in the igloo).
@@ -173,7 +191,7 @@ export class MerchantRoom {
     this.time += deltaSeconds;
     const { system } = this;
     const portal = system.portal;
-    this.arenaPortal.visible = !!portal && !system.inside;
+    this.arenaPortal.visible = !system.igloo && !!portal && !system.inside;
     if (portal) {
       simToWorld(portal.x, portal.y, 0, this.arenaPortal.position);
       // Fades in as it opens and flickers in its last seconds.

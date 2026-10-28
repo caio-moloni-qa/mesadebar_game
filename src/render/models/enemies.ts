@@ -336,7 +336,7 @@ function iceTrollParts(): RigPart[] {
 /** Lobo do Gelo: lean grey-blue body on long legs, a shaggy white ruff with ice shards through it, a long muzzle,
  *  upright ears, glowing ice-blue eyes and a low bushy tail. Bones: quadrupedBones, slimmer than the boar. */
 const WOLF = { coat: 0x7f95aa, shade: 0x52667c, light: 0xe8f2f8, ruff: 0xf4faff, nose: 0x1a2430, eye: 0x7ff0ff, ice: 0xa8e6ff, paw: 0x4f6274 };
-function iceWolfParts(): RigPart[] {
+export function iceWolfParts(): RigPart[] {
   const leg = (name: string, thigh: number, shin: number): RigPart[] => [
     { bone: `leg${name}`, geometry: part(box(0.1, thigh, 0.12), WOLF.coat, [0, -thigh / 2 + 0.03, 0]) },
     { bone: `shin${name}`, geometry: part(box(0.07, shin, 0.07), WOLF.shade, [0, -shin / 2, 0]) },

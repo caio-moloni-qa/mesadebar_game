@@ -13,7 +13,7 @@ import { CompanionEvents, CompanionSystem, MAX_COMPANION_LEVEL, MAX_COMPANIONS }
 import { MerchantEvents, MerchantSystem } from '../systems/MerchantSystem';
 import { NEUTRAL_TUNING, NeutralEvents, NeutralSystem } from '../systems/NeutralSystem';
 import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem, questNpcsFor } from '../systems/QuestSystem';
-import { SHELTER_TUNING, ShelterEvents, ShelterSystem } from '../systems/ShelterSystem';
+import { Eskimo, SHELTER_TUNING, ShelterEvents, ShelterSystem } from '../systems/ShelterSystem';
 import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
 import { FLEE_SPEED_MULTIPLIER, PULL_SPEED, PowerTierEvents, PowerTierSystem } from '../systems/PowerTierSystem';
 import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
@@ -508,7 +508,7 @@ export class GameSession implements WeaponHost {
 
   /** Sergio's Loja Portátil: opens the tavern portal at his feet (on a cooldown, never during the boss). */
   openPortableShop(): boolean {
-    if (this.characterId !== 'sergio' || this.over || this.clock.paused) return false;
+    if (this.journey || this.characterId !== 'sergio' || this.over || this.clock.paused) return false;
     if (this.merchant.portal || this.merchant.inside || this.bosses.hasActiveEncounter() || this.clock.now < this.portableShopReadyAt) return false;
     this.portableShopReadyAt = this.clock.now + HERO_ABILITY_TUNING.portableShopCooldownMs;
     this.merchant.openPortalAt(this.player.x, this.player.y, HERO_ABILITY_TUNING.portableShopMarkup);
@@ -678,8 +678,55 @@ export class GameSession implements WeaponHost {
 
   // ── Simulation step ───────────────────────────────────────────────────────────────────────────────────────
 
+  /** Cinematic time advances while the arena clock, combat and input stand still. */
+  journey: { kind: 'igloo' | 'tavern' | 'exit'; ms: number; start: Vec2; target: Vec2; escort: Eskimo | null; arrive: () => void; arrived: boolean } | null = null;
+
+  get journeyOpacity(): number {
+    const ms = this.journey?.ms ?? 0;
+    const smooth = (t: number) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+    return ms < 3200 ? smooth((ms - 2400) / 800) : ms < 5200 ? 1 : 1 - smooth((ms - 5200) / 900);
+  }
+
+  private beginJourney(kind: 'igloo' | 'tavern' | 'exit', target: Vec2, arrive: () => void, escort: Eskimo | null = null): void {
+    this.journey = { kind, ms: 0, start: { x: this.player.x, y: this.player.y }, target: { ...target }, escort, arrive, arrived: false };
+    this.setMoveInput(0, 0);
+  }
+
+  private advanceJourney(deltaMs: number): void {
+    const journey = this.journey!;
+    journey.ms = Math.min(6100, journey.ms + deltaMs);
+    const { player } = this;
+    snapPrevious(player);
+    if (journey.ms < 3200) {
+      const t = Math.min(1, journey.ms / 1400);
+      const ease = t * t * (3 - 2 * t);
+      const escort = journey.escort;
+      // Boarding is a short walk and hop; the passenger then travels with the sled.
+      const departure = escort ? Math.max(0, (journey.ms - 1600) / 1000) ** 2 * 70 : 0;
+      const dx = escort ? escort.facingX : 0, dy = escort ? escort.facingY : 0;
+      player.x = journey.start.x + (journey.target.x - journey.start.x) * ease + dx * departure;
+      player.y = journey.start.y + (journey.target.y - journey.start.y) * ease + dy * departure;
+      const faceX = t < 1 ? journey.target.x - journey.start.x : dx;
+      const faceY = t < 1 ? journey.target.y - journey.start.y : dy;
+      const faceLength = Math.hypot(faceX, faceY);
+      if (faceLength > 0) { player.facingX = faceX / faceLength; player.facingY = faceY / faceLength; }
+      if (escort) {
+        escort.prevX = escort.x; escort.prevY = escort.y;
+        escort.x = journey.target.x + dx * departure;
+        escort.y = journey.target.y + dy * departure;
+      }
+    }
+    if (journey.ms >= 5200 && !journey.arrived) {
+      journey.arrived = true;
+      journey.arrive();
+      if (journey.escort) this.shelter.eskimo = null;
+    }
+    if (journey.ms >= 6100) this.journey = null;
+  }
+
   step(deltaMs: number = STEP_MS): void {
     if (this.over || this.clock.paused) return;
+    if (this.journey) { this.advanceJourney(deltaMs); return; }
     if (this.merchant.inside) {
       // In the merchant's room the whole arena stands still (its clock too): only the hero walks around in here.
       snapPrevious(this.player);
@@ -1129,6 +1176,7 @@ export class GameSession implements WeaponHost {
   /** The interact key (E): the merchant's portal; in the tavern an item, a regular (talk, or answer them) or the exit;
    *  otherwise the end/continue portal in reach. */
   interact(): void {
+    if (this.journey) return;
     if (this.over || this.clock.paused) return;
     if (this.merchant.inside) {
       if (this.dialogue !== null) {
@@ -1144,7 +1192,7 @@ export class GameSession implements WeaponHost {
         if (spot?.kind === 'npc') this.dialogue = spot.index;
         return;
       }
-      if (spot?.kind === 'exit') this.merchant.leave();
+      if (spot?.kind === 'exit') this.beginJourney('exit', this.player, () => this.merchant.leave());
       if (spot?.kind === 'sergio') this.events.emit('merchant-shop', {});
       if (spot?.kind === 'npc') this.dialogue = spot.index;
       return;
@@ -1154,7 +1202,7 @@ export class GameSession implements WeaponHost {
       return;
     }
     if (this.merchant.portalInReach) {
-      this.merchant.enter();
+      this.beginJourney('tavern', this.merchant.portal!, () => this.merchant.enter());
       return;
     }
     const portal = this.portalInReach;
@@ -1170,14 +1218,23 @@ export class GameSession implements WeaponHost {
 
   /** Into the igloo: warm through (the cold gone, the ice off), and back out later by a fresh, fully lit torch. */
   private takeShelter(): void {
-    if (!this.shelter.accept(this.elapsedMs)) return;
+    const escort = this.shelter.eskimo;
+    if (!escort || !this.shelter.accept(this.elapsedMs)) return;
+    this.player.frozenUntil = -Infinity;
+    escort.offerUntil = 0;
+    this.shelter.eskimo = escort;
+    this.beginJourney('igloo', escort, () => this.arriveAtShelter(), escort);
+  }
+
+  private arriveAtShelter(): void {
     const { blizzard, player } = this;
     let torch = blizzard.torches[0];
     blizzard.torches.forEach((candidate) => {
       if (Math.hypot(candidate.x - player.x, candidate.y - player.y) < Math.hypot(torch.x - player.x, torch.y - player.y)) torch = candidate;
     });
     torch.fuelMs = BLIZZARD_TUNING.torchFuelMs;
-    blizzard.cold = 0;
+    blizzard.resetCold();
+    player.clearSlows();
     player.frozenUntil = -Infinity;
     this.merchant.enterShelter(this.arena.nearestWalkable(torch.x + 50, torch.y + 30, player.radius));
   }

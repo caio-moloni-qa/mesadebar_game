@@ -126,6 +126,7 @@ export class Game3D {
   private blizzardView?: BlizzardView;
   /** The Esquimó on his rounds and Joe's memory fragments (recreated with each session). */
   private eskimoView?: EskimoView;
+  private readonly journeyFade = document.createElement('div');
   private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
@@ -183,6 +184,9 @@ export class Game3D {
     this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.renderer.info.autoReset = false;
     container.appendChild(this.renderer.domElement);
+    this.journeyFade.style.cssText = 'position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:10000';
+    this.journeyFade.setAttribute('aria-hidden', 'true');
+    container.appendChild(this.journeyFade);
     this.pipeline = new PixelPipeline(this.renderer);
     this.scene.background = new THREE.Color(PALETTE.background);
     this.arenaSeed = options.seed ?? randomSeed();
@@ -1144,14 +1148,21 @@ export class Game3D {
         this.accumulator -= STEP_MS;
       }
     }
+    this.journeyFade.style.opacity = String(this.session.frozen ? 0 : this.session.journeyOpacity);
+    this.journeyFade.style.pointerEvents = this.session.journey && !this.session.frozen ? 'auto' : 'none';
     const alpha = running ? Math.min(1, this.accumulator / STEP_MS) : 1;
     const simNow = this.session.clock.now + (running ? this.accumulator : 0);
     const deltaSeconds = running || this.inMenu ? frameMs / 1000 : 0;
 
     // The hero keeps animating after death (the fall plays out) but freezes with pause / choice screens.
-    this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000);
+    this.playerView.update(this.session.player, alpha, simNow, this.session.frozen ? 0 : frameMs / 1000, this.session.journey?.kind === 'igloo' && this.session.journey.ms >= 1400 && !this.session.journey.arrived);
+    const journey = this.session.journey;
+    if (journey?.kind === 'igloo' && !journey.arrived) {
+      const t = Math.min(1, journey.ms / 1400);
+      this.playerView.root.position.y += Math.sin(t * Math.PI) * 0.45 - t * 0.25;
+    }
     this.syncHeldWeapons();
-    this.enemyView.update(this.session.enemies, alpha, simNow, deltaSeconds);
+    this.enemyView.update(this.session.enemies, alpha, simNow, journey ? 0 : deltaSeconds);
     this.enemyView.updateSwarms(this.session.neutrals.swarms, alpha, simNow);
     this.enemyView.updateFrostTrail(this.session.frostTrail.patches, simNow);
     this.snowfieldView.update(this.session, alpha, simNow);

@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { QuestSystem } from '../../core/systems/QuestSystem';
 import { ShelterSystem } from '../../core/systems/ShelterSystem';
 import { toonMaterial } from '../materials';
-import { humanoidClips } from '../models/clips';
+import { iceWolfParts } from '../models/enemies';
+import { box, cylinder, mergeParts, part } from '../models/parts';
+import { humanoidClips, quadrupedTrotClip } from '../models/clips';
 import { REGULAR_FIGURE_LOOK, REGULAR_FIGURES } from '../models/regulars';
-import { buildRiggedModel, clipForBones, humanoidBones } from '../models/rig';
+import { buildRiggedModel, clipForBones, humanoidBones, quadrupedBones } from '../models/rig';
 import { simToWorld } from '../space';
 
 const HIP = 0.82;
@@ -18,8 +20,6 @@ export class EskimoView {
   readonly glow = new THREE.Group();
   private readonly figure = new THREE.Group();
   private readonly mixer: THREE.AnimationMixer;
-  private readonly idle: THREE.AnimationAction;
-  private readonly walk: THREE.AnimationAction;
   private readonly lantern = new THREE.PointLight(0xffb45a, 9, 7, 1.6);
   private readonly halo: THREE.Mesh;
   private readonly offerRing: THREE.Mesh;
@@ -29,19 +29,40 @@ export class EskimoView {
   private readonly beam = new THREE.MeshBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false });
   private readonly beamGeometry = new THREE.CylinderGeometry(0.45, 0.6, 7, 12, 1, true).translate(0, 3.5, 0);
   private shownKey = '';
-  private walking = false;
   private time = 0;
+  private readonly wolves: THREE.AnimationMixer[] = [];
 
   constructor(private readonly shelter: ShelterSystem, private readonly quests: QuestSystem) {
     const model = buildRiggedModel(humanoidBones({ hipHeight: HIP }), REGULAR_FIGURES.eskimo(true), toonMaterial({ vertexColors: true, flatShading: true }));
     model.root.scale.setScalar(REGULAR_FIGURE_LOOK.eskimo.scale);
+    model.root.position.set(0, 0.32, -0.75);
+    // The driver rides at the rear; the front cushion is reserved for the passenger.
     this.figure.add(model.root);
+    const sledParts: THREE.BufferGeometry[] = [
+      part(box(1.35, 0.18, 2.25), 0x69462d, [0, 0.35, -0.05]),
+      part(box(1.15, 0.18, 1.2), 0xc9b79a, [0, 0.53, 0.25]),
+      part(box(1.3, 0.55, 0.12), 0x69462d, [0, 0.67, -1.1])
+    ];
+    for (const side of [-1, 1]) {
+      sledParts.push(part(box(0.12, 0.12, 2.9), 0xb3c8ce, [side * 0.65, 0.12, 0.12]));
+      sledParts.push(part(box(0.1, 0.12, 0.6), 0xb3c8ce, [side * 0.65, 0.28, 1.7], [-0.55, 0, 0]));
+      sledParts.push(part(box(0.08, 0.12, 2.2), 0x9c7045, [side * 0.66, 0.76, 0]));
+      for (const z of [-0.7, 0.7]) sledParts.push(part(box(0.1, 0.65, 0.1), 0x69462d, [side * 0.65, 0.44, z]));
+      // Taut leather traces link both wolves to the sled.
+      sledParts.push(part(cylinder(0.025, 0.025, 2.2), 0x6b4d36, [side * 0.58, 0.45, 2.1], [Math.PI / 2, 0, 0]));
+      const bones = quadrupedBones({ hipHeight: 0.56, bodyLength: 0.56, shoulderRise: 0.04, legSpread: 0.11, thighLength: 0.24, headReach: 0.32 });
+      const wolf = buildRiggedModel(bones, iceWolfParts(), toonMaterial({ vertexColors: true, flatShading: true }));
+      wolf.root.position.set(side * 0.65, 0, 3.35);
+      const mixer = new THREE.AnimationMixer(wolf.root);
+      mixer.clipAction(clipForBones(quadrupedTrotClip(bones[1].offset, 0.42), wolf.bones)).play();
+      this.wolves.push(mixer);
+      this.figure.add(wolf.root);
+      sledParts.push(part(box(0.48, 0.08, 0.14), 0x8a3e2d, [side * 0.65, 0.61, 3.4]));
+    }
+    this.figure.add(new THREE.Mesh(mergeParts(sledParts), toonMaterial({ vertexColors: true, flatShading: true })));
     this.mixer = new THREE.AnimationMixer(model.root);
     const clips = humanoidClips(HIP);
-    this.idle = this.mixer.clipAction(clipForBones(clips.idle, model.bones));
-    this.walk = this.mixer.clipAction(clipForBones(clips.run, model.bones));
-    this.walk.timeScale = 0.55;
-    this.idle.play();
+    this.mixer.clipAction(clipForBones(clips.idle, model.bones)).play();
     this.lantern.position.set(0.35, 0.9, 0.2);
     this.halo = new THREE.Mesh(new THREE.CircleGeometry(1.6, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffb45a, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.halo.position.y = 0.04;
@@ -71,11 +92,7 @@ export class EskimoView {
     this.offerRing.position.set(this.figure.position.x, 0.05, this.figure.position.z);
     this.offerRing.scale.setScalar(1 + Math.sin(this.time * 4) * 0.06);
     const walking = Math.hypot(eskimo.x - eskimo.prevX, eskimo.y - eskimo.prevY) > 0.01;
-    if (walking !== this.walking) {
-      this.walking = walking;
-      (walking ? this.walk : this.idle).reset().fadeIn(0.2).play();
-      (walking ? this.idle : this.walk).fadeOut(0.2);
-    }
+    this.wolves.forEach((mixer) => mixer.update(walking ? deltaSeconds : 0));
     // The flame in the lantern flickers.
     this.lantern.intensity = 9 + Math.sin(this.time * 11) * 1.2 + Math.sin(this.time * 27) * 0.6;
     this.mixer.update(deltaSeconds);
