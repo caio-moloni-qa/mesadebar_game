@@ -833,7 +833,10 @@ export class Game3D {
       this.cameraRig.cut();
       this.particles.burst(this.playerView.worldPosition.x, this.playerView.worldPosition.z, color, 16, 1.8, 1);
     };
-    events.on('merchant-entered', () => portalCut(0xb48cff));
+    events.on('merchant-entered', () => {
+      this.floating.clear();
+      portalCut(0xb48cff);
+    });
     events.on('merchant-left', () => portalCut(0xffc65a));
     events.on('quest-accepted', ({ title }) => this.floatAboveHero(`Missão aceita: ${title}`, '#ffd25a'));
     events.on('quest-completed', ({ title }) => {
@@ -1235,7 +1238,7 @@ export class Game3D {
     this.screens.update(this.session, this.inMenu, this.result);
     // Station prompts hide behind the tavern's panels.
     if (this.mode !== 'menu') this.bossUi.setVisible(!(this.shop.open || this.tierPicker.open || this.recordBook.open || (this.mode === 'hub' && this.menu.visible)));
-    this.bossUi.update(this.session, this.projectToScreen);
+    this.bossUi.update(this.session, this.projectToScreen, this.guardianIntro.filming);
     this.companionBars.update(this.session, this.projectToScreen);
     this.hud.update(this.session, {
       fps: this.fps.value,

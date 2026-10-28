@@ -127,6 +127,16 @@ export class PlayerState implements Body, UpgradeTarget {
     this.frostStacks = 0;
   }
 
+  /** Safe rooms remove temporary harmful statuses without changing equipment or buffs. */
+  clearNegativeEffects(): void {
+    this.clearSlows();
+    this.frozenUntil = -Infinity;
+    this.frostStacksMeltAt = -Infinity;
+    this.frostImmuneUntil = -Infinity;
+    this.rottenExpiresAt = -Infinity;
+    this.rottenTickElapsed = 0;
+  }
+
   /** Congelamento stacks still standing at `now`. */
   frostStacksAt(now: number): number {
     return now < this.frostStacksMeltAt ? this.frostStacks : 0;
