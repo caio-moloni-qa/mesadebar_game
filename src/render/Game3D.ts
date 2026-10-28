@@ -1,3 +1,4 @@
+import { BlizzardView } from './views/BlizzardView';
 import { SnowfieldView } from './views/SnowfieldView';
 import * as THREE from 'three';
 import { GameAudio } from '../audio/GameAudio';
@@ -117,6 +118,8 @@ export class Game3D {
   /** Sandbox: every hero playable, without touching the save. */
   private allHeroesUnlocked = false;
   private merchantRoom?: MerchantRoom;
+  /** The Nevasca's torches and storm snow, rebuilt with every session (empty where the arena has no blizzard). */
+  private blizzardView?: BlizzardView;
   private readonly miniBossEffects: MiniBossEffects;
   private readonly chestRoll: ChestRoll;
   private readonly joystick: Joystick;
@@ -486,6 +489,12 @@ export class Game3D {
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
     this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);
+    if (this.blizzardView) {
+      this.scene.remove(this.blizzardView.root);
+      disposeTree(this.blizzardView.root);
+    }
+    this.blizzardView = new BlizzardView(this.session.blizzard);
+    this.scene.add(this.blizzardView.root);
     if (attract) {
       this.session.skeletonSpawnEnabled = false;
       this.session.variantSpawnEnabled = false;
@@ -1133,6 +1142,7 @@ export class Game3D {
     this.enemyView.updateSwarms(this.session.neutrals.swarms, alpha, simNow);
     this.enemyView.updateFrostTrail(this.session.frostTrail.patches, simNow);
     this.snowfieldView.update(this.session, alpha, simNow);
+    this.blizzardView?.update(this.cameraRig.focus, deltaSeconds);
     this.projectileView.update(this.session.projectiles, alpha, simNow, this.cameraRig.camera);
     this.pickupView.update(this.session.pickups, alpha, simNow);
     this.hazardView.update(this.session.souls, this.session.peels, alpha, simNow);
@@ -1162,7 +1172,7 @@ export class Game3D {
     this.floating.update(now, this.projectToScreen);
     this.renderer.info.reset();
     this.pipeline.render(this.scene, this.cameraRig.camera, this.cameraRig.subTexelOffset,
-      [this.snowfieldView.root, this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
+      [this.snowfieldView.root, ...(this.blizzardView ? [this.blizzardView.glow] : []), this.enemyView.blobShadows, this.enemyView.rottenAuras, this.enemyView.lanes, this.particles.mesh, this.effects.root, this.sheetEffects.root, this.heroKitViews.glow, this.powerViews.glow, this.projectileView.boltMesh, ...this.arena.normalPassExclusions, this.bossEffects.root, this.miniBossEffects.root, this.playerView.effects],
       [this.playerView.root, this.snowfieldView.heroIce, this.bossViews.root, this.miniBossViews.root, this.companionViews.root, ...(this.merchantRoom ? [this.merchantRoom.characters] : [])]);
 
     this.fps.frames += 1;

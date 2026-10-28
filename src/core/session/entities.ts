@@ -141,10 +141,16 @@ export class PlayerState implements Body, UpgradeTarget {
     this.frostStacks = this.frostStacksAt(now) + count;
     this.frostStacksMeltAt = now + FROST_STACKS.decayMs;
     if (this.frostStacks < FROST_STACKS.max) return false;
-    this.frostStacks = 0;
-    this.frozenUntil = now + FROST_STACKS.freezeMs;
-    this.frostImmuneUntil = this.frozenUntil + FROST_STACKS.immuneMs;
+    this.freezeSolid(FROST_STACKS.freezeMs, now);
     return true;
+  }
+
+  /** Frozen solid for `durationMs` (Congelamento's last stack, the blizzard's full cold): stacks cleared, then the
+   *  usual grace. */
+  freezeSolid(durationMs: number, now: number): void {
+    this.frostStacks = 0;
+    this.frozenUntil = now + durationMs;
+    this.frostImmuneUntil = this.frozenUntil + FROST_STACKS.immuneMs;
   }
 
   applySlow(percent: number, durationMs: number, now: number): void {
