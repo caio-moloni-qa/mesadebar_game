@@ -55,9 +55,8 @@ export function buildRoomDecor(room: THREE.Group, igloo: boolean) {
       surface(new THREE.CircleGeometry(1.45, 18).rotateX(-Math.PI / 2), 'tavern_fur', look.rug[1], at(layout.fireplace.x, layout.fireplace.y - 65, 0.025));
     }
 
-    // Walls, with the gap in the north wall for the exit portal.
+    // The freestanding portal sits inside the room, in front of a continuous north wall.
     const thick = 0.5;
-    const gap = 3.2;
     // Full-height walls on the far sides; cutaway foreground keeps the hero and tables readable.
     const backWallHeight = 5.2;
     const frontWallHeight = 2.2;
@@ -68,8 +67,7 @@ export function buildRoomDecor(room: THREE.Group, igloo: boolean) {
     wall(thick, size + thick, -half, 0);
     wall(thick, size + thick, half, 0);
     wall(size + thick, thick, 0, half);
-    wall((size - gap) / 2, thick, -(size + gap) / 4, -half);
-    wall((size - gap) / 2, thick, (size + gap) / 4, -half);
+    wall(size + thick, thick, 0, -half);
 
     // The bar: the igloo's straight counter with the shelf behind it, or the tavern's round island (a ring of
     // counter segments with a darker overhanging top) around the bottle tower. A stack of barrels in the corner.
