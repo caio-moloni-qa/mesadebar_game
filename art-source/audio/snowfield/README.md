@@ -1,9 +1,10 @@
-# Campo Nevado — músicas dos chefes
+# Campo Nevado — iglu e músicas dos chefes
 
 Seis primeiras versões instrumentais geradas localmente pelo motor de síntese da suíte existente. Os timbres lembram instrumentos acústicos; não são gravações reais nem downloads de um gerador externo. Sem vozes.
 
 | Chefe | Arquivo | Duração | Identidade |
 | --- | --- | --- | --- |
+| Iglu — Abrigo sob a Aurora | igloo.mp3 | 120.0 s | Harpa, flauta, violoncelo e cristal; ré maior, 80 BPM. |
 | Cavaleiro Congelado | guardian-frost-knight.wav | 120.0 s | Marcha de castelo: metais, violoncelo e cristal. |
 | Serpente do Gelo | guardian-ice-serpent.wav | 137.14 s | Movimento serpenteante em 6/4: harpa, flauta e gelo. |
 | O Sineiro | guardian-bellringer.wav | 120.0 s | Valsa fúnebre em 3/4: órgão e três badaladas. |
@@ -13,12 +14,12 @@ Seis primeiras versões instrumentais geradas localmente pelo motor de síntese 
 
 Abra `preview.html` para ouvir os WAVs completos. `snowfield-sampler.wav` reúne 12 segundos de cada faixa, na ordem da tabela (72 segundos no total). O sampler é reduzido para 22,05 kHz; os WAVs completos são estéreo PCM16 a 44,1 kHz. Os brutos float32 preservam a cauda de 4 segundos; os loops dobram essa cauda no início.
 
-Validação técnica: cabeçalhos, duração, pico, RMS, estéreo, DC, amostras finitas, ausência de clipping e salto na emenda. Hashes e medições: `snowfield-manifest.json`. A checagem numérica não substitui revisão auditiva. Normalização por pico a -1,51 dBFS; aprovação musical dada pelo dono em 27/10/2026. LUFS ainda pendente: o Sineiro tem RMS maior que as outras faixas e precisa de ajuste de loudness na integração.
+Validação técnica dos WAVs: cabeçalhos, duração, pico, RMS, estéreo, DC, amostras finitas, ausência de clipping e salto na emenda. Hashes e medições: `snowfield-manifest.json`. A checagem numérica não substitui revisão auditiva. Os seis temas dos chefes tiveram aprovação musical do dono em 27/10/2026. O tema do iglu é uma composição nova de 28/10/2026, no mesmo motor, sem revisão auditiva humana nesta sessão.
 
-Sem alteração em GameAudio ou mecânicas. Vincular ao encontro correto quando os bosses estiverem implementados; frostKnight já existe, os demais nomes são de assets planejados.
+Integração de 28/10/2026: `GameAudio` seleciona o iglu na base do Nevado, dentro do abrigo e após a run. Cada um dos quatro guardiões tem sua faixa; o Rei do Inverno tem fase normal e enfurecida. O abrigo tem prioridade sobre os encontros; ao sair, volta a música do encontro. O menu inicial mantém a taverna. Pré-carregamento do chefão segue a arena, inclusive na transição de fase. Sem alteração de mecânicas.
 
-Publicação: versionar fontes, player e relatórios. Os WAVs completos, brutos e sampler ficam locais e ignorados pelo Git; podem ser reproduzidos com os scripts abaixo. Ainda não há MP3s: gerar versões com loudness casado para a integração com GameAudio, que usa MP3.
+Publicação: as sete faixas MP3 em `src/assets/audio/music/snowfield/` são carregadas sob demanda. WAVs e brutos ficam locais e ignorados pelo Git. `encode-music.py` preserva os WAVs, normaliza em duas passagens EBU R128 e grava MP3 estéreo a 160 kbps. Medição final: -14,45 a -14,51 LUFS; true peak abaixo de -1,9 dBFS (`integration-loudness.json`). Nenhum asset anterior foi sobrescrito.
 
-Reproduzir da raiz: `node art-source/audio/snowfield/render-snowfield.mjs`; depois `python art-source/audio/snowfield/audit-snowfield.py`. O renderer versiona WAVs existentes; a auditoria recusa sobrescrever relatórios/sampler. Para nova rodada, use arquivos de relatório versionados.
+Reproduzir da raiz: `node art-source/audio/snowfield/render-snowfield.mjs` (ou `igloo` para só o abrigo); depois `python art-source/audio/snowfield/encode-music.py --ffmpeg <executável>`. O renderer versiona WAVs existentes; o encoder recusa MP3s/relatórios existentes. Para nova rodada, use nomes versionados. A auditoria histórica `audit-snowfield.py` corresponde aos seis WAVs originais.
 
-Git: criação de branch/sincronização bloqueada nesta sessão por acesso negado a `.git/FETCH_HEAD`. Arquivos novos ficaram separados na cópia principal; nenhum commit/push/PR.
+Verificação da integração: com Vite na pasta principal, `node art-source/audio/snowfield/verify-game-music.mjs 5186` exercita os quatro guardiões, ambas as fases do Rei, entrada/saída do abrigo e base. Confere faixa atual, decodificação, sinal no bus, estéreo e reprodução após a emenda dos sete MP3s. Relatório e screenshots em `tools/discord/.state/`; não é revisão auditiva.

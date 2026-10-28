@@ -7,6 +7,13 @@ import { SoundName, synthesizeSound } from './soundbank';
 /** The score, one loop per situation (art-source/MUSIC_PROMPTS.md), loudness-matched MP3s. One static URL literal per
  *  file so Vite rewrites them; each is fetched the first time it's needed. */
 const TRACK_URLS = {
+  igloo: new URL('../assets/audio/music/snowfield/igloo.mp3', import.meta.url).href,
+  'guardian-frost-knight': new URL('../assets/audio/music/snowfield/guardian-frost-knight.mp3', import.meta.url).href,
+  'guardian-ice-serpent': new URL('../assets/audio/music/snowfield/guardian-ice-serpent.mp3', import.meta.url).href,
+  'guardian-bellringer': new URL('../assets/audio/music/snowfield/guardian-bellringer.mp3', import.meta.url).href,
+  'guardian-ancient-yeti': new URL('../assets/audio/music/snowfield/guardian-ancient-yeti.mp3', import.meta.url).href,
+  'boss-winter-king': new URL('../assets/audio/music/snowfield/boss-winter-king.mp3', import.meta.url).href,
+  'boss-winter-king-enraged': new URL('../assets/audio/music/snowfield/boss-winter-king-enraged.mp3', import.meta.url).href,
   tavern: new URL('../assets/audio/music/tavern.mp3', import.meta.url).href,
   // The original score ("The Last Watch", src/audio/score.ts) stays the arena's theme.
   arena: new URL('../assets/audio/the-last-watch.mp3', import.meta.url).href,
@@ -26,11 +33,12 @@ const STING_URLS = {
 };
 export type TrackName = keyof typeof TRACK_URLS;
 type StingName = keyof typeof STING_URLS;
-const GUARDIAN_TRACK: Record<MiniBossKind, TrackName> = { gravedigger: 'guardian-gravedigger', templeGuardian: 'guardian-temple', lakeSpirit: 'guardian-lake', frostKnight: 'guardian-temple', iceSerpent: 'guardian-lake', bellringer: 'guardian-gravedigger', ancientYeti: 'guardian-temple' };
+const GUARDIAN_TRACK: Record<MiniBossKind, TrackName> = { gravedigger: 'guardian-gravedigger', templeGuardian: 'guardian-temple', lakeSpirit: 'guardian-lake', frostKnight: 'guardian-frost-knight', iceSerpent: 'guardian-ice-serpent', bellringer: 'guardian-bellringer', ancientYeti: 'guardian-ancient-yeti' };
 const CROSSFADE_S = 1.6;
 
 /** What the music reads off the session (GameSession fits it). */
 export interface MusicSituation {
+  arena: { layout: { id: string } };
   merchant: { hub: boolean; inside: boolean };
   bosses: { bosses: ReadonlyArray<{ phaseTwo: boolean; enraged: boolean }> };
   miniBosses: { bosses: ReadonlyArray<{ kind: MiniBossKind }> };
@@ -39,12 +47,18 @@ export interface MusicSituation {
   over: boolean;
 }
 
-/** The loop the moment calls for: the tavern (menu, between runs, inside the portal, after a run), the Necromancer
- *  (enraged once he's in his second phase), a guardian's theme while one is up, else the arena, heating up from the
- *  third difficulty stage. */
+/** Both boss phases belong to the arena's ruler; warning preloads must follow the same choice as playback. */
+function finalBossTrack(session: MusicSituation, enraged: boolean): TrackName {
+  return session.arena.layout.id === 'snowfield'
+    ? enraged ? 'boss-winter-king-enraged' : 'boss-winter-king'
+    : enraged ? 'boss-necromancer-enraged' : 'boss-necromancer';
+}
+
+/** Shelters take priority over combat, then the final boss, guardians and the arena's intensity. */
 export function musicFor(session: MusicSituation, inMenu: boolean): TrackName {
-  if (inMenu || session.over || session.merchant.hub || session.merchant.inside) return 'tavern';
-  if (session.bosses.bosses.length) return session.bosses.bosses.some((boss) => boss.phaseTwo || boss.enraged) ? 'boss-necromancer-enraged' : 'boss-necromancer';
+  if (inMenu) return 'tavern';
+  if (session.over || session.merchant.hub || session.merchant.inside) return session.arena.layout.id === 'snowfield' ? 'igloo' : 'tavern';
+  if (session.bosses.bosses.length) return finalBossTrack(session, session.bosses.bosses.some((boss) => boss.phaseTwo || boss.enraged));
   const guardian = session.miniBosses.bosses[0];
   if (guardian) return GUARDIAN_TRACK[guardian.kind];
   return session.difficulty.stageFor(session.elapsedMs).startMs >= DIFFICULTY_STAGES[2].startMs ? 'arena-intense' : 'arena';
@@ -280,12 +294,12 @@ export class GameAudio {
       on('player-damaged', () => this.play('hurt')),
       on('pickup-collected', ({ kind }) => this.play(kind === 'gem' ? 'pickup' : 'upgrade', undefined, kind === 'gem' ? .35 : .65)),
       on('upgrade-applied', () => this.play('upgrade', undefined, .65, true)),
-      on('boss-warning', () => { this.sting('boss'); this.preload(TRACK_URLS['boss-necromancer']); }),
+      on('boss-warning', () => { this.sting('boss'); this.preload(TRACK_URLS[finalBossTrack(session, false)]); }),
       on('boss-shield-countdown', () => this.play('warning', undefined, .35)),
       on('boss-explosion', ({ x, y, kind }) => this.play('explosion', { x, y }, kind === 'shield' ? 1 : .65)),
       on('boss-shield-broken', ({ enemy }) => this.play('shield-break', enemy)),
-      on('boss-phase-two', () => { this.play('roar'); this.preload(TRACK_URLS['boss-necromancer-enraged']); }),
-      on('boss-enraged', () => this.play('roar', undefined, .8)),
+      on('boss-phase-two', () => { this.play('roar'); this.preload(TRACK_URLS[finalBossTrack(session, true)]); }),
+      on('boss-enraged', () => { this.play('roar', undefined, .8); this.preload(TRACK_URLS[finalBossTrack(session, true)]); }),
       on('boss-shockwave', ({ x, y }) => this.play('explosion', { x, y })),
       on('boss-wave-cleared', () => this.play('victory')),
       on('miniboss-warning', ({ kind }) => { this.sting('guardian'); this.preload(TRACK_URLS[GUARDIAN_TRACK[kind]]); }),
