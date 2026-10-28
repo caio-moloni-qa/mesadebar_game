@@ -1,10 +1,10 @@
-import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, GUARDIAN_FIGHT_SPAWNS, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS } from '../../config/balance';
+import { ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, EnemyVariantScheduleEntry, GUARDIAN_FIGHT_SPAWNS, HORDE_BY_ARENA, WOLF_PACK, HordeRoster, HordeVariantId, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS } from '../../config/balance';
 import { WORLD_SIZE } from '../../config/world';
-import { Rng, Vec2, intBetween, randomPointAround } from '../math';
+import { Rng, Vec2, floatBetween, intBetween, randomPointAround } from '../math';
 import { DifficultyStage } from './DifficultySystem';
 
-/** The variants the timed schedule spawns. */
-export type ScheduledVariantId = keyof typeof ENEMY_VARIANTS;
+/** The variants the timed schedule spawns (every arena's horde roster). */
+export type ScheduledVariantId = HordeVariantId;
 export type MiniBossVariantId = keyof typeof MINI_BOSS_VARIANTS;
 export type NeutralVariantId = keyof typeof NEUTRAL_VARIANTS;
 /** Everything the 3D core can spawn: the schedule's variants, the zone mini-bosses and the neutral creatures. */
@@ -16,6 +16,8 @@ export interface SpawnRequest {
   x: number;
   y: number;
   maxHealth: number;
+  /** A pack member's side of the hero (radians, world x/y): it circles out there before biting (WOLF_PACK). */
+  flankAngle?: number;
 }
 
 /** Everything the scheduler reads from the running game, exposed narrowly (same Host pattern as the other systems). */
@@ -36,24 +38,27 @@ const SKELETON_SPAWN_DISTANCE = { min: 700, max: 900 };
 const MAP_SPAWN_MARGIN = 120;
 const BORDER_SPAWN_EDGE = 40;
 
-/** Engine-agnostic "who/when/where/how strong" spawn decisions: the regular skeleton drip and the three scheduled
- *  variants (Necromante every 15s, Aparição hordes every 30s, Super Esqueleto waves every 40s — see
- *  ENEMY_VARIANT_SCHEDULE). Emits SpawnRequests through the host, which the session turns into enemies. */
+/** Engine-agnostic "who/when/where/how strong" spawn decisions: the base drip and the three scheduled roles
+ *  (summoner every 15s, fast hordes every 30s, elite waves every 40s — see ENEMY_VARIANT_SCHEDULE). Which variant
+ *  plays each role comes from the arena's roster (HORDE_BY_ARENA). Emits SpawnRequests through the host, which the
+ *  session turns into enemies. */
 export class EnemySpawnScheduler {
   private skeletonSpawnElapsed = 0;
-  private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.variantId, 0]));
-  /** Aparição horde size/health both grow with this — see spawnApparitionHorde. */
+  private packSpawnElapsed = 0;
+  private readonly variantSpawnElapsed = new Map<string, number>(ENEMY_VARIANT_SCHEDULE.map((entry) => [entry.role, 0]));
+  /** Fast horde size/health both grow with this — see spawnFastHorde. */
   private apparitionHordeLevel = 0;
-  /** How many Super Esqueletos spawn in the next wave — grows +2 every wave (see spawnSuperSkeletonWave), uncapped
-   *  by design: count is this variant's only difficulty lever besides the healthMultiplier applied per spawn. */
+  /** How many elites spawn in the next wave — grows +2 every wave (see spawnEliteWave), uncapped by design: count
+   *  is this role's only difficulty lever besides the healthMultiplier applied per spawn. */
   private superSkeletonSpawnCount = 1;
 
-  /** `worldSize`: side of the square play area (the 2D build's WORLD_SIZE, or the 3D arena's size). */
-  constructor(private readonly host: EnemySpawnSchedulerHost, private readonly rng: Rng, private readonly worldSize: number = WORLD_SIZE) {}
+  /** `worldSize`: side of the square play area. `horde`: who plays each role (Greenfield's unless told otherwise). */
+  constructor(private readonly host: EnemySpawnSchedulerHost, private readonly rng: Rng, private readonly worldSize: number = WORLD_SIZE, private readonly horde: HordeRoster = HORDE_BY_ARENA.greenfield) {}
 
   reset(): void {
     this.skeletonSpawnElapsed = 0;
-    ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, 0));
+    this.packSpawnElapsed = 0;
+    ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.role, 0));
     this.apparitionHordeLevel = 0;
     this.superSkeletonSpawnCount = 1;
   }
@@ -63,8 +68,9 @@ export class EnemySpawnScheduler {
   update(delta: number, elapsedMs: number): void {
     this.skeletonSpawnElapsed += delta;
     // The hordes wait out a guardian fight instead of arriving the moment it ends.
-    if (!this.host.guardianFight?.()) ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.variantId, (this.variantSpawnElapsed.get(entry.variantId) ?? 0) + delta));
+    if (!this.host.guardianFight?.()) ENEMY_VARIANT_SCHEDULE.forEach((entry) => this.variantSpawnElapsed.set(entry.role, (this.variantSpawnElapsed.get(entry.role) ?? 0) + delta));
     this.spawnDueSkeletons(elapsedMs);
+    if (this.horde.pack) this.spawnDuePack(delta, elapsedMs);
     this.spawnDueVariants(elapsedMs);
   }
 
@@ -81,47 +87,75 @@ export class EnemySpawnScheduler {
     this.skeletonSpawnElapsed = 0;
     if (fight && (this.host.liveEnemyCount?.() ?? 0) >= GUARDIAN_FIGHT_SPAWNS.enemyCap) return;
     const count = fight ? Math.min(stage.count, GUARDIAN_FIGHT_SPAWNS.maxPerTick) : stage.count;
+    const variantId = this.horde.base;
     for (let i = 0; i < count; i += 1) {
       const position = randomPointAround(this.rng, this.host.getPlayerPosition(), SKELETON_SPAWN_DISTANCE.min, SKELETON_SPAWN_DISTANCE.max);
-      this.host.spawn({ variantId: 'skeleton', ...position, maxHealth: ENEMY_VARIANTS.skeleton.maxHealth * stage.healthMultiplier });
+      this.host.spawn({ variantId, ...position, maxHealth: ENEMY_VARIANTS[variantId].maxHealth * stage.healthMultiplier });
+    }
+  }
+
+  /** The roster's pack creature, a whole pack at a time; it sits out encounters and guardian fights. */
+  private spawnDuePack(delta: number, elapsedMs: number): void {
+    if (!this.host.isSkeletonSpawnEnabled() || this.host.hasActiveEncounter() || this.host.guardianFight?.()) return;
+    this.packSpawnElapsed += delta;
+    if (this.packSpawnElapsed < WOLF_PACK.intervalMs) return;
+    this.packSpawnElapsed = 0;
+    const center = randomPointAround(this.rng, this.host.getPlayerPosition(), SKELETON_SPAWN_DISTANCE.min, SKELETON_SPAWN_DISTANCE.max);
+    this.spawnPack(center, intBetween(this.rng, WOLF_PACK.min, WOLF_PACK.max), this.host.difficultyStageFor(elapsedMs).healthMultiplier);
+  }
+
+  /** `count` of the roster's pack creature (wolves if it has none) bunched around `center`, each sent to its own side
+   *  of the hero: evenly over WOLF_PACK.flankArc either way of the line the pack comes in on. */
+  spawnPack(center: Vec2, count: number, healthMultiplier = 1): void {
+    const variantId = this.horde.pack ?? 'iceWolf';
+    const player = this.host.getPlayerPosition();
+    const approach = Math.atan2(center.y - player.y, center.x - player.x);
+    for (let index = 0; index < count; index += 1) {
+      const position = randomPointAround(this.rng, center, 0, WOLF_PACK.spread);
+      const share = count === 1 ? 0 : index / (count - 1) * 2 - 1;
+      const flankAngle = approach + share * WOLF_PACK.flankArc + floatBetween(this.rng, -0.15, 0.15);
+      this.host.spawn({ variantId, ...position, maxHealth: ENEMY_VARIANTS[variantId].maxHealth * healthMultiplier, flankAngle });
     }
   }
 
   private spawnDueVariants(elapsedMs: number): void {
     if (!this.host.isVariantSpawnEnabled() || this.host.hasActiveEncounter() || this.host.guardianFight?.()) return;
     ENEMY_VARIANT_SCHEDULE.forEach((entry) => {
-      const elapsed = this.variantSpawnElapsed.get(entry.variantId) ?? 0;
+      const elapsed = this.variantSpawnElapsed.get(entry.role) ?? 0;
       if (elapsed < entry.intervalMs) return;
-      this.variantSpawnElapsed.set(entry.variantId, 0);
-      this.spawnScheduledVariant(entry.variantId, elapsedMs);
+      this.variantSpawnElapsed.set(entry.role, 0);
+      this.spawnScheduledRole(entry.role, elapsedMs);
     });
   }
 
-  /** Necromante and Super Esqueleto scale through the same DifficultySystem.healthMultiplier (time stage x boss-cycle)
-   *  as the skeleton, so nothing in the roster is exempt from difficulty scaling. */
-  private spawnScheduledVariant(variantId: EnemyVariantScheduleEntry['variantId'], elapsedMs: number): void {
+  /** The summoner and the elite scale through the same DifficultySystem.healthMultiplier (time stage x boss-cycle)
+   *  as the base, so nothing in the roster is exempt from difficulty scaling. */
+  private spawnScheduledRole(role: EnemyVariantScheduleEntry['role'], elapsedMs: number): void {
     const healthMultiplier = this.host.difficultyStageFor(elapsedMs).healthMultiplier;
-    if (variantId === 'necromancerWraith') { this.spawnNecromancer(healthMultiplier); return; }
-    if (variantId === 'apparitionWraith') { this.spawnApparitionHorde(); return; }
-    this.spawnSuperSkeletonWave(healthMultiplier);
+    if (role === 'summoner') { this.spawnSummoner(healthMultiplier); return; }
+    if (role === 'fast') { this.spawnFastHorde(); return; }
+    this.spawnEliteWave(healthMultiplier);
   }
 
-  private spawnNecromancer(healthMultiplier: number): void {
-    this.host.spawn({ variantId: 'necromancerWraith', ...this.randomMapPosition(), maxHealth: ENEMY_VARIANTS.necromancerWraith.maxHealth * healthMultiplier });
+  private spawnSummoner(healthMultiplier: number): void {
+    const variantId = this.horde.summoner;
+    this.host.spawn({ variantId, ...this.randomMapPosition(), maxHealth: ENEMY_VARIANTS[variantId].maxHealth * healthMultiplier });
   }
 
-  private spawnApparitionHorde(): void {
+  private spawnFastHorde(): void {
+    const variantId = this.horde.fast;
     const count = 10 + this.apparitionHordeLevel * 2;
-    const health = ENEMY_VARIANTS.apparitionWraith.maxHealth + this.apparitionHordeLevel * 12;
+    const health = ENEMY_VARIANTS[variantId].maxHealth + this.apparitionHordeLevel * 12;
     for (let index = 0; index < count; index += 1) {
-      this.host.spawn({ variantId: 'apparitionWraith', ...this.randomBorderPosition(), maxHealth: health });
+      this.host.spawn({ variantId, ...this.randomBorderPosition(), maxHealth: health });
     }
     this.apparitionHordeLevel += 1;
   }
 
-  private spawnSuperSkeletonWave(healthMultiplier: number): void {
+  private spawnEliteWave(healthMultiplier: number): void {
+    const variantId = this.horde.elite;
     for (let index = 0; index < this.superSkeletonSpawnCount; index += 1) {
-      this.host.spawn({ variantId: 'superSkeleton', ...this.randomBorderPosition(), maxHealth: ENEMY_VARIANTS.superSkeleton.maxHealth * healthMultiplier });
+      this.host.spawn({ variantId, ...this.randomBorderPosition(), maxHealth: ENEMY_VARIANTS[variantId].maxHealth * healthMultiplier });
     }
     this.superSkeletonSpawnCount += 2;
   }

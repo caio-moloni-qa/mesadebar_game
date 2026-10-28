@@ -17,8 +17,13 @@ function boundWeapon(bone: string, id: 'sword' | 'staff', tilt: number, scale = 
   return { bone, geometry };
 }
 
-function skeletonParts(armored: boolean): RigPart[] {
-  const bone = armored ? 0xcfc4a6 : BONE;
+/** Esqueleto Congelado: the skeleton's bones bleached pale blue under a crust of ice — glassy shards on the shoulders,
+ *  skull and forearms, icicles hanging off the ribs and jaw, cold blue light in the sockets. */
+const FROST_BONE = { bone: 0xd6e6f0, dark: 0x8fa8bc, ice: 0x9fdcff, iceDeep: 0x4f9fd8, eye: 0x7ff0ff };
+
+function skeletonParts(armored: boolean, frost = false): RigPart[] {
+  const bone = frost ? FROST_BONE.bone : armored ? 0xcfc4a6 : BONE;
+  const boneDark = frost ? FROST_BONE.dark : BONE_DARK;
   const metal = 0x6f6a62;
   const limb = (s: 'L' | 'R'): RigPart[] => [
     { bone: `upperArm${s}`, geometry: part(box(0.08, 0.3, 0.08), bone, [0, -0.15, 0]) },
@@ -31,18 +36,37 @@ function skeletonParts(armored: boolean): RigPart[] {
   const parts: RigPart[] = [
     ...limb('L'),
     ...limb('R'),
-    { bone: 'hips', geometry: part(box(0.36, 0.12, 0.2), BONE_DARK, [0, 0, 0]) }, // pelvis
-    { bone: 'spine', geometry: part(box(0.07, 0.3, 0.07), BONE_DARK, [0, 0.14, -0.04]) }, // spine column
+    { bone: 'hips', geometry: part(box(0.36, 0.12, 0.2), boneDark, [0, 0, 0]) }, // pelvis
+    { bone: 'spine', geometry: part(box(0.07, 0.3, 0.07), boneDark, [0, 0.14, -0.04]) }, // spine column
     // Ribcage: three slats with gaps so it reads as bones, not a solid torso.
     ...[0, 1, 2].map((rib) => ({ bone: 'chest', geometry: part(box(0.44 - rib * 0.05, 0.06, 0.26), bone, [0, -0.04 + rib * 0.11, 0]) })),
     { bone: 'chest', geometry: part(box(0.5, 0.07, 0.22), bone, [0, 0.27, 0]) }, // collarbones
-    { bone: 'head', geometry: part(box(0.06, 0.12, 0.06), BONE_DARK, [0, 0.04, 0]) },
+    { bone: 'head', geometry: part(box(0.06, 0.12, 0.06), boneDark, [0, 0.04, 0]) },
     { bone: 'head', geometry: part(ball(0.21, 1), bone, [0, 0.26, 0]) }, // skull
-    { bone: 'head', geometry: part(box(0.24, 0.08, 0.16), BONE_DARK, [0, 0.1, 0.06]) }, // jaw
-    { bone: 'head', geometry: part(box(0.07, 0.07, 0.04), SOCKET, [0.07, 0.27, 0.19]) }, // eye sockets
-    { bone: 'head', geometry: part(box(0.07, 0.07, 0.04), SOCKET, [-0.07, 0.27, 0.19]) },
+    { bone: 'head', geometry: part(box(0.24, 0.08, 0.16), boneDark, [0, 0.1, 0.06]) }, // jaw
+    { bone: 'head', geometry: part(box(0.07, 0.07, 0.04), frost ? FROST_BONE.eye : SOCKET, [0.07, 0.27, 0.19]) }, // eye sockets
+    { bone: 'head', geometry: part(box(0.07, 0.07, 0.04), frost ? FROST_BONE.eye : SOCKET, [-0.07, 0.27, 0.19]) },
     boundWeapon('handR', 'sword', 1.35, armored ? 1.5 : 1)
   ];
+  if (frost) {
+    const { ice, iceDeep } = FROST_BONE;
+    const icicle = (bone: string, x: number, y: number, z: number, length: number): RigPart => ({ bone, geometry: part(cone(0.03, length, 4), ice, [x, y - length / 2, z], [Math.PI, 0, 0]) });
+    parts.push(
+      // Ice crust: a cap of shards over the skull, one glassy chunk on each shoulder and forearm.
+      { bone: 'head', geometry: part(gem(0.13), ice, [0.06, 0.42, -0.02], [0.3, 0.4, 0.2], [1, 1.5, 1]) },
+      { bone: 'head', geometry: part(gem(0.09), iceDeep, [-0.1, 0.4, 0.02], [0.2, 0, -0.5], [1, 1.6, 1]) },
+      { bone: 'head', geometry: part(gem(0.07), ice, [0.13, 0.33, 0.08], [0, 0.3, 0.7], [1, 1.4, 1]) },
+      { bone: 'chest', geometry: part(gem(0.12), ice, [0.24, 0.3, 0], [0, 0.4, -0.5], [1, 0.8, 1]) },
+      { bone: 'chest', geometry: part(gem(0.1), iceDeep, [-0.25, 0.31, 0.02], [0, -0.3, 0.6], [1, 0.8, 1]) },
+      { bone: 'foreArmL', geometry: part(gem(0.08), ice, [0.03, -0.12, 0], [0, 0, 0.3], [1, 1.6, 1]) },
+      { bone: 'foreArmR', geometry: part(gem(0.08), iceDeep, [-0.03, -0.1, 0], [0, 0, -0.3], [1, 1.6, 1]) },
+      { bone: 'shinL', geometry: part(gem(0.07), ice, [0.04, -0.12, 0.02], [0, 0, 0.2], [1, 1.5, 1]) },
+      // Icicles dripping off the jaw, the ribs and the pelvis.
+      icicle('head', 0.06, 0.06, 0.12, 0.1), icicle('head', -0.05, 0.06, 0.13, 0.08),
+      icicle('chest', 0.15, -0.07, 0.12, 0.14), icicle('chest', -0.12, -0.07, 0.12, 0.11), icicle('chest', 0.02, -0.07, 0.13, 0.17),
+      icicle('hips', 0.14, -0.06, 0.08, 0.12), icicle('hips', -0.15, -0.06, 0.06, 0.09)
+    );
+  }
   if (armored) {
     parts.push(
       { bone: 'head', geometry: part(cylinder(0.24, 0.26, 0.22, 7), metal, [0, 0.36, 0]) }, // helmet
@@ -97,6 +121,29 @@ function wraithParts(robe: number, trim: number, eyes: number, withStaff: boolea
       { bone: 'foreArmR', geometry: part(gem(0.07), eyes, [0, 0.72, 0.08]) }
     );
   }
+  return parts;
+}
+
+/** Espírito da Geada: the Aparição's robe in frost white over deep glacier-blue trim, a crown of ice spikes on the
+ *  hood, a hem that breaks into hanging shards and a crystal floating in each hand. */
+const FROST_SPIRIT = { robe: 0xe4f6ff, trim: 0x3f8fd0, eyes: 0x9ff8ff, ice: 0xa8e6ff, deep: 0x5ab0ea };
+function frostSpiritParts(): RigPart[] {
+  const { ice, deep } = FROST_SPIRIT;
+  const parts = wraithParts(FROST_SPIRIT.robe, FROST_SPIRIT.trim, FROST_SPIRIT.eyes, false);
+  // Seven shards round the hem, alternating long/short, pointing down and a little out.
+  for (let index = 0; index < 7; index += 1) {
+    const angle = (index / 7) * Math.PI * 2;
+    const length = index % 2 ? 0.18 : 0.3;
+    parts.push({ bone: 'skirt', geometry: part(cone(0.06, length, 4), index % 2 ? deep : ice, [Math.sin(angle) * 0.46, -0.82 - length / 2, Math.cos(angle) * 0.46], [Math.PI + Math.cos(angle) * 0.25, 0, -Math.sin(angle) * 0.25]) });
+  }
+  parts.push(
+    // The crown: five spikes fanning up and back round the hood.
+    ...[-2, -1, 0, 1, 2].map((slot): RigPart => ({ bone: 'head', geometry: part(cone(0.045, 0.24 - Math.abs(slot) * 0.04, 4), slot % 2 ? deep : ice, [slot * 0.09, 0.42 - Math.abs(slot) * 0.06, -0.08], [-0.35, 0, -slot * 0.32]) })),
+    { bone: 'foreArmL', geometry: part(gem(0.08), ice, [0, -0.46, 0.04], [0, 0, 0], [1, 1.5, 1]) },
+    { bone: 'foreArmR', geometry: part(gem(0.08), ice, [0, -0.46, 0.04], [0, 0, 0], [1, 1.5, 1]) },
+    // A frosted collar.
+    { bone: 'chest', geometry: part(cylinder(0.33, 0.3, 0.07, 7), deep, [0, 0.28, 0]) }
+  );
   return parts;
 }
 
@@ -219,6 +266,92 @@ function mimicParts(): RigPart[] {
   ];
 }
 
+/** Snowfield summoner: dark blue robes, white fur mantle, antlers and a crystal staff. */
+function snowShamanParts(): RigPart[] {
+  return [
+    ...wraithParts(0x284769, 0xc4e9fa, 0x6ef5ff, false),
+    { bone: 'chest', geometry: part(cylinder(0.38, 0.32, 0.18, 7), 0xf1f7ff, [0, 0.24, 0]) },
+    { bone: 'foreArmR', geometry: part(cylinder(0.035, 0.045, 1.7, 5), 0x594a43, [0, -0.05, 0.12]) },
+    { bone: 'foreArmR', geometry: part(gem(0.16), 0x73dfff, [0, 0.88, 0.12], [0, 0, 0], [0.8, 1.6, 0.8]) },
+    ...([-1, 1] as const).flatMap((side): RigPart[] => [
+      { bone: 'head', geometry: part(cone(0.07, 0.48, 5), 0xb1d8eb, [side * 0.23, 0.47, -0.05], [0, 0, -side * 0.65]) },
+      { bone: 'head', geometry: part(cone(0.04, 0.23, 4), 0xe4f6ff, [side * 0.36, 0.52, 0], [0.3, 0, side * 0.3]) }
+    ])
+  ];
+}
+
+/** Three snowballs with twig arms, coal buttons, scarf and a carrot nose. */
+function snowmanParts(): RigPart[] {
+  return [
+    { bone: 'hips', geometry: part(ball(0.42, 1), 0xe3f2ff, [0, -0.38, 0]) },
+    { bone: 'chest', geometry: part(ball(0.3, 1), 0xf7fbff, [0, -0.18, 0]) },
+    { bone: 'head', geometry: part(ball(0.23, 1), 0xffffff, [0, 0.04, 0]) },
+    { bone: 'head', geometry: part(cone(0.055, 0.22, 5), 0xf68b36, [0, 0.02, 0.28], [Math.PI / 2, 0, 0]) },
+    ...[-1, 1].map((side): RigPart => ({ bone: 'head', geometry: part(ball(0.035), 0x193048, [side * 0.09, 0.1, 0.2]) })),
+    ...[0, 1].map((i): RigPart => ({ bone: 'chest', geometry: part(ball(0.04), 0x193048, [0, -0.1 - i * 0.16, 0.28]) })),
+    { bone: 'chest', geometry: part(cylinder(0.24, 0.28, 0.1, 7), 0x8e3a63, [0, 0.08, 0]) },
+    { bone: 'chest', geometry: part(box(0.12, 0.32, 0.05), 0xb9507d, [0.17, -0.05, 0.25], [0, 0, 0.15]) },
+    ...(['L', 'R'] as const).map((side): RigPart => ({ bone: `upperArm${side}`, geometry: part(cylinder(0.025, 0.04, 0.48, 5), 0x60504b, [0, -0.2, 0], [0, 0, side === 'L' ? -0.7 : 0.7]) }))
+  ];
+}
+
+/** Broad glacier-blue brute with huge fists, tusks and a jagged ice ridge. */
+function iceTrollParts(): RigPart[] {
+  const parts: RigPart[] = [
+    { bone: 'hips', geometry: part(box(0.62, 0.32, 0.4), 0x3a7095, [0, 0, 0]) },
+    { bone: 'chest', geometry: part(ball(0.47, 1), 0x71accc, [0, 0.1, 0], [0, 0, 0], [1.2, 1, 0.8]) },
+    { bone: 'head', geometry: part(box(0.44, 0.38, 0.36), 0x8dc9df, [0, 0.19, 0.08]) },
+    { bone: 'head', geometry: part(box(0.35, 0.15, 0.18), 0x3a7095, [0, 0.03, 0.26]) },
+    ...[-1, 1].flatMap((side): RigPart[] => [
+      { bone: 'head', geometry: part(box(0.075, 0.045, 0.03), 0xc9ffff, [side * 0.12, 0.23, 0.27]) },
+      { bone: 'head', geometry: part(cone(0.045, 0.22, 5), 0xe9faff, [side * 0.15, 0.1, 0.34], [0.2, 0, -side * 0.2]) },
+      { bone: 'chest', geometry: part(gem(0.2), 0xb8edff, [side * 0.43, 0.37, -0.02], [0, 0, -side * 0.5], [1, 1.7, 1]) }
+    ])
+  ];
+  for (const side of ['L', 'R'] as const) parts.push(
+    { bone: `upperArm${side}`, geometry: part(box(0.25, 0.36, 0.28), 0x71accc, [0, -0.16, 0]) },
+    { bone: `foreArm${side}`, geometry: part(box(0.28, 0.3, 0.3), 0x3a7095, [0, -0.13, 0]) },
+    { bone: `hand${side}`, geometry: part(ball(0.21, 1), 0x9eddf2, [0, -0.07, 0.06]) },
+    { bone: `thigh${side}`, geometry: part(box(0.24, 0.4, 0.26), 0x3a7095, [0, -0.2, 0]) },
+    { bone: `shin${side}`, geometry: part(box(0.2, 0.38, 0.22), 0x71accc, [0, -0.19, 0]) },
+    { bone: `foot${side}`, geometry: part(box(0.27, 0.13, 0.36), 0x9eddf2, [0, 0.02, 0.08]) }
+  );
+  return parts;
+}
+
+/** Lobo do Gelo: lean grey-blue body on long legs, a shaggy white ruff with ice shards through it, a long muzzle,
+ *  upright ears, glowing ice-blue eyes and a low bushy tail. Bones: quadrupedBones, slimmer than the boar. */
+const WOLF = { coat: 0x7f95aa, shade: 0x52667c, light: 0xe8f2f8, ruff: 0xf4faff, nose: 0x1a2430, eye: 0x7ff0ff, ice: 0xa8e6ff, paw: 0x4f6274 };
+function iceWolfParts(): RigPart[] {
+  const leg = (name: string, thigh: number, shin: number): RigPart[] => [
+    { bone: `leg${name}`, geometry: part(box(0.1, thigh, 0.12), WOLF.coat, [0, -thigh / 2 + 0.03, 0]) },
+    { bone: `shin${name}`, geometry: part(box(0.07, shin, 0.07), WOLF.shade, [0, -shin / 2, 0]) },
+    { bone: `shin${name}`, geometry: part(box(0.09, 0.05, 0.11), WOLF.paw, [0, -shin + 0.02, 0.02]) }
+  ];
+  return [
+    ...leg('FL', 0.24, 0.26), ...leg('FR', 0.24, 0.26), ...leg('BL', 0.26, 0.24), ...leg('BR', 0.26, 0.24),
+    // Narrow rump, pale belly, deeper chest under the ruff.
+    { bone: 'hips', geometry: part(box(0.28, 0.26, 0.4), WOLF.coat, [0, 0, 0.08]) },
+    { bone: 'hips', geometry: part(box(0.22, 0.08, 0.36), WOLF.light, [0, -0.13, 0.12]) },
+    { bone: 'chest', geometry: part(box(0.34, 0.34, 0.36), WOLF.coat, [0, 0.02, -0.08]) },
+    { bone: 'chest', geometry: part(box(0.12, 0.1, 0.5), WOLF.shade, [0, 0.19, -0.16]) }, // dark saddle along the back
+    // The ruff: a white collar of fur round the neck, ice shards bristling through it.
+    { bone: 'chest', geometry: part(cylinder(0.24, 0.2, 0.26, 6), WOLF.ruff, [0, 0.06, 0.1], [Math.PI / 2, 0, 0]) },
+    ...[-1, 0, 1].map((slot): RigPart => ({ bone: 'chest', geometry: part(gem(0.07), WOLF.ice, [slot * 0.12, 0.27 - Math.abs(slot) * 0.05, 0.02 - Math.abs(slot) * 0.05], [-0.4, 0, -slot * 0.5], [1, 1.8, 1]) })),
+    // Head: skull, a long tapering muzzle, black nose, ears up.
+    { bone: 'head', geometry: part(box(0.22, 0.2, 0.22), WOLF.coat, [0, 0.06, 0.02]) },
+    { bone: 'head', geometry: part(box(0.13, 0.1, 0.2), WOLF.light, [0, 0.0, 0.2]) },
+    { bone: 'head', geometry: part(box(0.06, 0.05, 0.04), WOLF.nose, [0, 0.04, 0.31]) },
+    { bone: 'head', geometry: part(box(0.05, 0.035, 0.02), WOLF.eye, [0.065, 0.1, 0.13]) },
+    { bone: 'head', geometry: part(box(0.05, 0.035, 0.02), WOLF.eye, [-0.065, 0.1, 0.13]) },
+    { bone: 'head', geometry: part(cone(0.05, 0.14, 4), WOLF.shade, [0.07, 0.22, -0.03], [-0.15, 0, -0.2]) },
+    { bone: 'head', geometry: part(cone(0.05, 0.14, 4), WOLF.shade, [-0.07, 0.22, -0.03], [-0.15, 0, 0.2]) },
+    // Bushy tail hanging low, tipped white.
+    { bone: 'tail', geometry: part(box(0.09, 0.09, 0.3), WOLF.coat, [0, -0.06, -0.14], [0.6, 0, 0]) },
+    { bone: 'tail', geometry: part(box(0.08, 0.08, 0.1), WOLF.ruff, [0, -0.17, -0.27], [0.6, 0, 0]) }
+  ];
+}
+
 export interface BakedEnemyModel {
   /** Rest geometry with `frames` absolute morph targets (positions + normals) sampled from the clip. */
   geometry: THREE.BufferGeometry;
@@ -286,18 +419,19 @@ const material = () => new THREE.MeshBasicMaterial();
 export function createEnemyModels(): Record<EnemyVariantId, BakedEnemyModel> {
   const walk = humanoidClips(0.82).run;
   const float = wraithFloatClip();
-  const humanoid = (armored: boolean): BakedEnemyModel => ({
-    geometry: bake(buildRiggedModel(humanoidBones(), skeletonParts(armored), material()), walk, WALK_FRAMES),
+  const humanoid = (armored: boolean, frost = false): BakedEnemyModel => ({
+    geometry: bake(buildRiggedModel(humanoidBones(), skeletonParts(armored, frost), material()), walk, WALK_FRAMES),
     frames: WALK_FRAMES,
     cycleSeconds: walk.duration,
     hovers: false
   });
-  const wraith = (robe: number, trim: number, eyes: number, staff: boolean): BakedEnemyModel => ({
-    geometry: bake(buildRiggedModel(wraithBones(), wraithParts(robe, trim, eyes, staff), material()), float, WALK_FRAMES),
+  const wraithModel = (parts: RigPart[]): BakedEnemyModel => ({
+    geometry: bake(buildRiggedModel(wraithBones(), parts, material()), float, WALK_FRAMES),
     frames: WALK_FRAMES,
     cycleSeconds: float.duration,
     hovers: true
   });
+  const wraith = (robe: number, trim: number, eyes: number, staff: boolean) => wraithModel(wraithParts(robe, trim, eyes, staff));
   const boarBones = quadrupedBones();
   const trot = quadrupedTrotClip(boarBones[1].offset);
   const boar: BakedEnemyModel = {
@@ -314,6 +448,9 @@ export function createEnemyModels(): Record<EnemyVariantId, BakedEnemyModel> {
     cycleSeconds: deerTrot.duration,
     hovers: false
   });
+  const wolfBones = quadrupedBones({ hipHeight: 0.56, bodyLength: 0.56, shoulderRise: 0.04, legSpread: 0.11, thighLength: 0.24, headReach: 0.32 });
+  const wolfTrot = quadrupedTrotClip(wolfBones[1].offset, 0.42);
+  const iceWolf: BakedEnemyModel = { geometry: bake(buildRiggedModel(wolfBones, iceWolfParts(), material()), wolfTrot, WALK_FRAMES), frames: WALK_FRAMES, cycleSeconds: wolfTrot.duration, hovers: false };
   const hiveBones: BoneSpec[] = [{ name: 'root', offset: [0, 0, 0] }, { name: 'hips', parent: 'root', offset: [0.38, 1.22, 0] }];
   const sway = hiveSwayClip(hiveBones[1].offset);
   const mimicBones: BoneSpec[] = [{ name: 'root', offset: [0, 0, 0] }, { name: 'hips', parent: 'root', offset: [0, 0, 0] }, { name: 'head', parent: 'hips', offset: [0, 0.45, -0.25] }];
@@ -325,6 +462,12 @@ export function createEnemyModels(): Record<EnemyVariantId, BakedEnemyModel> {
     superSkeleton,
     necromancerWraith: wraith(0x4a2f6b, 0x9a6bd8, 0x7dff9a, true),
     apparitionWraith: wraith(0x8fd8f0, 0xe6fbff, 0xffffff, false),
+    frostSkeleton: humanoid(false, true),
+    frostSpirit: wraithModel(frostSpiritParts()),
+    snowShaman: wraithModel(snowShamanParts()),
+    snowman: { geometry: bake(buildRiggedModel(humanoidBones(), snowmanParts(), material()), walk, WALK_FRAMES), frames: WALK_FRAMES, cycleSeconds: walk.duration, hovers: false },
+    iceWolf,
+    iceTroll: { geometry: bake(buildRiggedModel(humanoidBones({ shoulderWidth: 0.48 }), iceTrollParts(), material()), walk, WALK_FRAMES), frames: WALK_FRAMES, cycleSeconds: walk.duration, hovers: false },
     // The boss has no 3D model yet (it isn't spawned on the 3D page); the armored skeleton stands in.
     finalBoss: superSkeleton,
     // Drawn by their own rigged views; never instanced.

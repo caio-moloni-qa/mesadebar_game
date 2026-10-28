@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTY_STAGES, ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, GUARDIAN_FIGHT_SPAWNS } from '../../config/balance';
+import { DIFFICULTY_STAGES, ENEMY_VARIANTS, ENEMY_VARIANT_SCHEDULE, GUARDIAN_FIGHT_SPAWNS, HORDE_BY_ARENA, HordeRoster, WOLF_PACK, hordeFor } from '../../config/balance';
 import { WORLD_SIZE } from '../../config/world';
 import { createRng, distanceSq } from '../math';
 import { DifficultySystem } from './DifficultySystem';
@@ -124,5 +124,49 @@ describe('EnemySpawnScheduler — guardian fights', () => {
     fight = false;
     scheduler.update(1, 0);
     expect(requests).toHaveLength(0);
+  });
+});
+
+describe('EnemySpawnScheduler — horde per arena', () => {
+  const run = (horde: HordeRoster) => {
+    const requests: SpawnRequest[] = [];
+    const difficulty = new DifficultySystem();
+    const scheduler = new EnemySpawnScheduler({
+      getPlayerPosition: () => PLAYER,
+      isSkeletonSpawnEnabled: () => true,
+      isVariantSpawnEnabled: () => true,
+      hasActiveEncounter: () => false,
+      difficultyStageFor: (elapsedMs) => difficulty.stageFor(elapsedMs),
+      spawn: (request) => requests.push(request)
+    }, createRng(2024), WORLD_SIZE, horde);
+    scheduler.update(40_000, 40_000);
+    return requests;
+  };
+
+  it('keeps Greenfield exactly as it was without a roster', () => {
+    const { requests, scheduler } = setup();
+    scheduler.update(40_000, 40_000);
+    expect(run(hordeFor('greenfield'))).toEqual(requests);
+    expect(new Set(requests.map((request) => request.variantId))).toEqual(new Set(['skeleton', 'necromancerWraith', 'apparitionWraith', 'superSkeleton']));
+  });
+
+  it('fills every Campo Nevado role with its own creature', () => {
+    const variants = new Set(run(hordeFor('snowfield')).map((request) => request.variantId));
+    expect(variants).toEqual(new Set(['frostSkeleton', 'snowShaman', 'frostSpirit', 'iceTroll', 'iceWolf']));
+  });
+
+  it('mixes Lobos do Gelo into the Nevado base as one bunched pack, each wolf off to its own side', () => {
+    const wolves = run(hordeFor('snowfield')).filter((request) => request.variantId === 'iceWolf');
+    expect(wolves.length).toBeGreaterThanOrEqual(WOLF_PACK.min);
+    expect(wolves.length).toBeLessThanOrEqual(WOLF_PACK.max);
+    const xs = wolves.map((wolf) => wolf.x);
+    const ys = wolves.map((wolf) => wolf.y);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThanOrEqual(WOLF_PACK.spread * 2);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThanOrEqual(WOLF_PACK.spread * 2);
+    expect(new Set(wolves.map((wolf) => wolf.flankAngle)).size).toBe(wolves.length);
+  });
+
+  it('falls back to Greenfield\'s horde for an arena without one', () => {
+    expect(hordeFor('nowhere')).toBe(HORDE_BY_ARENA.greenfield);
   });
 });

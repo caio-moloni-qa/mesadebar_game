@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, PLAYER_CONFIG, ENEMY_VARIANTS, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, NEUTRAL_VARIANTS, requiredExperience } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, ENEMY_CONFIG, FROST_TOUCH_VARIANTS, FROST_TRAIL, ICE_TROLL, PLAYER_CONFIG, ENEMY_VARIANTS, SNOWMAN, WOLF_PACK, GUARDIAN_FIGHT_SPAWNS, HEALTH_POTION_DROP_CHANCE, HEALTH_POTION_HEAL_AMOUNT, LEVEL_UPGRADE_CONFIG, LOOT_CHEST_DROP_CHANCE, NEUTRAL_VARIANTS, hordeFor, requiredExperience } from '../../config/balance';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { RUN_DURATION_MS } from '../../config/world';
 import { MAX_ACTIVE_WEAPONS, WEAPONS, WeaponConfig, WeaponFamily, weaponFamily } from '../../config/weapons';
@@ -19,6 +19,8 @@ import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, diffi
 import { CompanionKind, MINI_BOSSES, MiniBossEvents, MiniBossKind, MiniBossSystem, guardianRotation } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId, NeutralVariantId } from '../systems/EnemySpawnScheduler';
+import { FrostTrail } from '../systems/FrostTrail';
+import { IcicleField } from '../systems/IcicleField';
 import { Upgrade, UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponEvents, WeaponHost, WeaponSystem, WEAPON_TUNING } from '../systems/WeaponSystem';
 import { ArenaMap } from '../world/ArenaMap';
@@ -39,10 +41,10 @@ const SPATIAL_CELL_SIZE = 96;
 const MAX_RANGE_PADDING = 137;
 /** Fabri's banana peels (GameScene constants). */
 /** The guardian's entrance scatters the plain horde out of sight (thinHorde). */
-const THIN_HORDE_VARIANTS: EnemyVariantId[] = ['skeleton', 'apparitionWraith'];
+const THIN_HORDE_VARIANTS: EnemyVariantId[] = ['skeleton', 'apparitionWraith', 'frostSkeleton', 'frostSpirit', 'snowman', 'iceWolf'];
 const THIN_HORDE_DISTANCE = { announced: 650, risen: 250 };
 const PEEL = { spawnChance: 0.03, minRadius: 40, maxRadius: 130, lifetimeMs: 12000 } as const;
-const SLIPPERY_VARIANTS: ReadonlySet<string> = new Set(['skeleton', 'apparitionWraith', 'superSkeleton']);
+const SLIPPERY_VARIANTS: ReadonlySet<string> = new Set(['skeleton', 'apparitionWraith', 'superSkeleton', 'frostSkeleton', 'frostSpirit', 'snowman', 'iceTroll', 'iceWolf']);
 /** Soft push between overlapping enemies (fraction of the overlap resolved per step). New in 3D: without it a horde
  *  converging on the hero collapses into one solid block of models. Static enemies and bosses are never pushed. */
 const SEPARATION_STRENGTH = 0.25;
@@ -85,6 +87,12 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'upgrade-applied': { upgrade: Upgrade };
   'weapon-added': { weapon: WeaponConfig };
   'soul-fired': { x: number; y: number };
+  /** Campo Nevado: a Boneco de Neve burst on the hero, a Troll pounded the ground (icicles marked), one landed, and
+   *  the hero froze solid (Congelamento full). */
+  'snowman-burst': { x: number; y: number };
+  'troll-slam': { x: number; y: number };
+  'icicle-landed': { x: number; y: number };
+  'player-frozen': Record<string, never>;
   'enemy-slipped': { enemy: EnemyState };
   'player-died': Record<string, never>;
   /** Segunda chance: back on their feet once, at half health. */
@@ -164,6 +172,12 @@ export class GameSession implements WeaponHost {
   readonly powers: PowerTierSystem;
   /** Wildlife living on the map (calm until hurt). */
   readonly neutrals: NeutralSystem;
+  /** The frost the Espíritos da Geada leave behind them. */
+  readonly frostTrail = new FrostTrail();
+  /** The Trolls de Gelo's icicles, marked and falling. */
+  readonly icicles = new IcicleField();
+  /** The Troll's frost aura adds a stack every ICE_TROLL.auraTickMs while the hero stands in it. */
+  private frostAuraNextAt = -Infinity;
   /** Grimbo's Tudo ou Nada rolled a six: the next level-up pick is followed by another. */
   private jackpotPending = false;
   /** Sergio's Loja Portátil can open again at this sim time. */
@@ -339,8 +353,14 @@ export class GameSession implements WeaponHost {
       guardianFight: () => this.miniBosses.active,
       liveEnemyCount: () => this.enemies.activeCount - this.neutrals.liveCount,
       difficultyStageFor: (elapsedMs) => this.difficulty.stageFor(elapsedMs),
-      spawn: (request) => { this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth); }
-    }, this.rng, this.arena.size);
+      spawn: (request) => {
+        const enemy = this.spawnEnemy(request.variantId, request.x, request.y, request.maxHealth);
+        if (enemy && request.flankAngle !== undefined) {
+          enemy.flankAngle = request.flankAngle;
+          enemy.flankUntil = this.clock.now + WOLF_PACK.flankMs;
+        }
+      }
+    }, this.rng, this.arena.size, hordeFor(this.arena.layout.id));
     if (options.hub) {
       this.skeletonSpawnEnabled = false;
       this.variantSpawnEnabled = false;
@@ -654,6 +674,7 @@ export class GameSession implements WeaponHost {
     this.rebuildEnemyHash();
     this.updateEnemies(deltaMs, now);
     this.updatePlayerStatus(deltaMs, now);
+    this.updateFrostTrail(now);
     this.weapons.update(deltaMs);
     this.companions.update(deltaMs);
     this.abilities.update(deltaMs);
@@ -686,6 +707,8 @@ export class GameSession implements WeaponHost {
   }
 
   private movePlayer(deltaMs: number, now: number): void {
+    // Frozen solid (Congelamento): not a step, not a turn.
+    if (this.player.isFrozen(now)) return;
     const distance = (this.player.effectiveMovementSpeed(now) * deltaMs) / 1000;
     const { radius } = this.player;
     this.player.x = clamp(this.player.x + this.moveX * distance, radius, this.arena.size - radius);
@@ -722,6 +745,8 @@ export class GameSession implements WeaponHost {
 
   private updateEnemies(deltaMs: number, now: number): void {
     const finished: EnemyState[] = [];
+    const summoners: EnemyState[] = [];
+    let inFrostAura = false;
     this.enemies.forEachActive((enemy) => {
       if (!enemy.alive) {
         if (now >= enemy.phaseEndsAt) finished.push(enemy);
@@ -731,7 +756,7 @@ export class GameSession implements WeaponHost {
       if (now < enemy.pullUntil && !enemy.isStatic) {
         // Zora's Eclipse drags it in, stunned or not.
         this.chase(enemy, { x: enemy.pullX, y: enemy.pullY }, deltaMs, PULL_SPEED);
-      } else if (!enemy.isStatic && !held && now >= enemy.hitStunUntil && now >= enemy.slipUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy) && !this.neutrals.controls(enemy)) {
+      } else if (!enemy.isStatic && !held && now >= enemy.hitStunUntil && now >= enemy.slipUntil && now >= enemy.windupUntil && !this.bosses.holdsStill(enemy) && !this.miniBosses.controls(enemy) && !this.neutrals.controls(enemy)) {
         // The golem companion pulls nearby enemies off the hero (bosses ignore it).
         const taunt = enemy.isCommon ? this.companions.tauntTarget(enemy) : null;
         if (now < enemy.fleeUntil) this.flee(enemy, deltaMs, now);
@@ -748,7 +773,22 @@ export class GameSession implements WeaponHost {
         const shielded = this.player.damageBuffer > 0;
         const dealt = this.hurtPlayer(enemy.contactDamage, now);
         if (dealt > 0) this.powers.onContactHit(enemy, dealt, shielded);
+        // The Nevado horde's touch is cold: a stack of Congelamento with every hit.
+        if (dealt > 0 && FROST_TOUCH_VARIANTS.has(enemy.variantId)) this.frostPlayer(1, now);
       }
+      if (enemy.variantId === 'snowman' && now >= enemy.liftedUntil && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= enemy.radius + this.player.radius + SNOWMAN.burstReach) {
+        this.burstSnowman(enemy, now);
+        return;
+      }
+      if (enemy.variantId === 'snowShaman' && now >= enemy.nextCastAt) {
+        enemy.nextCastAt = now + ENEMY_VARIANTS.snowShaman.castCooldownMs;
+        summoners.push(enemy);
+      }
+      if (enemy.variantId === 'iceTroll' && now >= enemy.nextCastAt && now >= enemy.hitStunUntil && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= ICE_TROLL.slamRange) {
+        enemy.nextCastAt = now + ENEMY_VARIANTS.iceTroll.castCooldownMs;
+        this.trollSlam(enemy, now);
+      }
+      if (enemy.hasFrostAura && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= enemy.frostAuraRadius + this.player.radius) inFrostAura = true;
       if (enemy.variantId === 'necromancerWraith' && now >= enemy.nextSoulAt) {
         enemy.nextSoulAt = now + ENEMY_VARIANTS.necromancerWraith.soulCooldownMs;
         this.fireSoul(enemy, now);
@@ -756,6 +796,62 @@ export class GameSession implements WeaponHost {
       if (enemy.hasRottenAura && !enemy.rottenAuraSuppressed && Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= enemy.rottenAuraRadius) this.player.refreshRottenAura(now);
     });
     finished.forEach((enemy) => this.enemies.release(enemy));
+    summoners.forEach((shaman) => this.raiseSnowman(shaman));
+    if (inFrostAura && now >= this.frostAuraNextAt) {
+      this.frostAuraNextAt = now + ICE_TROLL.auraTickMs;
+      this.frostPlayer(1, now);
+    }
+    // A slam's icicles land together: standing under two of them still counts as one hit.
+    const landed = this.icicles.update(now, this.player);
+    landed.forEach((icicle) => this.events.emit('icicle-landed', { x: icicle.x, y: icicle.y }));
+    if (landed.some((icicle) => icicle.hit)) {
+      this.hurtPlayer(ICE_TROLL.icicleDamage, now);
+      this.frostPlayer(ICE_TROLL.icicleFrost, now);
+    }
+  }
+
+  // ── Campo Nevado: Congelamento, the Xamã's snowmen, the Troll's icicles ──────────────────────────────────────
+
+  /** Adds Congelamento to the hero; the stack that fills it freezes them solid. */
+  private frostPlayer(count: number, now: number): void {
+    if (!this.player.alive || !this.player.addFrost(count, now)) return;
+    this.events.emit('player-status', { text: 'CONGELADO!', tone: 'slow' });
+    this.events.emit('player-frozen', {});
+  }
+
+  /** The Xamã raises a Boneco de Neve beside it, up to SNOWMAN.perShaman alive per Xamã on the field. */
+  private raiseSnowman(shaman: EnemyState): void {
+    let shamans = 0;
+    let snowmen = 0;
+    this.enemies.forEachActive((enemy) => {
+      if (!enemy.alive) return;
+      if (enemy.variantId === 'snowShaman') shamans += 1;
+      else if (enemy.variantId === 'snowman') snowmen += 1;
+    });
+    if (snowmen >= shamans * SNOWMAN.perShaman) return;
+    const point = randomPointAround(this.rng, shaman, SNOWMAN.minRadius, SNOWMAN.maxRadius);
+    this.spawnEnemy('snowman', point.x, point.y);
+  }
+
+  /** A snowman reaching the hero bursts: a little damage, a stack of Congelamento, and it's gone (no kill credit). */
+  private burstSnowman(snowman: EnemyState, now: number): void {
+    snowman.health = 0;
+    snowman.phase = 'dying';
+    snowman.phaseEndsAt = now + ENEMY_DYING_MS;
+    this.hurtPlayer(SNOWMAN.damage, now);
+    this.frostPlayer(SNOWMAN.frostStacks, now);
+    this.events.emit('snowman-burst', { x: snowman.x, y: snowman.y });
+  }
+
+  /** The Troll stops and pounds the ground: icicles marked on the hero and around them, falling after the warning. */
+  private trollSlam(troll: EnemyState, now: number): void {
+    troll.windupUntil = now + ICE_TROLL.warnMs;
+    this.icicles.mark(this.player.x, this.player.y, now);
+    for (let index = 1; index < ICE_TROLL.icicles; index += 1) {
+      const point = randomPointAround(this.rng, this.player, ICE_TROLL.icicleRadius, ICE_TROLL.icicleSpread);
+      this.icicles.mark(point.x, point.y, now);
+    }
+    this.events.emit('troll-slam', { x: troll.x, y: troll.y });
   }
 
   /** Removes plain skeletons and wraiths beyond `minDistance` of the hero, farthest first, until at most `cap` enemies
@@ -807,12 +903,29 @@ export class GameSession implements WeaponHost {
     const dy = this.player.y - enemy.y;
     const length = Math.hypot(dx, dy);
     if (length === 0) return;
+    if (!Number.isNaN(enemy.flankAngle) && this.circleToFlank(enemy, length, deltaMs, now)) return;
     const route = this.flowField?.direction(enemy.x, enemy.y) ?? null;
     const step = Math.min(length, (enemy.effectiveMovementSpeed(now) * deltaMs) / 1000);
     enemy.facingX = route ? route.x : dx / length;
     enemy.facingY = route ? route.y : dy / length;
     enemy.x += enemy.facingX * step;
     enemy.y += enemy.facingY * step;
+  }
+
+  /** A pack wolf swings round the hero toward its own side (WOLF_PACK), turning at most ~50° of arc per target so it
+   *  curves out instead of cutting through. Returns false (and drops the flank for good) once it's there, close, or
+   *  out of time - from then on it bites like anyone else. */
+  private circleToFlank(enemy: EnemyState, distance: number, deltaMs: number, now: number): boolean {
+    const angle = Math.atan2(enemy.y - this.player.y, enemy.x - this.player.x);
+    const turn = Math.atan2(Math.sin(enemy.flankAngle - angle), Math.cos(enemy.flankAngle - angle));
+    if (Math.abs(turn) < 0.3 || distance <= WOLF_PACK.closeIn || now >= enemy.flankUntil) {
+      enemy.flankAngle = Number.NaN;
+      return false;
+    }
+    const aim = angle + Math.max(-0.9, Math.min(0.9, turn));
+    const reach = Math.max(WOLF_PACK.flankRadius, distance * 0.8);
+    this.chase(enemy, { x: this.player.x + Math.cos(aim) * reach, y: this.player.y + Math.sin(aim) * reach }, deltaMs, enemy.effectiveMovementSpeed(now));
+    return true;
   }
 
   private separate(enemy: EnemyState): void {
@@ -855,6 +968,15 @@ export class GameSession implements WeaponHost {
     if (rot > 0) this.events.emit('player-status', { text: `HP -${Math.round(rot)}`, tone: 'rot' });
   }
 
+  /** Every gliding Espírito da Geada frosts the ground under it; the hero standing on that frost is slowed. */
+  private updateFrostTrail(now: number): void {
+    this.enemies.forEachActive((enemy) => { if (enemy.variantId === 'frostSpirit' && enemy.alive) this.frostTrail.drop(enemy, now); });
+    const frost = this.frostTrail.update(now, this.player);
+    if (!frost) return;
+    this.player.applySlow(FROST_TRAIL.slowPercent, FROST_TRAIL.slowMs, now);
+    if (frost === 'entered') this.events.emit('player-status', { text: `GEADA -${Math.round(FROST_TRAIL.slowPercent * 100)}%`, tone: 'slow' });
+  }
+
   // ── Sandbox (the F9 panel) ──────────────────────────────────────────────────────────────────────────────────
 
   addCurrency(amount: number): void {
@@ -890,6 +1012,12 @@ export class GameSession implements WeaponHost {
       const point = this.scheduler.pointNearPlayer();
       this.spawnEnemy(variantId, point.x, point.y);
     }
+  }
+
+  /** A wolf pack (sandbox): `count` wolves bunched at `at` (a near-the-player spot by default), each heading for its
+   *  own side of the hero. */
+  spawnWolfPack(count: number, at: Vec2 = this.scheduler.pointNearPlayer()): void {
+    this.scheduler.spawnPack(at, count);
   }
 
   /** One random upgrade from the equipped weapons' own pools (deduped), or from the basic attribute pool. */
@@ -1140,7 +1268,7 @@ export class GameSession implements WeaponHost {
       const point = index === 0 ? enemy : randomPointAround(this.rng, enemy, 12, 28);
       this.dropPickup('gem', point.x, point.y, enemy.reward);
     }
-    if ((enemy.variantId === 'superSkeleton' || enemy.variantId === 'necromancerWraith') && this.rng() < LOOT_CHEST_DROP_CHANCE) this.dropPickup('chest', enemy.x, enemy.y, 0);
+    if ((enemy.variantId === 'superSkeleton' || enemy.variantId === 'necromancerWraith' || enemy.variantId === 'iceTroll' || enemy.variantId === 'snowShaman') && this.rng() < LOOT_CHEST_DROP_CHANCE) this.dropPickup('chest', enemy.x, enemy.y, 0);
     if (this.rng() < HEALTH_POTION_DROP_CHANCE) this.dropPickup('potion', enemy.x, enemy.y, HEALTH_POTION_HEAL_AMOUNT);
     // Wildlife leaves its own loot: the deer a potion, the hive its honey, the mimic the chest it pretended to be.
     const loot = enemy.neutral ? NEUTRAL_VARIANTS[enemy.variantId as NeutralVariantId].loot : null;

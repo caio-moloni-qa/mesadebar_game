@@ -116,7 +116,7 @@ export class HeroView {
     }
     this.aimSeconds = Math.max(0, this.aimSeconds - deltaSeconds);
 
-    this.mixer.update(deltaSeconds);
+    this.mixer.update(player.isFrozen(nowMs) ? 0 : deltaSeconds);
     // The clips never key the spine, so the twist is written straight onto it after the mixer.
     const twistTarget = aiming ? THREE.MathUtils.clamp(wrapAngle(this.aimYaw - this.yaw), -MAX_TWIST, MAX_TWIST) : 0;
     this.twist += (twistTarget - this.twist) * (1 - Math.exp(-TWIST_SHARPNESS * deltaSeconds));

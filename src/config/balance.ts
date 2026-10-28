@@ -7,8 +7,52 @@ export const ENEMY_VARIANTS = {
   necromancerWraith: { maxHealth: 150, movementSpeed: 0, contactDamage: 0, reward: 8, currencyDrops: 3, soulCooldownMs: 2200 },
   apparitionWraith: { maxHealth: 35, movementSpeed: 150, contactDamage: 10, reward: 4 },
   superSkeleton: { maxHealth: 500, movementSpeed: 35, contactDamage: 50, reward: 25 },
-  finalBoss: { maxHealth: 10000, movementSpeed: 35, contactDamage: 0, reward: 0 }
+  finalBoss: { maxHealth: 10000, movementSpeed: 35, contactDamage: 0, reward: 0 },
+  // Campo Nevado's horde (HORDE_BY_ARENA): same numbers as the Greenfield role they fill.
+  frostSkeleton: { maxHealth: ENEMY_CONFIG.maxHealth, movementSpeed: ENEMY_CONFIG.movementSpeed, contactDamage: ENEMY_CONFIG.contactDamage, reward: ENEMY_CONFIG.reward },
+  /** Espírito da Geada: an Aparição that leaves a slowing frost trail behind it (FROST_TRAIL). */
+  frostSpirit: { maxHealth: 35, movementSpeed: 150, contactDamage: 10, reward: 4 },
+  /** Xamã da Nevasca: the Necromante's numbers; instead of souls it raises a Boneco de Neve every castCooldownMs. */
+  snowShaman: { maxHealth: 150, movementSpeed: 0, contactDamage: 0, reward: 8, currencyDrops: 3, castCooldownMs: 3200 },
+  /** Boneco de Neve: 3 HP, waddles at the hero and bursts on reaching it (SNOWMAN). Worth nothing - it's a nuisance. */
+  snowman: { maxHealth: 3, movementSpeed: 95, contactDamage: 0, reward: 0, currencyDrops: 0 },
+  /** Troll de Gelo: the Super Esqueleto's numbers, a frost aura instead of the rot and a telegraphed icicle slam. */
+  iceTroll: { maxHealth: 500, movementSpeed: 35, contactDamage: 50, reward: 25, castCooldownMs: 7000 },
+  /** Lobo do Gelo: mixed into the Nevado's base drip in packs (WOLF_PACK) - quicker than the skeleton, frailer. */
+  iceWolf: { maxHealth: 26, movementSpeed: 110, contactDamage: 8, reward: 3 }
 };
+export type HordeVariantId = keyof typeof ENEMY_VARIANTS;
+/** The horde's four roles: the base drip, the standing summoner, the fast swarm from the borders, the elite wave. */
+export type HordeRole = 'base' | 'summoner' | 'fast' | 'elite';
+/** `pack`: an extra base creature that arrives in packs (WOLF_PACK) alongside the base drip. */
+export type HordeRoster = Record<HordeRole, HordeVariantId> & { pack?: HordeVariantId };
+/** Who fills each role, per arena (ArenaLayout.id). */
+export const HORDE_BY_ARENA: Record<string, HordeRoster> = {
+  greenfield: { base: 'skeleton', summoner: 'necromancerWraith', fast: 'apparitionWraith', elite: 'superSkeleton' },
+  snowfield: { base: 'frostSkeleton', summoner: 'snowShaman', fast: 'frostSpirit', elite: 'iceTroll', pack: 'iceWolf' }
+};
+/** A pack of `min..max` wolves every `intervalMs`, bunched within `spread` of one spot at the base drip's distance.
+ *  Each wolf takes a side of the hero (spread over `flankArc` radians either way of the pack's approach) and circles
+ *  out to it, `flankRadius` off the hero, before biting - so the pack closes in from several sides at once. It goes
+ *  straight for the hero once on its side, within `closeIn`, or `flankMs` after spawning. */
+export const WOLF_PACK = { intervalMs: 9000, min: 3, max: 5, spread: 45, flankArc: 2.4, flankRadius: 130, closeIn: 80, flankMs: 7000 };
+export const hordeFor = (arenaId: string): HordeRoster => HORDE_BY_ARENA[arenaId] ?? HORDE_BY_ARENA.greenfield;
+/** The Espírito da Geada drops a frost patch every `dropEveryMs`; each lasts `lifetimeMs`. Standing on one slows the
+ *  hero by `slowPercent` (refreshed while on it, never stacking with itself). */
+export const FROST_TRAIL = { dropEveryMs: 220, lifetimeMs: 3000, radius: 26, slowPercent: 0.3, slowMs: 400, maxPatches: 400 };
+/** Congelamento: Campo Nevado's own threat. Each stack slows the hero `slowPerStack`; they all melt `decayMs` after the
+ *  last one landed. Reaching `max` freezes the hero solid for `freezeMs` (no moving, no attacking), clears the stacks
+ *  and leaves `immuneMs` of grace before frost can build again. */
+export const FROST_STACKS = { max: 5, slowPerStack: 0.06, decayMs: 4000, freezeMs: 1000, immuneMs: 1500 };
+/** Every hit from these lands one stack of Congelamento (the Nevado horde's touch). */
+export const FROST_TOUCH_VARIANTS: ReadonlySet<string> = new Set(['frostSkeleton', 'frostSpirit', 'iceTroll']);
+/** The Xamã keeps at most `perShaman` snowmen alive each, raised `minRadius..maxRadius` from it. A snowman bursts once
+ *  within `burstReach` of the hero's body: `damage` plus `frostStacks`. */
+export const SNOWMAN = { perShaman: 4, minRadius: 30, maxRadius: 60, burstReach: 10, damage: 6, frostStacks: 1 };
+/** Troll de Gelo: standing in its aura (`auraRadius`) adds a stack every `auraTickMs`. Within `slamRange` of the hero
+ *  (and off cooldown) it stops, pounds the ground and marks `icicles` spots - one on the hero, the rest up to
+ *  `icicleSpread` around - that icicles hit `warnMs` later: `icicleDamage` and `icicleFrost` stacks each. */
+export const ICE_TROLL = { auraRadius: 60, auraTickMs: 1000, slamRange: 300, icicles: 3, icicleSpread: 90, icicleRadius: 38, warnMs: 1000, icicleDamage: 20, icicleFrost: 2 };
 /** 3D-only zone mini-bosses (kept out of ENEMY_VARIANTS).
  *  Health is multiplied by the difficulty stage when they spawn. */
 export const MINI_BOSS_VARIANTS = {
@@ -47,11 +91,12 @@ export const LOOT_CHEST_DROP_CHANCE = 0.15;
  * a Poção de Vida on death — a flat, instant HEALTH_POTION_HEAL_AMOUNT heal on pickup, no upgrade roll involved. */
 export const HEALTH_POTION_DROP_CHANCE = 0.01;
 export const HEALTH_POTION_HEAL_AMOUNT = 40;
-export interface EnemyVariantScheduleEntry { variantId: 'necromancerWraith' | 'apparitionWraith' | 'superSkeleton'; intervalMs: number; }
+export interface EnemyVariantScheduleEntry { role: Exclude<HordeRole, 'base'>; intervalMs: number; }
+/** Every arena keeps Greenfield's timing for now (Caio's call: tune it after playing). */
 export const ENEMY_VARIANT_SCHEDULE: EnemyVariantScheduleEntry[] = [
-  { variantId: 'necromancerWraith', intervalMs: 15000 },
-  { variantId: 'apparitionWraith', intervalMs: 30000 },
-  { variantId: 'superSkeleton', intervalMs: 40000 }
+  { role: 'summoner', intervalMs: 15000 },
+  { role: 'fast', intervalMs: 30000 },
+  { role: 'elite', intervalMs: 40000 }
 ];
 export const DIFFICULTY_STAGES = [
   { startMs: 0, spawnInterval: 1000, count: 1, healthMultiplier: 1 },

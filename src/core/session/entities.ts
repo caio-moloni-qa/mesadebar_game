@@ -1,4 +1,4 @@
-import { ALL_ENEMY_VARIANTS, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
+import { ALL_ENEMY_VARIANTS, FROST_STACKS, ICE_TROLL, MINI_BOSS_VARIANTS, NEUTRAL_VARIANTS, PLAYER_CONFIG, ROTTEN_AURA_CONFIG } from '../../config/balance';
 import { CharacterConfig } from '../../config/characters';
 import { WeaponConfig } from '../../config/weapons';
 import { EnemyVariantId } from '../systems/EnemySpawnScheduler';
@@ -70,6 +70,11 @@ export class PlayerState implements Body, UpgradeTarget {
   /** Colmeia's honey: this much faster until then. */
   hasteUntil = 0;
   hastePercent = 0;
+  /** Congelamento (Campo Nevado): stacks building towards a freeze, and the frozen-solid moment itself. */
+  frozenUntil = -Infinity;
+  private frostStacks = 0;
+  private frostStacksMeltAt = -Infinity;
+  private frostImmuneUntil = -Infinity;
   private slows: Array<{ expiresAt: number; percent: number }> = [];
   private passiveHealElapsed = 0;
   private bonusPassiveHealElapsed = 0;
@@ -114,9 +119,32 @@ export class PlayerState implements Body, UpgradeTarget {
     return amount - effective;
   }
 
-  /** The water fairy's cleanse. */
+  /** The water fairy's cleanse (Congelamento's stacks melt too). */
   clearSlows(): void {
     this.slows.length = 0;
+    this.frostStacks = 0;
+  }
+
+  /** Congelamento stacks still standing at `now`. */
+  frostStacksAt(now: number): number {
+    return now < this.frostStacksMeltAt ? this.frostStacks : 0;
+  }
+
+  isFrozen(now: number): boolean {
+    return now < this.frozenUntil;
+  }
+
+  /** Adds `count` stacks of Congelamento (none while frozen or in the grace after). Returns true when they froze the
+   *  hero solid. */
+  addFrost(count: number, now: number): boolean {
+    if (count <= 0 || now < this.frostImmuneUntil) return false;
+    this.frostStacks = this.frostStacksAt(now) + count;
+    this.frostStacksMeltAt = now + FROST_STACKS.decayMs;
+    if (this.frostStacks < FROST_STACKS.max) return false;
+    this.frostStacks = 0;
+    this.frozenUntil = now + FROST_STACKS.freezeMs;
+    this.frostImmuneUntil = this.frozenUntil + FROST_STACKS.immuneMs;
+    return true;
   }
 
   applySlow(percent: number, durationMs: number, now: number): void {
@@ -133,10 +161,12 @@ export class PlayerState implements Body, UpgradeTarget {
     return this.attackSpeedMultiplier + this.lowHealthAttackSpeedBonus * this.lowHealthBonusRatio();
   }
 
-  /** Stacked slows (floored at 25% speed) and the low-health bonus, same as entities/Player.effectiveMovementSpeed. */
+  /** Stacked slows (floored at 25% speed) and the low-health bonus, same as entities/Player.effectiveMovementSpeed.
+   *  Congelamento's stacks count as slows; frozen solid, the hero doesn't move at all. */
   effectiveMovementSpeed(now: number): number {
+    if (this.isFrozen(now)) return 0;
     this.slows = this.slows.filter((slow) => slow.expiresAt > now);
-    const slowAmount = this.slows.reduce((total, slow) => total + slow.percent, 0);
+    const slowAmount = this.slows.reduce((total, slow) => total + slow.percent, 0) + this.frostStacksAt(now) * FROST_STACKS.slowPerStack;
     const slowMultiplier = Math.max(0.25, 1 - slowAmount);
     const lowHealthBonus = this.lowHealthAttackSpeedBonus > 0 ? this.lowHealthAttackSpeedBonus * this.lowHealthBonusRatio() : 0;
     const haste = now < this.hasteUntil ? this.hastePercent : 0;
@@ -243,6 +273,8 @@ export class EnemyState implements Body {
   /** Super Esqueleto (and the boss later): shows a health bar, isn't a "common" enemy for the staff execute. */
   isMiniBoss = false;
   hasRottenAura = false;
+  /** Troll de Gelo: standing near it builds Congelamento (ICE_TROLL.auraRadius). */
+  hasFrostAura = false;
   /** The boss's aura goes quiet while it channels its shield. */
   rottenAuraSuppressed = false;
   /** Display size in game units (the old sprite displaySize) — the renderer scales the model from this. */
@@ -272,6 +304,11 @@ export class EnemyState implements Body {
   pullY = 0;
   gilded = false;
   nextSoulAt = 0;
+  /** The Xamã's next snowman, the Troll's next icicle slam. */
+  nextCastAt = 0;
+  /** A pack wolf's side of the hero (radians; NaN = none, or already there) and when it gives up circling. */
+  flankAngle = Number.NaN;
+  flankUntil = 0;
   /** Sim time it appeared (the renderer plays a rise-from-the-ground). */
   spawnedAt = -Infinity;
   // Neutral creatures (core/systems/NeutralSystem): their mood, the spot they live around, the group they wake with.
@@ -304,12 +341,13 @@ export class EnemyState implements Body {
     this.contactDamage = base.contactDamage;
     this.reward = base.reward;
     this.currencyDrops = 'currencyDrops' in base ? base.currencyDrops : 1;
-    this.isStatic = variantId === 'necromancerWraith' || variantId === 'hive';
-    this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'finalBoss' || variantId in MINI_BOSS_VARIANTS;
+    this.isStatic = variantId === 'necromancerWraith' || variantId === 'snowShaman' || variantId === 'hive';
+    this.isMiniBoss = variantId === 'superSkeleton' || variantId === 'iceTroll' || variantId === 'finalBoss' || variantId in MINI_BOSS_VARIANTS;
     this.hasRottenAura = variantId === 'superSkeleton' || variantId === 'finalBoss';
     this.rottenAuraSuppressed = false;
+    this.hasFrostAura = variantId === 'iceTroll';
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
-    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : variantId === 'boar' ? 22 : variantId === 'stag' ? 24 : variantId === 'hive' ? 20 : variantId === 'mimic' ? 22 : BODY_RADIUS.enemy;
+    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : variantId === 'boar' ? 22 : variantId === 'stag' ? 24 : variantId === 'hive' ? 20 : variantId === 'mimic' ? 22 : variantId === 'iceTroll' ? 26 : variantId === 'snowman' ? 14 : variantId === 'iceWolf' ? 16 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
@@ -319,7 +357,10 @@ export class EnemyState implements Body {
     this.heldUntil = this.liftedUntil = this.fleeUntil = this.pullUntil = 0;
     this.gilded = false;
     this.nextSoulAt = now + ('soulCooldownMs' in base ? base.soulCooldownMs : 0);
+    this.nextCastAt = now + ('castCooldownMs' in base ? base.castCooldownMs : 0);
     this.spawnedAt = now;
+    this.flankAngle = Number.NaN;
+    this.flankUntil = 0;
     this.neutral = variantId in NEUTRAL_VARIANTS;
     this.mood = 'calm';
     this.homeX = x;
@@ -339,7 +380,7 @@ export class EnemyState implements Body {
 
   /** GameScene.isCommonEnemy — what the staff's execute is allowed to one-shot. */
   get isCommon(): boolean {
-    return this.variantId !== 'superSkeleton' && this.variantId !== 'finalBoss' && !(this.variantId in MINI_BOSS_VARIANTS);
+    return this.variantId !== 'superSkeleton' && this.variantId !== 'iceTroll' && this.variantId !== 'finalBoss' && !(this.variantId in MINI_BOSS_VARIANTS);
   }
 
   /** GameScene.enemyRangePadding: the huge boss sprite is easier to reach than its center point suggests. */
@@ -350,6 +391,10 @@ export class EnemyState implements Body {
   /** Rotten Aura reach: half the display size, so it scales with the model. */
   get rottenAuraRadius(): number {
     return this.displaySize / 2;
+  }
+
+  get frostAuraRadius(): number {
+    return ICE_TROLL.auraRadius;
   }
 
   /** The banana stack, then any timed slow still running at `now`. */
@@ -370,6 +415,13 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   skeleton: 62,
   necromancerWraith: 68,
   apparitionWraith: 68,
+  frostSkeleton: 62,
+  frostSpirit: 68,
+  snowShaman: 70,
+  snowman: 44,
+  /** Low and long like the boar, a touch taller. */
+  iceWolf: 56,
+  iceTroll: 104,
   superSkeleton: 92,
   finalBoss: 390,
   gravedigger: 160,

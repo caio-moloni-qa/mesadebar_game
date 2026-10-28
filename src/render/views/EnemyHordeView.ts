@@ -1,10 +1,11 @@
-import { MINI_BOSS_VARIANTS } from '../../config/balance';
+import { FROST_TRAIL, MINI_BOSS_VARIANTS } from '../../config/balance';
 import * as THREE from 'three';
 import { ENEMY_DYING_MS, ENEMY_SLIP_MS, EnemyState } from '../../core/session/entities';
 import { EnemyVariantId } from '../../core/systems/EnemySpawnScheduler';
 import { Pool } from '../../core/Pool';
 import { POWER_TUNING } from '../../core/systems/PowerTierSystem';
 import { NEUTRAL_TUNING, Swarm } from '../../core/systems/NeutralSystem';
+import { FrostPatch } from '../../core/systems/FrostTrail';
 import { BakedEnemyModel, createEnemyModels } from '../models/enemies';
 import { PALETTE, toonMaterial } from '../materials';
 import { WORLD_SCALE, yawFromSimDirection } from '../space';
@@ -19,9 +20,9 @@ const RISE_MS = 420;
 const HIT_FLASH_MS = 110;
 /** Game-units/s at which the baked walk cycle plays at 1× (slow Super Esqueletos shuffle, Aparições glide). */
 const WALK_REFERENCE_SPEED = 120;
-const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith', 'boar', 'stag', 'doe', 'hive', 'mimic'];
+const VARIANTS: EnemyVariantId[] = ['skeleton', 'superSkeleton', 'necromancerWraith', 'apparitionWraith', 'frostSkeleton', 'frostSpirit', 'snowShaman', 'snowman', 'iceTroll', 'iceWolf', 'boar', 'stag', 'doe', 'hive', 'mimic'];
 /** finalBoss is drawn by BossView (its mesh entry here is never used). */
-const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton', frostKnight: 'superSkeleton', lakeSpirit: 'superSkeleton', boar: 'boar', stag: 'stag', doe: 'doe', hive: 'hive', mimic: 'mimic' };
+const MESH_FOR: Record<EnemyVariantId, EnemyVariantId> = { skeleton: 'skeleton', superSkeleton: 'superSkeleton', necromancerWraith: 'necromancerWraith', apparitionWraith: 'apparitionWraith', frostSkeleton: 'frostSkeleton', frostSpirit: 'frostSpirit', snowShaman: 'snowShaman', snowman: 'snowman', iceTroll: 'iceTroll', iceWolf: 'iceWolf', finalBoss: 'superSkeleton', gravedigger: 'superSkeleton', templeGuardian: 'superSkeleton', frostKnight: 'superSkeleton', lakeSpirit: 'superSkeleton', boar: 'boar', stag: 'stag', doe: 'doe', hive: 'hive', mimic: 'mimic' };
 
 /** The "!" over a neutral: yellow when it has just noticed the hero, red while it's angry. */
 const ALERT_COLORS = { startled: new THREE.Color(0xffd23a), angry: new THREE.Color(0xff3a2a) };
@@ -63,6 +64,8 @@ export class EnemyHordeView {
   readonly lanes: THREE.InstancedMesh;
   /** The Colmeia's swarms: a buzzing cloud of bees each. */
   private readonly bees: THREE.InstancedMesh;
+  /** The Espírito da Geada's frost trail: six-sided patches of pale ice that spread, then melt away. */
+  private readonly frost: THREE.InstancedMesh;
   private readonly batches = new Map<EnemyVariantId, VariantBatch>();
   private readonly phases = new WeakMap<EnemyState, number>();
   private readonly yaws = new WeakMap<EnemyState, number>();
@@ -80,9 +83,9 @@ export class EnemyHordeView {
     VARIANTS.forEach((variant) => {
       const model = models[variant];
       const material = toonMaterial({ vertexColors: true, flatShading: true });
-      if (variant === 'apparitionWraith') {
+      if (variant === 'apparitionWraith' || variant === 'frostSpirit') {
         material.transparent = true;
-        material.opacity = 0.82;
+        material.opacity = variant === 'frostSpirit' ? 0.78 : 0.82;
       }
       const mesh = new THREE.InstancedMesh(model.geometry, material, capacity);
       mesh.frustumCulled = false;
@@ -114,7 +117,10 @@ export class EnemyHordeView {
     this.bees = new THREE.InstancedMesh(new THREE.BoxGeometry(0.09, 0.07, 0.12), new THREE.MeshBasicMaterial({ color: 0xffd23a }), MAX_SWARMS * BEES_PER_SWARM);
     this.bees.frustumCulled = false;
     this.bees.count = 0;
-    this.root.add(this.blobShadows, this.rottenAuras, this.alerts, this.lanes, this.bees);
+    this.frost = new THREE.InstancedMesh(groundSector(Math.PI * 2, 0, 1, 6), new THREE.MeshBasicMaterial({ color: 0x8ccff5, transparent: true, opacity: 0.55, depthWrite: false }), FROST_TRAIL.maxPatches);
+    this.frost.frustumCulled = false;
+    this.frost.count = 0;
+    this.root.add(this.blobShadows, this.rottenAuras, this.alerts, this.lanes, this.bees, this.frost);
   }
 
   update(enemies: Pool<EnemyState>, alpha: number, nowMs: number, deltaSeconds: number): void {
@@ -263,6 +269,22 @@ export class EnemyHordeView {
     this.bees.count = index;
     this.bees.instanceMatrix.needsUpdate = true;
     if (this.bees.instanceColor) this.bees.instanceColor.needsUpdate = true;
+  }
+
+  /** Each patch spreads out in its first fifth of life and shrinks away in its last third, at its own tilt. */
+  updateFrostTrail(patches: readonly FrostPatch[], nowMs: number): void {
+    const count = Math.min(patches.length, FROST_TRAIL.maxPatches);
+    for (let index = 0; index < count; index += 1) {
+      const patch = patches[index];
+      const age = (nowMs - patch.bornAt) / FROST_TRAIL.lifetimeMs;
+      const grow = Math.min(1, age * 5) * Math.min(1, (1 - age) * 3);
+      this.position.set(patch.x * WORLD_SCALE, 0.035 + (index % 4) * 0.002, patch.y * WORLD_SCALE);
+      this.rotation.setFromAxisAngle(UP, (patch.x * 0.37 + patch.y * 0.61) % Math.PI);
+      this.scale.setScalar(Math.max(0.001, FROST_TRAIL.radius * WORLD_SCALE * grow));
+      this.frost.setMatrixAt(index, this.matrix.compose(this.position, this.rotation, this.scale));
+    }
+    this.frost.count = count;
+    this.frost.instanceMatrix.needsUpdate = true;
   }
 
   /** Blend the two baked frames around `phase` (0..1 over the cycle). */
