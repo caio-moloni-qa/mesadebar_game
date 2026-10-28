@@ -1,0 +1,4 @@
+Not generated: derived from the approved concept art art-source/characters/joe/joe-concept_v5.png (Joe as a plain
+ice cube, no face, scarf or limbs). Alpha below 40 dropped to clear the faint glow specks, cropped to the cube,
+LANCZOS-scaled to 82% of 128 px and centred (4 px low) on a transparent 128x128 canvas.
+Replaces joe-portrait.png (the old face-in-the-ice design), which is kept untouched.

@@ -91,8 +91,14 @@ const NPC_FACES: Partial<Record<QuestNpcId, string>> = {
  *  stand in for any that don't yet. */
 const NPC_PORTRAITS = import.meta.glob<string>('../../assets/characters/npcs/*-portrait.png', { query: '?url', import: 'default', eager: true });
 
+/** Portraits redrawn after a character's design changed (art is never overwritten, so the new one is a `_vN`). */
+const NPC_PORTRAIT_REVISIONS: Partial<Record<QuestNpcId, string>> = {
+  // Joe is now a plain ice cube (concept v5), no face or scarf.
+  joe: new URL('../../assets/characters/npcs/joe-portrait_v2.png', import.meta.url).href
+};
+
 export function npcPortrait(name: QuestNpcId | 'sergio' | 'eskimo'): string | undefined {
-  return NPC_PORTRAITS[`../../assets/characters/npcs/${name}-portrait.png`];
+  return NPC_PORTRAIT_REVISIONS[name as QuestNpcId] ?? NPC_PORTRAITS[`../../assets/characters/npcs/${name}-portrait.png`];
 }
 
 export function npcFace(id: QuestNpcId): string {
