@@ -43,6 +43,30 @@ function figure(id: RegularFigureId, dining = false): Character {
   return { root: imported.model.root, mixer, bones: imported.model.bones };
 }
 
+/** A spoon (with its bowl) in the figure's right hand, for eating at an igloo table. */
+function holdSpoon(character: Character): void {
+  const spoon = new THREE.Mesh(cylinder(0.022, 0.022, 0.3, 5), toonMaterial({ color: 0xcbdce5 }));
+  spoon.position.set(0, -0.04, 0.1); spoon.rotation.x = Math.PI / 2;
+  const bowl = new THREE.Mesh(ball(0.06, 1).scale(1, 0.3, 1), spoon.material);
+  bowl.position.set(0, 0.17, 0); spoon.add(bowl); character.bones.handR?.add(spoon);
+}
+
+/** Seated and eating, over the idle clip just applied (`t` drives the bites). */
+function dine({ bones }: Character, t: number): void {
+  // Joe's imported cube has no limbs to sit and eat with: he just idles by the table.
+  if (!bones.thighL) return;
+  const bite = Math.pow((Math.sin(t) + 1) / 2, 2);
+  bones.thighL.rotation.x = bones.thighR.rotation.x = -1.45;
+  bones.shinL.rotation.x = bones.shinR.rotation.x = 1.45;
+  // Down from the hip height the idle clip just set (each imported rig has its own).
+  bones.hips.position.y -= 0.28;
+  bones.upperArmR.rotation.set(-0.6 - bite * 0.5, 0, -0.15);
+  bones.foreArmR.rotation.x = -0.45 - bite * 1.3;
+  bones.upperArmL.rotation.x = -0.6;
+  bones.foreArmL.rotation.x = -0.6;
+  bones.head.rotation.x = 0.04 + bite * 0.15 + Math.sin(t * 5) * bite * 0.025;
+}
+
 /** "!" (mission on offer), "?" (come claim it), "…" (under way) over a regular's head. */
 function markerTexture(symbol: string, background: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -112,6 +136,8 @@ export class MerchantRoom {
   private readonly sergio: Character;
   /** The area's regulars, in table order. */
   private readonly regulars: Character[];
+  /** Sergio at his igloo table. */
+  private guest: Character | null = null;
   private readonly markers: THREE.Sprite[] = [];
   private readonly markerTextures: Record<Exclude<QuestStatus, 'done'>, THREE.Texture> = {
     offer: markerTexture('!', '#ffd25a'),
@@ -187,12 +213,7 @@ export class MerchantRoom {
       regular.root.position.copy(at(spot.x, spot.y).add(center));
       regular.root.rotation.y = layout.island ? facing(spot, layout.island) : -Math.PI / 2;
       this.characters.add(regular.root);
-      if (system.igloo) {
-        const spoon = new THREE.Mesh(cylinder(0.022, 0.022, 0.3, 5), toonMaterial({ color: 0xcbdce5 }));
-        spoon.position.set(0, -0.04, 0.1); spoon.rotation.x = Math.PI / 2;
-        const bowl = new THREE.Mesh(ball(0.06, 1).scale(1, 0.3, 1), spoon.material);
-        bowl.position.set(0, 0.17, 0); spoon.add(bowl); regular.bones.handR?.add(spoon);
-      }
+      if (system.igloo) holdSpoon(regular);
       // The composite needs sprite depth, too; alphaTest keeps the transparent corners out of it.
       const marker = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.2, depthWrite: true, toneMapped: false, fog: false }));
       // Only draw in the finer character pass, avoiding a second coarse world copy.
@@ -202,6 +223,15 @@ export class MerchantRoom {
       this.questMarkers.add(marker);
       this.markers.push(marker);
     });
+    if (layout.guest) {
+      const guest = figure('sergio', true);
+      guest.root.position.copy(at(layout.guest.x, layout.guest.y).add(center));
+      // Facing east, across his table.
+      guest.root.rotation.y = Math.PI / 2;
+      holdSpoon(guest);
+      this.characters.add(guest.root);
+      this.guest = guest;
+    }
     this.root.add(room, this.arenaPortal);
   }
 
@@ -223,22 +253,12 @@ export class MerchantRoom {
     this.sergio.mixer.update(deltaSeconds);
     this.regulars.forEach((regular, index) => {
       regular.mixer.update(deltaSeconds);
-      if (!system.igloo) return;
-      const { bones } = regular;
-      // Joe's imported cube has no limbs to sit and eat with: he just idles by the table.
-      if (!bones.thighL) return;
-      const t = this.time * 1.6 + index * 2.1;
-      const bite = Math.pow((Math.sin(t) + 1) / 2, 2);
-      bones.thighL.rotation.x = bones.thighR.rotation.x = -1.45;
-      bones.shinL.rotation.x = bones.shinR.rotation.x = 1.45;
-      // Down from the hip height the idle clip just set (each imported rig has its own).
-      bones.hips.position.y -= 0.28;
-      bones.upperArmR.rotation.set(-0.6 - bite * 0.5, 0, -0.15);
-      bones.foreArmR.rotation.x = -0.45 - bite * 1.3;
-      bones.upperArmL.rotation.x = -0.6;
-      bones.foreArmL.rotation.x = -0.6;
-      bones.head.rotation.x = 0.04 + bite * 0.15 + Math.sin(t * 5) * bite * 0.025;
+      if (system.igloo) dine(regular, this.time * 1.6 + index * 2.1);
     });
+    if (this.guest) {
+      this.guest.mixer.update(deltaSeconds);
+      dine(this.guest, this.time * 1.6 + 6.3);
+    }
     this.ambience.update(deltaSeconds);
     // The fire breathes.
     this.fireLight.intensity = 18 + Math.sin(this.time * 9) * 3 + Math.sin(this.time * 23) * 2;

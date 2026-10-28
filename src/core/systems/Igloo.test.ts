@@ -59,6 +59,20 @@ describe('O Esquimó e o Iglu', () => {
     session.player.y = session.merchant.room.y + bar.y;
     expect(session.merchant.roomSpot?.kind).toBe('sergio');
     expect(session.merchant.offers).toHaveLength(4);
+    // Sergio, eating at the fourth table, has his own items; buying from him re-prices the menu too.
+    const guest = session.merchant.layout.guest!;
+    session.player.x = session.merchant.room.x + guest.x - 40;
+    session.player.y = session.merchant.room.y + guest.y;
+    const shops: boolean[] = [];
+    session.events.on('merchant-shop', ({ guest: atTable }) => shops.push(atTable));
+    session.interact();
+    expect(shops).toEqual([true]);
+    expect(session.merchant.guestOffers.map((offer) => offer.id).slice(0, 2)).toEqual(['divine-blessing', 'arcane-curse']);
+    session.currency = 10_000;
+    const stew = session.merchant.offers[0].cost;
+    expect(session.buyMerchantItem(0, true)).toBe(true);
+    expect(session.merchant.guestOffers[0].purchased).toBe(true);
+    expect(session.merchant.offers[0].cost).toBe(stew * 3);
     session.player.x = session.merchant.room.x + MERCHANT_ROOM.exit.x;
     session.player.y = session.merchant.room.y + MERCHANT_ROOM.exit.y;
     session.interact();

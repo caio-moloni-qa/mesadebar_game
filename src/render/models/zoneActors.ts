@@ -3,7 +3,7 @@ import { toonMaterial } from '../materials';
 import { ActorClipName, actorClips } from './clips';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { BoneSpec, RigPart, RiggedModel, buildRiggedModel, clipForBones, humanoidBones } from './rig';
-import { GRAVEDIGGER_HIP_HEIGHT, GRAVEDIGGER_JOINTS, ImportedBossId, LAKE_SPIRIT_HIP_HEIGHT, LAKE_SPIRIT_JOINTS, TEMPLE_GUARDIAN_HIP_HEIGHT, TEMPLE_GUARDIAN_JOINTS, bossMesh } from './importedBosses';
+import { FROST_KNIGHT_HIP_HEIGHT, FROST_KNIGHT_JOINTS, GRAVEDIGGER_HIP_HEIGHT, GRAVEDIGGER_JOINTS, ImportedBossId, LAKE_SPIRIT_HIP_HEIGHT, LAKE_SPIRIT_JOINTS, TEMPLE_GUARDIAN_HIP_HEIGHT, TEMPLE_GUARDIAN_JOINTS, bossMesh } from './importedBosses';
 import { JointSpec, rigImportedMesh } from './importedRig';
 
 /** A rigged zone actor (mini-boss or companion) with its clips; `height` is its model height at scale 1 (m). */
@@ -15,7 +15,7 @@ export interface ActorModel extends RiggedModel {
 
 /** The imported Tripo mesh for `id` auto-rigged at `joints` (procedural `extras` such as props ride on bones), or
  *  null when it isn't loaded — the caller then builds its procedural model. */
-function imported(id: ImportedBossId, joints: JointSpec[], hipHeight: number, height: number, extras: RigPart[] = [], recolor?: (geometry: THREE.BufferGeometry) => void): ActorModel | null {
+export function imported(id: ImportedBossId, joints: JointSpec[], hipHeight: number, height: number, extras: RigPart[] = [], recolor?: (geometry: THREE.BufferGeometry) => void): ActorModel | null {
   const geometry = bossMesh(id);
   if (!geometry) return null;
   recolor?.(geometry);
@@ -167,6 +167,17 @@ export function createFrostKnightModel(): ActorModel {
   const frost = 0xe8f3fb;
   const glow = 0x7fe3ff;
   const cloak = 0x2b3f63;
+  // The imported knight came with empty hands: the shield (his front guard) and the ice blade ride on its bones.
+  const tripo = imported('frostKnight', FROST_KNIGHT_JOINTS, FROST_KNIGHT_HIP_HEIGHT, 2.2, [
+    { bone: 'foreArmL', geometry: part(box(0.06, 0.7, 0.5), plateDark, [0.2, -0.12, 0.08]) },
+    { bone: 'foreArmL', geometry: part(box(0.07, 0.62, 0.42), plate, [0.22, -0.12, 0.08]) },
+    { bone: 'foreArmL', geometry: part(gem(0.08), glow, [0.27, -0.12, 0.08]) },
+    { bone: 'handR', geometry: part(box(0.05, 0.2, 0.05), plateDark, [0, -0.1, 0.04]) },
+    { bone: 'handR', geometry: part(box(0.26, 0.05, 0.07), plateDark, [0, -0.2, 0.04]) },
+    { bone: 'handR', geometry: part(box(0.07, 1.05, 0.02), glow, [0, -0.74, 0.04]) },
+    { bone: 'handR', geometry: part(box(0.11, 1.0, 0.03), frost, [0, -0.72, 0.04]) }
+  ]);
+  if (tripo) return tripo;
   const bones = humanoidBones({ hipHeight: hip, shoulderWidth: 0.44, armLength: arm, legLength: leg });
   const limb = (s: 'L' | 'R'): RigPart[] => [
     { bone: `upperArm${s}`, geometry: part(box(0.17, arm + 0.04, 0.17), plate, [0, -arm / 2, 0]) },

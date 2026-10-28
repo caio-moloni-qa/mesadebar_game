@@ -146,6 +146,8 @@ export class Game3D {
   private attract = false;
   /** The title menu, the tavern between runs, or a run. */
   private mode: 'menu' | 'hub' | 'run' = 'menu';
+  /** The open run store is Sergio's at his igloo table rather than the room's counter. */
+  private shopGuest = false;
   private readonly shop: SergioShop;
   private readonly tavernHeader: TavernHeader;
   private readonly tierPicker: TierPicker;
@@ -279,12 +281,13 @@ export class Game3D {
       runShop: () => {
         const { session } = this;
         if (this.mode !== 'run' || !session.merchant.inside || session.merchant.hub) return null;
+        const guest = this.shopGuest;
         return {
-          igloo: session.merchant.igloo,
+          igloo: session.merchant.igloo && !guest,
           coins: session.currency,
-          offers: session.merchant.offers,
+          offers: guest ? session.merchant.guestOffers : session.merchant.offers,
           buy: (index) => {
-            session.buyMerchantItem(index);
+            session.buyMerchantItem(index, guest);
             // The Tomo de Afinidade's family choice takes the screen.
             if (session.pendingChoice) this.shop.hide();
           }
@@ -458,8 +461,7 @@ export class Game3D {
     });
   }
 
-  /** Regulars missing from this tavern: the ones already in your roster, and everyone from another area (an area
-   *  without regulars of its own, like the Campo Nevado for now, has an empty tavern). */
+  /** Regulars missing from this tavern (or igloo): the ones already in your roster, and everyone from another area. */
   private regularsAway(): QuestNpcId[] {
     const here = AREAS.find((area) => area.id === this.arenaMap.layout.id)?.regulars ?? [];
     const roster = rosterFor(this.progress);
@@ -558,7 +560,10 @@ export class Game3D {
     events.on('hub-exit', () => this.menu.showCharacters(this.run.characterId));
     events.on('hub-records', () => this.recordBook.show(this.progress));
     events.on('hub-sergio', () => this.shop.show());
-    events.on('merchant-shop', () => this.shop.show());
+    events.on('merchant-shop', ({ guest }) => {
+      this.shopGuest = guest;
+      this.shop.show();
+    });
     events.on('player-revived', () => {
       this.floatAboveHero('SEGUNDA CHANCE!', '#ffe29a');
       this.effects.pulse(this.session.player.x, this.session.player.y, 140, 0xffe29a, 0.6, 0.8);
@@ -1247,7 +1252,7 @@ export class Game3D {
     });
     this.choices.update(this.session);
     this.tavernDialog.update(this.session, this.progress);
-    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId));
+    this.tavernHeader.update(this.mode === 'hub' && !this.menu.visible && !this.shop.open && !this.tierPicker.open && !this.recordBook.open, this.progress, heroName(this.run.characterId), AREAS.find((area) => area.id === this.arenaMap.layout.id), this.session.merchant.igloo);
   }
 }
 

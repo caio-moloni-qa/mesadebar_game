@@ -62,7 +62,8 @@ export class BossUi {
     // A freshly opened merchant portal gets a few seconds of banner too.
     const portal = session.merchant.portal;
     const portalNews = !!portal && !session.merchant.inside && portal.remainingMs > MERCHANT_TUNING.portalOpenMs - 3500;
-    const banner = bosses.warningActive ? (session.arena.layout.id === 'snowfield' ? 'O Rei do Inverno se aproxima. Prepare-se para o frio eterno!' : FINAL_WARNING) : pending ? `${pending.name} desperta ${pending.where}!` : portalNews ? MERCHANT_NEWS : '';
+    // Arena news stays in the arena: indoors (tavern, igloo) it waits until the hero walks back out.
+    const banner = session.merchant.inside ? '' : bosses.warningActive ? (session.arena.layout.id === 'snowfield' ? 'O Rei do Inverno se aproxima. Prepare-se para o frio eterno!' : FINAL_WARNING) : pending ? `${pending.name} desperta ${pending.where}!` : portalNews ? MERCHANT_NEWS : '';
     if (this.last.get('bannerText') !== banner) {
       this.last.set('bannerText', banner);
       if (banner) this.banner.textContent = banner;
@@ -79,6 +80,8 @@ export class BossUi {
       this.banner.classList.toggle('merchant', banner === MERCHANT_NEWS);
     }
     this.toggle('banner', this.banner, banner !== '');
+    // The fights wait outside too (the arena stands still while the hero is indoors).
+    this.toggle('bars', this.bars, !session.merchant.inside);
     this.updateBars(session);
     this.updatePrompt(session, project);
     this.updateArrows(session, project);
@@ -158,8 +161,13 @@ export class BossUi {
     if (spot.kind === 'records') {
       return { x: merchant.room.x + merchant.layout.records.x, y: merchant.room.y + merchant.layout.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
     }
+    if (spot.kind === 'guest') {
+      if (session.dialogue !== null || !merchant.layout.guest) return null;
+      return { x: merchant.room.x + merchant.layout.guest.x, y: merchant.room.y + merchant.layout.guest.y, text: merchant.hub ? 'Pressione E para ver as melhorias do Sergio' : 'Pressione E para ver a loja do Sergio', poor: false };
+    }
     if (spot.kind === 'sergio') {
-      if (session.dialogue !== null) return null;
+      // Between runs the Esquimó's kitchen is closed (Sergio, at his table, is the one with something to sell).
+      if (session.dialogue !== null || (merchant.hub && merchant.igloo)) return null;
       return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text: merchant.igloo ? 'Pressione E para ver o cardápio do Esquimó' : 'Pressione E para ver a loja do Sergio', poor: false };
     }
     if (spot.kind === 'npc') {
@@ -179,18 +187,21 @@ export class BossUi {
   /** A marker at the screen edge for every boss, guardian (or the zone of one being announced) and portal that's
    *  off screen: their face in a ring, an arrow on the rim pointing the way, and how far it is. */
   private updateArrows(session: GameSession, project: Projector): void {
-    // Nothing out there to point at from the merchant's room.
-    const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = session.merchant.inside ? [] : session.bosses.bosses.map((boss) => ({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss' as const, tier: 'boss' }));
-    session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.kind, tier: 'miniboss' }));
-    // While a guardian is announced, point at its zone.
-    if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor(session.arena.layout), kind: session.miniBosses.pending.kind, tier: 'miniboss' });
-    if (session.portals) targets.push({ ...session.portals.end, kind: 'end', tier: 'end' }, { ...session.portals.continue, kind: 'continue', tier: 'continue' });
-    if (session.merchant.portal && !session.merchant.inside) targets.push({ x: session.merchant.portal.x, y: session.merchant.portal.y, kind: 'merchant', tier: 'merchant' });
-    const prophecy = session.merchant.inside ? null : session.prophecy();
-    if (prophecy) targets.push({ x: prophecy.x, y: prophecy.y, kind: prophecy.kind, tier: 'prophecy' });
-    if (!session.merchant.inside) session.quests.barrels.forEach((barrel) => targets.push({ ...barrel, kind: 'barrel', tier: 'quest' }));
-    if (!session.merchant.inside && session.quests.fragmentsShowing) session.quests.fragments.forEach((fragment) => targets.push({ ...fragment, kind: 'fragment', tier: 'quest' }));
-    if (session.shelter.eskimo && !session.merchant.inside) targets.push({ x: session.shelter.eskimo.x, y: session.shelter.eskimo.y, kind: 'eskimo', tier: 'merchant' });
+    const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = [];
+    // Nothing out there to point at from the merchant's room (tavern or igloo).
+    if (!session.merchant.inside) {
+      session.bosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss', tier: 'boss' }));
+      session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.kind, tier: 'miniboss' }));
+      // While a guardian is announced, point at its zone.
+      if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor(session.arena.layout), kind: session.miniBosses.pending.kind, tier: 'miniboss' });
+      if (session.portals) targets.push({ ...session.portals.end, kind: 'end', tier: 'end' }, { ...session.portals.continue, kind: 'continue', tier: 'continue' });
+      if (session.merchant.portal) targets.push({ x: session.merchant.portal.x, y: session.merchant.portal.y, kind: 'merchant', tier: 'merchant' });
+      const prophecy = session.prophecy();
+      if (prophecy) targets.push({ x: prophecy.x, y: prophecy.y, kind: prophecy.kind, tier: 'prophecy' });
+      session.quests.barrels.forEach((barrel) => targets.push({ ...barrel, kind: 'barrel', tier: 'quest' }));
+      if (session.quests.fragmentsShowing) session.quests.fragments.forEach((fragment) => targets.push({ ...fragment, kind: 'fragment', tier: 'quest' }));
+      if (session.shelter.eskimo) targets.push({ x: session.shelter.eskimo.x, y: session.shelter.eskimo.y, kind: 'eskimo', tier: 'merchant' });
+    }
     const { player } = session;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
