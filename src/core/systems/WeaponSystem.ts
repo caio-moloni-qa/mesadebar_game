@@ -175,9 +175,12 @@ export class WeaponSystem {
   }
 
   update(deltaMs: number): void {
-    this.weapons.forEach((weapon) => this.attackWithWeapon(weapon, deltaMs));
-    this.weapons.filter((weapon) => weapon.config.type === 'cone').forEach((weapon) => this.updateWhirlwind(weapon));
-    this.updateThrownSwordVolley();
+    // Frozen solid (Congelamento), the hero can't swing or throw; what's already in the air flies on.
+    if (!this.host.player.isFrozen(this.host.clock.now)) {
+      this.weapons.forEach((weapon) => this.attackWithWeapon(weapon, deltaMs));
+      this.weapons.filter((weapon) => weapon.config.type === 'cone').forEach((weapon) => this.updateWhirlwind(weapon));
+      this.updateThrownSwordVolley();
+    }
     this.updateProjectiles(deltaMs);
   }
 
