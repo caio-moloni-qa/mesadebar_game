@@ -1,5 +1,5 @@
 import { CONSUMABLES, ConsumableId, DIFFICULTY_TIERS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
-import { CURRENT_AREA } from '../../config/areas';
+import { AreaConfig, CURRENT_AREA } from '../../config/areas';
 import { heroName } from '../progress/heroNames';
 import { merchantItemIcon, npcPortrait, storeIcon } from './icons';
 import { MerchantOffer } from '../../core/systems/MerchantSystem';
@@ -238,14 +238,17 @@ export class TavernHeader {
     container.appendChild(this.root);
   }
 
-  update(visible: boolean, save: SaveData, heroName: string): void {
+  /** `region`: the area whose base this is (the tavern, or the Esquimó's igloo in the Campo Nevado). */
+  update(visible: boolean, save: SaveData, heroName: string, region: AreaConfig = CURRENT_AREA, igloo = false): void {
     this.root.hidden = !visible;
     if (!visible) return;
-    const area = areaCompletion(save, CURRENT_AREA);
-    const key = `${save.fichas}|${heroName}|${area.joined}`;
+    const area = areaCompletion(save, region);
+    const key = `${save.fichas}|${heroName}|${area.joined}|${region.id}|${igloo}`;
     if (key === this.shown) return;
     this.shown = key;
-    this.root.innerHTML = `<p class="eyebrow">A TAVERNA · ${CURRENT_AREA.name.toUpperCase()}</p><p class="tavern-fichas"><b>${save.fichas}</b> Fichas · último herói: <b></b></p><p class="tavern-area">Heróis da região conquistados: <b>${area.joined}/${area.total}</b></p><p class="tavern-hints">Fale com o Sergio para a loja · ajude os frequentadores · escolha o herói ao sair pelo portal</p>`;
+    const place = igloo ? 'O IGLU' : 'A TAVERNA';
+    const hints = igloo ? 'Fale com o Sergio na mesa para a loja · ajude os frequentadores · escolha o herói ao sair pelo túnel' : 'Fale com o Sergio para a loja · ajude os frequentadores · escolha o herói ao sair pelo portal';
+    this.root.innerHTML = `<p class="eyebrow">${place} · ${region.name.toUpperCase()}</p><p class="tavern-fichas"><b>${save.fichas}</b> Fichas · último herói: <b></b></p><p class="tavern-area">Heróis da região conquistados: <b>${area.joined}/${area.total}</b></p><p class="tavern-hints">${hints}</p>`;
     this.root.querySelectorAll('b')[1].textContent = heroName;
   }
 }

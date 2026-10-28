@@ -57,6 +57,9 @@ export interface RoomLayout {
   /** Between runs: the lectern with the record book, by the fireplace. */
   records: Vec2;
   fireplace: Vec2;
+  /** The igloo: Sergio, come over from the tavern, eating at the table the regulars leave free (his store, or his
+   *  upgrades between runs, are with him there). */
+  guest?: Vec2;
 }
 
 /** The tavern: a round bartender island in the middle of the hall with Sergio inside it, and the regulars at tables on
@@ -80,7 +83,9 @@ export const IGLOO_LAYOUT: RoomLayout = {
   tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
   sergioSpot: { x: -140, y: 0 },
   records: { x: -110, y: 235 },
-  fireplace: { x: -20, y: 300 }
+  fireplace: { x: -20, y: 300 },
+  // The fourth table (the Campo Nevado has three regulars), on its west side: the dome's front wall hides the east one.
+  guest: { x: 159, y: 230 }
 };
 
 export function roomLayout(igloo: boolean): RoomLayout {
@@ -142,13 +147,14 @@ export interface MerchantHost {
   /** Grimbo's Mão Leve makes everything cheaper. */
   priceMultiplier(): number;
   /** The Campo Nevado: the room is the Esquimó's igloo, reached through his offer of shelter (ShelterSystem), never
-   *  a portal of its own; the chef serves meals with run bonuses. */
+   *  a portal of its own (and the base between runs); the chef serves meals with run bonuses, Sergio sells his items
+   *  from a table. */
   readonly igloo?: boolean;
 }
 
-/** What the hero is at in the tavern: the exit portal, Sergio, one of the regulars, or nothing — and between runs,
- *  the record book. */
-export type RoomSpot = { kind: 'exit' } | { kind: 'npc'; index: number } | { kind: 'sergio' } | { kind: 'records' } | null;
+/** What the hero is at in the tavern: the exit portal, Sergio (the Esquimó, in the igloo), Sergio eating at an igloo
+ *  table, one of the regulars, or nothing — and between runs, the record book. */
+export type RoomSpot = { kind: 'exit' } | { kind: 'npc'; index: number } | { kind: 'sergio' } | { kind: 'guest' } | { kind: 'records' } | null;
 
 export class MerchantSystem {
   enabled = true;
@@ -159,8 +165,10 @@ export class MerchantSystem {
   /** The tavern between runs: no stock on the counter, Sergio and the waiting heroes to talk to, and the exit
    *  portal starts a run instead of returning to one. */
   hub = false;
-  /** Offers on this visit's pedestals. */
+  /** Offers on this visit's pedestals (the Esquimó's menu, in the igloo). */
   offers: MerchantOffer[] = [];
+  /** Sergio's items at his igloo table (empty anywhere else). */
+  guestOffers: MerchantOffer[] = [];
   /** The room's centre in game units (outside the arena). */
   readonly room: Vec2;
   private elapsedMs = 0;
@@ -205,6 +213,7 @@ export class MerchantSystem {
     const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
     const { layout } = this;
     if (this.igloo ? distance(layout.sergioSpot) <= MERCHANT_TUNING.reach : distance(layout.merchant) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+    if (layout.guest && distance(layout.guest) <= MERCHANT_ROOM.talkReach) return { kind: 'guest' };
     if (this.hub && distance(layout.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
     let npc = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -269,6 +278,7 @@ export class MerchantSystem {
     this.returnTo = { ...returnTo };
     this.inside = true;
     this.offers = this.igloo ? this.buildOffers() : [];
+    this.guestOffers = this.igloo ? this.buildSergioOffers() : [];
     player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
     player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y;
     this.host.events.emit('merchant-entered', {});
@@ -281,6 +291,7 @@ export class MerchantSystem {
     this.enabled = false;
     this.inside = true;
     this.offers = [];
+    this.guestOffers = [];
     player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
     player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y + 60;
   }
@@ -318,6 +329,7 @@ export class MerchantSystem {
       ...(layout.island ? [{ x: layout.island.x, y: layout.island.y, radius: layout.island.outer }] : []),
       ...layout.tables.map((table) => ({ ...table, radius: MERCHANT_ROOM.tableRadius })),
       ...layout.npcs.filter((_, index) => !this.away.has(index)).map((npc) => ({ ...npc, radius: MERCHANT_ROOM.npcRadius })),
+      ...(layout.guest ? [{ ...layout.guest, radius: MERCHANT_ROOM.npcRadius }] : []),
       { ...layout.records, radius: 16 }
     ];
     circles.forEach((circle) => {
@@ -333,14 +345,15 @@ export class MerchantSystem {
     });
   }
 
-  /** Buys offer `index` if affordable; returns it (the caller applies it — the tome opens a choice). */
-  buy(index: number, currency: number): MerchantOffer | null {
-    const offer = this.offers[index];
+  /** Buys offer `index` (from Sergio's igloo table with `guest`) if affordable; returns it (the caller applies it —
+   *  the tome opens a choice). */
+  buy(index: number, currency: number, guest = false): MerchantOffer | null {
+    const offer = (guest ? this.guestOffers : this.offers)[index];
     if (!this.inside || !offer || offer.purchased || currency < offer.cost) return null;
     offer.purchased = true;
     this.itemsPurchased += 1;
-    // Run-wide inflation: what's still on the table re-prices at once.
-    this.offers.forEach((other) => {
+    // Run-wide inflation: what's still on the table (either of the igloo's) re-prices at once.
+    [...this.offers, ...this.guestOffers].forEach((other) => {
       if (!other.purchased) other.cost = Math.round(other.cost * MERCHANT_TUNING.priceInflation);
     });
     this.host.events.emit('merchant-purchase', { id: offer.id, cost: offer.cost });
@@ -358,6 +371,12 @@ export class MerchantSystem {
   private buildOffers(): MerchantOffer[] {
     const multiplier = MERCHANT_TUNING.priceInflation ** this.itemsPurchased;
     if (this.igloo) return IGLOO_MENU.map(spec => ({ ...spec, cost: Math.round(spec.cost * multiplier * this.host.priceMultiplier()), purchased: false }));
+    return this.buildSergioOffers();
+  }
+
+  /** Sergio's four: the blessing, the curse, one random buff and the tome (or the elixir). */
+  private buildSergioOffers(): MerchantOffer[] {
+    const multiplier = MERCHANT_TUNING.priceInflation ** this.itemsPurchased;
     const randomBuff = { ...pickOne(this.host.rng, RANDOM_BUFFS), cost: MERCHANT_TUNING.randomBuffCost };
     const tome = this.host.affinities().size < MAX_AFFINITIES && this.availableFamilies().length > 0;
     const fourth = tome ? AFFINITY_TOME : VITALITY_ELIXIR;

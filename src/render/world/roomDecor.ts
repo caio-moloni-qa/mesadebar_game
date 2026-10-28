@@ -211,20 +211,23 @@ export function buildRoomDecor(room: THREE.Group, igloo: boolean, chairless: Rea
       solid(cylinder(0.1, 0.1, 0.2, 8), 0x9a6a3a, at(table.x - 10, table.y - 10, 0.99));
       solid(cylinder(0.1, 0.1, 0.2, 8), 0x9a6a3a, at(table.x + 12, table.y + 8, 0.99));
       if (igloo) {
-        const plate = at(table.x + 14, table.y, 0.93);
+        // Sergio's seat at the regulars' spare table is on its west side; everyone else eats on the east.
+        const seat = index === 3 && layout.guest ? layout.guest : layout.npcs[index];
+        const side = Math.sign(seat.x - table.x) || 1;
+        const plate = at(table.x + side * 14, table.y, 0.93);
         solid(cylinder(0.33, 0.3, 0.055, 16), 0xffefd1, plate);
         solid(cylinder(0.24, 0.24, 0.035, 12), 0xb56434, plate.clone().setY(0.97));
         solid(ball(0.14, 1).scale(1, 0.5, 0.65), 0x71412d, plate.clone().add(new THREE.Vector3(0, 0.09, 0)));
-        for (const dz of [-0.12, 0.08, 0.18]) solid(ball(0.07, 0), dz < 0 ? 0xf4a23b : 0x73a04b, plate.clone().add(new THREE.Vector3(-0.12, 0.06, dz)));
-        for (const side of [-1, 1]) {
-          const utensil = plate.clone().add(new THREE.Vector3(0, 0, side * 0.43));
+        for (const dz of [-0.12, 0.08, 0.18]) solid(ball(0.07, 0), dz < 0 ? 0xf4a23b : 0x73a04b, plate.clone().add(new THREE.Vector3(-0.12 * side, 0.06, dz)));
+        for (const flank of [-1, 1]) {
+          const utensil = plate.clone().add(new THREE.Vector3(0, 0, flank * 0.43));
           solid(new THREE.BoxGeometry(0.28, 0.025, 0.035), 0xc8dce5, utensil);
-          for (let t = 0; t < 3; t++) solid(new THREE.BoxGeometry(0.12, 0.025, 0.015), 0xc8dce5, utensil.clone().add(new THREE.Vector3(-0.16, 0, (t - 1) * 0.035)));
+          for (let t = 0; t < 3; t++) solid(new THREE.BoxGeometry(0.12, 0.025, 0.015), 0xc8dce5, utensil.clone().add(new THREE.Vector3(-0.16 * side, 0, (t - 1) * 0.035)));
         }
         if (!chairless.has(index)) {
-          const chair = at(layout.npcs[index].x, layout.npcs[index].y);
+          const chair = at(seat.x, seat.y);
           solid(new THREE.BoxGeometry(0.75, 0.15, 0.8), 0x795036, chair.clone().setY(0.55));
-          solid(new THREE.BoxGeometry(0.14, 1.1, 0.8), 0x795036, chair.clone().add(new THREE.Vector3(0.35, 0.7, 0)));
+          solid(new THREE.BoxGeometry(0.14, 1.1, 0.8), 0x795036, chair.clone().add(new THREE.Vector3(0.35 * side, 0.7, 0)));
           for (const dx of [-0.25, 0.25]) for (const dz of [-0.27, 0.27]) solid(new THREE.BoxGeometry(0.08, 0.5, 0.08), 0x513625, chair.clone().add(new THREE.Vector3(dx, 0.25, dz)));
         }
       }

@@ -106,8 +106,9 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'hub-exit': Record<string, never>;
   'hub-records': Record<string, never>;
   'hub-sergio': Record<string, never>;
-  /** During a run's visit: Sergio's store (the run's items) opens. */
-  'merchant-shop': Record<string, never>;
+  /** During a run's visit: Sergio's store (the run's items) opens — or the Esquimó's menu, in the igloo, unless it's
+   *  Sergio at his table there (`guest`). */
+  'merchant-shop': { guest: boolean };
   /** Every wave boss is dead: the arena is cleared and the end / continue portals open. */
   'boss-wave-cleared': { cycle: number };
   'run-ended': { victory: boolean };
@@ -294,6 +295,7 @@ export class GameSession implements WeaponHost {
       pushPlayer: (dx, dy) => this.pushPlayer(dx, dy)
     });
     const { blizzard } = this;
+    const snowyArena = (this.arena.layout.torches?.length ?? 0) > 0;
     this.quests = new QuestSystem({
       player: this.player,
       rng: this.rng,
@@ -301,7 +303,7 @@ export class GameSession implements WeaponHost {
       events: this.events,
       weather: blizzard.active ? { storm: () => blizzard.phase === 'storm', warmed: () => !!blizzard.warmingTorch(this.player) } : undefined,
       raiseIceBlocks: (count) => this.raiseIceBlocks(count)
-    }, options.questTiers, options.hub ? QUEST_NPCS : questNpcsFor(this.arena.layout.id));
+    }, options.questTiers, options.hub && !snowyArena ? QUEST_NPCS : questNpcsFor(this.arena.layout.id));
     this.events.on('quest-claimed', () => { this.stats.missions += 1; });
     // A guardian's fight is about the guardian: the plain horde scatters down to the fight's cap — out of sight when
     // it's announced, then all but the hero's closest when it rises (the camera is on the guardian by then).
@@ -355,7 +357,8 @@ export class GameSession implements WeaponHost {
       affinities: () => this.affinities,
       priceMultiplier: () => (this.characterId === 'grimbo' ? HERO_ABILITY_TUNING.grimboPrices : 1),
       encounterActive: () => this.bosses.hasActiveEncounter() || this.awaitingPortalChoice,
-      igloo: !options.hub && blizzard.active
+      // The blizzard's area: the igloo is also its base between runs (the hub has no blizzard of its own).
+      igloo: snowyArena
     });
     // Tables without a regular of this area (the igloo has three) stand empty.
     this.merchant.layout.npcs.forEach((_, index) => {
@@ -540,10 +543,11 @@ export class GameSession implements WeaponHost {
     this.closeChoice();
   }
 
-  /** Buys this visit's offer `index` from Sergio's store and applies it. The
-   *  Tomo de Afinidade opens its family choice. Returns false if it couldn't be bought. */
-  buyMerchantItem(index: number): boolean {
-    const offer = this.merchant.buy(index, this.currency);
+  /** Buys this visit's offer `index` from Sergio's store (the Esquimó's menu in the igloo, or with `guest` Sergio's
+   *  table there) and applies it. The Tomo de Afinidade opens its family choice. Returns false if it couldn't be
+   *  bought. */
+  buyMerchantItem(index: number, guest = false): boolean {
+    const offer = this.merchant.buy(index, this.currency, guest);
     if (!offer) return false;
     this.currency -= offer.cost;
     const { player } = this;
@@ -1195,13 +1199,14 @@ export class GameSession implements WeaponHost {
       if (this.merchant.hub) {
         // Between runs the room's stations are the renderer's to answer; the regulars still talk.
         if (spot?.kind === 'exit') this.events.emit('hub-exit', {});
-        if (spot?.kind === 'sergio') this.events.emit('hub-sergio', {});
+        // In the igloo Sergio sells his upgrades from his table; the Esquimó's kitchen only cooks during a run.
+        if (spot?.kind === (this.merchant.igloo ? 'guest' : 'sergio')) this.events.emit('hub-sergio', {});
         if (spot?.kind === 'records') this.events.emit('hub-records', {});
         if (spot?.kind === 'npc') this.dialogue = spot.index;
         return;
       }
       if (spot?.kind === 'exit') this.beginJourney('exit', this.player, () => this.merchant.leave());
-      if (spot?.kind === 'sergio') this.events.emit('merchant-shop', {});
+      if (spot?.kind === 'sergio' || spot?.kind === 'guest') this.events.emit('merchant-shop', { guest: spot.kind === 'guest' });
       if (spot?.kind === 'npc') this.dialogue = spot.index;
       return;
     }

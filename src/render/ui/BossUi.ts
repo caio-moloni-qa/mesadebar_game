@@ -161,8 +161,13 @@ export class BossUi {
     if (spot.kind === 'records') {
       return { x: merchant.room.x + merchant.layout.records.x, y: merchant.room.y + merchant.layout.records.y, text: 'Pressione E para ler o livro de recordes', poor: false };
     }
+    if (spot.kind === 'guest') {
+      if (session.dialogue !== null || !merchant.layout.guest) return null;
+      return { x: merchant.room.x + merchant.layout.guest.x, y: merchant.room.y + merchant.layout.guest.y, text: merchant.hub ? 'Pressione E para ver as melhorias do Sergio' : 'Pressione E para ver a loja do Sergio', poor: false };
+    }
     if (spot.kind === 'sergio') {
-      if (session.dialogue !== null) return null;
+      // Between runs the Esquimó's kitchen is closed (Sergio, at his table, is the one with something to sell).
+      if (session.dialogue !== null || (merchant.hub && merchant.igloo)) return null;
       return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text: merchant.igloo ? 'Pressione E para ver o cardápio do Esquimó' : 'Pressione E para ver a loja do Sergio', poor: false };
     }
     if (spot.kind === 'npc') {

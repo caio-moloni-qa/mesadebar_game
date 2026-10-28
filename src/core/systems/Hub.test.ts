@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SNOWFIELD } from '../../config/arenaLayout';
 import { WORLD_SIZE } from '../../config/world';
 import { GameSession, STEP_MS } from '../session/GameSession';
 import { ArenaMap } from '../world/ArenaMap';
@@ -48,6 +49,24 @@ describe('the tavern between runs', () => {
     expect(run.dialogue).toBeNull();
     expect(run.quests.quests[0].status).toBe('offer');
     expect(run.quests.quests[0].tier).toBe(1);
+  });
+});
+
+describe('the igloo between runs (Campo Nevado)', () => {
+  it('is the base: the area regulars at its tables, Sergio at the fourth with his upgrades, the kitchen closed', () => {
+    const run = new GameSession({ characterId: 'mage', seed: 3, skipStartingUpgrades: true, arena: ArenaMap.generate(3, SNOWFIELD), hub: true });
+    expect(run.merchant.igloo).toBe(true);
+    expect(run.quests.quests.map((quest) => quest.npc.id)).toEqual(['joe', 'beast', 'voly']);
+    const heard: string[] = [];
+    run.events.on('hub-sergio', () => heard.push('sergio'));
+    standAt(run, run.merchant.layout.sergioSpot);
+    run.interact();
+    expect(heard).toEqual([]);
+    const guest = run.merchant.layout.guest!;
+    standAt(run, { x: guest.x - 40, y: guest.y });
+    expect(run.merchant.roomSpot).toEqual({ kind: 'guest' });
+    run.interact();
+    expect(heard).toEqual(['sergio']);
   });
 });
 
