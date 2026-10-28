@@ -227,8 +227,8 @@ export const SNOWFIELD: ArenaLayout = {
   // Frost-covered stones south-west of the clearing.
   stoneCircle: { center: { x: 1380, y: 2060 }, radius: 130, stones: 7 },
   shrine: { x: 2560, y: 1060 },
-  // The castle's Cavaleiro Congelado first; the lake and the chapel keep Greenfield's guardians until theirs arrive.
-  guardians: ['frostKnight', 'lakeSpirit', 'gravedigger'],
+  // Local guardians: castle, frozen lake, chapel and pine forest.
+  guardians: ['frostKnight', 'iceSerpent', 'bellringer', 'ancientYeti'],
   // On the trails, a short walk out of the clearing and on towards every zone, so there's always another to move to.
   torches: [
     { x: 1460, y: 1730 }, { x: 1290, y: 1725 },

@@ -5,6 +5,7 @@ import type { CharacterId } from '../../config/characters';
 import { importedHeroRig } from '../models/heroes';
 import { toonMaterial } from '../materials';
 import { humanoidClips } from '../models/clips';
+import { ball, box, cone, cylinder, part } from '../models/parts';
 import { buildRoomDecor } from './roomDecor';
 import { RoomAmbience } from './RoomAmbience';
 import { MerchantPortal } from './MerchantPortal';
@@ -16,7 +17,7 @@ import { CHARACTER_LAYER } from '../PixelPipeline';
 
 const HIP = 0.82;
 
-interface Character { root: THREE.Group; mixer: THREE.AnimationMixer }
+interface Character { root: THREE.Group; mixer: THREE.AnimationMixer; bones: Record<string, THREE.Bone> }
 
 function rigged(parts: PartSpec[], scale: number, phase: number): Character {
   const material = toonMaterial({ vertexColors: true, flatShading: true });
@@ -27,19 +28,19 @@ function rigged(parts: PartSpec[], scale: number, phase: number): Character {
   // Regulars don't idle in lockstep.
   idle.time = phase * idle.getClip().duration;
   idle.play();
-  return { root: model.root, mixer };
+  return { root: model.root, mixer, bones: model.bones };
 }
 
 /** A tavern figure idling: their imported mesh when it's loaded, otherwise the procedural one (with what they hold). */
-function figure(id: RegularFigureId): Character {
+function figure(id: RegularFigureId, dining = false): Character {
   const look = REGULAR_FIGURE_LOOK[id];
   const imported = importedHeroRig(id as CharacterId, toonMaterial({ vertexColors: true, flatShading: true }));
-  if (!imported) return rigged(REGULAR_FIGURES[id](true), look.scale, look.phase);
+  if (!imported) return rigged(REGULAR_FIGURES[id](!dining), look.scale, look.phase);
   const mixer = new THREE.AnimationMixer(imported.model.root);
   const idle = mixer.clipAction(imported.clips.idle);
   idle.time = look.phase * idle.getClip().duration;
   idle.play();
-  return { root: imported.model.root, mixer };
+  return { root: imported.model.root, mixer, bones: imported.model.bones };
 }
 
 /** "!" (mission on offer), "?" (come claim it), "…" (under way) over a regular's head. */
@@ -125,7 +126,16 @@ export class MerchantRoom {
 
   constructor(private readonly system: MerchantSystem, private readonly quests: QuestSystem) {
     this.sergio = figure(system.igloo ? 'eskimo' : 'sergio');
-    this.regulars = quests.quests.map((quest) => figure(quest.npc.id as RegularFigureId));
+    if (system.igloo) {
+      const mat = toonMaterial({ vertexColors: true, flatShading: true });
+      const add = (bone: string, geometry: THREE.BufferGeometry) => this.sergio.bones[bone]?.add(new THREE.Mesh(geometry, mat));
+      add('head', part(cylinder(0.21, 0.22, 0.17, 8), 0xfff4dd, [0, 0.53, 0]));
+      add('head', part(ball(0.25, 1).scale(1, 0.7, 1), 0xfff4dd, [0, 0.67, 0]));
+      add('chest', part(box(0.4, 0.58, 0.04), 0xfff4dd, [0, -0.08, 0.19]));
+      add('handR', part(cylinder(0.025, 0.025, 0.45, 6), 0xa5bac7, [0, -0.1, 0.07]));
+      add('handR', part(ball(0.1, 1).scale(1, 0.4, 1), 0xa5bac7, [0, -0.33, 0.07]));
+    }
+    this.regulars = quests.quests.map((quest) => figure(quest.npc.id as RegularFigureId, system.igloo));
     const center = simToWorld(system.room.x, system.room.y, 0, new THREE.Vector3());
     const room = new THREE.Group();
     room.add(this.questMarkers);
@@ -175,6 +185,12 @@ export class MerchantRoom {
       regular.root.position.copy(at(spot.x, spot.y).add(center));
       regular.root.rotation.y = layout.island ? facing(spot, layout.island) : -Math.PI / 2;
       this.characters.add(regular.root);
+      if (system.igloo) {
+        const spoon = new THREE.Mesh(cylinder(0.022, 0.022, 0.3, 5), toonMaterial({ color: 0xcbdce5 }));
+        spoon.position.set(0, -0.04, 0.1); spoon.rotation.x = Math.PI / 2;
+        const bowl = new THREE.Mesh(ball(0.06, 1).scale(1, 0.3, 1), spoon.material);
+        bowl.position.set(0, 0.17, 0); spoon.add(bowl); regular.bones.handR?.add(spoon);
+      }
       // The composite needs sprite depth, too; alphaTest keeps the transparent corners out of it.
       const marker = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.2, depthWrite: true, toneMapped: false, fog: false }));
       // Only draw in the finer character pass, avoiding a second coarse world copy.
@@ -203,7 +219,21 @@ export class MerchantRoom {
     this.exitPortal.animate(this.time);
     if (!system.inside) return;
     this.sergio.mixer.update(deltaSeconds);
-    this.regulars.forEach((regular) => regular.mixer.update(deltaSeconds));
+    this.regulars.forEach((regular, index) => {
+      regular.mixer.update(deltaSeconds);
+      if (!system.igloo) return;
+      const { bones } = regular;
+      const t = this.time * 1.6 + index * 2.1;
+      const bite = Math.pow((Math.sin(t) + 1) / 2, 2);
+      bones.thighL.rotation.x = bones.thighR.rotation.x = -1.45;
+      bones.shinL.rotation.x = bones.shinR.rotation.x = 1.45;
+      bones.hips.position.y = HIP - 0.28;
+      bones.upperArmR.rotation.set(-0.6 - bite * 0.5, 0, -0.15);
+      bones.foreArmR.rotation.x = -0.45 - bite * 1.3;
+      bones.upperArmL.rotation.x = -0.6;
+      bones.foreArmL.rotation.x = -0.6;
+      bones.head.rotation.x = 0.04 + bite * 0.15 + Math.sin(t * 5) * bite * 0.025;
+    });
     this.ambience.update(deltaSeconds);
     // The fire breathes.
     this.fireLight.intensity = 18 + Math.sin(this.time * 9) * 3 + Math.sin(this.time * 23) * 2;

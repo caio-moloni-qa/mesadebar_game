@@ -75,7 +75,10 @@ export const MINI_BOSS_VARIANTS = {
   templeGuardian: { maxHealth: 1700, movementSpeed: 55, contactDamage: 15, reward: 0 },
   lakeSpirit: { maxHealth: 2000, movementSpeed: 60, contactDamage: 12, reward: 0 },
   // Campo Nevado
-  frostKnight: { maxHealth: 1600, movementSpeed: 70, contactDamage: 14, reward: 0 }
+  frostKnight: { maxHealth: 1600, movementSpeed: 70, contactDamage: 14, reward: 0 },
+  iceSerpent: { maxHealth: 2200, movementSpeed: 85, contactDamage: 16, reward: 0 },
+  bellringer: { maxHealth: 1900, movementSpeed: 60, contactDamage: 14, reward: 0 },
+  ancientYeti: { maxHealth: 2600, movementSpeed: 65, contactDamage: 18, reward: 0 }
 };
 /** Neutral creatures: they live at fixed spots of the map (ArenaLayout.neutrals), leave the hero alone until hurt,
  *  and don't count toward the horde's cap. `contactDamage` only bites while angry (NeutralSystem). */

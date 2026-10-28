@@ -244,6 +244,7 @@ export class PlayerState implements Body, UpgradeTarget {
   addAuraRadiusPercent(): void { this.auraRadiusBonusPercent += 0.06; }
   addAuraDamageBonus(): void { this.auraDamageBonus += 2.38; }
   addAuraTickSpeedBonus(): void { this.auraTickSpeedBonusMs += 100; }
+  addMealRegeneration(): void { this.bonusPassiveHealPerSecond += 2; }
   addDivineBlessing(): void { this.bonusPassiveHealPerSecond += 5; }
   addArcaneCurse(): void {
     this.maxHealth = Math.max(1, this.maxHealth - 50);
@@ -359,7 +360,7 @@ export class EnemyState implements Body {
     this.rottenAuraSuppressed = false;
     this.hasFrostAura = variantId === 'iceTroll';
     this.displaySize = ENEMY_DISPLAY_SIZES[variantId];
-    this.radius = variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : variantId === 'boar' ? 22 : variantId === 'stag' ? 24 : variantId === 'hive' ? 20 : variantId === 'mimic' ? 22 : variantId === 'iceTroll' ? 26 : variantId === 'snowman' ? 14 : variantId === 'iceWolf' ? 16 : variantId === 'iceBlock' ? 24 : BODY_RADIUS.enemy;
+    this.radius = variantId === 'ancientYeti' ? 48 : variantId === 'iceSerpent' ? 44 : variantId === 'bellringer' ? 32 : variantId === 'finalBoss' ? 58 : variantId === 'templeGuardian' ? 28 : variantId === 'frostKnight' ? 32 : variantId === 'gravedigger' ? 30 : variantId === 'boar' ? 22 : variantId === 'stag' ? 24 : variantId === 'hive' ? 20 : variantId === 'mimic' ? 22 : variantId === 'iceTroll' ? 26 : variantId === 'snowman' ? 14 : variantId === 'iceWolf' ? 16 : variantId === 'iceBlock' ? 24 : BODY_RADIUS.enemy;
     this.hitStunUntil = 0;
     this.lastHitAt = -Infinity;
     this.slowStackPercent = 0;
@@ -441,6 +442,9 @@ export const ENEMY_DISPLAY_SIZES: Record<EnemyVariantId, number> = {
   /** Sized (with its 28-unit body) to walk between the temple's colonnade pillars, 73 units apart. */
   templeGuardian: 150,
   frostKnight: 160,
+  iceSerpent: 190,
+  bellringer: 170,
+  ancientYeti: 210,
   /** Grows to 230 as it drinks the lake (MiniBossSystem). */
   lakeSpirit: 80,
   /** Low and long: about knee-high next to the hero. */

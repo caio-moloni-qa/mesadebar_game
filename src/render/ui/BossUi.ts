@@ -62,7 +62,7 @@ export class BossUi {
     // A freshly opened merchant portal gets a few seconds of banner too.
     const portal = session.merchant.portal;
     const portalNews = !!portal && !session.merchant.inside && portal.remainingMs > MERCHANT_TUNING.portalOpenMs - 3500;
-    const banner = bosses.warningActive ? FINAL_WARNING : pending ? `${pending.name} desperta ${pending.where}!` : portalNews ? MERCHANT_NEWS : '';
+    const banner = bosses.warningActive ? (session.arena.layout.id === 'snowfield' ? 'O Rei do Inverno se aproxima. Prepare-se para o frio eterno!' : FINAL_WARNING) : pending ? `${pending.name} desperta ${pending.where}!` : portalNews ? MERCHANT_NEWS : '';
     if (this.last.get('bannerText') !== banner) {
       this.last.set('bannerText', banner);
       if (banner) this.banner.textContent = banner;
@@ -90,7 +90,7 @@ export class BossUi {
     const guardianKey = guardians.map((boss) => `${boss.kind}:${Math.ceil(boss.enemy.health)}/${Math.ceil(boss.enemy.maxHealth)}`).join(';');
     const key = guardianKey + '#' + shown.map((boss) => {
       const countdown = boss.isMain && boss.cleanupPending ? Math.ceil(Math.max(0, BOSS_TUNING.cleanupMs - boss.cleanupElapsed) / 1000) : -1;
-      return `${Math.ceil(boss.enemy.health)}/${boss.enemy.maxHealth}|${boss.shieldActive ? Math.ceil(boss.shield) : -1}/${Math.ceil(boss.maxShield)}|${countdown}`;
+      return `${boss.winter}:${Math.ceil(boss.enemy.health)}/${boss.enemy.maxHealth}|${boss.shieldActive ? Math.ceil(boss.shield) : -1}/${Math.ceil(boss.maxShield)}|${countdown}`;
     }).join(';');
     if (this.last.get('bars') === key) return;
     this.last.set('bars', key);
@@ -108,6 +108,7 @@ export class BossUi {
       const shield = boss.shieldActive && boss.maxShield > 0 ? (boss.shield / boss.maxShield) * 100 : 0;
       const countdown = boss.isMain && boss.cleanupPending ? Math.ceil(Math.max(0, BOSS_TUNING.cleanupMs - boss.cleanupElapsed) / 1000) : null;
       bar.innerHTML = `
+        ${boss.winter ? '<p class="boss-countdown">Rei do Inverno</p>' : ''}
         ${countdown !== null ? `<p class="boss-countdown">A escuridão consome a arena em ${countdown}s</p>` : ''}
         <div class="boss-health"><div style="width:${health}%"></div><span>${Math.ceil(Math.max(0, boss.enemy.health))} / ${boss.enemy.maxHealth}</span></div>
         ${boss.shieldActive ? `<div class="boss-shield"><div style="width:${shield}%"></div></div>` : ''}`;
@@ -159,7 +160,7 @@ export class BossUi {
     }
     if (spot.kind === 'sergio') {
       if (session.dialogue !== null) return null;
-      return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text: 'Pressione E para ver a loja do Sergio', poor: false };
+      return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text: merchant.igloo ? 'Pressione E para ver o cardápio do Esquimó' : 'Pressione E para ver a loja do Sergio', poor: false };
     }
     if (spot.kind === 'npc') {
       if (session.dialogue !== null) return null;

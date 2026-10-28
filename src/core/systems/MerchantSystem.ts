@@ -76,7 +76,7 @@ export const TAVERN_LAYOUT: RoomLayout = {
 export const IGLOO_LAYOUT: RoomLayout = {
   merchant: { x: -255, y: 0 },
   counter: { x: -195, y: 10, halfWidth: 28, halfHeight: 200 },
-  npcs: [{ x: 120, y: -130 }, { x: 255, y: -40 }, { x: 120, y: 160 }, { x: 255, y: 230 }],
+  npcs: [{ x: 96, y: -130 }, { x: 231, y: -40 }, { x: 96, y: 160 }, { x: 231, y: 230 }],
   tables: [{ x: 60, y: -130 }, { x: 195, y: -40 }, { x: 60, y: 160 }, { x: 195, y: 230 }],
   sergioSpot: { x: -140, y: 0 },
   records: { x: -110, y: 235 },
@@ -91,7 +91,7 @@ export function roomLayout(igloo: boolean): RoomLayout {
  *  counts), however many weapons they carry. */
 export const MAX_AFFINITIES = 2;
 
-export type MerchantItemId = 'divine-blessing' | 'arcane-curse' | 'heal' | 'damage' | 'speed' | 'affinity-tome' | 'max-health';
+export type MerchantItemId = 'divine-blessing' | 'arcane-curse' | 'heal' | 'damage' | 'speed' | 'affinity-tome' | 'max-health' | 'polar-stew' | 'glacier-fish' | 'tundra-roast' | 'berry-tea';
 
 export interface MerchantOffer {
   id: MerchantItemId;
@@ -102,6 +102,13 @@ export interface MerchantOffer {
 }
 
 interface ItemSpec { id: MerchantItemId; name: string; description: string; cost: number }
+
+export const IGLOO_MENU: ItemSpec[] = [
+  { id: 'polar-stew', name: 'Ensopado Polar', description: 'Carne e raízes da tundra. Cura 40 de vida e concede +20 de vida máxima nesta run.', cost: 50 },
+  { id: 'glacier-fish', name: 'Peixe do Glaciar', description: 'Peixe crocante com ervas da neve. +15% de dano nesta run.', cost: 65 },
+  { id: 'tundra-roast', name: 'Assado da Tundra', description: 'Carne assada com legumes. +2 HP/s de regeneração nesta run.', cost: 75 },
+  { id: 'berry-tea', name: 'Chá de Frutas da Neve', description: 'Bebida quente de frutas locais. +15 de velocidade nesta run.', cost: 45 }
+];
 
 const DIVINE_BLESSING: ItemSpec = { id: 'divine-blessing', name: 'Bênção Divina', description: '+5 HP/s de cura passiva. Empilha se comprado de novo.', cost: 150 };
 const ARCANE_CURSE: ItemSpec = { id: 'arcane-curse', name: 'Maldição Arcana', description: '-50 de vida máxima, +150% de dano. Empilha se comprado de novo.', cost: 120 };
@@ -135,7 +142,7 @@ export interface MerchantHost {
   /** Grimbo's Mão Leve makes everything cheaper. */
   priceMultiplier(): number;
   /** The Campo Nevado: the room is the Esquimó's igloo, reached through his offer of shelter (ShelterSystem), never
-   *  a portal of its own; nothing on sale. */
+   *  a portal of its own; the chef serves meals with run bonuses. */
   readonly igloo?: boolean;
 }
 
@@ -197,7 +204,7 @@ export class MerchantSystem {
     if (near(MERCHANT_ROOM.exit)) return { kind: 'exit' };
     const distance = (offset: Vec2) => Math.hypot(player.x - (this.room.x + offset.x), player.y - (this.room.y + offset.y));
     const { layout } = this;
-    if (!this.host.igloo && distance(layout.merchant) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
+    if (this.igloo ? distance(layout.sergioSpot) <= MERCHANT_TUNING.reach : distance(layout.merchant) <= MERCHANT_ROOM.sergioReach) return { kind: 'sergio' };
     if (this.hub && distance(layout.records) <= MERCHANT_ROOM.recordsReach) return { kind: 'records' };
     let npc = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -261,7 +268,7 @@ export class MerchantSystem {
     const { player } = this.host;
     this.returnTo = { ...returnTo };
     this.inside = true;
-    this.offers = [];
+    this.offers = this.igloo ? this.buildOffers() : [];
     player.x = player.prevX = this.room.x + MERCHANT_ROOM.arrival.x;
     player.y = player.prevY = this.room.y + MERCHANT_ROOM.arrival.y;
     this.host.events.emit('merchant-entered', {});
@@ -350,6 +357,7 @@ export class MerchantSystem {
 
   private buildOffers(): MerchantOffer[] {
     const multiplier = MERCHANT_TUNING.priceInflation ** this.itemsPurchased;
+    if (this.igloo) return IGLOO_MENU.map(spec => ({ ...spec, cost: Math.round(spec.cost * multiplier * this.host.priceMultiplier()), purchased: false }));
     const randomBuff = { ...pickOne(this.host.rng, RANDOM_BUFFS), cost: MERCHANT_TUNING.randomBuffCost };
     const tome = this.host.affinities().size < MAX_AFFINITIES && this.availableFamilies().length > 0;
     const fourth = tome ? AFFINITY_TOME : VITALITY_ELIXIR;

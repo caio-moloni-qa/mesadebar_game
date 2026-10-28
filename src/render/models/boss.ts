@@ -1,3 +1,4 @@
+import { snowBossParts } from './snowBosses';
 import * as THREE from 'three';
 import { toonMaterial } from '../materials';
 import { BossClipName, bossClips } from './clips';
@@ -107,16 +108,16 @@ const CLIPS = bossClips(HIP_HEIGHT);
 
 /** The final boss, the Ancestral Necromancer: crowned, armoured skeleton king with a cape and green soul-fire.
  *  ~2.4 m at scale 1; BossView scales it to the boss's display size. */
-export function createBossModel(): BossModel {
+export function createBossModel(winter = false): BossModel {
   const material = toonMaterial({ vertexColors: true, flatShading: true });
   // The imported Tripo lich when it's loaded (importedBosses.ts), else the procedural skeleton king.
-  const geometry = bossMesh('necromancer');
+  const geometry = winter ? null : bossMesh('necromancer');
   if (geometry) {
     const model = rigImportedMesh(geometry, NECROMANCER_JOINTS, material);
     const clips = Object.fromEntries(Object.entries(bossClips(NECROMANCER_HIP_HEIGHT)).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<BossClipName, THREE.AnimationClip>;
     return { ...model, clips, material };
   }
-  const model = buildRiggedModel(bossBones(), bossParts(), material);
+  const model = buildRiggedModel(bossBones(), winter ? snowBossParts('winterKing') : bossParts(), material);
   const clips = Object.fromEntries(Object.entries(CLIPS).map(([name, clip]) => [name, clipForBones(clip, model.bones)])) as Record<BossClipName, THREE.AnimationClip>;
   return { ...model, clips, material };
 }

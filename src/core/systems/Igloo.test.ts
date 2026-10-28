@@ -57,7 +57,8 @@ describe('O Esquimó e o Iglu', () => {
     const bar = session.merchant.layout.sergioSpot;
     session.player.x = session.merchant.room.x + bar.x;
     session.player.y = session.merchant.room.y + bar.y;
-    expect(session.merchant.roomSpot?.kind).not.toBe('sergio');
+    expect(session.merchant.roomSpot?.kind).toBe('sergio');
+    expect(session.merchant.offers).toHaveLength(4);
     session.player.x = session.merchant.room.x + MERCHANT_ROOM.exit.x;
     session.player.y = session.merchant.room.y + MERCHANT_ROOM.exit.y;
     session.interact();

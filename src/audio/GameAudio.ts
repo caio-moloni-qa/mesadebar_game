@@ -26,7 +26,7 @@ const STING_URLS = {
 };
 export type TrackName = keyof typeof TRACK_URLS;
 type StingName = keyof typeof STING_URLS;
-const GUARDIAN_TRACK: Record<MiniBossKind, TrackName> = { gravedigger: 'guardian-gravedigger', templeGuardian: 'guardian-temple', lakeSpirit: 'guardian-lake', frostKnight: 'guardian-temple' };
+const GUARDIAN_TRACK: Record<MiniBossKind, TrackName> = { gravedigger: 'guardian-gravedigger', templeGuardian: 'guardian-temple', lakeSpirit: 'guardian-lake', frostKnight: 'guardian-temple', iceSerpent: 'guardian-lake', bellringer: 'guardian-gravedigger', ancientYeti: 'guardian-temple' };
 const CROSSFADE_S = 1.6;
 
 /** What the music reads off the session (GameSession fits it). */

@@ -13,7 +13,7 @@ export interface SergioShopActions {
   buyConsumable(id: ConsumableId): void;
   /** During a run's visit through his portal: this visit's items, the run's coins, and buying one. Null between
    *  runs. */
-  runShop(): { coins: number; offers: MerchantOffer[]; buy(index: number): void } | null;
+  runShop(): { igloo?: boolean; coins: number; offers: MerchantOffer[]; buy(index: number): void } | null;
   exportSave(): void;
   importSave(): void;
   close(): void;
@@ -77,14 +77,15 @@ export class SergioShop {
     const portrait = document.createElement('img');
     portrait.className = 'store-portrait';
     portrait.alt = '';
-    portrait.src = npcPortrait('sergio') ?? '';
+    portrait.src = npcPortrait(run?.igloo ? 'eskimo' : 'sergio') ?? '';
+    this.root.setAttribute('aria-label', run?.igloo ? 'Cozinha do Esquimó' : 'Loja do Sergio');
     const speech = document.createElement('div');
     const name = document.createElement('p');
     name.className = 'dialog-name';
-    name.innerHTML = 'Sergio <span>Taberneiro e mercador</span>';
+    name.innerHTML = run?.igloo ? 'Esquimó <span>Chef do Campo Nevado</span>' : 'Sergio <span>Taberneiro e mercador</span>';
     const said = document.createElement('p');
     said.className = 'dialog-text';
-    said.textContent = `“${run ? RUN_GREETING : this.welcome ? WELCOME : GREETING}”`;
+    said.textContent = `“${run?.igloo ? 'O melhor da tundra, servido quentinho! Escolha um prato para fortalecer sua jornada.' : run ? RUN_GREETING : this.welcome ? WELCOME : GREETING}”`;
     speech.append(name, said);
     const balance = document.createElement('p');
     balance.className = 'store-balance';
@@ -109,14 +110,14 @@ export class SergioShop {
     });
     const hint = document.createElement('p');
     hint.className = 'store-hint';
-    hint.textContent = run ? 'Itens desta partida, pagos com moedas. Cada compra deixa o resto 3× mais caro.' : TABS.find((spec) => spec.id === this.tab)!.hint;
+    hint.textContent = run?.igloo ? 'Receitas locais. Os efeitos duram nesta run; cada compra aumenta os preços restantes em 3×.' : run ? 'Itens desta partida, pagos com moedas. Cada compra deixa o resto 3× mais caro.' : TABS.find((spec) => spec.id === this.tab)!.hint;
     if (run) {
       tabs.replaceChildren();
       const tab = document.createElement('button');
       tab.type = 'button';
       tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-selected', 'true');
-      tab.textContent = 'Itens da run';
+      tab.textContent = run.igloo ? 'Cardápio do Nevado' : 'Itens da run';
       tabs.append(tab);
     }
 
@@ -342,6 +343,10 @@ const BESTIARY: Array<{ id: string; name: string; kind: 'horda' | 'neutro' | 'gu
   { id: 'gravedigger', name: 'O Coveiro', kind: 'guardião' },
   { id: 'templeGuardian', name: 'Guardião do Templo', kind: 'guardião' },
   { id: 'frostKnight', name: 'O Cavaleiro Congelado', kind: 'guardião' },
+  { id: 'iceSerpent', name: 'Serpente do Gelo', kind: 'guardião' },
+  { id: 'bellringer', name: 'O Sineiro', kind: 'guardião' },
+  { id: 'ancientYeti', name: 'Yeti Ancião', kind: 'guardião' },
+  { id: 'winterKing', name: 'Rei do Inverno', kind: 'chefe' },
   { id: 'lakeSpirit', name: 'O Espírito do Lago', kind: 'guardião' },
   { id: 'finalBoss', name: 'O Necromante', kind: 'chefe' }
 ];

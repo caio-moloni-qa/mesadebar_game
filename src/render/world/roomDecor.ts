@@ -4,6 +4,7 @@ import { MERCHANT_ROOM, roomLayout } from '../../core/systems/MerchantSystem';
 import { toonMaterial } from '../materials';
 import { ball, cone, cylinder, mergeParts, part } from '../models/parts';
 import { WORLD_SCALE } from '../space';
+import { buildIglooKitchen } from './iglooKitchen';
 import { roomMaterial } from './roomMaterials';
 
 /** Original palettes retained for missing-texture fallback. */
@@ -208,6 +209,22 @@ export function buildRoomDecor(room: THREE.Group, igloo: boolean) {
       solid(cylinder(0.45, 0.5, 0.06, 8), look.tableLeg, at(table.x, table.y, 0.03));
       solid(cylinder(0.1, 0.1, 0.2, 8), 0x9a6a3a, at(table.x - 10, table.y - 10, 0.99));
       solid(cylinder(0.1, 0.1, 0.2, 8), 0x9a6a3a, at(table.x + 12, table.y + 8, 0.99));
+      if (igloo) {
+        const plate = at(table.x + 14, table.y, 0.93);
+        solid(cylinder(0.33, 0.3, 0.055, 16), 0xffefd1, plate);
+        solid(cylinder(0.24, 0.24, 0.035, 12), 0xb56434, plate.clone().setY(0.97));
+        solid(ball(0.14, 1).scale(1, 0.5, 0.65), 0x71412d, plate.clone().add(new THREE.Vector3(0, 0.09, 0)));
+        for (const dz of [-0.12, 0.08, 0.18]) solid(ball(0.07, 0), dz < 0 ? 0xf4a23b : 0x73a04b, plate.clone().add(new THREE.Vector3(-0.12, 0.06, dz)));
+        for (const side of [-1, 1]) {
+          const utensil = plate.clone().add(new THREE.Vector3(0, 0, side * 0.43));
+          solid(new THREE.BoxGeometry(0.28, 0.025, 0.035), 0xc8dce5, utensil);
+          for (let t = 0; t < 3; t++) solid(new THREE.BoxGeometry(0.12, 0.025, 0.015), 0xc8dce5, utensil.clone().add(new THREE.Vector3(-0.16, 0, (t - 1) * 0.035)));
+        }
+        const chair = at(layout.npcs[index].x, layout.npcs[index].y);
+        solid(new THREE.BoxGeometry(0.75, 0.15, 0.8), 0x795036, chair.clone().setY(0.55));
+        solid(new THREE.BoxGeometry(0.14, 1.1, 0.8), 0x795036, chair.clone().add(new THREE.Vector3(0.35, 0.7, 0)));
+        for (const dx of [-0.25, 0.25]) for (const dz of [-0.27, 0.27]) solid(new THREE.BoxGeometry(0.08, 0.5, 0.08), 0x513625, chair.clone().add(new THREE.Vector3(dx, 0.25, dz)));
+      }
       if (index === 3 && !igloo) {
         glow(ball(0.24, 1), 0x9fe8ff, at(table.x, table.y, 1.14));
         solid(cylinder(0.15, 0.2, 0.08, 8), 0xc9963f, at(table.x, table.y, 0.93));
@@ -220,17 +237,17 @@ export function buildRoomDecor(room: THREE.Group, igloo: boolean) {
     if (igloo) {
       // Open-roof cutaway: successive courses lean inward to suggest the snow dome.
       // The rounded-square perimeter preserves the original square room's playable anchors.
-      for (let course = 0; course < 4; course++) {
+      for (let course = 0; course < 8; course++) {
         const count = 48;
         for (let i = 0; i < count; i++) {
           const angle = (i + (course % 2) * 0.5) / count * Math.PI * 2;
           const c = Math.cos(angle), z = Math.sin(angle);
-          const radius = (half + 0.1 - course * 0.12) / Math.pow(Math.pow(Math.abs(c), 8) + Math.pow(Math.abs(z), 8), 1 / 8);
+          const radius = (half + 0.1 - course * 0.065) / Math.pow(Math.pow(Math.abs(c), 8) + Math.pow(Math.abs(z), 8), 1 / 8);
           const x = c * radius, depth = z * radius;
-          if (depth < -half + 0.8 && Math.abs(x) < 1.8) continue; // Exit gap.
-          if (depth > half - 0.8 && course > 1) continue; // Camera-facing cutaway.
+          // Continuous rear wall behind the entrance tunnel.
+          if ((depth > half - 0.8 || x > half - 0.8) && course > 2) continue; // Camera-facing cutaway.
           const nextAngle = angle + 0.002;
-          const nextR = (half + 0.1 - course * 0.12) / Math.pow(Math.pow(Math.abs(Math.cos(nextAngle)), 8) + Math.pow(Math.abs(Math.sin(nextAngle)), 8), 1 / 8);
+          const nextR = (half + 0.1 - course * 0.065) / Math.pow(Math.pow(Math.abs(Math.cos(nextAngle)), 8) + Math.pow(Math.abs(Math.sin(nextAngle)), 8), 1 / 8);
           const tangent = Math.atan2(Math.sin(nextAngle) * nextR - depth, Math.cos(nextAngle) * nextR - x);
           const geometry = new THREE.BoxGeometry(1.65, 0.56, 0.62).rotateY(-tangent);
           // Sample one snow face inside the wall texture rather than shrinking many brick rows onto each block.
@@ -239,6 +256,7 @@ export function buildRoomDecor(room: THREE.Group, igloo: boolean) {
           surface(geometry, 'igloo_ice', look.wall, new THREE.Vector3(x, 0.29 + course * 0.6, depth));
         }
       }
+      buildIglooKitchen(solid, glow);
       // Dry fish suspended above the rear shelf.
       for (let i = 0; i < 9; i++) {
         const z = -3.6 + i * 0.86;
