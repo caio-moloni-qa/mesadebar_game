@@ -140,7 +140,9 @@ export class MerchantRoom {
     const room = new THREE.Group();
     room.add(this.questMarkers);
     room.position.copy(center);
-    const { flames, fireLight } = buildRoomDecor(room, system.igloo);
+    // Joe is a cube with no legs to sit: no chair at his table.
+    const chairless = new Set(quests.quests.flatMap((quest, index) => (quest.npc.id === 'joe' ? [index] : [])));
+    const { flames, fireLight } = buildRoomDecor(room, system.igloo, chairless);
     this.flames = flames;
     this.fireLight = fireLight;
     const at = (x: number, y: number, height = 0) => new THREE.Vector3(x * WORLD_SCALE, height, y * WORLD_SCALE);
@@ -223,11 +225,14 @@ export class MerchantRoom {
       regular.mixer.update(deltaSeconds);
       if (!system.igloo) return;
       const { bones } = regular;
+      // Joe's imported cube has no limbs to sit and eat with: he just idles by the table.
+      if (!bones.thighL) return;
       const t = this.time * 1.6 + index * 2.1;
       const bite = Math.pow((Math.sin(t) + 1) / 2, 2);
       bones.thighL.rotation.x = bones.thighR.rotation.x = -1.45;
       bones.shinL.rotation.x = bones.shinR.rotation.x = 1.45;
-      bones.hips.position.y = HIP - 0.28;
+      // Down from the hip height the idle clip just set (each imported rig has its own).
+      bones.hips.position.y -= 0.28;
       bones.upperArmR.rotation.set(-0.6 - bite * 0.5, 0, -0.15);
       bones.foreArmR.rotation.x = -0.45 - bite * 1.3;
       bones.upperArmL.rotation.x = -0.6;

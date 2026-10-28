@@ -320,3 +320,60 @@ export const SERGIO_JOINTS: JointSpec[] = [
 ];
 
 export const SERGIO_HIP_HEIGHT = 0.85;
+
+/** Voly's Tripo mesh (src/assets/3d/characters/voly.glb, art-source/3d/voly/): a 2.2 m polar-bear brawler with huge
+ *  furred arms hanging wide of the kilt (hands at |x| ≈ 0.7) and a bear head above broad shoulders. */
+export const VOLY_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.7, 0], radius: 0.4, minY: 0.45 },
+  { name: 'spine', parent: 'hips', at: [0, 1.0, 0], radius: 0.42, minY: 0.8 },
+  { name: 'chest', parent: 'spine', at: [0, 1.35, 0], radius: 0.45, minY: 1.1, maxY: 1.9 },
+  { name: 'head', parent: 'chest', at: [0, 1.75, 0.05], tip: [0, 2.2, 0.1], radius: 0.3, minY: 1.72 },
+  { name: 'upperArmL', parent: 'chest', at: [0.52, 1.58, 0], radius: 0.2, side: 'L', minAbsX: 0.45, maxY: 1.7, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.68, 1.2, 0], radius: 0.18, side: 'L', minAbsX: 0.52 },
+  { name: 'handL', parent: 'foreArmL', at: [0.7, 0.95, 0.05], tip: [0.7, 0.65, 0.1], radius: 0.14, side: 'L', minAbsX: 0.55 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.52, 1.58, 0], radius: 0.2, side: 'R', minAbsX: 0.45, maxY: 1.7, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.68, 1.2, 0], radius: 0.18, side: 'R', minAbsX: 0.52 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.7, 0.95, 0.05], tip: [-0.7, 0.65, 0.1], radius: 0.14, side: 'R', minAbsX: 0.55 },
+  { name: 'thighL', parent: 'hips', at: [0.25, 0.62, 0], radius: 0.18, side: 'L', maxY: 0.75, maxAbsX: 0.55 },
+  { name: 'shinL', parent: 'thighL', at: [0.35, 0.35, 0], radius: 0.16, side: 'L', maxY: 0.5 },
+  { name: 'footL', parent: 'shinL', at: [0.4, 0.12, 0], tip: [0.42, 0.02, 0.3], radius: 0.15, side: 'L', maxY: 0.22 },
+  { name: 'thighR', parent: 'hips', at: [-0.25, 0.62, 0], radius: 0.18, side: 'R', maxY: 0.75, maxAbsX: 0.55 },
+  { name: 'shinR', parent: 'thighR', at: [-0.35, 0.35, 0], radius: 0.16, side: 'R', maxY: 0.5 },
+  { name: 'footR', parent: 'shinR', at: [-0.4, 0.12, 0], tip: [-0.42, 0.02, 0.3], radius: 0.15, side: 'R', maxY: 0.22 }
+];
+
+export const VOLY_HIP_HEIGHT = 0.7;
+
+/** Beast's Tripo mesh (src/assets/3d/characters/beast.glb, art-source/3d/beast/): a 1.75 m huntress under a wolf
+ *  pelt whose cape hangs behind her to the knees; it stays with the torso and hips, like Lyra's cloak. */
+export const BEAST_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.85, 0], radius: 0.25, minY: 0.45 },
+  { name: 'spine', parent: 'hips', at: [0, 1.0, 0], radius: 0.25, minY: 0.8 },
+  { name: 'chest', parent: 'spine', at: [0, 1.2, 0], radius: 0.28, minY: 1.0, maxY: 1.5 },
+  { name: 'head', parent: 'chest', at: [0, 1.45, 0.03], tip: [0, 1.75, 0.05], radius: 0.18, minY: 1.42 },
+  { name: 'upperArmL', parent: 'chest', at: [0.27, 1.36, 0], radius: 0.08, side: 'L', minAbsX: 0.24, maxY: 1.42, rest: [0, 0, 10] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.38, 1.07, 0], radius: 0.08, side: 'L', minAbsX: 0.32 },
+  { name: 'handL', parent: 'foreArmL', at: [0.44, 0.82, 0.02], tip: [0.46, 0.62, 0.04], radius: 0.06, side: 'L', minAbsX: 0.36 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.27, 1.36, 0], radius: 0.08, side: 'R', minAbsX: 0.24, maxY: 1.42, rest: [0, 0, -10] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.38, 1.07, 0], radius: 0.08, side: 'R', minAbsX: 0.32 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.44, 0.82, 0.02], tip: [-0.46, 0.62, 0.04], radius: 0.06, side: 'R', minAbsX: 0.36 },
+  { name: 'thighL', parent: 'hips', at: [0.15, 0.8, 0], radius: 0.12, side: 'L', maxY: 0.9, maxAbsX: 0.35 },
+  { name: 'shinL', parent: 'thighL', at: [0.18, 0.45, 0], radius: 0.11, side: 'L', maxY: 0.6 },
+  { name: 'footL', parent: 'shinL', at: [0.22, 0.12, 0.02], tip: [0.24, 0.02, 0.25], radius: 0.1, side: 'L', maxY: 0.25 },
+  { name: 'thighR', parent: 'hips', at: [-0.15, 0.8, 0], radius: 0.12, side: 'R', maxY: 0.9, maxAbsX: 0.35 },
+  { name: 'shinR', parent: 'thighR', at: [-0.18, 0.45, 0], radius: 0.11, side: 'R', maxY: 0.6 },
+  { name: 'footR', parent: 'shinR', at: [-0.22, 0.12, 0.02], tip: [-0.24, 0.02, 0.25], radius: 0.1, side: 'R', maxY: 0.25 }
+];
+
+export const BEAST_HIP_HEIGHT = 0.85;
+
+/** Joe's Tripo mesh (src/assets/3d/characters/joe.glb, art-source/3d/joe/raw_v2.glb): a 1 m ice cube with no limbs.
+ *  One rigid bone at the base, so the idle rocks the whole cube on its bottom edge instead of bending it. */
+export const JOE_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.05, 0], tip: [0, 1, 0], radius: 1 }
+];
+
+export const JOE_HIP_HEIGHT = 0.05;
