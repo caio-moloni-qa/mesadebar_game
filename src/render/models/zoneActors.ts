@@ -156,7 +156,7 @@ export function createStoneGolemModel(runes = 0x7fe3ff): ActorModel {
 
 // ── O Cavaleiro Congelado (Campo Nevado) ─────────────────────────────────────────────────────────────────────
 
-/** A dead knight in a shell of ice: frosted plate, a tower shield on the left arm, a long blade of ice in the right
+/** A dead knight in a shell of ice: frosted plate, a long blade of ice in the right
  *  hand, a great helm with a cyan visor slit, icicles hanging off the pauldrons and a tattered blue cloak. */
 export function createFrostKnightModel(): ActorModel {
   const hip = 0.95;
@@ -167,11 +167,8 @@ export function createFrostKnightModel(): ActorModel {
   const frost = 0xe8f3fb;
   const glow = 0x7fe3ff;
   const cloak = 0x2b3f63;
-  // The imported knight came with empty hands: the shield (his front guard) and the ice blade ride on its bones.
+  // The imported knight came with empty hands: the ice blade rides on its right hand.
   const tripo = imported('frostKnight', FROST_KNIGHT_JOINTS, FROST_KNIGHT_HIP_HEIGHT, 2.2, [
-    { bone: 'foreArmL', geometry: part(box(0.06, 0.7, 0.5), plateDark, [0.2, -0.12, 0.08]) },
-    { bone: 'foreArmL', geometry: part(box(0.07, 0.62, 0.42), plate, [0.22, -0.12, 0.08]) },
-    { bone: 'foreArmL', geometry: part(gem(0.08), glow, [0.27, -0.12, 0.08]) },
     { bone: 'handR', geometry: part(box(0.05, 0.2, 0.05), plateDark, [0, -0.1, 0.04]) },
     { bone: 'handR', geometry: part(box(0.26, 0.05, 0.07), plateDark, [0, -0.2, 0.04]) },
     { bone: 'handR', geometry: part(box(0.07, 1.05, 0.02), glow, [0, -0.74, 0.04]) },
@@ -210,10 +207,7 @@ export function createFrostKnightModel(): ActorModel {
     { bone: 'head', geometry: part(box(0.22, 0.04, 0.02), glow, [0, 0.17, 0.175]) },
     { bone: 'head', geometry: part(box(0.04, 0.12, 0.02), plateDark, [0, 0.1, 0.18]) },
     { bone: 'head', geometry: part(cone(0.06, 0.24, 4), frost, [0, 0.44, 0]) },
-    // Tower shield on the left forearm, a blade of ice in the right hand.
-    { bone: 'foreArmL', geometry: part(box(0.06, 0.66, 0.46), plateDark, [-0.1, -arm * 0.5, 0.06]) },
-    { bone: 'foreArmL', geometry: part(box(0.07, 0.58, 0.38), plate, [-0.12, -arm * 0.5, 0.06]) },
-    { bone: 'foreArmL', geometry: part(gem(0.07), glow, [-0.16, -arm * 0.5, 0.06]) },
+    // A blade of ice in the right hand.
     { bone: 'handR', geometry: part(box(0.04, 0.18, 0.04), plateDark, [0, -0.06, 0.04]) }, // grip
     { bone: 'handR', geometry: part(box(0.22, 0.04, 0.06), plateDark, [0, -0.16, 0.04]) }, // crossguard
     { bone: 'handR', geometry: part(box(0.06, 0.95, 0.02), glow, [0, -0.66, 0.04]) }, // the blade

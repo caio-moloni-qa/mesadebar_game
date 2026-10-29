@@ -13,7 +13,8 @@ import { EnemyVariantId, MiniBossVariantId } from './EnemySpawnScheduler';
 // which the horde's flow-field pursuit can't do).
 
 export type MiniBossKind = MiniBossVariantId;
-export type CompanionKind = 'gravedigger' | 'stoneGolem' | 'waterFairy';
+export type SnowCompanionKind = 'frostKnight' | 'iceSerpent' | 'bellringer' | 'ancientYeti';
+export type CompanionKind = 'gravedigger' | 'stoneGolem' | 'waterFairy' | SnowCompanionKind;
 
 export interface MiniBossSpec {
   name: string;
@@ -34,10 +35,10 @@ export const MINI_BOSSES: Record<MiniBossKind, MiniBossSpec> = {
   templeGuardian: { name: 'Guardião do Templo', where: 'nas ruínas', zone: 'ruins', anchor: ({ temple }) => temple.center, leashRadius: 720, companion: 'stoneGolem' },
   lakeSpirit: { name: 'O Espírito do Lago', where: 'no lago', zone: 'lake', anchor: ({ lake }) => lake.center, leashRadius: 1000, companion: 'waterFairy', spawnInWater: true },
   // In the open courtyard south of the keep's inner sanctum (the sanctum itself is too tight to fight in).
-  iceSerpent: { name: 'Serpente do Gelo', where: 'no lago congelado', zone: 'lake', anchor: ({ lake }) => ({ x: lake.center.x - lake.radius - 130, y: lake.center.y }), leashRadius: 1000, companion: 'waterFairy' },
-  bellringer: { name: 'O Sineiro', where: 'na capela', zone: 'graveyard', anchor: ({ graveyard }) => graveyard.center, leashRadius: 780, companion: 'gravedigger' },
-  ancientYeti: { name: 'Yeti Ancião', where: 'nos pinheiros', zone: 'forest', anchor: ({ zones }) => { const forest = zones.find(z => z.kind === 'forest')!.blobs[0]; return { x: forest.x, y: forest.y }; }, leashRadius: 850, companion: 'stoneGolem' },
-  frostKnight: { name: 'O Cavaleiro Congelado', where: 'na fortaleza', zone: 'ruins', anchor: ({ temple }) => ({ x: temple.center.x, y: temple.center.y + temple.halfHeight * 0.5 }), leashRadius: 760, companion: 'stoneGolem' }
+  iceSerpent: { name: 'Serpente do Gelo', where: 'no lago congelado', zone: 'lake', anchor: ({ lake }) => ({ x: lake.center.x - lake.radius - 130, y: lake.center.y }), leashRadius: 1000, companion: 'iceSerpent' },
+  bellringer: { name: 'O Sineiro', where: 'na capela', zone: 'graveyard', anchor: ({ graveyard }) => graveyard.center, leashRadius: 780, companion: 'bellringer' },
+  ancientYeti: { name: 'Yeti Ancião', where: 'nos pinheiros', zone: 'forest', anchor: ({ zones }) => { const forest = zones.find(z => z.kind === 'forest')!.blobs[0]; return { x: forest.x, y: forest.y }; }, leashRadius: 850, companion: 'ancientYeti' },
+  frostKnight: { name: 'O Cavaleiro Congelado', where: 'na fortaleza', zone: 'ruins', anchor: ({ temple }) => ({ x: temple.center.x, y: temple.center.y + temple.halfHeight * 0.5 }), leashRadius: 760, companion: 'frostKnight' }
 };
 
 /** Rotation order of the per-cycle mini-boss slots: the arena's guardians. */

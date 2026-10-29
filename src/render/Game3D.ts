@@ -753,6 +753,9 @@ export class Game3D {
       this.floatAboveHero(level > 1 ? `${COMPANIONS[kind].name} — nível ${level}!` : `${COMPANIONS[kind].name} se junta a você!`, '#8bffd0');
     });
     events.on('companion-attack', ({ kind, x, y, radius }) => {
+      if (kind === 'frostKnight' || kind === 'iceSerpent' || kind === 'bellringer' || kind === 'ancientYeti') {
+        this.effects.pulse(x, y, radius, kind === 'bellringer' ? 0xe8c875 : 0x91d9ef, 0.3, 0.7);
+      }
       if (kind === 'stoneGolem') {
         this.effects.pulse(x, y, radius, 0xffd36a, 0.3, 0.7);
         const point = at(x, y);

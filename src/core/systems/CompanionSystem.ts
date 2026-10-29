@@ -2,7 +2,7 @@ import { EventBus } from '../EventBus';
 import { Vec2 } from '../math';
 import { EnemyState, PlayerState } from '../session/entities';
 import { ArenaMap } from '../world/ArenaMap';
-import { CompanionKind } from './MiniBossSystem';
+import { CompanionKind, SnowCompanionKind } from './MiniBossSystem';
 
 // Companions: allies earned from zone mini-bosses (one kind per zone), following the hero for the rest of the run.
 // Taking a kind you already have levels it up instead. Every companion has health: enemies touching it chip it, and
@@ -19,10 +19,26 @@ export interface CompanionSpec {
 }
 
 export const COMPANIONS: Record<CompanionKind, CompanionSpec> = {
+  frostKnight: { name: 'Cavaleiro Congelado Aliado', description: 'Segue você e corta os inimigos próximos com sua espada de gelo.' },
+  iceSerpent: { name: 'Serpente do Gelo Aliada', description: 'Cospe gelo à distância, atingindo os inimigos ao redor do alvo.' },
+  bellringer: { name: 'Sineiro Aliado', description: 'Segue você e solta badaladas que atingem os inimigos ao seu redor.' },
+  ancientYeti: { name: 'Yeti Ancião Aliado', description: 'Avança na horda e esmaga os inimigos com pancadas em área.' },
   gravedigger: { name: 'Coveiro Aliado', description: 'Segue você com a pá e ergue esqueletos aliados que caçam a horda.' },
   stoneGolem: { name: 'Golem de Pedra', description: 'Avança na horda com socos que atingem em área e atrai os inimigos próximos para si.' },
   waterFairy: { name: 'Fada da Água', description: 'Paira ao seu lado e cura você em pulsos, limpando lentidões. Também cura seus outros companheiros.' }
 };
+
+/** Allied attacks are tuned separately from guardian encounters. */
+export const SNOW_COMPANION_TUNING = {
+  frostKnight: { health: 260, damage: 26, cooldownMs: 1100, reach: 70, radius: 55, speed: 195 },
+  iceSerpent: { health: 170, damage: 19, cooldownMs: 1700, reach: 250, radius: 48, speed: 210 },
+  bellringer: { health: 210, damage: 18, cooldownMs: 2200, reach: 135, radius: 135, speed: 180 },
+  ancientYeti: { health: 340, damage: 32, cooldownMs: 1900, reach: 75, radius: 95, speed: 150 }
+} satisfies Record<SnowCompanionKind, object>;
+
+export function isSnowCompanion(kind: CompanionKind): kind is SnowCompanionKind {
+  return kind in SNOW_COMPANION_TUNING;
+}
 
 export const COMPANION_TUNING = {
   followDistance: 80,
@@ -193,7 +209,8 @@ export class CompanionSystem {
       companion.prevY = companion.y;
       if (!this.standing(companion)) return;
       companion.cooldownMs += delta;
-      if (companion.kind === 'gravedigger') this.updateGravedigger(companion, delta);
+      if (isSnowCompanion(companion.kind)) this.updateSnowCompanion(companion, companion.kind, delta);
+      else if (companion.kind === 'gravedigger') this.updateGravedigger(companion, delta);
       else if (companion.kind === 'stoneGolem') this.updateGolem(companion, delta);
       else this.updateFairy(companion, delta);
       this.takeContactDamage(companion, delta);
@@ -236,7 +253,7 @@ export class CompanionSystem {
 
   private maxHealth(kind: CompanionKind, level: number): number {
     const T = COMPANION_TUNING;
-    const base = kind === 'stoneGolem' ? T.golemHealth : kind === 'gravedigger' ? T.gravediggerHealth : T.fairyHealth;
+    const base = isSnowCompanion(kind) ? SNOW_COMPANION_TUNING[kind].health : kind === 'stoneGolem' ? T.golemHealth : kind === 'gravedigger' ? T.gravediggerHealth : T.fairyHealth;
     return base * (1 + T.perLevel * (level - 1));
   }
 
@@ -392,5 +409,19 @@ export class CompanionSystem {
       this.host.enemiesNear(companion, T.golemRadius).forEach((enemy) => this.host.damageEnemy(enemy, damage));
       this.host.events.emit('companion-attack', { kind: companion.kind, x: companion.x, y: companion.y, radius: T.golemRadius });
     }
+  }
+
+  private updateSnowCompanion(companion: CompanionState, kind: SnowCompanionKind, delta: number): void {
+    const tuning = SNOW_COMPANION_TUNING[kind];
+    const target = this.host.nearestEnemy(this.host.player, COMPANION_TUNING.golemSeekRange);
+    const follows = kind === 'bellringer' || kind === 'iceSerpent';
+    this.move(companion, target && !follows ? target : this.followSpot(companion), target && !follows ? tuning.speed : COMPANION_TUNING.followSpeed, delta, target && !follows ? tuning.reach * 0.6 : 6);
+    if (!target || companion.cooldownMs < tuning.cooldownMs || Math.hypot(target.x - companion.x, target.y - companion.y) > tuning.reach + target.radius) return;
+    companion.cooldownMs = 0;
+    companion.attackedAt = this.host.now();
+    this.face(companion, target);
+    const center = kind === 'iceSerpent' ? target : companion;
+    this.host.enemiesNear(center, tuning.radius).forEach(enemy => this.host.damageEnemy(enemy, this.damage(companion, tuning.damage)));
+    this.host.events.emit('companion-attack', { kind, x: center.x, y: center.y, radius: tuning.radius });
   }
 }

@@ -70,6 +70,10 @@ const UPGRADE_ICONS: Record<string, string> = {
 
 /** Generated companion portraits shared by joining and strengthening reward cards. */
 const COMPANION_ICONS: Record<CompanionKind, string> = {
+  frostKnight: new URL('../../assets/ui/markers/frostKnight-head.png', import.meta.url).href,
+  iceSerpent: new URL('../../assets/ui/markers/iceSerpent-head.png', import.meta.url).href,
+  bellringer: new URL('../../assets/ui/markers/bellringer-head.png', import.meta.url).href,
+  ancientYeti: new URL('../../assets/ui/markers/ancientYeti-head.png', import.meta.url).href,
   gravedigger: new URL('../../assets/ui/companions/gravedigger-portrait.png', import.meta.url).href,
   waterFairy: new URL('../../assets/ui/companions/water-fairy-portrait.png', import.meta.url).href,
   stoneGolem: new URL('../../assets/ui/companions/stone-golem-portrait.png', import.meta.url).href
