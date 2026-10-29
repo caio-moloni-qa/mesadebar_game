@@ -85,13 +85,23 @@ describe('O Esquimó e o Iglu', () => {
     expect(session.shelter.eskimo).toBeNull();
   });
 
-  it('leaves when the front passes', () => {
+  it('leaves by sled when the front passes: off the nearest map edge, offering nothing on the way', () => {
     const session = snowSession();
     session.adjustElapsedMs(STORM);
     session.summonEskimo();
     expect(session.shelter.eskimo).not.toBeNull();
-    advance(session, stormMs);
-    expect(session.shelter.eskimo).toBeNull();
+    expect(until(session, () => session.shelter.leaving, stormMs)).toBe(true);
+    const eskimo = session.shelter.eskimo!;
+    const start = { x: eskimo.x, y: eskimo.y };
+    const { size } = session.arena;
+    const edge = Math.min(start.x, start.y, size - start.x, size - start.y);
+    expect(session.shelter.offering).toBe(false);
+    advance(session, 1000);
+    expect(session.shelter.offering).toBe(false);
+    const moved = { x: eskimo.x, y: eskimo.y };
+    expect(Math.hypot(moved.x - start.x, moved.y - start.y)).toBeGreaterThan(SHELTER_TUNING.leaveSpeed * 0.9);
+    expect(Math.min(moved.x, moved.y, size - moved.x, size - moved.y)).toBeLessThan(edge);
+    expect(until(session, () => session.shelter.eskimo === null, SHELTER_TUNING.leaveMaxMs)).toBe(true);
   });
 });
 

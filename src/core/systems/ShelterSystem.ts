@@ -7,7 +7,8 @@ import { BlizzardSystem, blizzardFrontAt, blizzardPhaseAt } from './BlizzardSyst
 // always on to the one nearest the hero, so sooner or later he finds you. Close enough, he offers shelter for a few
 // seconds ("Precisa de abrigo?"); take it (E) and you're in his igloo (MerchantSystem's room, dressed as an igloo). He
 // takes you in once per front at most, and leaves when the front passes. Nothing hits him and nothing aims at him: he
-// isn't an enemy, just a walker this system moves.
+// isn't an enemy, just a walker this system moves. When his time is up he doesn't vanish: he climbs on his sled and
+// drives off the nearest edge of the map.
 
 export const SHELTER_TUNING = {
   /** He sets out this far into a front, from a lit torch at least this far from the hero. */
@@ -20,7 +21,11 @@ export const SHELTER_TUNING = {
   offerReach: 140,
   offerMs: 6_000,
   askAgainMs: 10_000,
-  radius: 16
+  radius: 16,
+  /** Leaving: the sled's speed (straight for the nearest map edge, over anything in the way) and how long it may take
+   *  before he's simply gone. */
+  leaveSpeed: 340,
+  leaveMaxMs: 14_000
 };
 
 export interface Eskimo {
@@ -38,12 +43,15 @@ export interface Eskimo {
   offerUntil: number;
   /** No new offer before this. */
   askAgainAt: number;
+  /** On his way out by sled: when he set off (-1 while still doing his rounds). */
+  leavingSince: number;
 }
 
 export interface ShelterEvents extends Record<string, unknown> {
   'eskimo-arrived': { x: number; y: number };
   'shelter-offered': { x: number; y: number };
   'shelter-accepted': Record<string, never>;
+  'eskimo-departing': { x: number; y: number };
   'eskimo-left': { x: number; y: number };
 }
 
@@ -69,7 +77,12 @@ export class ShelterSystem {
 
   /** He's waiting for an answer right now. */
   get offering(): boolean {
-    return !!this.eskimo && this.host.now() < this.eskimo.offerUntil;
+    return !!this.eskimo && this.eskimo.leavingSince < 0 && this.host.now() < this.eskimo.offerUntil;
+  }
+
+  /** He's on his sled, heading off the map. */
+  get leaving(): boolean {
+    return !!this.eskimo && this.eskimo.leavingSince >= 0;
   }
 
   update(deltaMs: number, elapsedMs: number): void {
@@ -81,8 +94,12 @@ export class ShelterSystem {
     if (eskimo) {
       eskimo.prevX = eskimo.x;
       eskimo.prevY = eskimo.y;
+      if (eskimo.leavingSince >= 0) {
+        this.drive(eskimo, deltaMs);
+        return;
+      }
       if (phase !== 'storm' || this.host.blocked() || front !== this.walkedFront) {
-        this.leave();
+        this.depart(eskimo);
         return;
       }
       this.walk(eskimo, deltaMs);
@@ -106,7 +123,7 @@ export class ShelterSystem {
     const spot = this.host.arena.nearestWalkable(player.x + 90, player.y, SHELTER_TUNING.radius);
     this.walkedFront = blizzardFrontAt(elapsedMs);
     this.servedFront = -1;
-    this.eskimo = { ...spot, prevX: spot.x, prevY: spot.y, facingX: -1, facingY: 0, target: this.nextTorch(-1), waypoint: null, pauseUntil: 0, offerUntil: 0, askAgainAt: 0 };
+    this.eskimo = { ...spot, prevX: spot.x, prevY: spot.y, facingX: -1, facingY: 0, target: this.nextTorch(-1), waypoint: null, pauseUntil: 0, offerUntil: 0, askAgainAt: 0, leavingSince: -1 };
     this.offer(this.eskimo);
   }
 
@@ -119,13 +136,38 @@ export class ShelterSystem {
     this.walkedFront = front;
     this.eskimo = {
       x: start.torch.x, y: start.torch.y, prevX: start.torch.x, prevY: start.torch.y, facingX: 0, facingY: 1,
-      target: this.nextTorch(start.index), waypoint: null, pauseUntil: this.host.now() + SHELTER_TUNING.torchPauseMs, offerUntil: 0, askAgainAt: 0
+      target: this.nextTorch(start.index), waypoint: null, pauseUntil: this.host.now() + SHELTER_TUNING.torchPauseMs, offerUntil: 0, askAgainAt: 0, leavingSince: -1
     };
     this.host.events.emit('eskimo-arrived', { x: start.torch.x, y: start.torch.y });
   }
 
-  private leave(): void {
-    const eskimo = this.eskimo!;
+  /** Time's up: no more offers, he turns his sled for the nearest map edge. */
+  private depart(eskimo: Eskimo): void {
+    const { size } = this.host.arena;
+    const exits = [
+      { distance: eskimo.x, x: -1, y: 0 },
+      { distance: size - eskimo.x, x: 1, y: 0 },
+      { distance: eskimo.y, x: 0, y: -1 },
+      { distance: size - eskimo.y, x: 0, y: 1 }
+    ];
+    const exit = exits.reduce((best, candidate) => (candidate.distance < best.distance ? candidate : best));
+    eskimo.leavingSince = this.host.now();
+    eskimo.offerUntil = 0;
+    eskimo.waypoint = null;
+    eskimo.facingX = exit.x;
+    eskimo.facingY = exit.y;
+    this.host.events.emit('eskimo-departing', { x: eskimo.x, y: eskimo.y });
+  }
+
+  /** The sled runs straight out, through trees and snowdrifts alike; gone once past the edge. */
+  private drive(eskimo: Eskimo, deltaMs: number): void {
+    const step = (SHELTER_TUNING.leaveSpeed * deltaMs) / 1000;
+    eskimo.x += eskimo.facingX * step;
+    eskimo.y += eskimo.facingY * step;
+    const { size } = this.host.arena;
+    const margin = SHELTER_TUNING.radius * 4;
+    const out = eskimo.x < -margin || eskimo.y < -margin || eskimo.x > size + margin || eskimo.y > size + margin;
+    if (!out && this.host.now() - eskimo.leavingSince < SHELTER_TUNING.leaveMaxMs) return;
     this.eskimo = null;
     this.host.events.emit('eskimo-left', { x: eskimo.x, y: eskimo.y });
   }
