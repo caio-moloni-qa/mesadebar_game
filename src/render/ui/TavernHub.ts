@@ -1,4 +1,4 @@
-import { CONSUMABLES, ConsumableId, DIFFICULTY_TIERS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
+import { CONSUMABLES, ConsumableId, DIFFICULTY_TIERS, IGLOO_MEALS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
 import { AreaConfig, CURRENT_AREA } from '../../config/areas';
 import { heroName } from '../progress/heroNames';
 import { merchantItemIcon, npcPortrait, storeIcon } from './icons';
@@ -21,6 +21,7 @@ export interface SergioShopActions {
 
 const WELCOME = 'Bem-vindo à minha taverna! Cada partida rende Fichas. Aqui no balcão você gasta: melhorias que valem para sempre, ou provisões para a próxima saída.';
 const GREETING = 'De volta, viajante? Fichas na mesa, e eu deixo você mais forte para a próxima.';
+const KITCHEN_GREETING = 'Vai encarar o frio? Levo uns pratos quentinhos para a viagem. Fichas na mesa!';
 const RUN_GREETING = 'Lá fora o tempo parou, pode escolher com calma. Moedas na mesa!';
 
 type ShopTab = 'atributos' | 'consumiveis';
@@ -33,10 +34,13 @@ const TABS: Array<{ id: ShopTab; label: string; hint: string }> = [
 /** Sergio's store, opened at his counter. Between runs: two shelves for Fichas, the permanent attributes (level
  *  pips, the next price) and the consumables for the next run (one of each in the pack), plus the save's
  *  export/import; the first visit opens with his welcome. During a run's visit: this visit's items, for the run's
- *  coins (every purchase makes what's left dearer). */
+ *  coins (every purchase makes what's left dearer). In the igloo between runs it's also the Esquimó's kitchen:
+ *  his dishes to go, for Fichas, into the pack. */
 export class SergioShop {
   private readonly root: HTMLDivElement;
   private welcome = false;
+  /** Between runs in the igloo: the Esquimó's dishes to go rather than Sergio's shelves. */
+  private kitchen = false;
   private tab: ShopTab = 'atributos';
 
   constructor(container: HTMLElement, private readonly actions: SergioShopActions) {
@@ -52,8 +56,9 @@ export class SergioShop {
     return !this.root.hidden;
   }
 
-  show(welcome = false): void {
+  show(welcome = false, kitchen = false): void {
     this.welcome = welcome;
+    this.kitchen = kitchen;
     this.root.hidden = false;
     this.render();
     this.root.querySelector<HTMLButtonElement>('.store-buy:not(:disabled), .store-close')?.focus({ preventScroll: true });
@@ -67,6 +72,8 @@ export class SergioShop {
     if (this.root.hidden) return;
     const save = this.actions.save();
     const run = this.actions.runShop();
+    const kitchen = !run && this.kitchen;
+    const eskimo = !!run?.igloo || kitchen;
     const focused = document.activeElement instanceof HTMLElement && this.root.contains(document.activeElement) ? document.activeElement.dataset.focus : undefined;
     this.root.replaceChildren();
     const panel = document.createElement('div');
@@ -77,15 +84,15 @@ export class SergioShop {
     const portrait = document.createElement('img');
     portrait.className = 'store-portrait';
     portrait.alt = '';
-    portrait.src = npcPortrait(run?.igloo ? 'eskimo' : 'sergio') ?? '';
-    this.root.setAttribute('aria-label', run?.igloo ? 'Cozinha do Esquimó' : 'Loja do Sergio');
+    portrait.src = npcPortrait(eskimo ? 'eskimo' : 'sergio') ?? '';
+    this.root.setAttribute('aria-label', eskimo ? 'Cozinha do Esquimó' : 'Loja do Sergio');
     const speech = document.createElement('div');
     const name = document.createElement('p');
     name.className = 'dialog-name';
-    name.innerHTML = run?.igloo ? 'Esquimó <span>Chef do Campo Nevado</span>' : 'Sergio <span>Taberneiro e mercador</span>';
+    name.innerHTML = eskimo ? 'Esquimó <span>Chef do Campo Nevado</span>' : 'Sergio <span>Taberneiro e mercador</span>';
     const said = document.createElement('p');
     said.className = 'dialog-text';
-    said.textContent = `“${run?.igloo ? 'O melhor da tundra, servido quentinho! Escolha um prato para fortalecer sua jornada.' : run ? RUN_GREETING : this.welcome ? WELCOME : GREETING}”`;
+    said.textContent = `“${run?.igloo ? 'O melhor da tundra, servido quentinho! Escolha um prato para fortalecer sua jornada.' : kitchen ? KITCHEN_GREETING : run ? RUN_GREETING : this.welcome ? WELCOME : GREETING}”`;
     speech.append(name, said);
     const balance = document.createElement('p');
     balance.className = 'store-balance';
@@ -110,14 +117,14 @@ export class SergioShop {
     });
     const hint = document.createElement('p');
     hint.className = 'store-hint';
-    hint.textContent = run?.igloo ? 'Receitas locais. Os efeitos duram nesta run; cada compra aumenta os preços restantes em 3×.' : run ? 'Itens desta partida, pagos com moedas. Cada compra deixa o resto 3× mais caro.' : TABS.find((spec) => spec.id === this.tab)!.hint;
-    if (run) {
+    hint.textContent = run?.igloo ? 'Receitas locais. Os efeitos duram nesta run; cada compra aumenta os preços restantes em 3×.' : run ? 'Itens desta partida, pagos com moedas. Cada compra deixa o resto 3× mais caro.' : kitchen ? TABS[1].hint : TABS.find((spec) => spec.id === this.tab)!.hint;
+    if (run || kitchen) {
       tabs.replaceChildren();
       const tab = document.createElement('button');
       tab.type = 'button';
       tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-selected', 'true');
-      tab.textContent = run.igloo ? 'Cardápio do Nevado' : 'Itens da run';
+      tab.textContent = kitchen ? 'Pratos para a viagem' : run!.igloo ? 'Cardápio do Nevado' : 'Itens da run';
       tabs.append(tab);
     }
 
@@ -130,6 +137,14 @@ export class SergioShop {
         tag.className = `store-tag${offer.purchased ? ' packed' : ''}`;
         tag.textContent = offer.purchased ? 'Comprado' : offer.cost === 0 ? 'Grátis!' : 'Nesta partida';
         grid.append(this.card(offer.id, offer.name, offer.description, tag, offer.purchased ? null : { price: offer.cost, affordable: run.coins >= offer.cost, label: 'Comprar', unit: 'moedas' }, () => run.buy(index), 'Vendido', merchantItemIcon(offer.id)));
+      });
+    } else if (kitchen) {
+      IGLOO_MEALS.forEach((spec) => {
+        const packed = save.pack.includes(spec.id);
+        const tag = document.createElement('span');
+        tag.className = `store-tag${packed ? ' packed' : ''}`;
+        tag.textContent = packed ? 'Na mochila' : 'Próxima partida';
+        grid.append(this.card(spec.id, spec.name, spec.effect, tag, packed ? null : { price: spec.price, affordable: save.fichas >= spec.price, label: 'Pôr na mochila' }, () => this.actions.buyConsumable(spec.id), packed ? 'Comprado' : '', merchantItemIcon(spec.id)));
       });
     } else if (this.tab === 'atributos') {
       META_UPGRADES.forEach((spec) => {
@@ -163,7 +178,7 @@ export class SergioShop {
     close.textContent = 'Até mais (Esc)';
     close.addEventListener('click', () => this.actions.close());
     footer.append(close);
-    if (!run && this.actions.canPlaySergio()) {
+    if (!run && !kitchen && this.actions.canPlaySergio()) {
       const play = document.createElement('button');
       play.type = 'button';
       play.className = 'ui-button';
@@ -181,7 +196,7 @@ export class SergioShop {
     importButton.className = 'link-button';
     importButton.textContent = 'Importar progresso';
     importButton.addEventListener('click', () => this.actions.importSave());
-    if (!run) footer.append(exportButton, importButton);
+    if (!run && !kitchen) footer.append(exportButton, importButton);
 
     panel.append(header, tabs, hint, grid, footer);
     this.root.append(panel);

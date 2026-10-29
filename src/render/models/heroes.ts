@@ -7,7 +7,7 @@ import { WeaponConfig } from '../../config/weapons';
 import { toonMaterial } from '../materials';
 import { HeroClipName, humanoidClips } from './clips';
 import { MeshId, heroMesh } from './heroMeshes';
-import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, BEAST_HIP_HEIGHT, BEAST_JOINTS, BROM_HIP_HEIGHT, BROM_JOINTS, FABRI_HIP_HEIGHT, FABRI_JOINTS, GRIMBO_HIP_HEIGHT, GRIMBO_JOINTS, JOE_HIP_HEIGHT, JOE_JOINTS, JointSpec, LYRA_HIP_HEIGHT, LYRA_JOINTS, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, SERGIO_HIP_HEIGHT, SERGIO_JOINTS, VOLY_HIP_HEIGHT, VOLY_JOINTS, ZORA_HIP_HEIGHT, ZORA_JOINTS, rigImportedMesh } from './importedRig';
+import { BARBARIAN_HIP_HEIGHT, BARBARIAN_JOINTS, BEAST_HIP_HEIGHT, BEAST_JOINTS, BROM_HIP_HEIGHT, BROM_JOINTS, ESKIMO_HIP_HEIGHT, ESKIMO_JOINTS,FABRI_HIP_HEIGHT, FABRI_JOINTS, GRIMBO_HIP_HEIGHT, GRIMBO_JOINTS, JOE_HIP_HEIGHT, JOE_JOINTS, JointSpec, LYRA_HIP_HEIGHT, LYRA_JOINTS, MAGE_HIP_HEIGHT, MAGE_JOINTS, RELIQUIA_HIP_HEIGHT, RELIQUIA_JOINTS, SERGIO_HIP_HEIGHT, SERGIO_JOINTS, VOLY_HIP_HEIGHT, VOLY_JOINTS, ZORA_HIP_HEIGHT, ZORA_JOINTS, rigImportedMesh } from './importedRig';
 import { ball, box, cone, cylinder, gem, part } from './parts';
 import { RigPart, RiggedModel, buildRiggedModel, clipForBones, humanoidBones } from './rig';
 import { WeaponModelId, heldWeapon } from './weapons';
@@ -154,7 +154,8 @@ const IMPORTED: Partial<Record<MeshId, { joints: JointSpec[]; clips: Record<Hero
   // Tavern-only regulars of the Campo Nevado: never the player, only importedHeroRig uses them.
   voly: { joints: VOLY_JOINTS, clips: humanoidClips(VOLY_HIP_HEIGHT), extras: () => [], scale: 1 },
   beast: { joints: BEAST_JOINTS, clips: humanoidClips(BEAST_HIP_HEIGHT), extras: () => [], scale: 1 },
-  joe: { joints: JOE_JOINTS, clips: humanoidClips(JOE_HIP_HEIGHT), extras: () => [], scale: 1 }
+  joe: { joints: JOE_JOINTS, clips: humanoidClips(JOE_HIP_HEIGHT), extras: () => [], scale: 1 },
+  eskimo: { joints: ESKIMO_JOINTS, clips: humanoidClips(ESKIMO_HIP_HEIGHT), extras: () => [], scale: 1 }
 };
 
 /** The imported mesh, rigged, with its clips (for figures that aren't the player, like the tavern regulars), or null

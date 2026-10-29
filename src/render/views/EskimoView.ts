@@ -3,6 +3,7 @@ import { QuestSystem } from '../../core/systems/QuestSystem';
 import { ShelterSystem } from '../../core/systems/ShelterSystem';
 import { toonMaterial } from '../materials';
 import { iceWolfParts } from '../models/enemies';
+import { importedHeroRig } from '../models/heroes';
 import { box, cylinder, mergeParts, part } from '../models/parts';
 import { humanoidClips, quadrupedTrotClip } from '../models/clips';
 import { REGULAR_FIGURE_LOOK, REGULAR_FIGURES } from '../models/regulars';
@@ -33,8 +34,19 @@ export class EskimoView {
   private readonly wolves: THREE.AnimationMixer[] = [];
 
   constructor(private readonly shelter: ShelterSystem, private readonly quests: QuestSystem) {
-    const model = buildRiggedModel(humanoidBones({ hipHeight: HIP }), REGULAR_FIGURES.eskimo(true), toonMaterial({ vertexColors: true, flatShading: true }));
-    model.root.scale.setScalar(REGULAR_FIGURE_LOOK.eskimo.scale);
+    // His imported mesh when it's loaded (with a lantern added to the mitten), otherwise the procedural figure.
+    const material = toonMaterial({ vertexColors: true, flatShading: true });
+    const imported = importedHeroRig('eskimo', material);
+    const model = imported?.model ?? buildRiggedModel(humanoidBones({ hipHeight: HIP }), REGULAR_FIGURES.eskimo(true), material);
+    if (imported) {
+      model.bones.handR.add(new THREE.Mesh(mergeParts([
+        part(cylinder(0.01, 0.01, 0.14, 4), 0x3a2414, [0, -0.12, 0.04]),
+        part(box(0.14, 0.18, 0.14), 0x4a3a2a, [0, -0.28, 0.04]),
+        part(box(0.1, 0.13, 0.15), 0xffc65a, [0, -0.28, 0.04])
+      ]), material));
+    } else {
+      model.root.scale.setScalar(REGULAR_FIGURE_LOOK.eskimo.scale);
+    }
     model.root.position.set(0, 0.32, -0.75);
     // The driver rides at the rear; the front cushion is reserved for the passenger.
     this.figure.add(model.root);
@@ -61,8 +73,7 @@ export class EskimoView {
     }
     this.figure.add(new THREE.Mesh(mergeParts(sledParts), toonMaterial({ vertexColors: true, flatShading: true })));
     this.mixer = new THREE.AnimationMixer(model.root);
-    const clips = humanoidClips(HIP);
-    this.mixer.clipAction(clipForBones(clips.idle, model.bones)).play();
+    this.mixer.clipAction(imported?.clips.idle ?? clipForBones(humanoidClips(HIP).idle, model.bones)).play();
     this.lantern.position.set(0.35, 0.9, 0.2);
     this.halo = new THREE.Mesh(new THREE.CircleGeometry(1.6, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffb45a, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.halo.position.y = 0.04;

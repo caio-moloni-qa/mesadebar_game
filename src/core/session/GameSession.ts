@@ -16,7 +16,7 @@ import { QUEST_NPCS, QuestEvents, QuestNpcId, QuestReward, QuestSystem, questNpc
 import { Eskimo, SHELTER_TUNING, ShelterEvents, ShelterSystem } from '../systems/ShelterSystem';
 import { HERO_ABILITY_TUNING, HeroAbilityEvents, HeroAbilitySystem } from '../systems/HeroAbilitySystem';
 import { FLEE_SPEED_MULTIPLIER, PULL_SPEED, PowerTierEvents, PowerTierSystem } from '../systems/PowerTierSystem';
-import { DifficultyTier, HeroId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
+import { DifficultyTier, HeroId, MealId, MetaBonuses, NO_META_BONUSES, RunSummary, difficultyTier } from '../progress/Progress';
 import { CompanionKind, MINI_BOSSES, MiniBossEvents, MiniBossKind, MiniBossSystem, guardianRotation } from '../systems/MiniBossSystem';
 import { DifficultySystem } from '../systems/DifficultySystem';
 import { EnemySpawnScheduler, EnemyVariantId, NeutralVariantId } from '../systems/EnemySpawnScheduler';
@@ -106,6 +106,8 @@ export interface SessionEvents extends WeaponEvents, BossEvents, MiniBossEvents,
   'hub-exit': Record<string, never>;
   'hub-records': Record<string, never>;
   'hub-sergio': Record<string, never>;
+  /** Between runs in the igloo: the Esquimó's kitchen (dishes to go, for the next run). */
+  'hub-eskimo': Record<string, never>;
   /** During a run's visit: Sergio's store (the run's items) opens — or the Esquimó's menu, in the igloo, unless it's
    *  Sergio at his table there (`guest`). */
   'merchant-shop': { guest: boolean };
@@ -425,6 +427,7 @@ export class GameSession implements WeaponHost {
   private applyMeta(meta: MetaBonuses): void {
     const { player } = this;
     player.maxHealth += meta.maxHealth;
+    meta.meals?.forEach((meal) => this.eatMeal(meal));
     player.health = player.maxHealth;
     player.damageMultiplier += meta.damage;
     player.movementSpeed *= 1 + meta.speed;
@@ -432,6 +435,17 @@ export class GameSession implements WeaponHost {
     this.currency += meta.startingCoins;
     this.revivesLeft = meta.revives;
     this.experienceMultiplier = 1 + meta.experience;
+  }
+
+  /** One of the Esquimó's dishes: bought at his counter during a run, or packed to go between runs. */
+  private eatMeal(meal: MealId): void {
+    const { player } = this;
+    switch (meal) {
+      case 'polar-stew': player.maxHealth += 20; break;
+      case 'glacier-fish': player.damageMultiplier += 0.15; break;
+      case 'tundra-roast': player.addMealRegeneration(); break;
+      case 'berry-tea': player.movementSpeed += 15; break;
+    }
   }
 
   /** What this run counts, for the results screen and the save. */
@@ -554,10 +568,10 @@ export class GameSession implements WeaponHost {
     switch (offer.id) {
       case 'divine-blessing': player.addDivineBlessing(); break;
       case 'arcane-curse': player.addArcaneCurse(); break;
-      case 'polar-stew': player.maxHealth += 20; this.healPlayer(40); break;
-      case 'glacier-fish': player.damageMultiplier += 0.15; break;
-      case 'tundra-roast': player.addMealRegeneration(); break;
-      case 'berry-tea': player.movementSpeed += 15; break;
+      case 'polar-stew': this.eatMeal(offer.id); this.healPlayer(40); break;
+      case 'glacier-fish':
+      case 'tundra-roast':
+      case 'berry-tea': this.eatMeal(offer.id); break;
       case 'heal': this.healPlayer(40); break;
       case 'damage': player.damageMultiplier += 0.15; break;
       case 'speed': player.movementSpeed += 15; break;
@@ -1199,8 +1213,9 @@ export class GameSession implements WeaponHost {
       if (this.merchant.hub) {
         // Between runs the room's stations are the renderer's to answer; the regulars still talk.
         if (spot?.kind === 'exit') this.events.emit('hub-exit', {});
-        // In the igloo Sergio sells his upgrades from his table; the Esquimó's kitchen only cooks during a run.
+        // In the igloo Sergio sells his upgrades from his table, and the Esquimó packs his dishes for the next run.
         if (spot?.kind === (this.merchant.igloo ? 'guest' : 'sergio')) this.events.emit('hub-sergio', {});
+        if (spot?.kind === 'sergio' && this.merchant.igloo) this.events.emit('hub-eskimo', {});
         if (spot?.kind === 'records') this.events.emit('hub-records', {});
         if (spot?.kind === 'npc') this.dialogue = spot.index;
         return;
