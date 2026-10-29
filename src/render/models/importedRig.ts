@@ -369,6 +369,30 @@ export const BEAST_JOINTS: JointSpec[] = [
 
 export const BEAST_HIP_HEIGHT = 0.85;
 
+/** The Esquimó's Tripo mesh (src/assets/3d/characters/eskimo.glb, art-source/3d/eskimo/): a stout 1.6 m figure in a
+ *  fur-hooded parka whose hem flares to the knees; the mittens hang just outside it (|x| ≈ 0.39 is the gap). */
+export const ESKIMO_JOINTS: JointSpec[] = [
+  { name: 'root', at: [0, 0, 0] },
+  { name: 'hips', parent: 'root', at: [0, 0.62, 0], radius: 0.3, minY: 0.45 },
+  { name: 'spine', parent: 'hips', at: [0, 0.8, 0], radius: 0.3, minY: 0.65 },
+  { name: 'chest', parent: 'spine', at: [0, 0.98, 0], radius: 0.3, minY: 0.85, maxY: 1.25 },
+  { name: 'head', parent: 'chest', at: [0, 1.12, 0.03], tip: [0, 1.6, 0.03], radius: 0.25, minY: 1.08 },
+  { name: 'upperArmL', parent: 'chest', at: [0.3, 1.05, 0], radius: 0.12, side: 'L', minAbsX: 0.3, minY: 0.85, rest: [0, 0, 20] },
+  { name: 'foreArmL', parent: 'upperArmL', at: [0.42, 0.86, 0.02], radius: 0.12, side: 'L', minAbsX: 0.33, minY: 0.7 },
+  { name: 'handL', parent: 'foreArmL', at: [0.48, 0.7, 0.04], tip: [0.5, 0.55, 0.05], radius: 0.1, side: 'L', minAbsX: 0.39, minY: 0.5 },
+  { name: 'upperArmR', parent: 'chest', at: [-0.3, 1.05, 0], radius: 0.12, side: 'R', minAbsX: 0.3, minY: 0.85, rest: [0, 0, -20] },
+  { name: 'foreArmR', parent: 'upperArmR', at: [-0.42, 0.86, 0.02], radius: 0.12, side: 'R', minAbsX: 0.33, minY: 0.7 },
+  { name: 'handR', parent: 'foreArmR', at: [-0.48, 0.7, 0.04], tip: [-0.5, 0.55, 0.05], radius: 0.1, side: 'R', minAbsX: 0.39, minY: 0.5 },
+  { name: 'thighL', parent: 'hips', at: [0.18, 0.5, 0], radius: 0.14, side: 'L', maxY: 0.55, maxAbsX: 0.38 },
+  { name: 'shinL', parent: 'thighL', at: [0.2, 0.3, 0], radius: 0.13, side: 'L', maxY: 0.42 },
+  { name: 'footL', parent: 'shinL', at: [0.22, 0.1, 0], tip: [0.24, 0.02, 0.18], radius: 0.12, side: 'L', maxY: 0.18 },
+  { name: 'thighR', parent: 'hips', at: [-0.18, 0.5, 0], radius: 0.14, side: 'R', maxY: 0.55, maxAbsX: 0.38 },
+  { name: 'shinR', parent: 'thighR', at: [-0.2, 0.3, 0], radius: 0.13, side: 'R', maxY: 0.42 },
+  { name: 'footR', parent: 'shinR', at: [-0.22, 0.1, 0], tip: [-0.24, 0.02, 0.18], radius: 0.12, side: 'R', maxY: 0.18 }
+];
+
+export const ESKIMO_HIP_HEIGHT = 0.62;
+
 /** Joe's Tripo mesh (src/assets/3d/characters/joe.glb, art-source/3d/joe/raw_v2.glb): a 1 m ice cube with no limbs.
  *  One rigid bone at the base, so the idle rocks the whole cube on its bottom edge instead of bending it. */
 export const JOE_JOINTS: JointSpec[] = [
