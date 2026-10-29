@@ -1,4 +1,6 @@
 import { createSnowGuardianModel } from '../models/snowBosses';
+import { hasSnowAnimation, snowGuardianClips, SnowGuardianAnimator } from '../models/snowGuardianAnimations';
+import { clipForBones } from '../models/rig';
 import * as THREE from 'three';
 import { AllySkeletonState, CompanionState } from '../../core/systems/CompanionSystem';
 import { MINI_BOSS_TUNING, MiniBossState } from '../../core/systems/MiniBossSystem';
@@ -15,7 +17,7 @@ export const GUARDIAN_ENTRANCE = { wait: 0.7, rise: 1.1, total: 3.5 };
 const ONE_SHOTS: ActorClipName[] = ['raise', 'slamHit', 'emerge', 'shockSlam', 'shoot', 'death'];
 /** Companion display sizes (game units, like an enemy's displaySize): the Coveiro hero-sized, golem a head taller;
  *  the skeletons he raises a little smaller than the horde's. */
-export const COMPANION_SIZE = { gravedigger: 66, stoneGolem: 105, waterFairy: 30 };
+export const COMPANION_SIZE = { gravedigger: 66, stoneGolem: 105, waterFairy: 30, frostKnight: 76, iceSerpent: 80, bellringer: 76, ancientYeti: 100 };
 export const ALLY_SKELETON_SIZE = 52;
 
 /** One rigged actor: model + mixer, crossfading between named clips; one-shots play once and hold. */
@@ -85,6 +87,7 @@ class RiggedActor {
 /** A mini-boss on screen, animated from its MiniBossState. */
 class MiniBossView {
   readonly actor: RiggedActor;
+  private readonly snowAnimator?: SnowGuardianAnimator;
   private yaw: number;
   private readonly last = new THREE.Vector3();
   private dyingFor = -1;
@@ -94,6 +97,7 @@ class MiniBossView {
 
   constructor(readonly state: MiniBossState) {
     this.actor = new RiggedActor(state.kind === 'iceSerpent' || state.kind === 'bellringer' || state.kind === 'ancientYeti' ? createSnowGuardianModel(state.kind) : state.kind === 'gravedigger' ? createGravediggerModel() : state.kind === 'lakeSpirit' ? createLakeSpiritModel() : state.kind === 'frostKnight' ? createFrostKnightModel() : createStoneGolemModel());
+    if (hasSnowAnimation(state.kind)) this.snowAnimator = new SnowGuardianAnimator(this.actor.model, state.kind);
     this.yaw = yawFromSimDirection(Math.cos(state.facing), Math.sin(state.facing));
   }
 
@@ -139,13 +143,8 @@ class MiniBossView {
       return;
     }
     const attack = state.attack;
-    if (state.kind === 'iceSerpent' || state.kind === 'bellringer' || state.kind === 'ancientYeti') {
-      if (state.stunnedMs > 0) actor.set('stagger');
-      else if (attack?.phase === 'telegraph') actor.set(attack.type === 'leap' ? 'chargeWindup' : 'shockWindup');
-      else if (attack) actor.set('channel');
-      else actor.set(moved ? 'walk' : 'idle');
-      if (state.kind === 'iceSerpent' && attack?.type === 'eruption' && attack.phase === 'telegraph') actor.root.position.y = -2 * actor.root.scale.y;
-      if (attack?.type === 'leap' && attack.phase === 'telegraph') actor.root.position.y = Math.sin(Math.min(1, attack.elapsedMs / 1100) * Math.PI) * 3;
+    if (this.snowAnimator) {
+      actor.root.position.y = this.snowAnimator.update(state, moved, deltaSeconds) * actor.root.scale.y;
     } else if (state.kind === 'gravedigger') {
       if (attack?.type === 'burrow') {
         // Digs down, travels unseen (the crack trail shows where), bursts out at the exit.
@@ -194,13 +193,18 @@ class MiniBossView {
     } else {
       actor.set(moved ? 'walk' : 'idle');
     }
-    actor.update(deltaSeconds);
+    if (!this.snowAnimator) actor.update(deltaSeconds);
     if (nowMs - enemy.lastHitAt < HIT_FLASH_MS) actor.tint(0.1, 0.09, 0.08);
     else if (state.kind === 'lakeSpirit') actor.tint(0, 0.035 + Math.sin(nowMs / 200) * 0.01, 0.07);
     else if (state.stunnedMs > 0) actor.tint(0.03, 0.025, 0);
     else if (state.enraged) actor.tint(0, 0.03 + Math.sin(nowMs / 160) * 0.01, 0.06);
     else if (state.leashing) actor.tint(0, 0.02, 0.04);
     else actor.tint(0, 0, 0);
+  }
+
+  dispose(): void {
+    this.snowAnimator?.dispose();
+    this.actor.dispose();
   }
 
   /** Climbs out of the ground (the Coveiro digging his way up, the others rising), then roars with its arms up. */
@@ -234,7 +238,7 @@ export class MiniBossViews {
     bosses.forEach((boss) => {
       const existing = this.views.get(boss.enemy);
       if (existing && existing.state !== boss) {
-        existing.actor.dispose();
+        existing.dispose();
         this.views.delete(boss.enemy);
       }
       if (this.views.has(boss.enemy)) return;
@@ -246,7 +250,7 @@ export class MiniBossViews {
     this.views.forEach((view, enemy) => {
       view.update(live.has(enemy) && view.state.enemy.alive, alpha, nowMs, deltaSeconds);
       if (view.finished) {
-        view.actor.dispose();
+        view.dispose();
         this.views.delete(enemy);
       }
     });
@@ -257,7 +261,7 @@ export class MiniBossViews {
   }
 
   clear(): void {
-    this.views.forEach((view) => view.actor.dispose());
+    this.views.forEach((view) => view.dispose());
     this.views.clear();
   }
 }
@@ -324,7 +328,21 @@ export class CompanionViews {
     this.updateSkeletons(skeletons, alpha, deltaSeconds);
     companions.forEach((companion) => {
       if (companion.kind === 'waterFairy' || this.views.has(companion)) return;
-      const actor = new RiggedActor(companion.kind === 'gravedigger' ? createGravediggerModel() : createStoneGolemModel(0xffd36a));
+      const kind = companion.kind;
+      const model = kind === 'gravedigger' ? createGravediggerModel() : kind === 'stoneGolem' ? createStoneGolemModel(0xffd36a) : kind === 'frostKnight' ? createFrostKnightModel() : createSnowGuardianModel(kind);
+      if (hasSnowAnimation(kind)) {
+        const hips = model.bones.hips.position.toArray() as [number, number, number];
+        const clips = snowGuardianClips(kind, hips);
+        const attack = kind === 'frostKnight' ? 'iceSlash' : kind === 'iceSerpent' ? 'shard' : kind === 'bellringer' ? 'bellWave' : 'avalanche';
+        model.clips.idle = clipForBones(clips.idle, model.bones);
+        model.clips.walk = clipForBones(clips.walk, model.bones);
+        // Allied damage is immediate: play the strike and recovery without the boss windup.
+        const strike = clips[attack].clone();
+        strike.tracks.forEach(track => track.trim(1, 1.65).shift(-1));
+        strike.resetDuration();
+        model.clips.shockSlam = clipForBones(strike, model.bones);
+      }
+      const actor = new RiggedActor(model);
       actor.setDisplaySize(COMPANION_SIZE[companion.kind]);
       this.root.add(actor.root);
       this.views.set(companion, { actor, lastAttack: companion.attackedAt, yaw: 0, last: new THREE.Vector3() });

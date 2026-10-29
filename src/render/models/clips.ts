@@ -3,8 +3,8 @@ import { Vec3Tuple } from './parts';
 
 /** Bone rotations in degrees (X, Y, Z) — easier to author and read than quaternions. The model faces +Z, so a
  *  negative X rotation swings a hanging limb forward and a positive X on the chest leans it forward. */
-type Pose = Record<string, Vec3Tuple>;
-interface Key { t: number; pose: Pose; hips?: Vec3Tuple; }
+export type Pose = Record<string, Vec3Tuple>;
+export interface Key { t: number; pose: Pose; hips?: Vec3Tuple; }
 
 /** Arms rest slightly away from the body — every pose starts from this so the silhouette never collapses. */
 const REST: Pose = { upperArmL: [0, 0, 10], upperArmR: [0, 0, -10] };
@@ -58,7 +58,7 @@ export function smoothCurve(times: number[], values: Vec3Tuple[], loop: boolean)
 }
 
 /** Builds a clip from keyed poses. Every bone mentioned in any key gets a track; keys that omit it use REST/0. */
-function poseClip(name: string, duration: number, keys: Key[], hipsRest: Vec3Tuple, { includeRest = true, loop = false } = {}): THREE.AnimationClip {
+export function poseClip(name: string, duration: number, keys: Key[], hipsRest: Vec3Tuple, { includeRest = true, loop = false } = {}): THREE.AnimationClip {
   const bones = new Set<string>();
   keys.forEach((key) => Object.keys(key.pose).forEach((bone) => bones.add(bone)));
   if (includeRest) Object.keys(REST).forEach((bone) => bones.add(bone));
