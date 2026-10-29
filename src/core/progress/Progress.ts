@@ -163,6 +163,8 @@ export interface MetaBonuses {
   revives: number;
   /** Fraction added to the experience every kill gives. */
   experience: number;
+  /** The Esquimó's meals packed to go: eaten as the run starts, as if bought at his counter. */
+  meals?: MealId[];
 }
 
 export const NO_META_BONUSES: MetaBonuses = { maxHealth: 0, damage: 0, speed: 0, pickupRange: 0, startingCoins: 0, extraStartingPicks: 0, revives: 0, experience: 0 };
@@ -197,7 +199,10 @@ export function buyUpgrade(save: SaveData, id: MetaUpgradeId): SaveData | null {
 
 // ── Sergio's consumables: bought between runs, spent on the next one ────────────────────────────────────────────
 
-export type ConsumableId = 'elixir' | 'pedra' | 'botas' | 'saco' | 'tomo' | 'fenix';
+/** The Esquimó's dishes (the same as his menu during a run, MerchantSystem's IGLOO_MENU). */
+export type MealId = 'polar-stew' | 'glacier-fish' | 'tundra-roast' | 'berry-tea';
+
+export type ConsumableId = 'elixir' | 'pedra' | 'botas' | 'saco' | 'tomo' | 'fenix' | MealId;
 
 export interface ConsumableSpec {
   id: ConsumableId;
@@ -215,9 +220,17 @@ export const CONSUMABLES: ConsumableSpec[] = [
   { id: 'fenix', name: 'Pena de Fênix', effect: 'Renasce uma vez com 50% de vida', price: 150 }
 ];
 
+/** Between runs, in the igloo: the Esquimó's kitchen packs his dishes to go, for Fichas, into the same pack. */
+export const IGLOO_MEALS: Array<ConsumableSpec & { id: MealId }> = [
+  { id: 'polar-stew', name: 'Ensopado Polar', effect: '+20 de vida máxima na próxima partida', price: 40 },
+  { id: 'glacier-fish', name: 'Peixe do Glaciar', effect: '+15% de dano na próxima partida', price: 60 },
+  { id: 'tundra-roast', name: 'Assado da Tundra', effect: '+2 HP/s de regeneração na próxima partida', price: 70 },
+  { id: 'berry-tea', name: 'Chá de Frutas da Neve', effect: '+15 de velocidade na próxima partida', price: 40 }
+];
+
 /** One of each in the pack at a time. */
 export function buyConsumable(save: SaveData, id: ConsumableId): SaveData | null {
-  const spec = CONSUMABLES.find((consumable) => consumable.id === id)!;
+  const spec = [...CONSUMABLES, ...IGLOO_MEALS].find((consumable) => consumable.id === id)!;
   if (save.pack.includes(id) || save.fichas < spec.price) return null;
   return { ...save, fichas: save.fichas - spec.price, pack: [...save.pack, id] };
 }
@@ -232,6 +245,8 @@ export function runBonuses(save: SaveData): MetaBonuses {
   if (has('saco')) bonuses.startingCoins += 80;
   if (has('tomo')) bonuses.experience += 0.25;
   if (has('fenix')) bonuses.revives += 1;
+  const meals = save.pack.filter((id): id is MealId => IGLOO_MEALS.some((meal) => meal.id === id));
+  if (meals.length > 0) bonuses.meals = meals;
   return bonuses;
 }
 
@@ -482,7 +497,7 @@ export function parseSave(text: string | null | undefined): SaveData {
     fichas: Math.floor(number(raw.fichas)),
     fichasEarned: Math.floor(number(raw.fichasEarned)),
     upgrades: numbersOnly<MetaUpgradeId>(raw.upgrades),
-    pack: Array.isArray(raw.pack) ? raw.pack.filter((id): id is ConsumableId => CONSUMABLES.some((consumable) => consumable.id === id)).filter((id, index, all) => all.indexOf(id) === index) : [],
+    pack: Array.isArray(raw.pack) ? raw.pack.filter((id): id is ConsumableId => [...CONSUMABLES, ...IGLOO_MEALS].some((consumable) => consumable.id === id)).filter((id, index, all) => all.indexOf(id) === index) : [],
     mastery: numbersOnly<HeroId>(raw.mastery),
     skins: isRecord(raw.skins) ? Object.fromEntries(Object.entries(raw.skins).filter(([, v]) => typeof v === 'string')) as Partial<Record<HeroId, SkinId>> : {},
     regularMissions: numbersOnly<QuestNpcId>(raw.regularMissions),

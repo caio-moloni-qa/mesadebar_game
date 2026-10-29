@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SNOWFIELD } from '../../config/arenaLayout';
 import { WORLD_SIZE } from '../../config/world';
+import { IGLOO_MEALS, buyConsumable, emptySave, parseSave, runBonuses, serializeSave } from '../progress/Progress';
 import { GameSession, STEP_MS } from '../session/GameSession';
 import { ArenaMap } from '../world/ArenaMap';
 import { MERCHANT_ROOM, MERCHANT_TUNING } from './MerchantSystem';
@@ -53,20 +54,33 @@ describe('the tavern between runs', () => {
 });
 
 describe('the igloo between runs (Campo Nevado)', () => {
-  it('is the base: the area regulars at its tables, Sergio at the fourth with his upgrades, the kitchen closed', () => {
+  it('is the base: the area regulars at its tables, Sergio at the fourth with his upgrades, the Esquimó with his kitchen', () => {
     const run = new GameSession({ characterId: 'mage', seed: 3, skipStartingUpgrades: true, arena: ArenaMap.generate(3, SNOWFIELD), hub: true });
     expect(run.merchant.igloo).toBe(true);
     expect(run.quests.quests.map((quest) => quest.npc.id)).toEqual(['joe', 'beast', 'voly']);
     const heard: string[] = [];
     run.events.on('hub-sergio', () => heard.push('sergio'));
+    run.events.on('hub-eskimo', () => heard.push('eskimo'));
     standAt(run, run.merchant.layout.sergioSpot);
     run.interact();
-    expect(heard).toEqual([]);
+    expect(heard).toEqual(['eskimo']);
     const guest = run.merchant.layout.guest!;
     standAt(run, { x: guest.x - 40, y: guest.y });
     expect(run.merchant.roomSpot).toEqual({ kind: 'guest' });
     run.interact();
-    expect(heard).toEqual(['sergio']);
+    expect(heard).toEqual(['eskimo', 'sergio']);
+  });
+
+  it("the Esquimó's dishes to go, packed for Fichas, are eaten as the next run starts", () => {
+    const save = buyConsumable({ ...emptySave(), fichas: 200 }, 'glacier-fish')!;
+    expect(save.fichas).toBe(200 - IGLOO_MEALS.find((meal) => meal.id === 'glacier-fish')!.price);
+    expect(buyConsumable(save, 'glacier-fish')).toBeNull();
+    const withTea = buyConsumable(save, 'berry-tea')!;
+    expect(parseSave(serializeSave(withTea))?.pack).toEqual(['glacier-fish', 'berry-tea']);
+    const plain = new GameSession({ characterId: 'mage', seed: 3, skipStartingUpgrades: true, arena: ArenaMap.open(WORLD_SIZE), meta: runBonuses(emptySave()) });
+    const fed = new GameSession({ characterId: 'mage', seed: 3, skipStartingUpgrades: true, arena: ArenaMap.open(WORLD_SIZE), meta: runBonuses(withTea) });
+    expect(fed.player.damageMultiplier).toBeCloseTo(plain.player.damageMultiplier + 0.15);
+    expect(fed.player.movementSpeed).toBeCloseTo(plain.player.movementSpeed + 15);
   });
 });
 

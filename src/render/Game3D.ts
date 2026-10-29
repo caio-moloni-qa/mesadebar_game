@@ -560,6 +560,7 @@ export class Game3D {
     events.on('hub-exit', () => this.menu.showCharacters(this.run.characterId));
     events.on('hub-records', () => this.recordBook.show(this.progress));
     events.on('hub-sergio', () => this.shop.show());
+    events.on('hub-eskimo', () => this.shop.show(false, true));
     events.on('merchant-shop', ({ guest }) => {
       this.shopGuest = guest;
       this.shop.show();

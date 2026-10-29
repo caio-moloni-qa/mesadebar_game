@@ -53,7 +53,7 @@ describe('O Esquimó e o Iglu', () => {
     expect(session.elapsedMs).toBe(elapsed);
     expect(session.merchant.inside).toBe(true);
     expect(session.blizzard.cold).toBe(0);
-    // Only the regulars talk: the Esquimó's bar has nothing on sale.
+    // The Esquimó's menu, at his bar.
     const bar = session.merchant.layout.sergioSpot;
     session.player.x = session.merchant.room.x + bar.x;
     session.player.y = session.merchant.room.y + bar.y;

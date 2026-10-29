@@ -166,9 +166,9 @@ export class BossUi {
       return { x: merchant.room.x + merchant.layout.guest.x, y: merchant.room.y + merchant.layout.guest.y, text: merchant.hub ? 'Pressione E para ver as melhorias do Sergio' : 'Pressione E para ver a loja do Sergio', poor: false };
     }
     if (spot.kind === 'sergio') {
-      // Between runs the Esquimó's kitchen is closed (Sergio, at his table, is the one with something to sell).
-      if (session.dialogue !== null || (merchant.hub && merchant.igloo)) return null;
-      return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text: merchant.igloo ? 'Pressione E para ver o cardápio do Esquimó' : 'Pressione E para ver a loja do Sergio', poor: false };
+      if (session.dialogue !== null) return null;
+      const text = !merchant.igloo ? 'Pressione E para ver a loja do Sergio' : merchant.hub ? 'Pressione E para pedir pratos para a viagem' : 'Pressione E para ver o cardápio do Esquimó';
+      return { x: merchant.room.x + merchant.layout.merchant.x, y: merchant.room.y + merchant.layout.merchant.y, text, poor: false };
     }
     if (spot.kind === 'npc') {
       if (session.dialogue !== null) return null;
