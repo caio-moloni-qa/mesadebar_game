@@ -121,18 +121,19 @@ export function upgradeIcon(id: string): string {
 export const LIFE_STEAL_ICON = UPGRADE_ART.lifeSteal;
 
 /** Faces for the off-screen markers (a portrait in a ring, the arrow on its rim): who you're being pointed to. */
-export type MarkerKind = 'iceSerpent' | 'bellringer' | 'ancientYeti' | 'boss' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'frostKnight' | 'end' | 'continue' | 'merchant' | 'barrel' | 'fragment' | 'eskimo';
+export type MarkerKind = 'iceSerpent' | 'bellringer' | 'ancientYeti' | 'boss' | 'winterKing' | 'gravedigger' | 'templeGuardian' | 'lakeSpirit' | 'frostKnight' | 'end' | 'continue' | 'merchant' | 'barrel' | 'fragment' | 'eskimo';
 const MARKER_FACES: Record<MarkerKind, string> = {
   // The Necromancer and the zone guardians: their heads, cut from the concept art (art-source/3d/<boss>/views/front.png).
   boss: new URL('../../assets/ui/markers/boss-head.png', import.meta.url).href,
   gravedigger: new URL('../../assets/ui/markers/gravedigger-head.png', import.meta.url).href,
   templeGuardian: new URL('../../assets/ui/markers/templeGuardian-head.png', import.meta.url).href,
   lakeSpirit: new URL('../../assets/ui/markers/lakeSpirit-head.png', import.meta.url).href,
-  // O Cavaleiro Congelado: a frosted great helm, a cyan visor slit, a crest of ice.
-  iceSerpent: svg('<path d="M10 50q35 20 36-4T25 27q-10-15 9-17l14 6-10 9" stroke="#90d9ef" stroke-width="10" fill="none"/><circle cx="36" cy="13" r="3" fill="#ffcf61"/>'),
-  bellringer: svg('<path d="M12 45q8-5 8-20 0-20 12-20t12 20q0 15 8 20z" fill="#c4a05c"/><rect x="10" y="44" width="44" height="6" fill="#f4cc78"/><circle cx="32" cy="55" r="6" fill="#805c36"/>'),
-  ancientYeti: svg('<circle cx="32" cy="31" r="26" fill="#dfedf2"/><path d="M10 20 4 6l18 9m32 5 6-14-18 9" fill="#80a5bc"/><ellipse cx="32" cy="34" rx="17" ry="16" fill="#68889d"/><path d="M20 29h7m10 0h7" stroke="#88edff" stroke-width="4"/><path d="M21 40h22l-5 12-4-10-5 10z" fill="#fff"/>'),
-  frostKnight: svg('<path d="M32 4 L38 14 L32 12 L26 14 Z" fill="#e8f3fb"/><path d="M14 22 Q14 10 32 10 Q50 10 50 22 L50 46 Q50 56 32 58 Q14 56 14 46 Z" fill="#9fc3dc"/><path d="M14 30 L50 30 L50 34 L14 34 Z" fill="#5f7d96"/><rect x="20" y="30" width="24" height="5" fill="#7fe3ff"/><path d="M31 38 L33 38 L33 54 L31 54 Z" fill="#5f7d96"/><path d="M14 22 Q14 10 32 10 L32 14 Q18 14 18 24 Z" fill="#e8f3fb" opacity=".8"/>'),
+  // The Campo Nevado's guardians and its Winter King, cut the same way.
+  iceSerpent: new URL('../../assets/ui/markers/iceSerpent-head.png', import.meta.url).href,
+  bellringer: new URL('../../assets/ui/markers/bellringer-head.png', import.meta.url).href,
+  ancientYeti: new URL('../../assets/ui/markers/ancientYeti-head.png', import.meta.url).href,
+  frostKnight: new URL('../../assets/ui/markers/frostKnight-head.png', import.meta.url).href,
+  winterKing: new URL('../../assets/ui/markers/winterKing-head.png', import.meta.url).href,
   end: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#9fb4ff" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#9fb4ff" opacity=".6"/><path d="M26 32 h12 m-5 -5 l5 5 l-5 5" stroke="#ffffff" stroke-width="3" fill="none"/>'),
   // Sergio, the merchant: a wide hat over a grey beard, a gold coin at the brim.
   merchant: svg('<rect x="8" y="22" width="48" height="5" rx="2" fill="#3a2a1e"/><path d="M20 22 L32 6 L44 22 Z" fill="#3a2a1e"/><circle cx="32" cy="34" r="11" fill="#d9a77e"/><rect x="26" y="31" width="4" height="4" fill="#1a1410"/><rect x="34" y="31" width="4" height="4" fill="#1a1410"/><path d="M21 38 L43 38 L32 58 Z" fill="#cfc8bb"/><circle cx="46" cy="18" r="5" fill="#ffc65a" stroke="#b8923a" stroke-width="2"/>'),
@@ -140,8 +141,8 @@ const MARKER_FACES: Record<MarkerKind, string> = {
   barrel: svg('<ellipse cx="32" cy="14" rx="16" ry="5" fill="#c9963f"/><path d="M16 14 Q12 32 16 50 L48 50 Q52 32 48 14 Z" fill="#8a5a32"/><rect x="13" y="22" width="38" height="4" fill="#4a4a52"/><rect x="13" y="40" width="38" height="4" fill="#4a4a52"/><ellipse cx="32" cy="50" rx="16" ry="5" fill="#6a4226"/>'),
   // One of Joe's memory fragments: a shard of glowing blue ice.
   fragment: svg('<path d="M32 6 L46 26 L38 58 L26 58 L18 26 Z" fill="#7fe3ff"/><path d="M32 6 L38 58 L26 58 Z" fill="#c9f4ff"/><path d="M18 26 L46 26" stroke="#3aa8d8" stroke-width="2"/><circle cx="32" cy="30" r="5" fill="#ffffff" opacity=".8"/>'),
-  // The Esquimó: a fur-ringed hood around a round face, his lantern glowing beside it.
-  eskimo: svg('<circle cx="30" cy="32" r="20" fill="#e8dcc4"/><circle cx="30" cy="32" r="15" fill="#8a5a32"/><circle cx="30" cy="34" r="10" fill="#d9a77e"/><rect x="25" y="31" width="3" height="3" fill="#1a1410"/><rect x="32" y="31" width="3" height="3" fill="#1a1410"/><rect x="48" y="36" width="8" height="12" rx="2" fill="#ffc65a" stroke="#6a4a2a" stroke-width="2"/><path d="M52 30 v6" stroke="#6a4a2a" stroke-width="2"/>'),
+  // The Esquimó: his fur-ringed hood, from his concept art.
+  eskimo: new URL('../../assets/ui/markers/eskimo-head.png', import.meta.url).href,
   continue: svg('<circle cx="32" cy="32" r="18" fill="none" stroke="#7dffa0" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="#7dffa0" opacity=".6"/><path d="M32 24 v16 M24 32 h16" stroke="#ffffff" stroke-width="3"/>')
 };
 

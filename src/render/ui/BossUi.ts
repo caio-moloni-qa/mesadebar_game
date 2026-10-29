@@ -190,7 +190,7 @@ export class BossUi {
     const targets: Array<{ x: number; y: number; kind: MarkerKind; tier: string }> = [];
     // Nothing out there to point at from the merchant's room (tavern or igloo).
     if (!session.merchant.inside) {
-      session.bosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: 'boss', tier: 'boss' }));
+      session.bosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.winter ? 'winterKing' : 'boss', tier: 'boss' }));
       session.miniBosses.bosses.forEach((boss) => targets.push({ x: boss.enemy.x, y: boss.enemy.y, kind: boss.kind, tier: 'miniboss' }));
       // While a guardian is announced, point at its zone.
       if (session.miniBosses.pending) targets.push({ ...MINI_BOSSES[session.miniBosses.pending.kind].anchor(session.arena.layout), kind: session.miniBosses.pending.kind, tier: 'miniboss' });
