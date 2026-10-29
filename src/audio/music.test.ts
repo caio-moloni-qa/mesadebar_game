@@ -4,6 +4,7 @@ import { MusicSituation, musicFor } from './GameAudio';
 
 function situation(overrides: Partial<MusicSituation> = {}): MusicSituation {
   return {
+    arena: { layout: { id: 'greenfield' } },
     merchant: { hub: false, inside: false },
     bosses: { bosses: [] },
     miniBosses: { bosses: [] },
@@ -15,6 +16,30 @@ function situation(overrides: Partial<MusicSituation> = {}): MusicSituation {
 }
 
 describe('musicFor', () => {
+  const snow = { arena: { layout: { id: 'snowfield' } } };
+  it('plays the igloo at the snowy base, inside the shelter and after death, ahead of combat', () => {
+    const fighting = { bosses: { bosses: [{ phaseTwo: false, enraged: false }] } };
+    expect(musicFor(situation({ ...snow, ...fighting, merchant: { hub: true, inside: true } }), false)).toBe('igloo');
+    expect(musicFor(situation({ ...snow, ...fighting, merchant: { hub: false, inside: true } }), false)).toBe('igloo');
+    expect(musicFor(situation({ ...snow, over: true }), false)).toBe('igloo');
+    expect(musicFor(situation(snow), true)).toBe('tavern');
+    expect(musicFor(situation(snow), false)).toBe('arena');
+  });
+
+  it.each([
+    ['frostKnight', 'guardian-frost-knight'], ['iceSerpent', 'guardian-ice-serpent'],
+    ['bellringer', 'guardian-bellringer'], ['ancientYeti', 'guardian-ancient-yeti']
+  ] as const)('gives %s its own snowy theme and restores the arena after the fight', (kind, track) => {
+    expect(musicFor(situation({ ...snow, miniBosses: { bosses: [{ kind }] } }), false)).toBe(track);
+    expect(musicFor(situation(snow), false)).toBe('arena');
+  });
+
+  it('gives the Winter King both phases and priority over guardians', () => {
+    const guardian = { bosses: [{ kind: 'frostKnight' as const }] };
+    for (const [phaseTwo, enraged, track] of [[false, false, 'boss-winter-king'], [true, false, 'boss-winter-king-enraged'], [false, true, 'boss-winter-king-enraged']] as const) {
+      expect(musicFor(situation({ ...snow, miniBosses: guardian, bosses: { bosses: [{ phaseTwo, enraged }] } }), false)).toBe(track);
+    }
+  });
   it('plays the tavern in the menu, between runs, inside the portal and after a run', () => {
     expect(musicFor(situation(), true)).toBe('tavern');
     expect(musicFor(situation({ merchant: { hub: true, inside: false } }), false)).toBe('tavern');

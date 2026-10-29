@@ -1,0 +1,68 @@
+{
+  "method": "FFmpeg two-pass EBU R128, -14 LUFS, -1.5 dBTP, 160 kbps stereo MP3",
+  "tracks": [
+    {
+      "track": "igloo",
+      "source": "igloo.wav",
+      "file": "igloo.mp3",
+      "bytes": 2401219,
+      "source_lufs": -11.01,
+      "mp3_lufs": -14.45,
+      "mp3_true_peak_dbfs": -4.94
+    },
+    {
+      "track": "guardian-frost-knight",
+      "source": "guardian-frost-knight.wav",
+      "file": "guardian-frost-knight.mp3",
+      "bytes": 2401219,
+      "source_lufs": -16.46,
+      "mp3_lufs": -14.46,
+      "mp3_true_peak_dbfs": -1.92
+    },
+    {
+      "track": "guardian-ice-serpent",
+      "source": "guardian-ice-serpent.wav",
+      "file": "guardian-ice-serpent.mp3",
+      "bytes": 2743946,
+      "source_lufs": -17.25,
+      "mp3_lufs": -14.47,
+      "mp3_true_peak_dbfs": -1.9
+    },
+    {
+      "track": "guardian-bellringer",
+      "source": "guardian-bellringer.wav",
+      "file": "guardian-bellringer.mp3",
+      "bytes": 2401219,
+      "source_lufs": -13.28,
+      "mp3_lufs": -14.45,
+      "mp3_true_peak_dbfs": -2.67
+    },
+    {
+      "track": "guardian-ancient-yeti",
+      "source": "guardian-ancient-yeti.wav",
+      "file": "guardian-ancient-yeti.mp3",
+      "bytes": 2689088,
+      "source_lufs": -18.97,
+      "mp3_lufs": -14.51,
+      "mp3_true_peak_dbfs": -1.93
+    },
+    {
+      "track": "boss-winter-king",
+      "source": "boss-winter-king.wav",
+      "file": "boss-winter-king.mp3",
+      "bytes": 3001513,
+      "source_lufs": -18.01,
+      "mp3_lufs": -14.45,
+      "mp3_true_peak_dbfs": -1.9
+    },
+    {
+      "track": "boss-winter-king-enraged",
+      "source": "boss-winter-king-enraged.wav",
+      "file": "boss-winter-king-enraged.mp3",
+      "bytes": 2527652,
+      "source_lufs": -14.78,
+      "mp3_lufs": -14.46,
+      "mp3_true_peak_dbfs": -1.91
+    }
+  ]
+}
