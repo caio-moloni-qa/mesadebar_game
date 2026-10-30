@@ -64,7 +64,7 @@ export const TOWER_TUNING = {
   /** Each ally in the squad adds this share of HP to every foe (three fighters must not trivialise a floor). */
   hpPerAlly: 0.55,
   /** ...and this share to every hit (more targets spread the damage thinner). */
-  damagePerAlly: 0.1
+  damagePerAlly: 0.18
 } as const;
 
 export const TOWERS: Record<TowerId, TowerSpec> = {

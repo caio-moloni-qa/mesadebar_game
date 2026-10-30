@@ -84,3 +84,26 @@ longer (+0.5–1 min per climb), which also pulls fichas/min down (good for the 
 the Iglu took the biggest hit; watch them after M5. Solo climbs untouched.
 
 **Decision:** kept.
+
+## 2026-10-30 · Taverna em Turnos · M4b: a squad of three trivialised the towers (foe damage)
+
+**Goal:** same as M4a: the trio helps a newcomer, it doesn't carry them.
+
+**Lever** (`src/config/tavernTowers.ts` → `TOWER_TUNING.damagePerAlly`): 0.1 → 0.18.
+
+**Before → after** (`m4-hpally` → `m4-dmgally`; reaches the top):
+
+| tower | squad | newcomer | average |
+|---|---|---|---|
+| taverna | barbarian+mage+zora | 70% → 34% | 100% → 100% |
+| taverna | brom+sergio+grimbo | 93% → 80% | 100% → 100% |
+| taverna | mage+lyra | 1% → 0% | 95% → 90% |
+| snowfield | eskimo+frostKnight+iceSerpent | 69% → 48% | 100% → 100% |
+| snowfield | barbarian+bellringer+ancientYeti | 0% → 0% | 95% → 85% |
+| snowfield | mage+lyra | 0% → 0% | 39% → 28% (69% end on the champion) |
+
+**Reading:** with M4a + M4b the trio takes a newcomer to the top 34–80% of the time (was 85–97%), an average player
+still 85–100%, the assisted newcomer 93–100%. Bringing friends is still the easy road, not a free one. The combined
+effect on the newcomer is bigger than either lever alone; the average player barely notices.
+
+**Decision:** kept.
