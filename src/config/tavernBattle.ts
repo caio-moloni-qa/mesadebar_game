@@ -213,8 +213,8 @@ export const DUELS: Record<DuelId, DuelSpec> = {
     lines: { won: 'Quebrou metade da minha loja e ainda ganhou. Leva uma da casa, vai.', lost: 'Volta quando tiver fichas pra pagar os pratos, freguês.' },
     patterns: [
       { id: 'caneca', name: 'Caneca Arremessada', intent: 'arremesso', leadMs: 1000, projectile: 'mug', flightMs: 500, hits: [{ offsetMs: 0, damage: 10 }], weight: 3 },
-      { id: 'pratos', name: 'Chuva de Pratos', intent: 'arremesso', leadMs: 1100, projectile: 'plate', flightMs: 450, hits: [{ offsetMs: 0, damage: 5 }, { offsetMs: 300, damage: 5 }, { offsetMs: 450, damage: 5 }, { offsetMs: 900, damage: 5 }], weight: 3 },
-      { id: 'garrafas', name: 'Garrafas de Rolha', intent: 'arremesso', leadMs: 1000, projectile: 'bottle', flightMs: 350, hits: [{ offsetMs: 0, damage: 4 }, { offsetMs: 170, damage: 4 }, { offsetMs: 340, damage: 4 }], weight: 2 },
+      { id: 'pratos', name: 'Chuva de Pratos', intent: 'arremesso', leadMs: 1100, projectile: 'plate', flightMs: 450, hits: [{ offsetMs: 0, damage: 5 }, { offsetMs: 300, damage: 5 }, { offsetMs: 500, damage: 5 }, { offsetMs: 900, damage: 5 }], weight: 3 },
+      { id: 'garrafas', name: 'Garrafas de Rolha', intent: 'arremesso', leadMs: 1000, projectile: 'bottle', flightMs: 350, hits: [{ offsetMs: 0, damage: 4 }, { offsetMs: 190, damage: 4 }, { offsetMs: 380, damage: 4 }], weight: 2 },
       { id: 'barril', name: 'Barril Rolando', intent: 'pesado', leadMs: 1200, projectile: 'barrel', flightMs: 1400, hits: [{ offsetMs: 0, damage: 18 }], weight: 2 }
     ]
   }

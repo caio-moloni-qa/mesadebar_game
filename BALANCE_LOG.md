@@ -107,3 +107,18 @@ still 85–100%, the assisted newcomer 93–100%. Bringing friends is still the 
 effect on the newcomer is bigger than either lever alone; the average player barely notices.
 
 **Decision:** kept.
+
+## 2026-10-30 · Taverna em Turnos · m1: Sergio's volleys were too tight to read
+
+**Goal (fairness):** two hits of one combo never land closer than 180 ms (2× the parry window), so every hit can be
+answered on its own.
+
+**Lever** (`src/config/tavernBattle.ts` → Sergio's patterns, hit `offsetMs`):
+- Chuva de Pratos: 0/300/450/900 → 0/300/500/900 (tightest gap 150 → 200)
+- Garrafas de Rolha: 0/170/340 → 0/190/380 (170 → 190)
+
+**Before → after** (`m4-dmgally` → `m1-sergio-gaps`): the static table has no `GAP<180` flag left. The Sergio duel
+barely moves (newcomer hits taken 27% → 28%, average 14% → 15%): the bots press on their own timing noise, so they
+can't feel a cramped rhythm; a human can.
+
+**Decision:** kept (fairness, not strength).
