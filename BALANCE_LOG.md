@@ -167,3 +167,24 @@ its own it rarely loses the duel, because the duels are still short of the newco
 now would only make the rule a coin flip for a newcomer who hasn't read it yet.
 
 **Decision:** no lever. Re-check after M1b.
+
+## 2026-10-30 · Taverna em Turnos · M5a: Zora as a fighter was too weak to climb
+
+**Goal:** every fighter wins somewhere; solo, an average player with any taverna regular reaches the top of the Torre
+da Taverna roughly as often as the middle of the pack (Mago, Relíquia, Grimbo: 36–38%).
+
+**Lever** (`src/config/tavernRoster.ts` → `ROSTER.zora.stats`): attack 10 → 12 on the player's side only (her duel
+as a foe keeps 10).
+
+**Before → after** (`m2-before` → `m5-zora12`, Torre da Taverna, solo; reaches the top):
+
+| bot | top | floor 7 ends | fichas/min |
+|---|---|---|---|
+| newcomerAssisted | 9% → 30% | 86% → 59% | 11.0 → 17.9 |
+| average | 5% → 18% | 56% → 45% | 10.5 → 15.7 |
+| skilled | 100% → 100% | – | 32.1 → 37.7 |
+
+**Reading:** better, still the weakest of the taverna. Her kit (shield, curse, foresight) pays off with Coragem she
+rarely has solo. Next step, if needed, is her kit, not more attack.
+
+**Decision:** kept.
