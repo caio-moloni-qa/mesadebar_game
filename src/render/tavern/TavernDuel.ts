@@ -1,10 +1,14 @@
 import { CHARACTERS, CharacterId } from '../../config/characters';
-import { DICE_RULE, DUELS, DUEL_HERO, DuelId, TAVERN_BATTLE } from '../../config/tavernBattle';
+import { DICE_RULE, DUELS, DuelId, TAVERN_BATTLE } from '../../config/tavernBattle';
+import { ROSTER, ROSTER_ORDER, RosterId, SQUAD_TUNING, foeSpec, isRosterId } from '../../config/tavernRoster';
 import { SkillNode } from '../../config/tavernSkills';
-import { TurnBattle } from '../../core/tavern/TurnBattle';
+import { TOWERS, TOWER_TUNING, TowerId } from '../../config/tavernTowers';
+import { TowerRun } from '../../core/tavern/TowerRun';
+import { BattleAlly, Fighter, TurnBattle, TurnBattleOptions } from '../../core/tavern/TurnBattle';
 import { heroName } from '../progress/heroNames';
 import { npcFace, npcPortrait } from '../ui/icons';
 import { BattleStage2D } from './BattleStage2D';
+import { statusInfo } from './StatusBadges';
 
 export interface DuelSettings { assisted: boolean; timingTrack: boolean }
 
@@ -27,7 +31,20 @@ export interface TavernDuelHooks {
   stake(amount: number): boolean;
   /** The duel closed: back to the 3D tavern where it was left. */
   closed(): void;
+  /** O Coliseu do Sergio: a floor won banks the climbing hero's mastery and the tower's best floor at once. */
+  towerFloor(tower: TowerId, cleared: number, masteryXp: number): TowerFloorBanked;
+  /** The climb ended (walked away, lost or topped): bank the fichas it paid. */
+  towerEnded(tower: TowerId, fichas: number, reachedTop: boolean): void;
+  /** The regulars who have taught the hero something (the climb's "Treinado por"). */
+  mentors(): DuelId[];
+  /** The heroes the player has unlocked: only they (and the hero in play) can join a tower's squad. */
+  roster(): CharacterId[];
+  /** Sandbox: every fighter pickable, the towers' locals too. */
+  allFighters(): boolean;
 }
+
+/** What a tower floor banked, for the floor's result panel. */
+export interface TowerFloorBanked { level: number; levelsGained: number; joined: string[] }
 
 /** Taverna em Turnos: the duel overlay. Owns a TurnBattle, feeds it real time and key presses (J aparar,
  *  K esquivar, 1–4 actions, Esc pause), draws it on the 2D stage and keeps the DOM HUD (turn queue, HP, Coragem,
@@ -51,6 +68,23 @@ export class TavernDuel {
   private hudKey = '';
   /** "Habilidade" pressed: the action menu lists the skills instead. */
   private skillMenu = false;
+  /** O Coliseu do Sergio: the climb in progress (null in a plain duel). */
+  private climb: TowerRun | null = null;
+  /** Whose tree the hero climbs with. */
+  private mentor: DuelId | null = null;
+  /** The enemy to strike in a group fight (index among the living; Tab cycles). */
+  private targetIndex = 0;
+  /** The floor being fought (1-based; the climb moves on as soon as it's won). */
+  private floorNumber = 1;
+  private readonly towerEl: HTMLDivElement;
+  /** The tower's squad, picked before the first floor: the leader first (roster ids). */
+  private squad: RosterId[] = [];
+  /** The squad picker is up (before a climb). */
+  private picking: TowerId | null = null;
+  /** What a buff or debuff over a head does, while the mouse is on it. */
+  private readonly statusTip: HTMLDivElement;
+  private pointer: { x: number; y: number } | null = null;
+  private tipKey = '';
 
   constructor(container: HTMLElement, private readonly hooks: TavernDuelHooks) {
     this.root = document.createElement('div');
@@ -69,8 +103,23 @@ export class TavernDuel {
     this.betEl = document.createElement('div');
     this.betEl.className = 'duel-panel duel-bet';
     this.betEl.hidden = true;
-    this.frameEl.append(this.stage.canvas, this.hud, this.pauseEl, this.resultEl, this.betEl);
-    this.root.appendChild(this.frameEl);
+    this.towerEl = document.createElement('div');
+    this.towerEl.className = 'duel-panel duel-tower';
+    this.towerEl.hidden = true;
+    this.statusTip = document.createElement('div');
+    this.statusTip.className = 'duel-status-tip';
+    this.statusTip.hidden = true;
+    this.frameEl.append(this.stage.canvas, this.hud, this.pauseEl, this.resultEl, this.betEl, this.towerEl);
+    this.root.append(this.frameEl, this.statusTip);
+    this.frameEl.addEventListener('pointermove', (event) => { this.pointer = { x: event.clientX, y: event.clientY }; });
+    this.frameEl.addEventListener('pointerleave', () => { this.pointer = null; });
+    // A group fight: clicking a foe's plate makes it the target.
+    this.frameEl.addEventListener('click', (event) => {
+      const foe = this.paused ? null : this.stage.plateUnder(event.clientX, event.clientY);
+      if (!foe || foe.side !== 'enemy' || foe.hp <= 0) return;
+      const index = this.battle?.enemies.filter((enemy) => enemy.hp > 0).indexOf(foe) ?? -1;
+      if (index >= 0) this.targetIndex = index;
+    });
     container.appendChild(this.root);
     window.addEventListener('resize', () => { if (this.open) this.layout(); });
   }
@@ -88,13 +137,103 @@ export class TavernDuel {
       dice: battle.attack?.dice ?? null, bet: this.bet, loot: battle.loot,
       attack: battle.attack && battle.phase === 'enemy-attack' ? battle.attack.pattern.name : null,
       lastReaction: battle.lastReaction?.result ?? null, tally: { ...battle.tally }, paused: this.paused,
-      skills: battle.party[0].skills.map((skill) => skill.id), skillMenu: this.skillMenu, shield: battle.party[0].shield
+      skills: (this.actor() ?? battle.party[0]).skills.map((skill) => skill.id), skillMenu: this.skillMenu, shield: battle.party[0].shield,
+      target: this.target()?.id ?? null, enemies: battle.enemies.map((enemy) => enemy.id),
+      party: battle.party.map((member) => ({ id: member.id, look: member.look, hp: member.hp, courage: member.courage, taunting: member.taunting })),
+      tower: this.climb ? { id: this.climb.tower.id, floor: this.climb.floor, pot: this.climb.pot, heroHp: this.climb.heroHp, ended: this.climb.ended } : null
     };
   }
 
-  /** Opens a duel. Grimbo's asks for the bet first; `bet` skips the question (test URLs). */
-  start(duelId: DuelId, heroId: CharacterId, seed: number, bet?: number): void {
-    this.duelId = duelId;
+  /** O Coliseu do Sergio: a climb up a tower, floor by floor. First the squad (the heroes the player has unlocked), then the ladder screen. `squad` skips the picker (test URLs). */
+  startTower(tower: TowerId, heroId: CharacterId, seed: number, squad?: RosterId[]): void {
+    this.reset(heroId, seed);
+    this.climb = null;
+    this.stage.setBackdrop(TOWERS[tower].stage);
+    this.mentor = this.hooks.mentors()[0] ?? null;
+    this.squad = [heroId];
+    if (squad && squad.length > 0) this.beginClimb(tower, squad);
+    else this.showSquadPicker(tower);
+  }
+
+  /** Who can join a tower's squad: the heroes the player has unlocked (the region's people first), or everyone with
+   *  the sandbox toggle. */
+  private available(tower: TowerId): RosterId[] {
+    const local = TOWERS[tower].roster;
+    const owned = new Set<string>([...this.hooks.roster(), this.heroId]);
+    const everyone = this.hooks.allFighters();
+    return ROSTER_ORDER.filter((id) => everyone || owned.has(id))
+      .sort((a, b) => Number(local.includes(b)) - Number(local.includes(a)));
+  }
+
+  /** The region's people not unlocked yet: shown in the picker behind a padlock. */
+  private locked(tower: TowerId): RosterId[] {
+    const open = this.available(tower);
+    return TOWERS[tower].roster.filter((id) => !open.includes(id));
+  }
+
+  /** The squad picker: the leader plus up to SQUAD_TUNING.maxAllies, each with their kit on show. */
+  private showSquadPicker(tower: TowerId): void {
+    this.picking = tower;
+    const spec = TOWERS[tower];
+    const options = this.available(tower);
+    const max = 1 + SQUAD_TUNING.maxAllies;
+    this.towerEl.hidden = false;
+    this.towerEl.innerHTML = `
+      <p class="eyebrow">O Coliseu do Sergio · ${spec.region}</p>
+      <h2>${spec.name}: monte o grupo</h2>
+      <p class="duel-xp">Até <b>${max}</b> lutadores, cada um com suas habilidades e seu turno. O primeiro é o líder. Quanto maior o grupo, mais fortes os inimigos.</p>
+      <ol class="squad-grid">${options.map((id, i) => {
+        const fighter = ROSTER[id];
+        const place = this.squad.indexOf(id);
+        return `<li><button type="button" class="squad-card${place >= 0 ? ' picked' : ''}" data-pick="${id}" style="--chip:${hex(fighter.color)}">
+          <b>${i < 9 ? `<kbd>${i + 1}</kbd> ` : ''}${fighter.name}${place === 0 ? ' <em>líder</em>' : place > 0 ? ' <em>no grupo</em>' : ''}${spec.roster.includes(id) ? ' <span class="local">da região</span>' : ''}</b>
+          <span class="squad-stats">Vida ${fighter.stats.maxHp} · Ataque ${fighter.stats.attack} · Velocidade ${fighter.stats.speed}</span>
+          <span class="squad-kit">${fighter.kit.map((skill) => `<i class="${skill.kind}" title="${skill.description}">${skill.name}</i>`).join('')}</span>
+        </button></li>`;
+      }).join('')}${this.locked(tower).map((id) => `<li><button type="button" class="squad-card locked" disabled style="--chip:${hex(ROSTER[id].color)}">
+          <b>🔒 ${ROSTER[id].name} <span class="local">da região</span></b>
+          <span class="squad-stats">Ainda não desbloqueado</span>
+        </button></li>`).join('')}</ol>
+      <div class="duel-panel-actions"></div>`;
+    this.towerEl.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((button) => button.addEventListener('click', () => this.togglePick(button.dataset.pick as RosterId)));
+    const actions = this.towerEl.querySelector('.duel-panel-actions')!;
+    const go = this.button(`Subir com ${this.squad.length} (Enter)`, 'primary', () => this.beginClimb(tower, this.squad));
+    go.disabled = this.squad.length === 0;
+    actions.append(go, this.button('Voltar (Esc)', '', () => this.close()));
+  }
+
+  private togglePick(id: RosterId): void {
+    const tower = this.picking;
+    if (!tower) return;
+    if (this.squad.includes(id)) this.squad = this.squad.filter((other) => other !== id);
+    else if (this.squad.length < 1 + SQUAD_TUNING.maxAllies) this.squad = [...this.squad, id];
+    this.showSquadPicker(tower);
+  }
+
+  private beginClimb(tower: TowerId, squad: RosterId[]): void {
+    this.picking = null;
+    this.squad = squad.filter(isRosterId).slice(0, 1 + SQUAD_TUNING.maxAllies);
+    if (this.squad.length === 0) this.squad = [this.heroId];
+    const [leader, ...allies] = this.squad;
+    this.climb = new TowerRun(TOWERS[tower], ROSTER[leader].stats, allies.map((id): BattleAlly => ({ id: `ally-${id}`, look: id, spec: ROSTER[id].stats, kit: ROSTER[id].kit })));
+    this.showLadder();
+  }
+
+  /** The leader's stats and kit: their own four skills plus what the chosen regular taught. */
+  private leader(look: RosterId, mentor: DuelId | null): { hero: TurnBattleOptions['hero']; kit: SkillNode[]; heroLook: string } {
+    const fighter = ROSTER[look];
+    const taught = mentor ? this.hooks.kit(mentor) : [];
+    const kit = [...fighter.kit, ...taught.filter((skill) => !fighter.kit.some((own) => own.id === skill.id))];
+    return { hero: { ...fighter.stats, name: look === this.heroId ? heroName(this.heroId) : fighter.name }, kit, heroLook: look };
+  }
+
+  /** What the probe reads between floors. */
+  towerSnapshot(): Record<string, unknown> | null {
+    const climb = this.climb;
+    return climb ? { tower: climb.tower.id, floor: climb.floor, pot: climb.pot, heroHp: climb.heroHp, courage: climb.courage, ended: climb.ended, masteryXp: climb.masteryXp, mentor: this.mentor, ladder: !this.towerEl.hidden } : null;
+  }
+
+  private reset(heroId: CharacterId, seed: number): void {
     this.heroId = heroId;
     this.seed = seed;
     this.battle?.events.clear();
@@ -103,8 +242,168 @@ export class TavernDuel {
     this.root.hidden = false;
     this.pauseEl.hidden = true;
     this.resultEl.hidden = true;
+    this.betEl.hidden = true;
+    this.towerEl.hidden = true;
     this.hud.innerHTML = '';
     this.layout();
+  }
+
+  /** Between floors: the tower's ladder, the hero's HP, the pot, and what to do next. */
+  private showLadder(): void {
+    const climb = this.climb!;
+    const floor = climb.current!;
+    this.battle?.events.clear();
+    this.battle = null;
+    this.stage.detach();
+    this.hud.innerHTML = '';
+    this.resultEl.hidden = true;
+    this.towerEl.hidden = false;
+    const number = climb.floor + 1;
+    const squadLine = [`${ROSTER[this.squad[0]]?.name ?? 'Você'} ${climb.heroHp}/${climb.heroMaxHp}`, ...climb.allies.map(({ ally, hp }) => `${ROSTER[ally.look as RosterId]?.name ?? ally.look} ${hp}/${ally.spec.maxHp}`)].join(' · ');
+    const rungs = climb.tower.floors.map((spec, i) => {
+      const state = i < climb.floor ? 'done' : i === climb.floor ? 'current' : '';
+      const prize = spec.kind === 'fight' ? `<span>+${spec.fichas} fichas</span>` : '<span>descanso</span>';
+      return `<li class="${state} ${spec.kind === 'fight' && spec.champion ? 'champion' : ''}"><b>${i + 1}</b> ${spec.name} ${prize}</li>`;
+    }).reverse().join('');
+    const mentorName = this.mentor ? DUELS[this.mentor].enemy.name : null;
+    this.towerEl.innerHTML = `
+      <p class="eyebrow">O Coliseu do Sergio · ${climb.tower.region}</p>
+      <h2>${climb.tower.name}</h2>
+      <p class="duel-xp">${climb.allies.length > 0 ? `Grupo: <b>${squadLine}</b>` : `Vida <b>${climb.heroHp}/${climb.heroMaxHp}</b>`} · Pote <b>${climb.pot} fichas</b>${climb.masteryXp > 0 ? ` · Maestria <b>+${climb.masteryXp} XP</b>` : ''}${climb.courage > 0 ? ` · Coragem <b>${climb.courage}</b>` : ''}</p>
+      <ol class="tower-ladder">${rungs}</ol>
+      <p class="duel-result-line">${floor.kind === 'rest' ? `Andar ${number}: o balcão. Um respiro antes de subir.` : `Andar ${number}: ${floor.name}${floor.foes.length > 1 ? ` (${floor.foes.map((foe) => foeSpec(foe.duel).enemy.name).join(' + ')})` : ''}`}</p>
+      <div class="duel-panel-actions"></div>`;
+    // The ladder is drawn top-down: bring the floor you're on into view.
+    this.towerEl.querySelector('.tower-ladder li.current')?.scrollIntoView({ block: 'center' });
+    const actions = this.towerEl.querySelector('.duel-panel-actions')!;
+    if (floor.kind === 'rest') {
+      actions.append(
+        this.button(`Comer algo: +${Math.round(TOWER_TUNING.restHeal * 100)}% de vida (1)`, 'primary', () => this.rest('heal')),
+        this.button(`Respirar fundo: começa o próximo com ${TOWER_TUNING.restCourage} de Coragem (2)`, '', () => this.rest('courage'))
+      );
+    } else {
+      actions.append(this.button(`Lutar: andar ${number} (Enter)`, 'primary', () => this.beginFloor()));
+      if (this.hooks.mentors().length > 0) actions.append(this.button(`Treinado por: ${mentorName ?? 'ninguém'} (T)`, '', () => this.cycleMentor()));
+    }
+    actions.append(this.button(climb.pot > 0 ? `Sair com ${climb.pot} fichas (Esc)` : 'Voltar à taverna (Esc)', '', () => this.leaveTower()));
+  }
+
+  private cycleMentor(): void {
+    const mentors: Array<DuelId | null> = [...this.hooks.mentors(), null];
+    this.mentor = mentors[(mentors.indexOf(this.mentor) + 1) % mentors.length];
+    this.showLadder();
+  }
+
+  private rest(choice: 'heal' | 'courage'): void {
+    const climb = this.climb!;
+    climb.rest(choice);
+    if (climb.ended) this.finishClimb();
+    else this.showLadder();
+  }
+
+  private beginFloor(): void {
+    const climb = this.climb!;
+    const settings = this.hooks.settings();
+    const options = climb.battleOptions({ ...this.leader(this.squad[0], this.mentor), seed: this.seed + climb.floor * 7919, assisted: settings.assisted });
+    if (!options) return;
+    this.towerEl.hidden = true;
+    this.bet = 0;
+    this.floorNumber = climb.floor + 1;
+    this.launch(options);
+  }
+
+  /** "Sair com o prêmio" (or giving up between floors): the whole pot. */
+  private leaveTower(): void {
+    const climb = this.climb;
+    if (climb && !climb.ended) this.hooks.towerEnded(climb.tower.id, climb.leave(), false);
+    this.close();
+  }
+
+  /** The top was reached (the champion beaten, or a rest on the last floor): the whole pot. */
+  private finishClimb(): void {
+    const climb = this.climb!;
+    this.hooks.towerEnded(climb.tower.id, climb.payout, true);
+    this.towerEl.hidden = false;
+    this.towerEl.innerHTML = `
+      <p class="eyebrow">O Coliseu do Sergio</p>
+      <h2>Topo da ${climb.tower.name}!</h2>
+      <p class="duel-result-line">“Ninguém sobe essa escada inteira. Ninguém... até agora.” — Sergio</p>
+      <p class="duel-xp">+${climb.payout} fichas · Maestria +${climb.masteryXp} XP</p>
+      <div class="duel-panel-actions"></div>`;
+    this.towerEl.querySelector('.duel-panel-actions')!.append(this.button('Voltar à taverna (Enter)', 'primary', () => this.close()));
+  }
+
+  /** A floor's fight ended: bank it and offer the next floor (or the way down). */
+  private showFloorResult(): void {
+    const climb = this.climb!;
+    const battle = this.battle!;
+    const won = battle.phase === 'won';
+    const number = climb.floor + 1;
+    const floor = climb.current;
+    const name = floor?.name ?? '';
+    const lines: string[] = [];
+    let title: string;
+    this.resultEl.hidden = false;
+    this.resultEl.className = `duel-panel duel-result ${won ? 'won' : 'lost'}`;
+    const actions: HTMLButtonElement[] = [];
+    if (won) {
+      const prize = climb.won(battle.party[0].hp, Object.fromEntries(battle.party.slice(1).map((member) => [member.id, member.hp])));
+      const banked = this.hooks.towerFloor(climb.tower.id, climb.cleared, prize.masteryXp);
+      title = `Andar ${number} vencido!`;
+      lines.push(`+${prize.fichas} fichas no pote (agora <b>${climb.pot}</b>)`);
+      lines.push(`Maestria +${prize.masteryXp} XP${banked.levelsGained > 0 ? ` · <b>nível ${banked.level}!</b>` : ''}`);
+      banked.joined.forEach((hero) => lines.push(`<b>${hero}</b> entrou pro seu elenco!`));
+      if (climb.ended) {
+        actions.push(this.button('Ver o prêmio (Enter)', 'primary', () => { this.resultEl.hidden = true; this.battle?.events.clear(); this.battle = null; this.stage.detach(); this.hud.innerHTML = ''; this.finishClimb(); }));
+      } else {
+        actions.push(
+          this.button('Próximo andar (Enter)', 'primary', () => this.showLadder()),
+          this.button(`Sair com ${climb.pot} fichas (Esc)`, '', () => this.leaveTower())
+        );
+      }
+    } else {
+      const pot = climb.pot;
+      const kept = climb.lost();
+      this.hooks.towerEnded(climb.tower.id, kept, false);
+      title = `Caiu no andar ${number}`;
+      lines.push(pot > 0 ? `Você leva <b>${kept}</b> das ${pot} fichas do pote` : 'O pote estava vazio');
+      if (climb.masteryXp > 0) lines.push(`A maestria fica: +${climb.masteryXp} XP nessa subida`);
+      actions.push(this.button('Voltar à taverna (Enter)', 'primary', () => this.close()));
+    }
+    const { tally } = battle;
+    this.resultEl.innerHTML = `
+      <p class="eyebrow">${climb.tower.name} · ${name}</p>
+      <h2>${title}</h2>
+      <ul class="duel-tally">
+        <li><b>${tally.parry}</b> aparos perfeitos</li>
+        <li><b>${tally.dodge}</b> esquivas</li>
+        <li><b>${tally.taken}</b> golpes levados</li>
+        <li><b>${battle.party.reduce((sum, member) => sum + member.hp, 0)}</b> de vida sobrando${battle.party.length > 1 ? ' no grupo' : ''}</li>
+      </ul>
+      ${lines.map((line) => `<p class="duel-xp">${line}</p>`).join('')}
+      <div class="duel-panel-actions"></div>`;
+    this.resultEl.querySelector('.duel-panel-actions')!.append(...actions);
+  }
+
+  /** The living enemy the hero strikes (group fights pick with Tab). */
+  private target(): Fighter | null {
+    const living = this.battle?.enemies.filter((enemy) => enemy.hp > 0) ?? [];
+    if (living.length === 0) return null;
+    return living[this.targetIndex % living.length];
+  }
+
+  private cycleTarget(step = 1): void {
+    const living = this.battle?.enemies.filter((enemy) => enemy.hp > 0) ?? [];
+    if (living.length > 1) this.targetIndex = (this.targetIndex + step + living.length) % living.length;
+  }
+
+  /** Opens a duel. Grimbo's asks for the bet first; `bet` skips the question (test URLs). */
+  start(duelId: DuelId, heroId: CharacterId, seed: number, bet?: number): void {
+    this.duelId = duelId;
+    this.climb = null;
+    this.picking = null;
+    this.reset(heroId, seed);
+    this.stage.setBackdrop('tavern');
     if (DUELS[duelId].rule === 'dice' && bet === undefined) this.askBet();
     else this.begin(bet ?? 0);
   }
@@ -139,9 +438,15 @@ export class TavernDuel {
     this.bet = bet;
     this.betEl.hidden = true;
     const settings = this.hooks.settings();
-    this.battle = new TurnBattle({ duel: DUELS[this.duelId], hero: { ...DUEL_HERO, name: heroName(this.heroId) }, seed: this.seed, assisted: settings.assisted, kit: this.hooks.kit(this.duelId), diceRevealed: bet > 0 });
+    this.launch({ duel: DUELS[this.duelId], ...this.leader(this.heroId, this.duelId), seed: this.seed, assisted: settings.assisted, diceRevealed: bet > 0 });
+  }
+
+  private launch(options: TurnBattleOptions): void {
+    const settings = this.hooks.settings();
+    this.battle = new TurnBattle(options);
+    this.targetIndex = 0;
     this.stage.showTrack = settings.timingTrack;
-    this.stage.attach(this.battle, CHARACTERS[this.heroId]?.accentColor ?? 0xc0502a);
+    this.stage.attach(this.battle, (look) => ROSTER[look as RosterId]?.color ?? CHARACTERS[this.heroId]?.accentColor ?? 0xc0502a);
     this.battle.events.on('battleEnded', () => this.showResult());
     this.paused = false;
     this.skillMenu = false;
@@ -150,8 +455,14 @@ export class TavernDuel {
   }
 
   close(): void {
+    // Giving up mid-fight in a tower is a fall: the share of the pot a defeat keeps.
+    const climb = this.climb;
+    if (climb && !climb.ended) this.hooks.towerEnded(climb.tower.id, this.battle && !this.battle.over ? climb.lost() : climb.leave(), false);
+    this.climb = null;
+    this.picking = null;
     this.root.hidden = true;
     this.betEl.hidden = true;
+    this.towerEl.hidden = true;
     this.stage.detach();
     this.battle?.events.clear();
     this.battle = null;
@@ -168,6 +479,31 @@ export class TavernDuel {
     this.sync(now);
     this.stage.draw(this.battle.clock.now, now);
     this.updateHud();
+    this.updateStatusTip();
+  }
+
+  /** Re-checked every frame, so the tip follows a fighter that moves and goes when the status wears off. */
+  private updateStatusTip(): void {
+    const hit = this.pointer && !this.paused ? this.stage.statusUnder(this.pointer.x, this.pointer.y) : null;
+    if (!hit) {
+      this.statusTip.hidden = true;
+      this.tipKey = '';
+      return;
+    }
+    const info = statusInfo(hit.fighter, hit.badge);
+    const key = `${hit.fighter.id}:${info.title}:${info.text}`;
+    if (key !== this.tipKey) {
+      this.tipKey = key;
+      this.statusTip.classList.toggle('bad', !info.good);
+      this.statusTip.innerHTML = `<strong>${info.title}</strong><span>${info.text}</span><em>${hit.fighter.name}</em>`;
+    }
+    this.statusTip.hidden = false;
+    // Above the badge, kept on screen; below it when there's no room up top.
+    const width = this.statusTip.offsetWidth;
+    const height = this.statusTip.offsetHeight;
+    const left = Math.max(6, Math.min(window.innerWidth - width - 6, hit.left - width / 2));
+    const top = hit.top - height - 8 >= 6 ? hit.top - height - 8 : hit.bottom + 8;
+    this.statusTip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
   }
 
   /** Brings the battle clock up to `now` (also right before a key press is judged, so it's stamped when it happened,
@@ -176,12 +512,34 @@ export class TavernDuel {
     const elapsed = now - this.lastAt;
     this.lastAt = now;
     // A hidden tab or a long hitch doesn't fast-forward the fight.
-    if (!this.paused && elapsed > 0) this.battle!.advance(Math.min(elapsed, 250));
+    if (!this.paused && elapsed > 0 && this.stage.artReady) this.battle!.advance(Math.min(elapsed, 250));
   }
 
   keydown(event: KeyboardEvent): void {
     const battle = this.battle;
     const code = event.code;
+    if (!battle && this.open && this.picking) {
+      event.preventDefault();
+      const digit = /^(?:Digit|Numpad)([1-9])$/.exec(code)?.[1];
+      const options = this.available(this.picking);
+      if (code === 'Escape') this.close();
+      else if ((code === 'Enter' || code === 'NumpadEnter') && this.squad.length > 0) this.beginClimb(this.picking, this.squad);
+      else if (digit && options[Number(digit) - 1]) this.togglePick(options[Number(digit) - 1]);
+      return;
+    }
+    if (!battle && this.open && !this.towerEl.hidden) {
+      event.preventDefault();
+      const floor = this.climb?.current;
+      if (!this.climb || this.climb.ended || !floor) {
+        if (['Escape', 'Enter', 'NumpadEnter', 'Space'].includes(code)) this.close();
+      } else if (code === 'Escape') this.leaveTower();
+      else if (floor.kind === 'rest') {
+        if (code === 'Digit1' || code === 'Numpad1') this.rest('heal');
+        else if (code === 'Digit2' || code === 'Numpad2') this.rest('courage');
+      } else if (code === 'Enter' || code === 'NumpadEnter' || code === 'Space') this.beginFloor();
+      else if (code === 'KeyT' && this.hooks.mentors().length > 0) this.cycleMentor();
+      return;
+    }
     if (!battle) {
       // Grimbo's bet question.
       if (!this.open || this.betEl.hidden) return;
@@ -194,6 +552,16 @@ export class TavernDuel {
     }
     event.preventDefault();
     if (event.repeat) return;
+    if (battle.over && this.climb) {
+      // The floor's result panel: its first button is the way on (Enter), Esc walks away with the pot.
+      if (this.resultEl.hidden) return;
+      if (['Enter', 'NumpadEnter', 'Space'].includes(code)) this.resultEl.querySelector<HTMLButtonElement>('.duel-panel-actions button')?.click();
+      else if (code === 'Escape') {
+        if (this.climb.ended) this.close();
+        else this.leaveTower();
+      }
+      return;
+    }
     if (battle.over) {
       if (code === 'KeyR') this.start(this.duelId, this.heroId, this.seed + 1);
       else if (['Escape', 'Enter', 'NumpadEnter', 'Space'].includes(code)) this.close();
@@ -202,7 +570,7 @@ export class TavernDuel {
     const digit = /^(?:Digit|Numpad)([1-9])$/.exec(code)?.[1];
     if (this.skillMenu && !this.paused) {
       if (code === 'Escape' || code === 'Backspace') this.skillMenu = false;
-      else if (digit) this.useSkill(battle.party[0].skills[Number(digit) - 1]);
+      else if (digit) this.useSkill(this.actor()?.skills[Number(digit) - 1]);
       return;
     }
     if (code === 'Escape') {
@@ -212,20 +580,26 @@ export class TavernDuel {
     if (this.paused) return;
     this.sync(performance.now());
     if (code === 'KeyJ' || code === 'KeyK') battle.react(code === 'KeyJ' ? 'parry' : 'dodge');
-    else if (digit === '1') battle.attackTarget();
+    else if (code === 'Tab' || code === 'ArrowRight' || code === 'ArrowLeft') this.cycleTarget(code === 'ArrowLeft' ? -1 : 1);
+    else if (digit === '1') battle.attackTarget(this.target()?.id);
     else if (digit === '2') this.openSkills();
     else if (digit === '4') battle.firm();
   }
 
+  /** The squad member whose turn it is (null outside the party's turns). */
+  private actor(): Fighter | null {
+    const battle = this.battle;
+    return battle && battle.phase === 'player-turn' && battle.active?.side === 'party' ? battle.active : null;
+  }
+
   private openSkills(): void {
-    const battle = this.battle!;
-    if (battle.phase === 'player-turn' && battle.party[0].skills.length > 0) this.skillMenu = true;
+    if ((this.actor()?.skills.length ?? 0) > 0) this.skillMenu = true;
   }
 
   private useSkill(skill: SkillNode | undefined): void {
     if (!skill || !this.battle) return;
     this.sync(performance.now());
-    if (this.battle.useSkill(skill.id)) this.skillMenu = false;
+    if (this.battle.useSkill(skill.id, this.target()?.id)) this.skillMenu = false;
   }
 
   private setPaused(paused: boolean): void {
@@ -252,11 +626,16 @@ export class TavernDuel {
         this.stage.showTrack = next.timingTrack;
         this.setPaused(true);
       }),
-      this.button('Desistir e voltar à taverna', '', () => this.close())
+      this.button(this.climb ? `Desistir (leva ${Math.floor(this.climb.pot * TOWER_TUNING.keepOnLoss)} das ${this.climb.pot} fichas)` : 'Desistir e voltar à taverna', '', () => this.close())
     );
   }
 
   private showResult(): void {
+    if (this.climb) {
+      this.skillMenu = false;
+      this.showFloorResult();
+      return;
+    }
     const battle = this.battle!;
     const won = battle.phase === 'won';
     const enemy = battle.enemies[0];
@@ -304,46 +683,56 @@ export class TavernDuel {
   /** The DOM HUD: rebuilt only when something it shows changes. */
   private updateHud(): void {
     const battle = this.battle!;
-    const hero = battle.party[0];
+    const leader = battle.party[0];
+    const actor = this.actor();
+    // The skills and Coragem on the menu are whoever's turn it is.
+    const hero = actor ?? leader;
     const enemy = battle.enemies[0];
+    const group = battle.enemies.length > 1;
+    const squad = battle.party.length > 1;
+    const target = this.target();
+    this.stage.targetId = group ? target?.id ?? null : null;
     const queue = battle.over ? [] : battle.upcoming();
     const playerTurn = battle.phase === 'player-turn';
     const defending = battle.phase === 'enemy-attack';
     if (!playerTurn) this.skillMenu = false;
-    const key = [battle.phase, battle.active?.id, hero.hp, enemy.hp, hero.courage, hero.tipsiness, enemy.tipsiness, hero.firm, hero.shield, hero.wall, queue.join(','), battle.assisted, this.skillMenu, enemy.poison?.rounds, enemy.mark?.hits, battle.loot].join('|');
+    const state = (fighter: Fighter) => [fighter.hp, fighter.courage, fighter.tipsiness, fighter.firm, fighter.shield, fighter.wall, fighter.taunting, fighter.poison?.rounds, fighter.mark?.hits, fighter.stunned].join(':');
+    const key = [battle.phase, battle.active?.id, battle.fighters.map(state).join(','), target?.id, queue.join(','), battle.assisted, this.skillMenu, battle.loot].join('|');
     if (key === this.hudKey) return;
     this.hudKey = key;
-    const face = (id: string) => (id === 'hero'
-      ? `<span class="duel-chip hero" style="--chip:${hex(CHARACTERS[this.heroId]?.accentColor ?? 0xc0502a)}">${initials(hero.name)}</span>`
-      : `<span class="duel-chip enemy"><img alt="" src="${this.duelId === 'sergio' ? npcPortrait('sergio') ?? '' : npcFace(this.duelId)}"></span>`);
-    const bar = (fighter: typeof hero, side: 'left' | 'right') => `
-      <div class="duel-fighter ${side}">
-        <p class="duel-name">${fighter.name}${fighter.firm ? ' <em>firme</em>' : ''}${fighter.wall ? ` <em>${fighter.wallAs === 'dodge' ? 'esquiva certa' : 'aparo certo'}</em>` : ''}${fighter.shield > 0 ? ` <em class="shield">barril ${fighter.shield}</em>` : ''}</p>
-        <div class="duel-hp"><i style="width:${(fighter.hp / fighter.maxHp) * 100}%"></i><span>${fighter.hp}/${fighter.maxHp}</span></div>
-        <p class="duel-meta">${side === 'left' ? `Coragem ${pips(fighter.courage, TAVERN_BATTLE.courageMax)}` : ''}<span class="duel-mugs" title="Embriaguez">${'🍺'.repeat(fighter.tipsiness)}</span>${fighter.poison ? ` <em class="poison">veneno ${fighter.poison.rounds}</em>` : ''}${fighter.mark ? ` <em class="mark">marca ${fighter.mark.hits}</em>` : ''}</p>
-      </div>`;
+    const face = (id: string) => {
+      const fighter = battle.fighter(id);
+      const look = fighter?.look ?? this.duelId;
+      const regular = look in DUELS && fighter?.side === 'enemy';
+      if (regular) return `<span class="duel-chip enemy"><img alt="" src="${look === 'sergio' ? npcPortrait('sergio') ?? '' : npcFace(look as Exclude<DuelId, 'sergio'>)}"></span>`;
+      const color = ROSTER[look as RosterId]?.color ?? CHARACTERS[this.heroId]?.accentColor ?? 0x5a6a7a;
+      return `<span class="duel-chip ${fighter?.side === 'party' ? 'hero' : 'enemy'}" style="--chip:${hex(color)}">${initials(fighter?.name ?? '?')}</span>`;
+    };
+    // Names, HP and Coragem are on the plates over each head (the stage draws them); the top keeps the turn queue.
+    this.stage.actingId = squad ? actor?.id ?? null : null;
+    // Who the incoming attack is aimed at, so the player knows whose skin is on the line.
+    const aimed = defending && squad ? battle.fighter(battle.attack?.hits[0]?.targetId ?? '') : null;
+    this.hud.classList.toggle('squad', squad);
     this.hud.innerHTML = `
       <div class="duel-top">
-        ${bar(hero, 'left')}
         <div class="duel-queue"><p class="eyebrow">Próximos turnos</p><div>${queue.map(face).join('')}</div></div>
-        ${bar(enemy, 'right')}
       </div>
-      <p class="duel-legend">${battle.assisted ? '<b>Modo assistido</b> · ' : ''}${this.bet > 0 ? `<b>Aposta ${this.bet}</b> · ` : ''}${battle.loot > 0 ? `<b>+${battle.loot} fichas</b> afanadas · ` : ''}${battle.duel.legend} <kbd>Esc</kbd> pausa</p>
+      <p class="duel-legend">${this.climb ? `<b>${this.climb.tower.name} · andar ${this.floorNumber}</b> · Pote ${this.climb.pot} · ` : ''}${battle.assisted ? '<b>Modo assistido</b> · ' : ''}${this.bet > 0 ? `<b>Aposta ${this.bet}</b> · ` : ''}${battle.loot > 0 ? `<b>+${battle.loot} fichas</b> afanadas · ` : ''}${battle.duel.legend} <kbd>Esc</kbd> pausa</p>
       <div class="duel-bottom">
         <div class="duel-actions" ${playerTurn && !this.skillMenu ? '' : 'hidden'}>
-          <p class="eyebrow">Sua vez</p>
+          <p class="eyebrow">${squad ? `Vez de ${hero.name}` : 'Sua vez'}</p>
           <button type="button" data-action="attack"><kbd>1</kbd> Atacar</button>
           <button type="button" data-action="skills" ${hero.skills.length > 0 ? '' : `disabled title="Aprenda com ${enemy.name} em Habilidades, na taverna"`}><kbd>2</kbd> Habilidade</button>
           <button type="button" disabled title="Em breve"><kbd>3</kbd> Item do bar</button>
           <button type="button" data-action="firm"><kbd>4</kbd> Firmar</button>
         </div>
         <div class="duel-actions duel-skills" ${playerTurn && this.skillMenu ? '' : 'hidden'}>
-          <p class="eyebrow">Habilidades · <kbd>Esc</kbd> volta</p>
+          <p class="eyebrow">Habilidades${squad ? ` de ${hero.name}` : ''} · <kbd>Esc</kbd> volta</p>
           ${hero.skills.map((skill, i) => `<button type="button" data-skill="${i}" class="${skill.kind}" ${hero.courage >= skill.cost ? '' : 'disabled'} title="${skill.description}"><kbd>${i + 1}</kbd> ${skill.name} ${pips(skill.cost, skill.cost)}</button>`).join('')}
         </div>
-        <p class="duel-hint" ${defending ? '' : 'hidden'}><kbd>J</kbd> aparar &nbsp;·&nbsp; <kbd>K</kbd> esquivar</p>
+        <p class="duel-hint" ${defending ? '' : 'hidden'}>${aimed ? `Defendendo <b>${aimed.name}</b> · ` : ''}<kbd>J</kbd> aparar &nbsp;·&nbsp; <kbd>K</kbd> esquivar</p>
       </div>`;
-    this.hud.querySelector('[data-action="attack"]')?.addEventListener('click', () => battle.attackTarget());
+    this.hud.querySelector('[data-action="attack"]')?.addEventListener('click', () => battle.attackTarget(this.target()?.id));
     this.hud.querySelector('[data-action="firm"]')?.addEventListener('click', () => battle.firm());
     this.hud.querySelector('[data-action="skills"]')?.addEventListener('click', () => this.openSkills());
     this.hud.querySelectorAll<HTMLButtonElement>('[data-skill]').forEach((button) => {

@@ -1,5 +1,6 @@
 import { CONSUMABLES, ConsumableId, DIFFICULTY_TIERS, IGLOO_MEALS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
 import { AreaConfig, CURRENT_AREA } from '../../config/areas';
+import { TOWERS, TOWER_ORDER, TowerId } from '../../config/tavernTowers';
 import { heroName } from '../progress/heroNames';
 import { merchantItemIcon, npcPortrait, storeIcon } from './icons';
 import { MerchantOffer } from '../../core/systems/MerchantSystem';
@@ -12,6 +13,8 @@ export interface SergioShopActions {
   /** Taverna em Turnos: a duel with Sergio, and his skill tree. */
   duel(): void;
   skills(): void;
+  /** O Coliseu do Sergio: climb a tower (he's its secretary). */
+  tower(id: TowerId): void;
   buy(id: MetaUpgradeId): void;
   buyConsumable(id: ConsumableId): void;
   /** During a run's visit through his portal: this visit's items, the run's coins, and buying one. Null between
@@ -27,11 +30,12 @@ const GREETING = 'De volta, viajante? Fichas na mesa, e eu deixo você mais fort
 const KITCHEN_GREETING = 'Vai encarar o frio? Levo uns pratos quentinhos para a viagem. Fichas na mesa!';
 const RUN_GREETING = 'Lá fora o tempo parou, pode escolher com calma. Moedas na mesa!';
 
-type ShopTab = 'atributos' | 'consumiveis';
+type ShopTab = 'atributos' | 'consumiveis' | 'coliseu';
 
 const TABS: Array<{ id: ShopTab; label: string; hint: string }> = [
   { id: 'atributos', label: 'Atributos', hint: 'Melhorias permanentes, para todos os heróis.' },
-  { id: 'consumiveis', label: 'Consumíveis', hint: 'Valem só para a próxima partida: saem da mochila quando ela começa. Um de cada.' }
+  { id: 'consumiveis', label: 'Consumíveis', hint: 'Valem só para a próxima partida: saem da mochila quando ela começa. Um de cada.' },
+  { id: 'coliseu', label: 'Coliseu', hint: 'O Coliseu do Sergio: suba as torres andar por andar com o herói escolhido. A vida passa de um andar pro outro, cada vitória dá maestria e põe fichas no pote. Saia quando quiser; se cair, leva metade.' }
 ];
 
 /** Sergio's store, opened at his counter. Between runs: two shelves for Fichas, the permanent attributes (level
@@ -149,6 +153,8 @@ export class SergioShop {
         tag.textContent = packed ? 'Na mochila' : 'Próxima partida';
         grid.append(this.card(spec.id, spec.name, spec.effect, tag, packed ? null : { price: spec.price, affordable: save.fichas >= spec.price, label: 'Pôr na mochila' }, () => this.actions.buyConsumable(spec.id), packed ? 'Comprado' : '', merchantItemIcon(spec.id)));
       });
+    } else if (this.tab === 'coliseu') {
+      TOWER_ORDER.forEach((id) => grid.append(this.towerCard(id, save)));
     } else if (this.tab === 'atributos') {
       META_UPGRADES.forEach((spec) => {
         const level = save.upgrades[spec.id] ?? 0;
@@ -194,6 +200,15 @@ export class SergioShop {
       skills.addEventListener('click', () => this.actions.skills());
       footer.append(duel, skills);
     }
+    // The igloo is a turn-based arena too: the Esquimó keeps the Nevado's tower.
+    if (kitchen && !TOWERS.snowfield.comingSoon) {
+      const tower = document.createElement('button');
+      tower.type = 'button';
+      tower.className = 'ui-button';
+      tower.textContent = 'Torre do Iglu (turnos)';
+      tower.addEventListener('click', () => this.actions.tower('snowfield'));
+      footer.append(tower);
+    }
     if (!run && !kitchen && this.actions.canPlaySergio()) {
       const play = document.createElement('button');
       play.type = 'button';
@@ -220,6 +235,36 @@ export class SergioShop {
   }
 
   /** One item on the shelf: art, name, what it does, its status line, and the buy button (or why there's none). */
+  /** A tower of O Coliseu do Sergio: its best floor so far and the way up (the region towers are announced). */
+  private towerCard(id: TowerId, save: SaveData): HTMLLIElement {
+    const spec = TOWERS[id];
+    const record = save.tavern.towers[id];
+    const card = document.createElement('li');
+    card.className = 'store-card tower-card';
+    if (spec.comingSoon) card.classList.add('owned');
+    const icon = document.createElement('img');
+    icon.className = 'store-icon';
+    icon.alt = '';
+    icon.src = npcPortrait(spec.stage === 'igloo' ? 'eskimo' : 'sergio') ?? '';
+    const name = document.createElement('strong');
+    name.textContent = spec.name;
+    const text = document.createElement('span');
+    text.className = 'store-effect';
+    text.textContent = spec.blurb;
+    const status = document.createElement('span');
+    status.className = 'store-tag';
+    status.textContent = spec.comingSoon ? 'Em breve' : record?.tops ? `Topo alcançado ${record.tops}×` : `Melhor andar: ${record?.best ?? 0} de ${spec.floors.length}`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ui-button store-buy';
+    button.dataset.focus = `tower-${id}`;
+    button.textContent = spec.comingSoon ? 'Em breve' : 'Subir a torre';
+    button.disabled = Boolean(spec.comingSoon);
+    button.addEventListener('click', () => this.actions.tower(id));
+    card.append(icon, name, text, status, button);
+    return card;
+  }
+
   private card(id: string, title: string, effect: string, status: HTMLElement, offer: { price: number; affordable: boolean; label: string; unit?: string } | null, buy: () => void, done: string, art = storeIcon(id)): HTMLLIElement {
     const card = document.createElement('li');
     card.className = 'store-card';

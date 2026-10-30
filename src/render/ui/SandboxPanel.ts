@@ -69,6 +69,8 @@ export interface SandboxHost {
   announce(text: string): void;
   /** Every hero playable (the tavern regulars and Sergio), without touching the save. */
   unlockAllHeroes(): void;
+  /** Every fighter pickable in the Coliseu's squad picker (the towers' locals too), without touching the save. */
+  unlockAllFighters(): void;
   /** The save, for testing: Fichas to spend, a mastery level for the hero in play, or a clean slate (every tip, unlock
    *  and welcome plays again). */
   addFichas(amount: number): void;
@@ -178,6 +180,7 @@ export class SandboxPanel {
       { label: () => 'Abrir portal do mercador', run: () => run().openMerchantPortal() },
       { label: () => 'Chamar o Esquimó (Nevado)', run: () => run().summonEskimo() },
       { label: () => 'Liberar todos os heróis', run: () => this.host.unlockAllHeroes() },
+      { label: () => 'Coliseu: liberar todos os lutadores', run: () => this.host.unlockAllFighters() },
       { label: () => 'Progresso: +500 Fichas', run: () => this.host.addFichas(500) },
       { label: () => 'Progresso: +1 nível de maestria', run: () => this.host.addMasteryLevel() },
       { label: () => 'Progresso: apagar tudo', run: () => this.host.resetProgress() },

@@ -6,6 +6,15 @@
 export type SkillEffect =
   /** Hits the enemy for `ratio` × the user's attack. */
   | { type: 'damage'; ratio: number }
+  /** Hits every enemy standing for `ratio` × the user's attack (the squad's sweeping finishers). */
+  | { type: 'damageAll'; ratio: number }
+  /** Heals every living member of the user's side a flat amount. */
+  | { type: 'healAll'; amount: number }
+  /** A shield of this much on every living member of the user's side. */
+  | { type: 'shieldAll'; amount: number }
+  /** Draws every enemy attack onto the user until their next turn; optionally weakens the next one (× ratio) and
+   *  raises a shield. */
+  | { type: 'taunt'; weaken?: number; shield?: number }
   /** Hits for `ratio` × attack and pushes the target's next turn back by `delay` of the initiative meter. */
   | { type: 'stun'; ratio: number; delay: number }
   /** Heals a flat amount. */

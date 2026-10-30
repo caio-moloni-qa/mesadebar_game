@@ -1,0 +1,4 @@
+Same built-in image_gen source and exact prompt as winter-king-poses_v1-raw.png / winter-king-poses_v1-generation-prompt.txt.
+Corrected export only: source connected components with row==0, count<1000, l>=310 and r<550 belong to pose1 (ice ray), including shards across the nominal first-column boundary.
+Nearest-neighbor export, one shared scale 0.182113821138211, horizontal content centered, alpha content bottom119, 512x256 RGBA. See tools/discord/.state/export-winter-king-v2.ps1.
+Preserves v1 without overwrite. Integrate v2.

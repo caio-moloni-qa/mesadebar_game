@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { CURRENT_AREA } from '../../config/areas';
 import {
   DIFFICULTY_TIERS, MASTERY_THRESHOLDS, MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, RunSummary, SERGIO_TOTAL_MASTERY, applyRun, buyUpgrade, emptySave,
-  areaCompletion, arenaProgress, heroesToWelcome, masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockSteps, unlockedSkins
+  areaCompletion, arenaProgress, heroesToWelcome, masteryLevel, metaBonuses, nextPrice, parseSave, rosterFor, runPayout, serializeSave, unlockSteps, unlockedSkins,
+  SaveData, bankTowerClimb, bankTowerFloor, towerBest
 } from './Progress';
+import { TOWERS, TOWER_UNLOCKS } from '../../config/tavernTowers';
+
+/** The Torre da Taverna climbed to `best` (heroes also need their tower floor beaten). */
+function climbed(save: SaveData, best = TOWERS.taverna.floors.length): SaveData {
+  return { ...save, tavern: { ...save.tavern, towers: { taverna: { best, climbs: 1, tops: 0 } } } };
+}
 
 function run(overrides: Partial<RunSummary> = {}): RunSummary {
   return {
@@ -53,12 +60,12 @@ describe('progress', () => {
 
   it('a regular joins after all their missions and the paired mastery level; Sergio after all four', () => {
     const level5 = MASTERY_THRESHOLDS[4];
-    let save = { ...emptySave(), regularMissions: { brom: MISSIONS_PER_REGULAR }, mastery: { barbarian: level5 - 1 } };
+    let save = climbed({ ...emptySave(), regularMissions: { brom: MISSIONS_PER_REGULAR }, mastery: { barbarian: level5 - 1 } });
     expect(rosterFor(save)).not.toContain('brom');
     save = { ...save, mastery: { barbarian: level5 } };
     expect(rosterFor(save)).toContain('brom');
     const everyone = {
-      ...emptySave(),
+      ...climbed(emptySave()),
       regularMissions: { brom: 3, lyra: 3, grimbo: 3, zora: 3 },
       mastery: Object.fromEntries(Object.values(REGULAR_UNLOCKS).map((rule) => [rule.hero, level5]))
     };
@@ -72,7 +79,7 @@ describe('progress', () => {
 
   it('announces a newly joined hero once', () => {
     const level5 = MASTERY_THRESHOLDS[4];
-    const save = { ...emptySave(), regularMissions: { brom: 2 }, mastery: { barbarian: level5 } };
+    const save = climbed({ ...emptySave(), regularMissions: { brom: 2 }, mastery: { barbarian: level5 } });
     const outcome = applyRun(save, run({ questTiers: { brom: 3 } }));
     expect(outcome.joined).toEqual(['brom']);
     expect(applyRun(outcome.save, run()).joined).toEqual([]);
@@ -104,11 +111,11 @@ describe('progress', () => {
   it('loads saves from before the Taverna em Turnos with empty duel defaults, and round-trips its settings', () => {
     const old = parseSave(JSON.stringify({ fichas: 40, mastery: { mage: 600 } }));
     expect(old.fichas).toBe(40);
-    expect(old.tavern).toEqual({ regulars: {}, assisted: false, timingTrack: true, boons: [] });
-    const tavern = { regulars: { brom: { xp: 30, level: 2, learned: ['contragolpe'], finisher: 'golpe-da-forja' } }, assisted: true, timingTrack: false, boons: ['flecha-marcada' as const] };
+    expect(old.tavern).toEqual({ regulars: {}, assisted: false, timingTrack: true, boons: [], towers: {} });
+    const tavern = { regulars: { brom: { xp: 30, level: 2, learned: ['contragolpe'], finisher: 'golpe-da-forja' } }, assisted: true, timingTrack: false, boons: ['flecha-marcada' as const], towers: { taverna: { best: 4, climbs: 2, tops: 0 } } };
     expect(parseSave(serializeSave({ ...emptySave(), tavern })).tavern).toEqual(tavern);
-    expect(parseSave(JSON.stringify({ tavern: { regulars: { brom: 'x', lyra: { xp: -3, learned: [1, 'a'] } }, assisted: 'yes', boons: ['uma-visao', 'nope', 'uma-visao'] } })).tavern)
-      .toEqual({ regulars: { lyra: { xp: 0, level: 1, learned: ['a'] } }, assisted: false, timingTrack: true, boons: ['uma-visao'] });
+    expect(parseSave(JSON.stringify({ tavern: { regulars: { brom: 'x', lyra: { xp: -3, learned: [1, 'a'] } }, assisted: 'yes', boons: ['uma-visao', 'nope', 'uma-visao'], towers: { taverna: { best: -1, climbs: 'x' }, atlantis: { best: 3 } } } })).tavern)
+      .toEqual({ regulars: { lyra: { xp: 0, level: 1, learned: ['a'] } }, assisted: false, timingTrack: true, boons: ['uma-visao'], towers: { taverna: { best: 0, climbs: 0, tops: 0 } } });
   });
 });
 
@@ -124,8 +131,8 @@ describe('unlocking the tavern heroes', () => {
     const save = emptySave();
     expect(unlockSteps(save, 'barbarian')).toEqual([]);
     const steps = unlockSteps(save, 'brom');
-    expect(steps.map((step) => [step.current, step.needed])).toEqual([[0, MISSIONS_PER_REGULAR], [1, REGULAR_UNLOCKS.brom.level]]);
-    const unlocked = { ...save, regularMissions: { brom: MISSIONS_PER_REGULAR }, mastery: { barbarian: MASTERY_THRESHOLDS[REGULAR_UNLOCKS.brom.level - 1] } };
+    expect(steps.map((step) => [step.current, step.needed])).toEqual([[0, MISSIONS_PER_REGULAR], [1, REGULAR_UNLOCKS.brom.level], [0, TOWER_UNLOCKS.brom!.floor]]);
+    const unlocked = climbed({ ...save, regularMissions: { brom: MISSIONS_PER_REGULAR }, mastery: { barbarian: MASTERY_THRESHOLDS[REGULAR_UNLOCKS.brom.level - 1] } }, TOWER_UNLOCKS.brom!.floor);
     expect(unlockSteps(unlocked, 'brom').every((step) => step.current >= step.needed)).toBe(true);
     expect(heroesToWelcome(unlocked)).toEqual(['brom']);
     expect(heroesToWelcome({ ...unlocked, welcomed: [...unlocked.welcomed, 'brom'] })).toEqual([]);
@@ -133,8 +140,40 @@ describe('unlocking the tavern heroes', () => {
 
   it('keeps Sergio for last: every regular and a mastery total', () => {
     const steps = unlockSteps(emptySave(), 'sergio');
-    expect(steps.map((step) => step.needed)).toEqual([4, SERGIO_TOTAL_MASTERY]);
+    expect(steps.map((step) => step.needed)).toEqual([4, SERGIO_TOTAL_MASTERY, TOWERS.taverna.floors.length]);
     expect(steps[1].current).toBe(0);
+  });
+});
+
+describe('O Coliseu do Sergio (the towers)', () => {
+  const level5 = MASTERY_THRESHOLDS[4];
+  const ready = { ...emptySave(), regularMissions: { brom: MISSIONS_PER_REGULAR, lyra: MISSIONS_PER_REGULAR }, mastery: { barbarian: level5, fabri: level5 } };
+
+  it('a regular also needs their tower floor beaten; the floor banks mastery at once and announces who joined', () => {
+    expect(rosterFor(ready)).not.toContain('brom');
+    const first = bankTowerFloor(ready, 'mage', 'taverna', 1, 60);
+    expect(first.save.mastery.mage).toBe(60);
+    expect(towerBest(first.save, 'taverna')).toBe(1);
+    expect(first.joined).toEqual(['brom']);
+    // Lyra's floor is the second.
+    expect(rosterFor(first.save)).not.toContain('lyra');
+    const second = bankTowerFloor(first.save, 'mage', 'taverna', 2, 70);
+    expect(second.joined).toEqual(['lyra']);
+    // A worse climb never lowers the best floor.
+    expect(towerBest(bankTowerFloor(second.save, 'mage', 'taverna', 1, 60).save, 'taverna')).toBe(2);
+  });
+
+  it('never takes a hero away from a save that had them before the towers', () => {
+    const old = { ...ready, announced: [...ready.announced, 'brom' as const] };
+    expect(rosterFor(old)).toContain('brom');
+    expect(unlockSteps(old, 'brom')).toHaveLength(2);
+  });
+
+  it('banks a climb: the fichas and the counters', () => {
+    const save = bankTowerClimb({ ...emptySave(), fichas: 5 }, 'taverna', 30, true);
+    expect(save.fichas).toBe(35);
+    expect(save.fichasEarned).toBe(30);
+    expect(save.tavern.towers.taverna).toEqual({ best: 0, climbs: 1, tops: 1 });
   });
 });
 

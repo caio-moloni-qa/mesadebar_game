@@ -1,4 +1,6 @@
+import { isRosterId } from './config/tavernRoster';
 import { DUELS, DuelId } from './config/tavernBattle';
+import { TOWERS, TowerId } from './config/tavernTowers';
 import { CHARACTERS, CharacterId } from './config/characters';
 import { WEAPONS, WeaponConfig } from './config/weapons';
 import { ZoneKind } from './config/arenaLayout';
@@ -23,7 +25,7 @@ const initialRun = characterId ? { characterId, weaponId: weaponId ?? CHARACTERS
 
 // Imported hero meshes load first (a failed one falls back to the procedural model), then the game starts.
 void Promise.all([loadHeroMeshes(), loadBossMeshes()]).then(() => {
-  const game = new Game3D(document.getElementById('app')!, { initialRun, seed, stressEnemyCount: stress, invincible: params.get('god') === '1', debug: params.get('debug') === '1', showCollision: params.get('debug') === 'collision', zoom: Number(params.get('zoom')) || undefined, startZone: (params.get('at') as ZoneKind | null) ?? undefined, arena: params.get('arena') ?? undefined, touch: params.get('touch') === '1', duel: (params.get('duel') ?? '') in DUELS ? (params.get('duel') as DuelId) : undefined, duelBet: params.has('bet') ? Number(params.get('bet')) || 0 : undefined });
+  const game = new Game3D(document.getElementById('app')!, { initialRun, seed, stressEnemyCount: stress, invincible: params.get('god') === '1', debug: params.get('debug') === '1', showCollision: params.get('debug') === 'collision', zoom: Number(params.get('zoom')) || undefined, startZone: (params.get('at') as ZoneKind | null) ?? undefined, arena: params.get('arena') ?? undefined, touch: params.get('touch') === '1', duel: (params.get('duel') ?? '') in DUELS ? (params.get('duel') as DuelId) : undefined, duelBet: params.has('bet') ? Number(params.get('bet')) || 0 : undefined, tower: (params.get('tower') ?? '') in TOWERS ? (params.get('tower') as TowerId) : undefined, squad: params.get('squad')?.split(',').filter(isRosterId) });
   // ?debug=1: the running game on window for poking at it from the console / test drivers.
   if (params.get('debug') === '1') Object.assign(window, { __game: game });
 });

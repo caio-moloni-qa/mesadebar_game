@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AttackPattern, DUELS, DUEL_HERO, DuelId, DuelSpec } from '../../config/tavernBattle';
+import { AttackPattern, DUELS, DUEL_HERO, DuelId, DuelSpec, REACTION_WINDOWS } from '../../config/tavernBattle';
 import { SKILL_TREES } from '../../config/tavernSkills';
 import { activeKit, freshRegular, learn } from './SkillTree';
 import { TurnBattle } from './TurnBattle';
@@ -46,7 +46,7 @@ describe('Lyra: arrows from range can only be dodged', () => {
 
     const dodged = new TurnBattle({ duel: arrow, hero: DUEL_HERO, seed: 1 });
     untilPhase(dodged, 'enemy-attack');
-    toHit(dodged, 150);
+    toHit(dodged, REACTION_WINDOWS.dodgeMs - 10);
     expect(dodged.react('dodge')).toBe('dodge');
     expect(dodged.party[0].hp).toBe(100);
   });
@@ -182,7 +182,7 @@ describe('the phase-3 skills', () => {
     expect(battle.react('dodge')).toBe('dodge');
     expect(before - battle.enemies[0].hp).toBe(8);
     const lyra = new TurnBattle({ duel: straight('lyra'), hero: DUEL_HERO, seed: 1, kit: kitOf('lyra', ['pes-ligeiros']) });
-    expect(lyra.windowsFor(lyra.party[0]).dodgeMs).toBe(220);
+    expect(lyra.windowsFor(lyra.party[0]).dodgeMs).toBe(REACTION_WINDOWS.dodgeMs + 40);
   });
 
   it('Dança do Vento dodges the whole next attack on its own (no counter)', () => {

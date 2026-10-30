@@ -28,30 +28,31 @@ function advanceTo(battle: TurnBattle, time: number): void {
 }
 
 describe('judgeReaction', () => {
+  const { parryMs: P, dodgeMs: D } = WINDOWS;
   it.each([
-    ['parry', 90, 'parry'], ['parry', -90, 'parry'],
-    ['parry', 91, 'taken'], ['parry', -91, 'taken'],
-    ['parry', 180, 'taken'], ['parry', 181, 'early'],
-    ['dodge', 180, 'dodge'], ['dodge', -180, 'dodge'],
-    ['dodge', 181, 'early'], ['dodge', -181, 'early'],
+    ['parry', P, 'parry'], ['parry', -P, 'parry'],
+    ['parry', P + 1, 'taken'], ['parry', -P - 1, 'taken'],
+    ['parry', D, 'taken'], ['parry', D + 1, 'early'],
+    ['dodge', D, 'dodge'], ['dodge', -D, 'dodge'],
+    ['dodge', D + 1, 'early'], ['dodge', -D - 1, 'early'],
     ['dodge', 0, 'dodge']
   ] as const)('%s at %i ms → %s', (kind, offset, expected) => {
     expect(judgeReaction(kind, 1000, 1000 + offset, WINDOWS)).toBe(expected);
   });
 
-  it('assisted mode doubles both windows', () => {
+  it('assisted mode doubles every window', () => {
     const assisted = reactionWindows(REACTION_WINDOWS, { assisted: true });
-    expect(assisted.parryMs).toBe(180);
-    expect(assisted.dodgeMs).toBe(360);
-    expect(judgeReaction('parry', 0, 170, assisted)).toBe('parry');
-    expect(judgeReaction('dodge', 0, -350, assisted)).toBe('dodge');
-    expect(judgeReaction('dodge', 0, 361, assisted)).toBe('early');
+    expect(assisted.parryMs).toBe(P * 2);
+    expect(assisted.dodgeMs).toBe(D * 2);
+    expect(judgeReaction('parry', 0, P * 2 - 10, assisted)).toBe('parry');
+    expect(judgeReaction('dodge', 0, -D * 2 + 10, assisted)).toBe('dodge');
+    expect(judgeReaction('dodge', 0, D * 2 + 1, assisted)).toBe('early');
   });
 
   it('Firmar widens only the parry window', () => {
     const firm = reactionWindows(REACTION_WINDOWS, { firm: true });
-    expect(firm.parryMs).toBe(130);
-    expect(firm.dodgeMs).toBe(180);
+    expect(firm.parryMs).toBe(P + REACTION_WINDOWS.firmBonusMs);
+    expect(firm.dodgeMs).toBe(D);
   });
 });
 

@@ -37,7 +37,9 @@ import { activeKit, duelXp, grantXp, regularState, resetTree, treeFor, withRegul
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
-import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses } from '../core/progress/Progress';
+import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, bankTowerClimb, bankTowerFloor, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses } from '../core/progress/Progress';
+import { TOWERS, TowerId } from '../config/tavernTowers';
+import { RosterId } from '../config/tavernRoster';
 import { HeroKitViews } from './views/HeroKitViews';
 import { PowerViews } from './views/PowerViews';
 import { PowerBanner } from './ui/PowerBanner';
@@ -88,6 +90,10 @@ export interface Game3DOptions {
   duel?: DuelId;
   /** Test URLs: Grimbo's bet, skipping the question (?bet=10). */
   duelBet?: number;
+  /** Test URLs: open a tower of O Coliseu do Sergio straight from the tavern (?tower=taverna). */
+  tower?: TowerId;
+  /** Test URLs: the tower's squad, skipping the picker (?squad=eskimo,frostKnight). */
+  squad?: RosterId[];
 }
 
 /** Floating callout colours per player-status tone. */
@@ -131,6 +137,8 @@ export class Game3D {
   private readonly heroKitViews = new HeroKitViews();
   /** Sandbox: every hero playable, without touching the save. */
   private allHeroesUnlocked = false;
+  /** Sandbox: every fighter (the towers' locals too) pickable in the Coliseu, without touching the save. */
+  private allFightersUnlocked = false;
   private merchantRoom?: MerchantRoom;
   /** The Nevasca's torches and storm snow, rebuilt with every session (empty where the arena has no blizzard). */
   private blizzardView?: BlizzardView;
@@ -229,6 +237,10 @@ export class Game3D {
         this.allHeroesUnlocked = true;
         this.floatAboveHero('Sandbox: todos os heróis liberados', '#8bff8b');
       },
+      unlockAllFighters: () => {
+        this.allFightersUnlocked = true;
+        this.floatAboveHero('Sandbox: todos os lutadores do Coliseu liberados', '#8bff8b');
+      },
       addFichas: (amount) => {
         this.saveProgress({ fichas: this.progress.fichas + amount });
         this.floatAboveHero(`Sandbox: +${amount} Fichas`, '#8bff8b');
@@ -243,6 +255,7 @@ export class Game3D {
       resetProgress: () => {
         if (!window.confirm('Apagar todo o progresso salvo (Fichas, maestria, missões, heróis liberados, dicas vistas)?')) return;
         this.allHeroesUnlocked = false;
+        this.allFightersUnlocked = false;
         this.progress = emptySave();
         SaveStore.save(this.progress);
         this.showMenu();
@@ -297,7 +310,18 @@ export class Game3D {
         this.keys.clear();
         this.accumulator = 0;
         this.lastFrameAt = performance.now();
-      }
+      },
+      // O Coliseu do Sergio: each floor's mastery goes to the hero climbing, saved at once.
+      towerFloor: (tower, cleared, masteryXp) => {
+        const outcome = bankTowerFloor(this.progress, this.run.characterId, tower, cleared, masteryXp);
+        this.saveProgress(outcome.save);
+        const level = masteryLevel(outcome.xpAfter);
+        return { level, levelsGained: level - masteryLevel(outcome.xpBefore), joined: outcome.joined.map((hero) => CHARACTERS[hero]?.name ?? hero) };
+      },
+      towerEnded: (tower, fichas, reachedTop) => this.saveProgress(bankTowerClimb(this.progress, tower, fichas, reachedTop)),
+      mentors: () => (Object.keys(DUELS) as DuelId[]).filter((regular) => regularState(this.progress, regular).learned.length > 0),
+      roster: () => this.roster(),
+      allFighters: () => this.allFightersUnlocked
     });
     this.skillTree = new SkillTreeScreen(container, {
       state: (regular) => ({ regular: regularState(this.progress, regular), fichas: this.progress.fichas }),
@@ -368,6 +392,10 @@ export class Game3D {
         this.shop.hide();
         this.openSkillTree('sergio');
       },
+      tower: (tower) => {
+        this.shop.hide();
+        this.startTower(tower);
+      },
       canPlaySergio: () => this.roster().includes('sergio'),
       playSergio: () => {
         this.shop.hide();
@@ -402,6 +430,10 @@ export class Game3D {
       if (options.initialRun) this.run = options.initialRun;
       this.enterHub();
       this.startDuel(options.duel, options.duelBet);
+    } else if (options.tower) {
+      if (options.initialRun) this.run = options.initialRun;
+      this.enterHub();
+      this.startTower(options.tower);
     } else if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
     this.bindInput();
@@ -477,6 +509,14 @@ export class Game3D {
     if (this.session.dialogue !== null) this.session.closeDialogue();
     this.keys.clear();
     this.duel.start(duel, this.run.characterId, this.options.seed ?? randomSeed(), bet);
+  }
+
+  /** O Coliseu do Sergio: a climb up a tower with the hero chosen in the tavern (it earns their mastery). */
+  startTower(tower: TowerId): void {
+    if (!TOWERS[tower] || TOWERS[tower].comingSoon) return;
+    if (this.session.dialogue !== null) this.session.closeDialogue();
+    this.keys.clear();
+    this.duel.startTower(tower, this.run.characterId, this.options.seed ?? randomSeed(), this.options.squad);
   }
 
   /** "Habilidades" in a regular's dialogue: their skill tree over the tavern. */

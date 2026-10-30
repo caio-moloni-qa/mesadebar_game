@@ -33,7 +33,7 @@ export interface AttackHit {
 }
 
 /** What a ranged attack throws: drawn flying from the attacker, who stays home. */
-export type Projectile = 'arrow' | 'mug' | 'plate' | 'bottle' | 'barrel';
+export type Projectile = 'arrow' | 'mug' | 'plate' | 'bottle' | 'barrel' | 'fish' | 'ice' | 'snowball';
 
 export interface AttackPattern {
   id: string;
@@ -77,6 +77,8 @@ export const TAVERN_BATTLE = {
   introMs: 1400,
   /** How long a party strike plays out before the next turn. */
   strikeMs: 700,
+  /** How long a skill plays out: a cast charges, then its bolt (or arrow, meteor, avalanche) still has to land. */
+  skillMs: 1050,
   /** "Firmar" plays out this long. */
   firmMs: 450,
   /** After the last hit of an enemy attack resolves (and the counter, if any). */

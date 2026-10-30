@@ -1,4 +1,5 @@
-import { AttackPattern, DRINKING_RULE, DuelFighterSpec, DuelSpec, REACTION_WINDOWS, TAVERN_BATTLE } from '../../config/tavernBattle';
+import { AttackPattern, DRINKING_RULE, DuelFighterSpec, REACTION_WINDOWS, TAVERN_BATTLE } from '../../config/tavernBattle';
+import { FoeSpec } from '../../config/tavernRoster';
 import { SkillNode } from '../../config/tavernSkills';
 import { EventBus } from '../EventBus';
 import { Rng, createRng } from '../math';
@@ -10,6 +11,8 @@ export type BattlePhase = 'player-turn' | 'enemy-attack' | 'resolving' | 'won' |
 
 export interface Fighter {
   id: string;
+  /** Who it looks like on the stage (the regular's art); ids are unique per battle, looks can repeat. */
+  look: string;
   name: string;
   side: BattleSide;
   /** Position in its side's line (turn-order ties break by it). */
@@ -42,6 +45,10 @@ export interface Fighter {
   poison: { perRound: number; rounds: number } | null;
   /** Marca: the next `hits` party blows on this fighter hit for (1 + ratio) ×. */
   mark: { ratio: number; hits: number } | null;
+  /** Grito de Guerra / Guarda de Gelo / Rugido: every enemy attack comes at this fighter until its next turn. */
+  taunting: boolean;
+  /** Atordoar: knocked back in the turn order; shown until this fighter's next turn. */
+  stunned: boolean;
 }
 
 export interface FighterPassives {
@@ -100,7 +107,7 @@ export type TurnBattleEvents = {
   fighterDown: { fighterId: string };
   battleEnded: { winner: BattleSide };
   /** A skill from the tree: what it did (damage dealt, HP healed). */
-  skillUsed: { fighterId: string; skill: SkillNode; targetId: string; damage: number; heal: number; crit: boolean };
+  skillUsed: { fighterId: string; skill: SkillNode; targetId: string; damage: number; heal: number; crit: boolean; splash: Array<{ targetId: string; damage: number }> };
   /** Contragolpe and friends: a parry or a dodge struck straight back. */
   riposte: { defenderId: string; attackerId: string; damage: number; on: 'parry' | 'dodge' };
   /** Veneno / Praga ticking at the start of a round. */
@@ -111,9 +118,35 @@ export type TurnBattleEvents = {
   healed: { fighterId: string; amount: number };
 };
 
+/** One enemy of a group fight (the tower's floors): a regular or a monster, with its own patterns. */
+export interface BattleFoe {
+  id: string;
+  look: string;
+  enemy: DuelFighterSpec;
+  patterns: AttackPattern[];
+}
+
+/** A squad member fighting beside the hero (the towers' squads): their stats, kit and what they carry in. */
+export interface BattleAlly {
+  id: string;
+  look: string;
+  spec: DuelFighterSpec;
+  kit?: SkillNode[];
+  start?: { hp?: number; courage?: number };
+}
+
 export interface TurnBattleOptions {
-  duel: DuelSpec;
+  /** The fight's rule and lines (a duel; a tower floor builds one for its group). */
+  duel: FoeSpec;
+  /** The enemies, when not just the duel's one regular (the tower's groups). */
+  foes?: BattleFoe[];
+  /** The tower carries the hero over from floor to floor: HP left and Coragem to start with. */
+  heroStart?: { hp?: number; courage?: number };
   hero: DuelFighterSpec;
+  /** Who the hero looks like on the stage (a roster id; 'hero' draws the blocks). */
+  heroLook?: string;
+  /** The rest of the squad: each takes their own turns, and the player defends whoever an attack is aimed at. */
+  allies?: BattleAlly[];
   seed: number;
   /** Assisted mode: both reaction windows × assistedScale. */
   assisted?: boolean;
@@ -129,7 +162,7 @@ export function tipsyOffsets(offsets: readonly number[], tipsiness: number, rng:
   return offsets.map((offset) => offset + (rng() * 2 - 1) * spread);
 }
 
-function makeFighter(id: string, spec: DuelFighterSpec, side: BattleSide, slot: number, patterns: AttackPattern[], kit: SkillNode[] = []): Fighter {
+function makeFighter(id: string, look: string, spec: DuelFighterSpec, side: BattleSide, slot: number, patterns: AttackPattern[], kit: SkillNode[] = []): Fighter {
   const passives: FighterPassives = { armor: 0, roundHeal: 0, parryBonusMs: 0, ripostes: [], critChance: 0, dodgeBonusMs: 0, parryLoot: 0, foresight: false };
   kit.filter((node) => node.kind === 'passive').forEach(({ effect }) => {
     if (effect.type === 'armor') passives.armor += effect.amount;
@@ -142,9 +175,9 @@ function makeFighter(id: string, spec: DuelFighterSpec, side: BattleSide, slot: 
     else if (effect.type === 'foresight') passives.foresight = true;
   });
   return {
-    id, name: spec.name, side, slot, hp: spec.maxHp, maxHp: spec.maxHp, attack: spec.attack, speed: spec.speed, courage: 0,
+    id, look, name: spec.name, side, slot, hp: spec.maxHp, maxHp: spec.maxHp, attack: spec.attack, speed: spec.speed, courage: 0,
     firm: false, statuses: [], tipsiness: 0, patterns, skills: kit.filter((node) => node.kind !== 'passive'), passives,
-    shield: 0, weakened: 1, wall: false, wallAs: 'parry', poison: null, mark: null
+    shield: 0, weakened: 1, wall: false, wallAs: 'parry', poison: null, mark: null, taunting: false, stunned: false
   };
 }
 
@@ -180,17 +213,26 @@ export class TurnBattle {
     this.rng = createRng(options.seed);
     this.assisted = Boolean(options.assisted);
     const { hero, duel } = options;
+    const foes = options.foes ?? [{ id: duel.id, look: duel.id, enemy: duel.enemy, patterns: duel.patterns }];
+    const allies = options.allies ?? [];
     this.fighters = [
-      makeFighter('hero', hero, 'party', 0, [], options.kit),
-      makeFighter(duel.id, duel.enemy, 'enemy', 0, duel.patterns)
+      makeFighter('hero', options.heroLook ?? 'hero', hero, 'party', 0, [], options.kit),
+      ...allies.map((ally, i) => makeFighter(ally.id, ally.look, ally.spec, 'party', i + 1, [], ally.kit)),
+      ...foes.map((foe, slot) => makeFighter(foe.id, foe.look, foe.enemy, 'enemy', slot, foe.patterns))
     ];
+    // The tower carries everyone in with the HP and Coragem they had.
+    [options.heroStart, ...allies.map((ally) => ally.start)].forEach((start, i) => {
+      const fighter = this.fighters[i];
+      if (start?.hp !== undefined) fighter.hp = Math.max(1, Math.min(fighter.maxHp, Math.round(start.hp)));
+      if (start?.courage !== undefined) fighter.courage = Math.max(0, Math.min(TAVERN_BATTLE.courageMax, start.courage));
+    });
     this.fighters.forEach((fighter) => this.meters.set(fighter.id, this.rng() * TAVERN_BATTLE.initiativeJitter));
     this.startRound();
     this.wait(TAVERN_BATTLE.introMs);
   }
 
   /** The duel being fought (its rule, for the stage and the HUD). */
-  get duel(): DuelSpec { return this.options.duel; }
+  get duel(): FoeSpec { return this.options.duel; }
   get party(): Fighter[] { return this.fighters.filter((fighter) => fighter.side === 'party'); }
   get enemies(): Fighter[] { return this.fighters.filter((fighter) => fighter.side === 'enemy'); }
   get over(): boolean { return this.phase === 'won' || this.phase === 'lost'; }
@@ -250,11 +292,16 @@ export class TurnBattle {
     let damage = 0;
     let heal = 0;
     let crit = false;
+    const splash: Array<{ targetId: string; damage: number }> = [];
+    const allies = this.fighters.filter((fighter) => fighter.side === actor.side && fighter.hp > 0);
     const strike = (ratio: number) => ({ damage, crit } = this.blow(actor, target, actor.attack * ratio, true));
     if (effect.type === 'damage' || effect.type === 'stun') {
       strike(effect.ratio);
       // Pushed back on the initiative meter: the target acts later.
-      if (effect.type === 'stun') this.meters.set(target.id, this.meters.get(target.id)! - effect.delay);
+      if (effect.type === 'stun') {
+        this.meters.set(target.id, this.meters.get(target.id)! - effect.delay);
+        target.stunned = true;
+      }
     } else if (effect.type === 'gamble') {
       strike(effect.min + this.rng() * (effect.max - effect.min));
     } else if (effect.type === 'poison') {
@@ -277,9 +324,24 @@ export class TurnBattle {
     } else if (effect.type === 'wall') {
       actor.wall = true;
       actor.wallAs = effect.as ?? 'parry';
+    } else if (effect.type === 'damageAll') {
+      this.enemies.filter((enemy) => enemy.hp > 0).forEach((enemy) => {
+        const hit = this.blow(actor, enemy, actor.attack * effect.ratio, true);
+        splash.push({ targetId: enemy.id, damage: hit.damage });
+        damage += hit.damage;
+        crit ||= hit.crit;
+      });
+    } else if (effect.type === 'healAll') {
+      allies.forEach((ally) => { heal += this.heal(ally, effect.amount); });
+    } else if (effect.type === 'shieldAll') {
+      allies.forEach((ally) => { ally.shield += effect.amount; });
+    } else if (effect.type === 'taunt') {
+      actor.taunting = true;
+      if (effect.shield) actor.shield += effect.shield;
+      if (effect.weaken !== undefined) this.enemies.forEach((enemy) => { enemy.weakened = Math.min(enemy.weakened, effect.weaken!); });
     }
-    this.events.emit('skillUsed', { fighterId: actor.id, skill, targetId: target.id, damage, heal, crit });
-    if (!this.checkEnd()) this.wait(TAVERN_BATTLE.strikeMs);
+    this.events.emit('skillUsed', { fighterId: actor.id, skill, targetId: target.id, damage, heal, crit, splash });
+    if (!this.checkEnd()) this.wait(TAVERN_BATTLE.skillMs);
     return true;
   }
 
@@ -335,8 +397,10 @@ export class TurnBattle {
     }
     this.actedThisRound.add(actor.id);
     this.active = actor;
-    // Firmar lasts until the fighter's own next turn.
+    // Firmar, a taunt and a stun last until the fighter's own next turn.
     actor.firm = false;
+    actor.taunting = false;
+    actor.stunned = false;
     this.events.emit('turnStarted', { fighterId: actor.id, round: this.round });
     if (actor.side === 'party') {
       this.phase = 'player-turn';
@@ -387,7 +451,10 @@ export class TurnBattle {
 
   private announceAttack(attacker: Fighter): void {
     const pattern = this.pickPattern(attacker.patterns);
-    const targets = this.party.filter((fighter) => fighter.hp > 0);
+    const living = this.party.filter((fighter) => fighter.hp > 0);
+    // A taunt draws every attack.
+    const taunters = living.filter((fighter) => fighter.taunting);
+    const targets = taunters.length > 0 ? taunters : living;
     const target = targets[Math.floor(this.rng() * targets.length)];
     const now = this.clock.now;
     // Grimbo's dice: the roll decides how many copies of the first hit come.
