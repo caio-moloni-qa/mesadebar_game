@@ -147,3 +147,23 @@ done on bots alone: the newcomer bot (σ 110 ms, knows the keys) is likely bette
 is a human first try on Lyra/Grimbo/Zora/Sergio before touching enemy damage.
 
 **Decision:** kept. M1b (enemy damage) waits for a human first-try playtest.
+
+## 2026-10-30 · Taverna em Turnos · M2: do the house rules teach? (measured, no lever)
+
+**Goal:** biting Zora's feints and parrying Lyra's arrows must cost enough to be noticed.
+
+**Measurement:** the baseline only compared win rates (97% vs 100%), which looked like "the mistake costs nothing".
+The lesson table now also shows the HP left on the wins (p50), batch `m2-before` (after M1a):
+
+| lesson | bot | win a / b | HP left a / b |
+|---|---|---|---|
+| Zora: bite every feint / hold | average | 92% / 100% | 31% / 86% |
+| Zora: bite every feint / hold | skilled | 100% / 100% | 44% / 100% |
+| Lyra: parry arrows / dodge them | average | 95% / 100% | 52% / 89% |
+| Lyra: parry arrows / dodge them | skilled | 98% / 100% | 66% / 100% |
+
+**Reading:** the wrong answer costs 35–55 points of HP: the player ends the duel hanging by a thread and feels it. On
+its own it rarely loses the duel, because the duels are still short of the newcomer target (M1). Raising feint damage
+now would only make the rule a coin flip for a newcomer who hasn't read it yet.
+
+**Decision:** no lever. Re-check after M1b.

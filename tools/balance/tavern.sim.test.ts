@@ -129,13 +129,13 @@ describe.runIf(process.env.BALANCE)('Taverna em Turnos balance', () => {
     const run = (duel: DuelId, profileId: string, tweak: Partial<typeof PROFILES[string]>, opts: { diceRevealed?: boolean } = {}) => summarize(SEEDS.map((seed) => playBattle(new TurnBattle({ duel: DUELS[duel], hero: DUEL_HERO, seed, ...opts }), { ...PROFILES[profileId], ...tweak, id: `${profileId}*` }, 'attackOnly', seed)));
     for (const bot of ['average', 'skilled']) {
       const zBite = run('zora', bot, { bite: 1 }), zHold = run('zora', bot, { bite: 0 });
-      lesson.push({ lesson: 'Zora: bite every feint vs hold', bot, a: pct(zBite.win), b: pct(zHold.win) });
+      lesson.push({ lesson: 'Zora: bite every feint vs hold', bot, a: pct(zBite.win), b: pct(zHold.win), hpA: pct(zBite.hpLeftWinP50), hpB: pct(zHold.hpLeftWinP50) });
       const lParry = run('lyra', bot, { readsArrows: false, parryRate: 1 }), lDodge = run('lyra', bot, { readsArrows: true });
-      lesson.push({ lesson: 'Lyra: parry arrows vs dodge them', bot, a: pct(lParry.win), b: pct(lDodge.win) });
+      lesson.push({ lesson: 'Lyra: parry arrows vs dodge them', bot, a: pct(lParry.win), b: pct(lDodge.win), hpA: pct(lParry.hpLeftWinP50), hpB: pct(lDodge.hpLeftWinP50) });
       const gBlind = run('grimbo', bot, {}), gSeen = run('grimbo', bot, {}, { diceRevealed: true });
-      lesson.push({ lesson: 'Grimbo: dice hidden vs seen (bet)', bot, a: pct(gBlind.win), b: pct(gSeen.win) });
+      lesson.push({ lesson: 'Grimbo: dice hidden vs seen (bet)', bot, a: pct(gBlind.win), b: pct(gSeen.win), hpA: pct(gBlind.hpLeftWinP50), hpB: pct(gSeen.hpLeftWinP50) });
     }
-    table('\n== Lessons (a vs b win rate; note: the bots time every hit, so reading the dice only shows if a miss-count costs) ==', lesson);
+    table('\n== Lessons (a vs b win rate and HP left of the wins, p50; note: the bots time every hit, so reading the dice only shows if a miss-count costs) ==', lesson);
     out.lessons = lesson;
   });
 
