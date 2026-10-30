@@ -188,3 +188,22 @@ as a foe keeps 10).
 rarely has solo. Next step, if needed, is her kit, not more attack.
 
 **Decision:** kept.
+
+## 2026-10-30 · Taverna em Turnos · M5b: Lyra as a fighter was too weak to climb
+
+**Goal:** same as M5a.
+
+**Lever** (`src/config/tavernRoster.ts` → `ROSTER.lyra.stats`): attack 9 → 11 on the player's side only.
+
+**Before → after** (`m5-zora12` → `m5-lyra11`; reaches the top):
+
+| tower | squad | bot | top |
+|---|---|---|---|
+| taverna | lyra | newcomerAssisted | 42% → 53% |
+| taverna | lyra | average | 16% → 34% (floor 7 ends 44% → 32%) |
+| taverna | mage+lyra | average | 90% → 96% |
+| snowfield | mage+lyra | average | 28% → 46% |
+
+**Reading:** Lyra now sits in the middle of the pack (Mago/Relíquia/Grimbo 36–38%).
+
+**Decision:** kept.
