@@ -376,7 +376,7 @@ export class TavernDuel {
       <h2>${title}</h2>
       <ul class="duel-tally">
         <li><b>${tally.parry}</b> aparos perfeitos</li>
-        <li><b>${tally.dodge}</b> esquivas</li>
+        <li><b>${tally.dodge}</b> esquivas${tally.perfectDodge > 0 ? ` (${tally.perfectDodge} perfeitas)` : ''}</li>
         <li><b>${tally.taken}</b> golpes levados</li>
         <li><b>${battle.party.reduce((sum, member) => sum + member.hp, 0)}</b> de vida sobrando${battle.party.length > 1 ? ' no grupo' : ''}</li>
       </ul>
@@ -658,7 +658,7 @@ export class TavernDuel {
       <p class="duel-result-line"></p>
       <ul class="duel-tally">
         <li><b>${tally.parry}</b> aparos perfeitos</li>
-        <li><b>${tally.dodge}</b> esquivas</li>
+        <li><b>${tally.dodge}</b> esquivas${tally.perfectDodge > 0 ? ` (${tally.perfectDodge} perfeitas)` : ''}</li>
         <li><b>${tally.taken}</b> golpes levados</li>
         <li><b>${tally.early}</b> apertos adiantados</li>
         ${duel.rule === 'feints' ? `<li><b>${tally.held}</b> fintas seguradas</li>` : ''}

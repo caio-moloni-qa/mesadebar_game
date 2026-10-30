@@ -257,7 +257,7 @@ export class BattleStage2D {
         this.cue('stagger', now(), fighterId);
         this.floats.push({ text: 'CEDO!', color: '#b9b9b9', x: this.restX(fighterId), y: FLOOR_Y - 200, at: now(), size: 22, life: 600 });
       }),
-      events.on('hitResolved', ({ targetId, result, damage }) => {
+      events.on('hitResolved', ({ targetId, result, damage, perfect }) => {
         const at = now();
         this.cue(result, at, targetId);
         const home = this.restX(targetId);
@@ -265,6 +265,9 @@ export class BattleStage2D {
         if (result === 'parry') {
           this.floats.push({ text: 'PERFEITO!', color: '#ffd75a', x: home, y: FLOOR_Y - 210, at, size: 34, life: 900 });
           this.burst(x + 40, FLOOR_Y - 110, '#fff6b0', 14, at);
+        } else if (result === 'dodge' && perfect) {
+          this.floats.push({ text: 'ESQUIVA PERFEITA!', color: '#7fdcff', x: home - 30, y: FLOOR_Y - 205, at, size: 28, life: 900 });
+          this.burst(home - 30, FLOOR_Y - 120, '#c8f2ff', 10, at);
         } else if (result === 'dodge') {
           this.floats.push({ text: 'ESQUIVA', color: '#7fdcff', x: home - 30, y: FLOOR_Y - 200, at, size: 24, life: 700 });
         } else if (result === 'held') {
@@ -1033,7 +1036,7 @@ export class BattleStage2D {
   }
 
   /** Under the stage: every hit of the attack slides toward the line; the gold band is the parry window, the blue
-   *  one the dodge window (both as wide as the defender's are right now). */
+   *  one the dodge window, the bright strip the perfect dodge (all as wide as the defender's are right now). */
   private drawTrack(now: number): void {
     const battle = this.battle!;
     const attack = battle.attack;
@@ -1048,6 +1051,9 @@ export class BattleStage2D {
     ctx.fillRect(TRACK_X - windows.dodgeMs * TRACK_PX_PER_MS, TRACK_Y - 14, windows.dodgeMs * 2 * TRACK_PX_PER_MS, 28);
     ctx.fillStyle = '#ffd75a70';
     ctx.fillRect(TRACK_X - windows.parryMs * TRACK_PX_PER_MS, TRACK_Y - 14, windows.parryMs * 2 * TRACK_PX_PER_MS, 28);
+    // The perfect dodge: a blue strip along the bottom.
+    ctx.fillStyle = '#7fdcff';
+    ctx.fillRect(TRACK_X - windows.perfectDodgeMs * TRACK_PX_PER_MS, TRACK_Y + 10, windows.perfectDodgeMs * 2 * TRACK_PX_PER_MS, 4);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(TRACK_X - 1, TRACK_Y - 18, 2, 36);
     if (battle.lockedUntil > now) {

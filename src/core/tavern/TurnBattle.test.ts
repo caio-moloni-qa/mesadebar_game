@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DUELS, DUEL_HERO, DuelSpec, REACTION_WINDOWS } from '../../config/tavernBattle';
 import { createRng } from '../math';
-import { judgeReaction, reactionWindows } from './Reaction';
+import { isPerfectDodge, judgeReaction, reactionWindows } from './Reaction';
 import { TurnBattle, tipsyOffsets } from './TurnBattle';
 
 const WINDOWS = reactionWindows(REACTION_WINDOWS);
@@ -40,10 +40,18 @@ describe('judgeReaction', () => {
     expect(judgeReaction(kind, 1000, 1000 + offset, WINDOWS)).toBe(expected);
   });
 
+  it('the dodge is the easier answer, but the perfect dodge is the sharpest', () => {
+    expect(WINDOWS.dodgeMs).toBeGreaterThan(WINDOWS.parryMs);
+    expect(WINDOWS.perfectDodgeMs).toBeLessThan(WINDOWS.parryMs);
+    expect(isPerfectDodge(1000, 1000 + WINDOWS.perfectDodgeMs, WINDOWS)).toBe(true);
+    expect(isPerfectDodge(1000, 1000 - WINDOWS.perfectDodgeMs - 1, WINDOWS)).toBe(false);
+  });
+
   it('assisted mode doubles every window', () => {
     const assisted = reactionWindows(REACTION_WINDOWS, { assisted: true });
     expect(assisted.parryMs).toBe(P * 2);
     expect(assisted.dodgeMs).toBe(D * 2);
+    expect(assisted.perfectDodgeMs).toBe(WINDOWS.perfectDodgeMs * 2);
     expect(judgeReaction('parry', 0, P * 2 - 10, assisted)).toBe('parry');
     expect(judgeReaction('dodge', 0, -D * 2 + 10, assisted)).toBe('dodge');
     expect(judgeReaction('dodge', 0, D * 2 + 1, assisted)).toBe('early');
@@ -80,6 +88,21 @@ describe('TurnBattle', () => {
     battle.advance(1);
     expect(hit.result).toBe('taken');
     expect(battle.party[0].hp).toBe(DUEL_HERO.maxHp - 10);
+  });
+
+  it('only a perfect dodge earns Coragem; a plain dodge just saves the hit', () => {
+    const play = (offset: number) => {
+      const battle = new TurnBattle({ duel: soberDuel([{ offsetMs: 0, damage: 10 }], { speed: 50 }), hero: DUEL_HERO, seed: 3 });
+      runUntil(battle, 'enemy-attack');
+      const hero = battle.party[0];
+      const before = hero.courage;
+      const hit = battle.attack!.hits[0];
+      advanceTo(battle, hit.at + offset);
+      expect(battle.react('dodge')).toBe('dodge');
+      return { gained: hero.courage - before, perfect: battle.tally.perfectDodge, hp: hero.hp };
+    };
+    expect(play(WINDOWS.perfectDodgeMs)).toEqual({ gained: 1, perfect: 1, hp: DUEL_HERO.maxHp });
+    expect(play(WINDOWS.dodgeMs)).toEqual({ gained: 0, perfect: 0, hp: DUEL_HERO.maxHp });
   });
 
   it('an early press locks input, and the hit still comes', () => {

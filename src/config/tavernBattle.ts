@@ -8,17 +8,20 @@ export interface ReactionWindowsConfig {
   parryMs: number;
   /** |offset| inside this with "esquivar" is a dodge; a parry outside parryMs but inside this is taken. */
   dodgeMs: number;
+  /** A dodge inside this is perfect: +1 Coragem (the easy answer only pays when it's sharp; a parry always pays). */
+  perfectDodgeMs: number;
   /** A press outside the dodge window locks input this long (the punishment for mashing early). */
   earlyLockMs: number;
   /** "Firmar" widens the parry window by this until the fighter's next turn. */
   firmBonusMs: number;
-  /** Assisted mode multiplies both windows by this. */
+  /** Assisted mode multiplies every window by this. */
   assistedScale: number;
 }
 
 export const REACTION_WINDOWS: ReactionWindowsConfig = {
   parryMs: 90,
-  dodgeMs: 180,
+  dodgeMs: 130,
+  perfectDodgeMs: 60,
   earlyLockMs: 250,
   firmBonusMs: 40,
   assistedScale: 2
@@ -65,7 +68,7 @@ export interface DuelFighterSpec {
 }
 
 export const TAVERN_BATTLE = {
-  /** Coragem: +1 per parry and per hit landed, capped (skills spend it from phase 2). */
+  /** Coragem: +1 per parry, perfect dodge and hit landed, capped (skills spend it from phase 2). */
   courageMax: 5,
   /** The initiative meter a fighter must fill to act. */
   initiativeThreshold: 100,

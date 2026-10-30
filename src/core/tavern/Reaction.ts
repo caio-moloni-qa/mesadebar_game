@@ -6,17 +6,23 @@ export type ReactionKind = 'parry' | 'dodge';
  *  feint held (nobody bit: Zora's arm never came down). */
 export type ReactionResult = 'parry' | 'dodge' | 'taken' | 'early' | 'held';
 
-export interface ReactionWindows { parryMs: number; dodgeMs: number; earlyLockMs: number }
+export interface ReactionWindows { parryMs: number; dodgeMs: number; perfectDodgeMs: number; earlyLockMs: number }
 
 /** The windows in play for a defender: Firmar and skills (`parryBonusMs`) widen the parry window, assisted mode scales
- *  both. */
+ *  them all. */
 export function reactionWindows(config: ReactionWindowsConfig, options: { firm?: boolean; assisted?: boolean; parryBonusMs?: number; dodgeBonusMs?: number } = {}): ReactionWindows {
   const scale = options.assisted ? config.assistedScale : 1;
   return {
     parryMs: (config.parryMs + (options.firm ? config.firmBonusMs : 0) + (options.parryBonusMs ?? 0)) * scale,
     dodgeMs: (config.dodgeMs + (options.dodgeBonusMs ?? 0)) * scale,
+    perfectDodgeMs: config.perfectDodgeMs * scale,
     earlyLockMs: config.earlyLockMs
   };
+}
+
+/** A dodge pressed this close to the hit is perfect (worth Coragem, like a parry). */
+export function isPerfectDodge(hitAt: number, pressedAt: number, windows: ReactionWindows): boolean {
+  return Math.abs(pressedAt - hitAt) <= windows.perfectDodgeMs;
 }
 
 /** The timing judgement, the heart of the mode. `hitAt` / `pressedAt` are SimClock times. |offset| <= parryMs with

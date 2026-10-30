@@ -4,7 +4,7 @@ import { SkillNode } from '../../config/tavernSkills';
 import { EventBus } from '../EventBus';
 import { Rng, createRng } from '../math';
 import { SimClock, TimerHandle } from '../SimClock';
-import { ReactionKind, ReactionResult, ReactionWindows, judgeReaction, reactionWindows } from './Reaction';
+import { ReactionKind, ReactionResult, ReactionWindows, isPerfectDodge, judgeReaction, reactionWindows } from './Reaction';
 
 export type BattleSide = 'party' | 'enemy';
 export type BattlePhase = 'player-turn' | 'enemy-attack' | 'resolving' | 'won' | 'lost';
@@ -81,6 +81,8 @@ export interface BattleHit {
   feint: boolean;
   /** Lyra's arrows from range: a parry can't stop them. */
   dodgeOnly: boolean;
+  /** A dodge pressed inside the perfect window (+1 Coragem). */
+  perfect?: boolean;
 }
 
 export interface EnemyAttack {
@@ -101,7 +103,7 @@ export type TurnBattleEvents = {
   firmed: { fighterId: string };
   /** A press outside every window: input locks for a moment. */
   early: { fighterId: string };
-  hitResolved: { attackerId: string; targetId: string; index: number; result: ReactionResult; damage: number };
+  hitResolved: { attackerId: string; targetId: string; index: number; result: ReactionResult; damage: number; perfect: boolean };
   /** Every hit of an attack parried: the defender's free swing. */
   counter: { defenderId: string; attackerId: string; damage: number };
   fighterDown: { fighterId: string };
@@ -199,7 +201,7 @@ export class TurnBattle {
   /** The last reaction judged (results screen, probe). */
   lastReaction: { result: ReactionResult; at: number } | null = null;
   /** Reactions per result over the battle. */
-  readonly tally: Record<ReactionResult, number> = { parry: 0, dodge: 0, taken: 0, early: 0, held: 0 };
+  readonly tally: Record<ReactionResult | 'perfectDodge', number> = { parry: 0, dodge: 0, perfectDodge: 0, taken: 0, early: 0, held: 0 };
   /** Input is locked until this time after an early press. */
   lockedUntil = 0;
   /** Fichas the party pocketed this duel (Mão Leve), paid out at the end. */
@@ -369,6 +371,7 @@ export class TurnBattle {
       this.events.emit('early', { fighterId: target.id });
       return result;
     }
+    if (result === 'dodge' && isPerfectDodge(hit.at, now, windows)) hit.perfect = true;
     this.resolveHit(hit, result);
     return result;
   }
@@ -508,11 +511,13 @@ export class TurnBattle {
     hit.result = result;
     const damage = result === 'taken' ? this.soak(target, hit.damage) : 0;
     this.damage(target, damage);
-    if (result === 'parry' || result === 'held') this.gainCourage(target);
+    const perfect = Boolean(hit.perfect);
+    if (result === 'parry' || result === 'held' || perfect) this.gainCourage(target);
     if (result === 'parry' && target.passives.parryLoot > 0) this.pocket(target, target.passives.parryLoot);
     this.tally[result] += 1;
+    if (perfect) this.tally.perfectDodge += 1;
     this.lastReaction = { result, at: this.clock.now };
-    this.events.emit('hitResolved', { attackerId: attack.attackerId, targetId: target.id, index: hit.index, result, damage });
+    this.events.emit('hitResolved', { attackerId: attack.attackerId, targetId: target.id, index: hit.index, result, damage, perfect });
     if (this.checkEnd()) return;
     const attacker = this.fighter(attack.attackerId)!;
     for (const riposte of target.passives.ripostes) {
