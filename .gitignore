@@ -29,3 +29,6 @@ art-source/audio/__pycache__/
 
 # Discord agents: each one's read position
 tools/discord/.state/
+
+# Balance batches (tools/balance/*.sim.test.ts)
+tools/balance/out/
