@@ -61,3 +61,26 @@ Zora as solo heroes, which is the roster gap (M5), not the floor. Skilled bots u
 average bot +1–2 (economy, m3, still to be measured with human time).
 
 **Decision:** kept. Revisit after M5.
+
+## 2026-10-30 · Taverna em Turnos · M4a: a squad of three trivialised the towers (foe HP)
+
+**Goal:** bringing friends helps, but three fighters must not carry a newcomer to the top (85–97% before; solo 0–35%).
+
+**Lever** (`src/config/tavernTowers.ts` → `TOWER_TUNING.hpPerAlly`): 0.35 → 0.55.
+
+**Before → after** (`m3-floor7` → `m4-hpally`, sensible policy, 100 tower seeds; reaches the top):
+
+| tower | squad | newcomer | average | fichas/min (average) |
+|---|---|---|---|---|
+| taverna | barbarian+mage+zora | 90% → 70% | 100% → 100% | 33.8 → 28.2 |
+| taverna | brom+sergio+grimbo | 97% → 93% | 100% → 100% | 32.7 → 27.2 |
+| taverna | mage+lyra | 11% → 1% | 96% → 95% | 36.9 → 32.5 |
+| snowfield | eskimo+frostKnight+iceSerpent | 85% → 69% | 100% → 100% | 22.4 → 18.2 |
+| snowfield | barbarian+bellringer+ancientYeti | 14% → 0% | 100% → 95% | 28.0 → 22.5 |
+| snowfield | mage+lyra | 0% → 0% | 61% → 39% | 25.5 → 18.6 |
+
+**Reading:** the trio still carries the newcomer most of the time, so the hit damage (M4b) comes next. Fights are
+longer (+0.5–1 min per climb), which also pulls fichas/min down (good for the economy rule). Two-fighter squads in
+the Iglu took the biggest hit; watch them after M5. Solo climbs untouched.
+
+**Decision:** kept.
