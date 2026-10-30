@@ -122,3 +122,28 @@ barely moves (newcomer hits taken 27% → 28%, average 14% → 15%): the bots pr
 can't feel a cramped rhythm; a human can.
 
 **Decision:** kept (fairness, not strength).
+
+## 2026-10-30 · Taverna em Turnos · M1a: the duels were over before they got tense
+
+**Goal:** a first duel should be a fight you feel (2–5 min with thinking time, first win in 1–3 tries). The newcomer
+bot won 99–100% first try in ~25 s of combat.
+
+**Lever** (`src/config/tavernBattle.ts` → `DUEL_HERO.attack`): 12 → 10. Duels only (the towers use the roster's
+stats; tower table identical). Tests that check skill math now pin a 12-attack hero of their own.
+
+**Before → after** (`m1-sergio-gaps` → `m1-heroatk10`, attackOnly, no kit, 200 seeds):
+
+| duel | newcomer win | newcomer t50 (s) | newcomer hpLeft | comebacks (<25% HP) | average hpLeft |
+|---|---|---|---|---|---|
+| brom | 100% → 100% | 26 → 31 | 66% → 60% | 1% → 5% | 88% → 82% |
+| lyra | 100% → 100% | 25 → 29 | 58% → 53% | 4% → 9% | 91% → 89% |
+| grimbo | 99% → 99% | 29 → 32 | 60% → 56% | 6% → 9% | 85% → 83% |
+| zora | 99% → 93% | 27 → 32 | 44% → 36% | 16% → 29% | 69% → 64% |
+| sergio | 100% → 99% | 25 → 29 | 70% → 62% | 1% → 3% | 86% → 85% |
+
+**Reading:** +15–20% longer fights and twice the close calls, but the newcomer bot still wins almost always. To make
+it lose often, the regulars' hits would need roughly +40–50%, and those same numbers drive every tower floor. Not
+done on bots alone: the newcomer bot (σ 110 ms, knows the keys) is likely better than a real first-timer. Next step
+is a human first try on Lyra/Grimbo/Zora/Sergio before touching enemy damage.
+
+**Decision:** kept. M1b (enemy damage) waits for a human first-try playtest.

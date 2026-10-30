@@ -93,7 +93,7 @@ export const TAVERN_BATTLE = {
 } as const;
 
 /** The duel hero: every hero is scaled to the same duel stats in phase 1 (tune after the owner plays it). */
-export const DUEL_HERO: DuelFighterSpec = { name: 'Você', maxHp: 100, attack: 12, speed: 10 };
+export const DUEL_HERO: DuelFighterSpec = { name: 'Você', maxHp: 100, attack: 10, speed: 10 };
 
 /** The drinking duel: both drink at the start of every round; Brom's rhythm grows irregular as he gets tipsy. */
 export const DRINKING_RULE = {

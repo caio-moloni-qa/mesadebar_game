@@ -130,9 +130,11 @@ describe('Grimbo: the dice', () => {
 
 describe('the phase-3 skills', () => {
   const straight = (duel: DuelId, damage = 10) => onePattern(duel, { hits: [{ offsetMs: 0, damage }] });
+  /** The skill math below is written for a 12-attack hero, whatever the duel hero is tuned to. */
+  const HERO = { ...DUEL_HERO, attack: 12 };
 
   it('poison ticks at the start of the next rounds, then wears off', () => {
-    const battle = new TurnBattle({ duel: straight('lyra'), hero: DUEL_HERO, seed: 1, kit: kitOf('lyra', ['flecha-envenenada']) });
+    const battle = new TurnBattle({ duel: straight('lyra'), hero: HERO, seed: 1, kit: kitOf('lyra', ['flecha-envenenada']) });
     untilPhase(battle, 'player-turn');
     battle.party[0].courage = 1;
     expect(battle.useSkill('flecha-envenenada')).toBe(true);
@@ -150,7 +152,7 @@ describe('the phase-3 skills', () => {
   });
 
   it('a mark makes the next blows hit harder, then fades', () => {
-    const battle = new TurnBattle({ duel: straight('zora'), hero: DUEL_HERO, seed: 1, kit: kitOf('zora', ['mau-olhado', 'marca']) });
+    const battle = new TurnBattle({ duel: straight('zora'), hero: HERO, seed: 1, kit: kitOf('zora', ['mau-olhado', 'marca']) });
     untilPhase(battle, 'player-turn');
     battle.party[0].courage = 2;
     battle.useSkill('marca');
@@ -201,7 +203,7 @@ describe('the phase-3 skills', () => {
 
   it('crits are seeded: the same seed crits the same blows', () => {
     const crits = (seed: number) => {
-      const battle = new TurnBattle({ duel: straight('grimbo', 1), hero: DUEL_HERO, seed, kit: kitOf('grimbo', ['rolar-os-dados', 'dado-chumbado']) });
+      const battle = new TurnBattle({ duel: straight('grimbo', 1), hero: HERO, seed, kit: kitOf('grimbo', ['rolar-os-dados', 'dado-chumbado']) });
       const seen: boolean[] = [];
       battle.events.on('strike', ({ crit, damage }) => { seen.push(crit); expect(damage).toBe(crit ? 24 : 12); });
       for (let guard = 0; guard < 200000 && seen.length < 8 && !battle.over; guard += 1) {

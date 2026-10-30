@@ -87,6 +87,9 @@ describe('SkillTree', () => {
   });
 });
 
+/** The skill math below is written for a 12-attack hero, whatever the duel hero is tuned to. */
+const HERO = { ...DUEL_HERO, attack: 12 };
+
 describe('TurnBattle with a skill kit', () => {
   const sober = (damage: number): DuelSpec => ({
     ...DUELS.brom,
@@ -102,7 +105,7 @@ describe('TurnBattle with a skill kit', () => {
   }
 
   it('passives fold in: armor, parry bonus and riposte', () => {
-    const battle = new TurnBattle({ duel: sober(10), hero: DUEL_HERO, seed: 3, kit: kit(['barril', 'casca-grossa', 'contragolpe', 'martelada', 'ritmo-da-forja']) });
+    const battle = new TurnBattle({ duel: sober(10), hero: HERO, seed: 3, kit: kit(['barril', 'casca-grossa', 'contragolpe', 'martelada', 'ritmo-da-forja']) });
     const hero = battle.party[0];
     expect(hero.passives).toMatchObject({ armor: 2, roundHeal: 0, parryBonusMs: 20, ripostes: [{ ratio: 0.4, on: 'parry', of: 'attack' }] });
     expect(hero.skills.map((node) => node.id)).toEqual(['barril', 'martelada']);
@@ -116,14 +119,14 @@ describe('TurnBattle with a skill kit', () => {
   });
 
   it('armor takes its share off a hit, never below 1', () => {
-    const battle = new TurnBattle({ duel: sober(10), hero: DUEL_HERO, seed: 3, kit: kit(['barril', 'casca-grossa']) });
+    const battle = new TurnBattle({ duel: sober(10), hero: HERO, seed: 3, kit: kit(['barril', 'casca-grossa']) });
     untilPhase(battle, 'enemy-attack');
     untilPhase(battle, 'resolving');
     expect(battle.party[0].hp).toBe(100 - 8);
   });
 
   it('skills spend Coragem and do what they say', () => {
-    const battle = new TurnBattle({ duel: sober(10), hero: DUEL_HERO, seed: 1, kit: kit(['barril', 'contragolpe', 'martelada']) });
+    const battle = new TurnBattle({ duel: sober(10), hero: HERO, seed: 1, kit: kit(['barril', 'contragolpe', 'martelada']) });
     untilPhase(battle, 'player-turn');
     const hero = battle.party[0];
     expect(battle.useSkill('martelada')).toBe(false);
@@ -135,7 +138,7 @@ describe('TurnBattle with a skill kit', () => {
   });
 
   it('Barril soaks damage before HP', () => {
-    const battle = new TurnBattle({ duel: sober(18), hero: DUEL_HERO, seed: 1, kit: kit(['barril']) });
+    const battle = new TurnBattle({ duel: sober(18), hero: HERO, seed: 1, kit: kit(['barril']) });
     untilPhase(battle, 'player-turn');
     battle.party[0].courage = 2;
     battle.useSkill('barril');
@@ -147,7 +150,7 @@ describe('TurnBattle with a skill kit', () => {
   });
 
   it('Muralha Viva parries the whole next attack on its own and counters', () => {
-    const battle = new TurnBattle({ duel: sober(18), hero: DUEL_HERO, seed: 1, kit: kit(['barril', 'casca-grossa', 'provocar', 'muralha-viva']) });
+    const battle = new TurnBattle({ duel: sober(18), hero: HERO, seed: 1, kit: kit(['barril', 'casca-grossa', 'provocar', 'muralha-viva']) });
     untilPhase(battle, 'player-turn');
     battle.party[0].courage = 5;
     expect(battle.useSkill('muralha-viva')).toBe(true);
@@ -164,7 +167,7 @@ describe('TurnBattle with a skill kit', () => {
   });
 
   it('Provocar halves the next attack only', () => {
-    const battle = new TurnBattle({ duel: sober(18), hero: DUEL_HERO, seed: 1, kit: kit(['barril', 'casca-grossa', 'provocar']) });
+    const battle = new TurnBattle({ duel: sober(18), hero: HERO, seed: 1, kit: kit(['barril', 'casca-grossa', 'provocar']) });
     untilPhase(battle, 'player-turn');
     battle.party[0].courage = 1;
     battle.useSkill('provocar');
