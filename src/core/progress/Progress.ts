@@ -1,3 +1,4 @@
+import { BOON_TUNING, DUEL_REWARDS, TavernBoonId } from '../../config/tavernBattle';
 import { AREAS, AreaConfig } from '../../config/areas';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { QuestNpcId } from '../systems/QuestSystem';
@@ -165,6 +166,10 @@ export interface MetaBonuses {
   experience: number;
   /** The Esquimó's meals packed to go: eaten as the run starts, as if bought at his counter. */
   meals?: MealId[];
+  /** Flecha marcada (Lyra's duel): this many of the run's first projectile hits crit for sure. */
+  markedCrits?: number;
+  /** Uma visão (Zora's duel): this many of the run's first guardians rise weakened. */
+  guardianVisions?: number;
 }
 
 export const NO_META_BONUSES: MetaBonuses = { maxHealth: 0, damage: 0, speed: 0, pickupRange: 0, startingCoins: 0, extraStartingPicks: 0, revives: 0, experience: 0 };
@@ -247,6 +252,12 @@ export function runBonuses(save: SaveData): MetaBonuses {
   if (has('fenix')) bonuses.revives += 1;
   const meals = save.pack.filter((id): id is MealId => IGLOO_MEALS.some((meal) => meal.id === id));
   if (meals.length > 0) bonuses.meals = meals;
+  // The Taverna em Turnos' duel gifts, spent by the same run.
+  const boon = (id: TavernBoonId) => save.tavern.boons.includes(id);
+  if (boon('caneca-de-ferro')) bonuses.maxHealth += BOON_TUNING.canecaMaxHealth;
+  if (boon('garrafa-da-casa')) bonuses.damage += BOON_TUNING.garrafaDamage;
+  if (boon('flecha-marcada')) bonuses.markedCrits = BOON_TUNING.flechaMarcadaCrits;
+  if (boon('uma-visao')) bonuses.guardianVisions = 1;
   return bonuses;
 }
 
@@ -455,6 +466,39 @@ export interface SaveData {
   firstRunTipSeen: boolean;
   /** Heroes the tavern has announced as playable (the welcome on coming back after an unlock). */
   welcomed: HeroId[];
+  /** Taverna em Turnos: the regulars' duel progress (skill trees from phase 2) and the duel settings. */
+  tavern: TavernSave;
+}
+
+export interface TavernRegularSave { xp: number; level: number; learned: string[]; finisher?: string }
+
+export interface TavernSave {
+  /** The mission regulars, and Sergio (his duel opens from the shop). */
+  regulars: Partial<Record<QuestNpcId | 'sergio', TavernRegularSave>>;
+  /** Assisted mode: wider reaction windows. */
+  assisted: boolean;
+  /** Show the timing track under the stage (off: read the animation only). */
+  timingTrack: boolean;
+  /** Duel gifts waiting for the next run (one of each). */
+  boons: TavernBoonId[];
+}
+
+function parseTavern(raw: unknown): TavernSave {
+  const tavern = isRecord(raw) ? raw : {};
+  const regulars = isRecord(tavern.regulars) ? tavern.regulars : {};
+  return {
+    regulars: Object.fromEntries(Object.entries(regulars).flatMap(([id, regular]) => {
+      if (!isRecord(regular)) return [];
+      const count = (field: unknown) => (typeof field === 'number' && Number.isFinite(field) && field >= 0 ? Math.floor(field) : 0);
+      const learned = Array.isArray(regular.learned) ? regular.learned.filter((node): node is string => typeof node === 'string') : [];
+      return [[id, { xp: count(regular.xp), level: Math.max(1, count(regular.level)), learned, ...(typeof regular.finisher === 'string' ? { finisher: regular.finisher } : {}) }]];
+    })),
+    assisted: tavern.assisted === true,
+    timingTrack: tavern.timingTrack !== false,
+    boons: Array.isArray(tavern.boons)
+      ? tavern.boons.filter((id): id is TavernBoonId => Object.values(DUEL_REWARDS).some((reward) => reward?.id === id)).filter((id, i, all) => all.indexOf(id) === i)
+      : []
+  };
 }
 
 export function emptySave(): SaveData {
@@ -474,7 +518,8 @@ export function emptySave(): SaveData {
     tutorialSeen: false,
     guardianTipSeen: false,
     firstRunTipSeen: false,
-    welcomed: [...STARTING_HEROES]
+    welcomed: [...STARTING_HEROES],
+    tavern: { regulars: {}, assisted: false, timingTrack: true, boons: [] }
   };
 }
 
@@ -519,7 +564,9 @@ export function parseSave(text: string | null | undefined): SaveData {
     tutorialSeen: raw.tutorialSeen === true,
     guardianTipSeen: raw.guardianTipSeen === true,
     firstRunTipSeen: raw.firstRunTipSeen === true,
-    welcomed: Array.isArray(raw.welcomed) ? raw.welcomed.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES]
+    welcomed: Array.isArray(raw.welcomed) ? raw.welcomed.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES],
+    // Saves from before the Taverna em Turnos start with no duel progress.
+    tavern: parseTavern(raw.tavern)
   };
 }
 

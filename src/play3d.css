@@ -641,3 +641,103 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .hero-mastery-badge-max { font: 600 8px/1.4 var(--sans); }
 .hero-mastery-badge-track { position: absolute; inset: auto 0 0; height: 3px; background: linear-gradient(90deg, var(--gold) var(--mastery-progress), #dec28a18 var(--mastery-progress)); }
 .hero-mastery-badge.maxed { border-color: var(--gold); box-shadow: inset 0 0 14px #dec28a12; }
+
+/* Taverna em Turnos: the duel overlay — a 960×540 pixel stage (integer-scaled) with a DOM HUD on top. */
+.duel { position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; background: #080505; }
+.duel-frame { position: relative; --duel-scale: 1; }
+.duel-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.duel-hud { position: absolute; inset: 0; pointer-events: none; font-size: calc(11px * var(--duel-scale)); }
+.duel-hud button, .duel-panel { pointer-events: auto; }
+.duel-top { position: absolute; left: 2%; right: 2%; top: 3%; display: grid; grid-template-columns: 1fr auto 1fr; gap: 3%; align-items: start; }
+.duel-fighter { padding: .6em 1em; background: #140c08d8; border: 1px solid #dec28a40; border-radius: 4px; }
+.duel-fighter.right { text-align: right; }
+.duel-name { margin: 0 0 .35em; font: 600 1.25em var(--display); color: var(--cream); }
+.duel-name em { font: 600 .7em var(--sans); color: #8fc8ff; letter-spacing: .12em; text-transform: uppercase; }
+.duel-hp { position: relative; height: 1.4em; background: #2a1410; border: 1px solid #00000080; }
+.duel-hp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#e0603a, #a8321e); transition: width .25s; }
+.duel-fighter.right .duel-hp i { inset: 0 0 0 auto; }
+.duel-hp span { position: relative; display: block; text-align: center; font: 700 .95em/1.4em var(--sans); color: #fff; text-shadow: 0 1px 2px #000; }
+.duel-meta { display: flex; justify-content: space-between; align-items: center; gap: .6em; margin: .4em 0 0; min-height: 1.4em; color: var(--muted); font-size: .9em; }
+.duel-fighter.right .duel-meta { justify-content: flex-end; }
+.duel-pips { display: inline-flex; gap: .3em; margin-left: .4em; vertical-align: middle; }
+.duel-pips i { width: .8em; height: .8em; transform: rotate(45deg); border: 1px solid #ffd75a90; background: #00000060; }
+.duel-pips i.on { background: #ffd75a; box-shadow: 0 0 .5em #ffd75a; }
+.duel-mugs { letter-spacing: .1em; }
+.duel-queue { text-align: center; padding: .4em .8em; background: #140c08c0; border-radius: 4px; }
+.duel-queue > div { display: flex; gap: .4em; margin-top: .3em; }
+.duel-chip { display: grid; place-items: center; width: 2.6em; height: 2.6em; border: 2px solid #dec28a60; border-radius: 3px; overflow: hidden; font: 700 .95em var(--sans); }
+.duel-chip:first-child { border-color: var(--gold); box-shadow: 0 0 .6em #dec28a90; }
+.duel-chip.hero { background: var(--chip); color: #fff; text-shadow: 0 1px 2px #000; }
+.duel-chip.enemy { background: #3a2416; }
+.duel-chip img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.duel-bottom { position: absolute; left: 2%; right: 2%; top: 17.5%; bottom: 12%; display: flex; flex-direction: column; align-items: flex-start; gap: .5em; }
+.duel-actions { display: grid; grid-template-columns: repeat(2, auto); gap: .4em; padding: .7em; background: #140c08e8; border: 1px solid #dec28a60; border-radius: 4px; }
+.duel-actions .eyebrow { grid-column: 1 / -1; font-size: .85em; }
+.duel-actions button { display: flex; align-items: center; gap: .6em; min-width: 11em; padding: .5em .9em; border: 1px solid #dec28a40; border-radius: 3px; background: #ffffff08; font-size: 1.1em; text-align: left; }
+.duel-actions button:hover:not(:disabled) { border-color: var(--gold); background: #dec28a20; }
+.duel-actions button:disabled { opacity: .4; }
+.duel-actions kbd, .duel-hint kbd, .duel-legend kbd { font-size: .85em; }
+.duel-hint { align-self: center; margin: auto 0 0; padding: .4em 1.2em; background: #140c08d8; border-radius: 4px; font: 700 1.5em var(--sans); color: #ffe3a0; animation: duel-pulse .6s ease-in-out infinite alternate; }
+.duel-legend { position: absolute; left: 2%; right: 2%; bottom: .6%; margin: 0; text-align: center; color: #c9b89acc; font-size: .85em; }
+.duel-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 34%; padding: 1.6em 2.2em; text-align: center; background: #140c08f2; border: 1px solid var(--gold); border-radius: 6px; box-shadow: 0 1em 3em #000c; font-size: calc(11px * var(--duel-scale)); }
+.duel-panel h2 { margin: .2em 0 .5em; font: 600 2.6em var(--display); color: var(--cream); }
+.duel-result.won h2 { color: #ffd75a; }
+.duel-result.lost h2 { color: #ff8a6a; }
+.duel-result-line { margin: 0 0 1em; color: var(--muted); font-style: italic; }
+.duel-tally { display: grid; grid-template-columns: repeat(2, auto); gap: .3em 2em; justify-content: center; margin: 0 0 1.2em; padding: 0; list-style: none; color: var(--muted); }
+.duel-tally b { color: var(--cream); font-size: 1.2em; }
+.duel-panel-actions { display: flex; flex-direction: column; gap: .6em; align-items: stretch; }
+@keyframes duel-pulse { from { opacity: .7; } to { opacity: 1; } }
+.duel-name em.shield { color: #e0b070; }
+.duel-meta em { font-style: normal; text-transform: uppercase; font-size: .85em; letter-spacing: .06em; }
+.duel-meta em.poison { color: #8de05a; }
+.duel-meta em.mark { color: #c58bff; }
+.duel-panel-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.duel-skills { grid-template-columns: repeat(2, auto); }
+.duel-skills button.finisher { border-color: #ffd75a80; }
+.duel-skills button .duel-pips { margin-left: auto; }
+.duel-xp { margin: 0 0 1.2em; color: #8dffa8; font-weight: 600; }
+.duel-xp b { color: #ffd75a; }
+
+/* Taverna em Turnos: a regular's skill tree (three branch columns, a detail panel, the points left). */
+.skill-tree { position: absolute; inset: 0; z-index: 55; display: grid; place-items: center; background: #050303b8; }
+.skill-tree[hidden] { display: none; }
+.skill-tree-panel { width: min(1060px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; box-sizing: border-box; padding: 22px 26px; border: 1px solid var(--gold); border-radius: 6px; background: #140c08f4; box-shadow: 0 10px 40px #000c; text-align: left; }
+.skill-tree-head { display: flex; align-items: center; gap: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.skill-face { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--gold); image-rendering: pixelated; background: radial-gradient(circle, #3a2a22 55%, #1a120e); }
+.skill-tree-head > div { flex: 1; }
+.skill-tree-head h2 { margin: 2px 0 8px; font: 600 26px/1.2 var(--display); color: var(--cream); }
+.skill-tree-head h2 span { margin-left: 8px; font: 500 14px var(--sans); color: var(--muted); }
+.skill-xp { position: relative; max-width: 320px; height: 14px; background: #2a1c12; border: 1px solid #00000080; }
+.skill-xp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#8dffa8, #3aa860); }
+.skill-xp span { position: relative; display: block; text-align: center; font: 700 10px/14px var(--sans); color: #fff; text-shadow: 0 1px 2px #000; }
+.skill-points { margin: 0; color: var(--muted); font-size: 15px; text-align: center; }
+.skill-points b { display: block; font: 700 34px/1 var(--display); color: #ffd75a; }
+.skill-tree-body { display: grid; grid-template-columns: 1fr 300px; gap: 22px; padding: 18px 0; }
+.skill-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.skill-branch { padding: 12px; border: 1px solid var(--line); border-radius: 5px; background: #ffffff05; }
+.skill-branch h3 { margin: 0; font: 600 18px var(--display); color: var(--gold); text-align: center; }
+.skill-theme { margin: 2px 0 12px; color: var(--muted); font-size: 12px; text-align: center; }
+.skill-branch ol { position: relative; display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.skill-branch ol::before { content: ''; position: absolute; left: 50%; top: 20px; bottom: 20px; width: 2px; background: #dec28a30; }
+.skill-node { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid #dec28a30; border-radius: 4px; background: #1c120c; color: var(--cream); text-align: left; cursor: pointer; }
+.skill-gem { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #dec28a60; background: #00000060; }
+.skill-node.finisher .skill-gem { border-radius: 2px; transform: rotate(45deg) scale(.86); }
+.skill-node.learned { border-color: #ffd75a90; }
+.skill-node.learned .skill-gem { border-color: #ffd75a; background: #ffd75a; box-shadow: 0 0 10px #ffd75a90; }
+.skill-node.available .skill-gem { border-color: #8dffa8; animation: duel-pulse .7s ease-in-out infinite alternate; }
+.skill-node.available { border-color: #8dffa870; }
+.skill-node.locked { color: #f4efe280; border-color: #dec28a18; }
+.skill-node.locked .skill-gem { border-color: #dec28a30; }
+.skill-node.selected { outline: 2px solid var(--gold); outline-offset: 2px; }
+.skill-node.equipped::after { content: 'equipado'; margin-left: auto; font: 700 9px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: #ffd75a; }
+.skill-node-name { font-weight: 600; }
+.skill-detail { padding: 16px; border: 1px solid var(--line); border-radius: 5px; background: #ffffff06; }
+.skill-detail h3 { margin: 4px 0 8px; font: 600 22px var(--display); color: var(--cream); }
+.skill-detail p { margin: 0 0 10px; color: #efe6cf; line-height: 1.5; }
+.skill-detail .skill-cost { color: #ffd75a; font-weight: 600; }
+.skill-detail .skill-why { color: var(--muted); font-size: 13px; }
+.skill-detail-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.skill-tree-foot { display: flex; align-items: center; gap: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.skill-tree-foot span { flex: 1; color: var(--muted); font-size: 13px; text-align: center; }
+@media (max-width: 820px) { .skill-tree-body { grid-template-columns: 1fr; } .skill-columns { grid-template-columns: 1fr; } }

@@ -100,6 +100,16 @@ describe('progress', () => {
     expect(parseSave(JSON.stringify({ fichas: -5, mastery: { mage: 'lots' } })).fichas).toBe(0);
     expect(parseSave(JSON.stringify({ fichas: -5, mastery: { mage: 'lots' } })).mastery).toEqual({});
   });
+
+  it('loads saves from before the Taverna em Turnos with empty duel defaults, and round-trips its settings', () => {
+    const old = parseSave(JSON.stringify({ fichas: 40, mastery: { mage: 600 } }));
+    expect(old.fichas).toBe(40);
+    expect(old.tavern).toEqual({ regulars: {}, assisted: false, timingTrack: true, boons: [] });
+    const tavern = { regulars: { brom: { xp: 30, level: 2, learned: ['contragolpe'], finisher: 'golpe-da-forja' } }, assisted: true, timingTrack: false, boons: ['flecha-marcada' as const] };
+    expect(parseSave(serializeSave({ ...emptySave(), tavern })).tavern).toEqual(tavern);
+    expect(parseSave(JSON.stringify({ tavern: { regulars: { brom: 'x', lyra: { xp: -3, learned: [1, 'a'] } }, assisted: 'yes', boons: ['uma-visao', 'nope', 'uma-visao'] } })).tavern)
+      .toEqual({ regulars: { lyra: { xp: 0, level: 1, learned: ['a'] } }, assisted: false, timingTrack: true, boons: ['uma-visao'] });
+  });
 });
 
 describe('signature skins', () => {

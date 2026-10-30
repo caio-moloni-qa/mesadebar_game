@@ -435,6 +435,8 @@ export class GameSession implements WeaponHost {
     this.currency += meta.startingCoins;
     this.revivesLeft = meta.revives;
     this.experienceMultiplier = 1 + meta.experience;
+    this.weapons.markedCrits = meta.markedCrits ?? 0;
+    this.miniBosses.visions = meta.guardianVisions ?? 0;
   }
 
   /** One of the Esquimó's dishes: bought at his counter during a run, or packed to go between runs. */

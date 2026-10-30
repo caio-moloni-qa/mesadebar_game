@@ -42,3 +42,18 @@ describe("Sergio's consumables", () => {
     expect(make(0.25)).toBeCloseTo(make(0) * 1.25);
   });
 });
+
+describe('the Taverna em Turnos duel gifts', () => {
+  it('add to the next run only, and the session spends them', () => {
+    const save = { ...emptySave(), tavern: { ...emptySave().tavern, boons: ['caneca-de-ferro', 'flecha-marcada', 'uma-visao', 'garrafa-da-casa'] as const } };
+    const bonuses = runBonuses({ ...save, tavern: { ...save.tavern, boons: [...save.tavern.boons] } });
+    expect(bonuses.maxHealth).toBe(20);
+    expect(bonuses.damage).toBeCloseTo(0.1);
+    expect(bonuses.markedCrits).toBe(1);
+    expect(bonuses.guardianVisions).toBe(1);
+    const run = new GameSession({ characterId: 'mage', seed: 2, skipStartingUpgrades: true, arena: ArenaMap.open(WORLD_SIZE), meta: bonuses });
+    expect(run.weapons.markedCrits).toBe(1);
+    expect(run.miniBosses.visions).toBe(1);
+    expect(runBonuses(emptySave()).markedCrits).toBeUndefined();
+  });
+});

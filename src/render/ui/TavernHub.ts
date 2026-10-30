@@ -9,6 +9,9 @@ export interface SergioShopActions {
   /** Sergio has joined the roster: offer to play as him. */
   canPlaySergio(): boolean;
   playSergio(): void;
+  /** Taverna em Turnos: a duel with Sergio, and his skill tree. */
+  duel(): void;
+  skills(): void;
   buy(id: MetaUpgradeId): void;
   buyConsumable(id: ConsumableId): void;
   /** During a run's visit through his portal: this visit's items, the run's coins, and buying one. Null between
@@ -178,6 +181,19 @@ export class SergioShop {
     close.textContent = 'Até mais (Esc)';
     close.addEventListener('click', () => this.actions.close());
     footer.append(close);
+    if (!run && !kitchen) {
+      const duel = document.createElement('button');
+      duel.type = 'button';
+      duel.className = 'ui-button';
+      duel.textContent = 'Desafiar para um duelo';
+      duel.addEventListener('click', () => this.actions.duel());
+      const skills = document.createElement('button');
+      skills.type = 'button';
+      skills.className = 'ui-button';
+      skills.textContent = 'Habilidades';
+      skills.addEventListener('click', () => this.actions.skills());
+      footer.append(duel, skills);
+    }
     if (!run && !kitchen && this.actions.canPlaySergio()) {
       const play = document.createElement('button');
       play.type = 'button';

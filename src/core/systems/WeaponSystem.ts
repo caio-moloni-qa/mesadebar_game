@@ -148,6 +148,8 @@ export interface WeaponHost {
  *  exclusives keep the repo's guardrail: upgradeCount >= 5 AND affinity with the weapon's family. */
 export class WeaponSystem {
   readonly weapons: ActiveWeapon[] = [];
+  /** Flecha marcada (won in Lyra's duel): the next this-many projectile hits crit for sure. */
+  markedCrits = 0;
   private readonly consumedExecuteTokens = new Set<number>();
   /** Reused by updateProjectiles' hit test (runs per projectile per step). Nested queries (staff explosion) use
    *  their own arrays, so this one is never overwritten mid-iteration. */
@@ -582,6 +584,10 @@ export class WeaponSystem {
     if (projectile.executeToken > 0 && enemy.isCommon && !this.consumedExecuteTokens.has(projectile.executeToken)) {
       this.consumedExecuteTokens.add(projectile.executeToken);
       return { amount: enemy.health, critical: false };
+    }
+    if (this.markedCrits > 0) {
+      this.markedCrits -= 1;
+      return { amount: projectile.damage * 2, critical: true };
     }
     // Lyra's Olho de Falcão: far targets are easier to hit where it hurts.
     const { player } = this.host;
