@@ -35,4 +35,29 @@ sloppy newcomer more than the dodge spammer.
 
 **Not measured:** how 130 ms feels by hand (input lag, the stage's hit frame); human playtest pending.
 
-**Decision:** kept (pending the owner's playtest).
+**Decision:** kept. The owner played it: "130ms é de boa".
+
+## 2026-10-30 · Taverna em Turnos · M3: the wall on floor 7 of the Torre da Taverna
+
+**Goal:** no floor but the champion ends more than 35% of the climbs; floor 7 (Lyra + Zora) ended 33–87% of solo climbs.
+
+**Lever** (`src/config/tavernTowers.ts` → taverna floor 7 "Flecha e feitiço"): both foes `hpScale` 0.7 → 0.6.
+
+**Before → after** (`b1-dodge130` → `m3-floor7`, sensible policy, 100 tower seeds; share of climbs that end on floor 7):
+
+| squad | bot | floor 7 ends | reaches the top |
+|---|---|---|---|
+| mage | average | 34% → 29% | 34% → 38% |
+| mage | newcomerAssisted | 39% → 28% | 55% → 67% |
+| reliquia | average | 42% → 39% | 34% → 38% |
+| fabri | newcomer | 59% → 46% | 27% → 34% |
+| barbarian | newcomerAssisted | 24% → 11% | 73% → 85% |
+| lyra | average | 57% → 44% | 11% → 16% |
+| zora | average | 58% → 56% | 6% → 6% |
+| mage+lyra | newcomer | 60% → 48% | 9% → 11% |
+
+**Reading:** the wall is lower for the heroes in the middle of the pack. What still dies on floor 7 is mostly Lyra and
+Zora as solo heroes, which is the roster gap (M5), not the floor. Skilled bots unchanged (100% top). Fichas/min of the
+average bot +1–2 (economy, m3, still to be measured with human time).
+
+**Decision:** kept. Revisit after M5.

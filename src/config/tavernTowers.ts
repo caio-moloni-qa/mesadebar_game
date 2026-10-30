@@ -82,7 +82,7 @@ export const TOWERS: Record<TowerId, TowerSpec> = {
       { kind: 'rest', name: 'Balcão' },
       { kind: 'fight', name: 'As fintas da Zora', foes: [{ duel: 'zora' }], fichas: 12, masteryXp: 90 },
       { kind: 'fight', name: 'Mesa dos fundos', foes: [{ duel: 'brom', hpScale: 0.7 }, { duel: 'grimbo', hpScale: 0.7 }], fichas: 15, masteryXp: 110 },
-      { kind: 'fight', name: 'Flecha e feitiço', foes: [{ duel: 'lyra', hpScale: 0.7 }, { duel: 'zora', hpScale: 0.7 }], fichas: 18, masteryXp: 120 },
+      { kind: 'fight', name: 'Flecha e feitiço', foes: [{ duel: 'lyra', hpScale: 0.6 }, { duel: 'zora', hpScale: 0.6 }], fichas: 18, masteryXp: 120 },
       { kind: 'rest', name: 'Balcão' },
       { kind: 'fight', name: 'A turma toda', foes: [{ duel: 'brom', hpScale: 0.55 }, { duel: 'lyra', hpScale: 0.55 }, { duel: 'grimbo', hpScale: 0.55 }], fichas: 22, masteryXp: 140 },
       { kind: 'fight', name: 'O dono da casa', foes: [{ duel: 'sergio', hpScale: 1.3, damageScale: 1.15 }], fichas: 40, masteryXp: 200, champion: true }
