@@ -52,7 +52,7 @@ export interface TowerSpec {
 
 export const TOWER_TUNING = {
   /** Share of the pot kept when the climb ends in a defeat (rounded down). */
-  keepOnLoss: 0.5,
+  keepOnLoss: 0.35,
   /** Rest floor, "Comer algo": heals this share of max HP. */
   restHeal: 0.5,
   /** Rest floor, "Respirar fundo": the next floor starts with this much Coragem. */

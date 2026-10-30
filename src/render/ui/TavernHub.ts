@@ -1,6 +1,6 @@
 import { CONSUMABLES, ConsumableId, DIFFICULTY_TIERS, IGLOO_MEALS, META_UPGRADES, MetaUpgradeId, SaveData, areaCompletion, nextPrice } from '../../core/progress/Progress';
 import { AreaConfig, CURRENT_AREA } from '../../config/areas';
-import { TOWERS, TOWER_ORDER, TowerId } from '../../config/tavernTowers';
+import { TOWERS, TOWER_ORDER, TOWER_TUNING, TowerId } from '../../config/tavernTowers';
 import { heroName } from '../progress/heroNames';
 import { merchantItemIcon, npcPortrait, storeIcon } from './icons';
 import { MerchantOffer } from '../../core/systems/MerchantSystem';
@@ -35,7 +35,7 @@ type ShopTab = 'atributos' | 'consumiveis' | 'coliseu';
 const TABS: Array<{ id: ShopTab; label: string; hint: string }> = [
   { id: 'atributos', label: 'Atributos', hint: 'Melhorias permanentes, para todos os heróis.' },
   { id: 'consumiveis', label: 'Consumíveis', hint: 'Valem só para a próxima partida: saem da mochila quando ela começa. Um de cada.' },
-  { id: 'coliseu', label: 'Coliseu', hint: 'O Coliseu do Sergio: suba as torres andar por andar com o herói escolhido. A vida passa de um andar pro outro, cada vitória dá maestria e põe fichas no pote. Saia quando quiser; se cair, leva metade.' }
+  { id: 'coliseu', label: 'Coliseu', hint: `O Coliseu do Sergio: suba as torres andar por andar com o herói escolhido. A vida passa de um andar pro outro, cada vitória dá maestria e põe fichas no pote. Saia quando quiser; se cair, leva ${Math.round(TOWER_TUNING.keepOnLoss * 100)}% do pote.` }
 ];
 
 /** Sergio's store, opened at his counter. Between runs: two shelves for Fichas, the permanent attributes (level

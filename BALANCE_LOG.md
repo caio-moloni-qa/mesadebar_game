@@ -207,3 +207,30 @@ rarely has solo. Next step, if needed, is her kit, not more attack.
 **Reading:** Lyra now sits in the middle of the pack (Mago/Relíquia/Grimbo 36–38%).
 
 **Decision:** kept.
+
+## 2026-10-30 · Taverna em Turnos · m2: leaving the tower was never the right call for a good player
+
+**Goal:** in the middle floors, "take the pot and go" vs "climb on" is a real choice: climbing should only pay when
+the player is likely to make it.
+
+**Lever** (`src/config/tavernTowers.ts` → `TOWER_TUNING.keepOnLoss`): 0.5 → 0.35. The Coliseu hint in the hub now
+reads the share from config ("se cair, leva 35% do pote").
+
+**Before → after** (`m5-lyra11` → `m2-keep35`, Torre da Taverna, solo; expected fichas per climb):
+
+| hero | bot | always climb | leave after 3 | leave after 6 |
+|---|---|---|---|---|
+| mage | average | 70.6 → 64.1 | 24 | 50 |
+| reliquia | average | 67.6 → 62.0 | 24 | 49.7 |
+| grimbo | average | 68.4 → 61.8 | 24 | 50.2 |
+| lyra | average | 65.9 → 59.3 | 24 | 49.8 |
+| zora | average | 48.0 → 40.4 | 24 | 48.7 |
+| barbarian | average | 111.1 → 108.7 | 24 | 51 |
+| any | newcomer | 13–19 → 9–13 | 17–23 | 10–23 |
+| any | skilled | 131 | 24 | 51 |
+
+**Reading:** for the middle of the pack, climbing on now pays only ~25% more than leaving after floor 6 (was ~40%),
+for the weakest hero leaving is the better bet, and for a newcomer leaving early is clearly right. A skilled player
+still climbs (and should). Fichas/min of the average bot −1–3 (economy, m3).
+
+**Decision:** kept.
