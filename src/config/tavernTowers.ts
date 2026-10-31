@@ -115,7 +115,7 @@ export const TOWERS: Record<TowerId, TowerSpec> = {
       { kind: 'fight', name: 'O Yeti Ancião', foes: [{ duel: 'ancientYeti', hpScale: 1.15 }], fichas: 20, masteryXp: 130 },
       { kind: 'rest', name: 'Fogueira' },
       { kind: 'fight', name: 'Guardiões juntos', foes: [{ duel: 'frostKnight', hpScale: 0.7 }, { duel: 'iceSerpent', hpScale: 0.7 }, { duel: 'bellringer', hpScale: 0.7 }], fichas: 26, masteryXp: 150 },
-      { kind: 'fight', name: 'O Rei do Inverno', foes: [{ duel: 'winterKing', hpScale: 1, damageScale: 1.1 }, { duel: 'frostSkeleton', hpScale: 0.6 }], fichas: 45, masteryXp: 220, champion: true }
+      { kind: 'fight', name: 'O Rei do Inverno', foes: [{ duel: 'winterKing', hpScale: 1, damageScale: 0.95 }, { duel: 'frostSkeleton', hpScale: 0.6 }], fichas: 45, masteryXp: 220, champion: true }
     ]
   }
 };
