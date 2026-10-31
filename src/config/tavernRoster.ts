@@ -147,7 +147,7 @@ export const ROSTER: Record<RosterId, RosterFighter> = {
   },
   ancientYeti: {
     id: 'ancientYeti', name: 'Yeti Ancião', region: 'snowfield', color: 0xd8dde6,
-    stats: { name: 'Yeti Ancião', maxHp: 135, attack: 14, speed: 7 },
+    stats: { name: 'Yeti Ancião', maxHp: 165, attack: 14, speed: 7 },
     kit: [
       node('pancada', 'Pancada', 'Os dois punhos: 1,8× o ataque.', 'active', 2, { type: 'damage', ratio: 1.8 }),
       node('rugido', 'Rugido', 'Um rugido que chama a briga: os inimigos atacam só ele até a próxima vez dele.', 'active', 1, { type: 'taunt' }),
