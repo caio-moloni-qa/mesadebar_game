@@ -117,7 +117,7 @@ export const ROSTER: Record<RosterId, RosterFighter> = {
   },
   frostKnight: {
     id: 'frostKnight', name: 'Cavaleiro Congelado', region: 'snowfield', color: 0x6fa8d8,
-    stats: { name: 'Cavaleiro Congelado', maxHp: 120, attack: 12, speed: 8 },
+    stats: { name: 'Cavaleiro Congelado', maxHp: 150, attack: 12, speed: 8 },
     kit: [
       node('corte-gelido', 'Corte Gélido', 'A espada de gelo: 1,7× o ataque.', 'active', 2, { type: 'damage', ratio: 1.7 }),
       node('guarda-de-gelo', 'Guarda de Gelo', 'Ergue a guarda: os inimigos atacam só ele até a próxima vez dele, com um escudo de 10.', 'active', 1, { type: 'taunt', shield: 10 }),
