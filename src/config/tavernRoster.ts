@@ -94,7 +94,7 @@ export const ROSTER: Record<RosterId, RosterFighter> = {
     kit: fromTree('grimbo', ['rolar-os-dados', 'batedor-de-carteira', 'dado-chumbado', 'seis-duplo'])
   },
   zora: {
-    id: 'zora', name: 'Zora', region: 'taverna', color: 0x7a3a9a, stats: { ...DUELS.zora.enemy, attack: 12 },
+    id: 'zora', name: 'Zora', region: 'taverna', color: 0x7a3a9a, stats: { ...DUELS.zora.enemy, maxHp: 120, attack: 12 },
     kit: fromTree('zora', ['escudo-de-cristal', 'mau-olhado', 'pressentimento', 'eclipse'])
   },
   sergio: {
