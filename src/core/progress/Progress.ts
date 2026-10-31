@@ -1,3 +1,5 @@
+import { BOON_TUNING, DUEL_REWARDS, TavernBoonId } from '../../config/tavernBattle';
+import { TOWERS, TOWER_UNLOCKS, TowerId } from '../../config/tavernTowers';
 import { AREAS, AreaConfig } from '../../config/areas';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { QuestNpcId } from '../systems/QuestSystem';
@@ -165,6 +167,10 @@ export interface MetaBonuses {
   experience: number;
   /** The Esquimó's meals packed to go: eaten as the run starts, as if bought at his counter. */
   meals?: MealId[];
+  /** Flecha marcada (Lyra's duel): this many of the run's first projectile hits crit for sure. */
+  markedCrits?: number;
+  /** Uma visão (Zora's duel): this many of the run's first guardians rise weakened. */
+  guardianVisions?: number;
 }
 
 export const NO_META_BONUSES: MetaBonuses = { maxHealth: 0, damage: 0, speed: 0, pickupRange: 0, startingCoins: 0, extraStartingPicks: 0, revives: 0, experience: 0 };
@@ -247,6 +253,12 @@ export function runBonuses(save: SaveData): MetaBonuses {
   if (has('fenix')) bonuses.revives += 1;
   const meals = save.pack.filter((id): id is MealId => IGLOO_MEALS.some((meal) => meal.id === id));
   if (meals.length > 0) bonuses.meals = meals;
+  // The Taverna em Turnos' duel gifts, spent by the same run.
+  const boon = (id: TavernBoonId) => save.tavern.boons.includes(id);
+  if (boon('caneca-de-ferro')) bonuses.maxHealth += BOON_TUNING.canecaMaxHealth;
+  if (boon('garrafa-da-casa')) bonuses.damage += BOON_TUNING.garrafaDamage;
+  if (boon('flecha-marcada')) bonuses.markedCrits = BOON_TUNING.flechaMarcadaCrits;
+  if (boon('uma-visao')) bonuses.guardianVisions = 1;
   return bonuses;
 }
 
@@ -343,12 +355,70 @@ export function rosterFor(save: SaveData): HeroId[] {
   const roster: HeroId[] = [...STARTING_HEROES];
   (Object.keys(REGULAR_UNLOCKS) as RegularHeroId[]).forEach((npc) => {
     const rule = REGULAR_UNLOCKS[npc];
-    if ((save.regularMissions[npc] ?? 0) >= MISSIONS_PER_REGULAR && masteryLevel(save.mastery[rule.hero] ?? 0) >= rule.level) roster.push(npc);
+    if ((save.regularMissions[npc] ?? 0) >= MISSIONS_PER_REGULAR && masteryLevel(save.mastery[rule.hero] ?? 0) >= rule.level && towerFloorMet(save, npc)) roster.push(npc);
   });
   AREAS.forEach((area) => {
-    if (area.finale && area.regulars.every((hero) => (roster as string[]).includes(hero)) && totalMastery(save) >= SERGIO_TOTAL_MASTERY) roster.push(area.finale);
+    if (area.finale && area.regulars.every((hero) => (roster as string[]).includes(hero)) && totalMastery(save) >= SERGIO_TOTAL_MASTERY && towerFloorMet(save, area.finale)) roster.push(area.finale);
   });
   return roster;
+}
+
+/** The highest floor beaten in a tower (0: never climbed). */
+export function towerBest(save: SaveData, tower: TowerId): number {
+  return save.tavern.towers[tower]?.best ?? 0;
+}
+
+/** A hero's tower floor (TOWER_UNLOCKS) is beaten — or they had already joined before the towers existed, so an old
+ *  save never loses a hero. */
+function towerFloorMet(save: SaveData, hero: HeroId): boolean {
+  const rule = TOWER_UNLOCKS[hero as keyof typeof TOWER_UNLOCKS];
+  return !rule || towerBest(save, rule.tower) >= rule.floor || save.announced.includes(hero);
+}
+
+function towerStep(save: SaveData, hero: HeroId): UnlockStep[] {
+  const rule = TOWER_UNLOCKS[hero as keyof typeof TOWER_UNLOCKS];
+  if (!rule || save.announced.includes(hero)) return [];
+  return [{ label: `Vencer o andar ${rule.floor} da ${TOWERS[rule.tower].name} (Coliseu do Sergio)`, current: Math.min(rule.floor, towerBest(save, rule.tower)), needed: rule.floor }];
+}
+
+/** What one floor of a tower banked: the hero's mastery, the tower's best floor, and whoever joined with it. */
+export interface TowerFloorOutcome {
+  save: SaveData;
+  xpBefore: number;
+  xpAfter: number;
+  rewards: MasteryReward[];
+  joined: HeroId[];
+}
+
+/** A floor won in a tower: the climbing hero's mastery XP and the tower's best floor are saved at once (never at
+ *  risk); newly unlocked heroes are announced like after a run. */
+export function bankTowerFloor(save: SaveData, hero: HeroId, tower: TowerId, floorsCleared: number, masteryXp: number): TowerFloorOutcome {
+  const xpBefore = save.mastery[hero] ?? 0;
+  const xpAfter = xpBefore + masteryXp;
+  const record = save.tavern.towers[tower] ?? { best: 0, climbs: 0, tops: 0 };
+  const next: SaveData = {
+    ...save,
+    mastery: { ...save.mastery, [hero]: xpAfter },
+    tavern: { ...save.tavern, towers: { ...save.tavern.towers, [tower]: { ...record, best: Math.max(record.best, floorsCleared) } } }
+  };
+  const levelBefore = masteryLevel(xpBefore);
+  const levelAfter = masteryLevel(xpAfter);
+  const rewards = MASTERY_REWARDS.filter((reward) => reward.level > levelBefore && reward.level <= levelAfter);
+  const roster = rosterFor(next);
+  const joined = roster.filter((id) => !save.announced.includes(id));
+  next.announced = [...new Set([...save.announced, ...roster])];
+  return { save: next, xpBefore, xpAfter, rewards, joined };
+}
+
+/** A climb ended (walked away, lost, or reached the top): the fichas it paid, and the tower's counters. */
+export function bankTowerClimb(save: SaveData, tower: TowerId, fichas: number, reachedTop: boolean): SaveData {
+  const record = save.tavern.towers[tower] ?? { best: 0, climbs: 0, tops: 0 };
+  return {
+    ...save,
+    fichas: save.fichas + fichas,
+    fichasEarned: save.fichasEarned + fichas,
+    tavern: { ...save.tavern, towers: { ...save.tavern.towers, [tower]: { ...record, climbs: record.climbs + 1, tops: record.tops + (reachedTop ? 1 : 0) } } }
+  };
 }
 
 /** One condition to unlock a hero, with how far the save is. */
@@ -366,7 +436,8 @@ export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
     const rule = REGULAR_UNLOCKS[npc];
     return [
       { label: `Concluir as missões de ${CHARACTERS[npc].name} na taverna`, current: Math.min(MISSIONS_PER_REGULAR, save.regularMissions[npc] ?? 0), needed: MISSIONS_PER_REGULAR },
-      { label: `Maestria nível ${rule.level} com ${CHARACTERS[rule.hero].name}`, current: Math.min(rule.level, masteryLevel(save.mastery[rule.hero] ?? 0)), needed: rule.level }
+      { label: `Maestria nível ${rule.level} com ${CHARACTERS[rule.hero].name}`, current: Math.min(rule.level, masteryLevel(save.mastery[rule.hero] ?? 0)), needed: rule.level },
+      ...towerStep(save, npc)
     ];
   }
   const finaleOf = AREAS.find((area) => area.finale === hero);
@@ -374,7 +445,8 @@ export function unlockSteps(save: SaveData, hero: HeroId): UnlockStep[] {
     const roster = rosterFor(save);
     return [
       { label: `Conquistar todos os frequentadores de ${finaleOf.name}`, current: finaleOf.regulars.filter((regular) => (roster as string[]).includes(regular)).length, needed: finaleOf.regulars.length },
-      { label: `Somar ${SERGIO_TOTAL_MASTERY} níveis de maestria entre todos os heróis`, current: Math.min(SERGIO_TOTAL_MASTERY, totalMastery(save)), needed: SERGIO_TOTAL_MASTERY }
+      { label: `Somar ${SERGIO_TOTAL_MASTERY} níveis de maestria entre todos os heróis`, current: Math.min(SERGIO_TOTAL_MASTERY, totalMastery(save)), needed: SERGIO_TOTAL_MASTERY },
+      ...towerStep(save, hero)
     ];
   }
   return [];
@@ -455,6 +527,50 @@ export interface SaveData {
   firstRunTipSeen: boolean;
   /** Heroes the tavern has announced as playable (the welcome on coming back after an unlock). */
   welcomed: HeroId[];
+  /** Taverna em Turnos: the regulars' duel progress (skill trees from phase 2) and the duel settings. */
+  tavern: TavernSave;
+}
+
+export interface TavernRegularSave { xp: number; level: number; learned: string[]; finisher?: string }
+
+export interface TavernSave {
+  /** The mission regulars, and Sergio (his duel opens from the shop). */
+  regulars: Partial<Record<QuestNpcId | 'sergio', TavernRegularSave>>;
+  /** Assisted mode: wider reaction windows. */
+  assisted: boolean;
+  /** Show the timing track under the stage (off: read the animation only). */
+  timingTrack: boolean;
+  /** Duel gifts waiting for the next run (one of each). */
+  boons: TavernBoonId[];
+  /** O Coliseu do Sergio: the best floor beaten per tower, climbs started and tops reached. */
+  towers: Partial<Record<TowerId, TowerRecord>>;
+}
+
+export interface TowerRecord { best: number; climbs: number; tops: number }
+
+function parseTavern(raw: unknown): TavernSave {
+  const tavern = isRecord(raw) ? raw : {};
+  const regulars = isRecord(tavern.regulars) ? tavern.regulars : {};
+  return {
+    regulars: Object.fromEntries(Object.entries(regulars).flatMap(([id, regular]) => {
+      if (!isRecord(regular)) return [];
+      const count = (field: unknown) => (typeof field === 'number' && Number.isFinite(field) && field >= 0 ? Math.floor(field) : 0);
+      const learned = Array.isArray(regular.learned) ? regular.learned.filter((node): node is string => typeof node === 'string') : [];
+      return [[id, { xp: count(regular.xp), level: Math.max(1, count(regular.level)), learned, ...(typeof regular.finisher === 'string' ? { finisher: regular.finisher } : {}) }]];
+    })),
+    assisted: tavern.assisted === true,
+    timingTrack: tavern.timingTrack !== false,
+    boons: Array.isArray(tavern.boons)
+      ? tavern.boons.filter((id): id is TavernBoonId => Object.values(DUEL_REWARDS).some((reward) => reward?.id === id)).filter((id, i, all) => all.indexOf(id) === i)
+      : [],
+    towers: isRecord(tavern.towers)
+      ? Object.fromEntries(Object.entries(tavern.towers).flatMap(([id, record]) => {
+        if (!(id in TOWERS) || !isRecord(record)) return [];
+        const count = (field: unknown) => (typeof field === 'number' && Number.isFinite(field) && field >= 0 ? Math.floor(field) : 0);
+        return [[id, { best: count(record.best), climbs: count(record.climbs), tops: count(record.tops) }]];
+      }))
+      : {}
+  };
 }
 
 export function emptySave(): SaveData {
@@ -474,7 +590,8 @@ export function emptySave(): SaveData {
     tutorialSeen: false,
     guardianTipSeen: false,
     firstRunTipSeen: false,
-    welcomed: [...STARTING_HEROES]
+    welcomed: [...STARTING_HEROES],
+    tavern: { regulars: {}, assisted: false, timingTrack: true, boons: [], towers: {} }
   };
 }
 
@@ -519,7 +636,9 @@ export function parseSave(text: string | null | undefined): SaveData {
     tutorialSeen: raw.tutorialSeen === true,
     guardianTipSeen: raw.guardianTipSeen === true,
     firstRunTipSeen: raw.firstRunTipSeen === true,
-    welcomed: Array.isArray(raw.welcomed) ? raw.welcomed.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES]
+    welcomed: Array.isArray(raw.welcomed) ? raw.welcomed.filter((id): id is HeroId => typeof id === 'string') : [...STARTING_HEROES],
+    // Saves from before the Taverna em Turnos start with no duel progress.
+    tavern: parseTavern(raw.tavern)
   };
 }
 

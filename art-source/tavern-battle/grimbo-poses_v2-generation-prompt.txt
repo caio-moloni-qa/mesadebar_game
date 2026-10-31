@@ -1,0 +1,1 @@
+Edit this sprite sheet. Change ONLY the object held in the FIRST ROW THIRD COLUMN: replace the brown tankard/mug with two clearly visible ivory dice with black pips cupped in Grimbo's extended left hand. Keep goblin, position, hat, body, hand pose, all other seven cells, pixel-art style, canvas, transparency and scale exactly unchanged. No text or grid. Transparent background.

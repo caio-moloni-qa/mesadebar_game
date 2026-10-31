@@ -1,0 +1,42 @@
+﻿[
+    {
+        "destinationY":  8.883878241263,
+        "sourceBottom":  439,
+        "index":  0
+    },
+    {
+        "destinationY":  8.8838782412626927,
+        "sourceBottom":  439,
+        "index":  1
+    },
+    {
+        "destinationY":  8.8838782412626927,
+        "sourceBottom":  439,
+        "index":  2
+    },
+    {
+        "destinationY":  8.8838782412626927,
+        "sourceBottom":  439,
+        "index":  3
+    },
+    {
+        "destinationY":  149.2581736189402,
+        "sourceBottom":  390,
+        "index":  4
+    },
+    {
+        "destinationY":  149.25817361894025,
+        "sourceBottom":  390,
+        "index":  5
+    },
+    {
+        "destinationY":  149.25817361894025,
+        "sourceBottom":  390,
+        "index":  6
+    },
+    {
+        "destinationY":  148.50056369785796,
+        "sourceBottom":  393,
+        "index":  7
+    }
+]

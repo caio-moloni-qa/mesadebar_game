@@ -2,6 +2,8 @@ import { GameSession } from '../../core/session/GameSession';
 import { MISSIONS_PER_REGULAR, REGULAR_UNLOCKS, SaveData, masteryLevel, rosterFor } from '../../core/progress/Progress';
 import { heroName } from '../progress/heroNames';
 import { CharacterId } from '../../config/characters';
+import { DUELS, DuelId } from '../../config/tavernBattle';
+import { SKILL_TREES } from '../../config/tavernSkills';
 import { npcFace } from './icons';
 import { goalText, progressText, rewardText } from './questText';
 
@@ -14,7 +16,9 @@ export class TavernDialog {
   private session: GameSession | null = null;
 
   /** `onPlay`: between runs, an unlocked regular's "Jogar com …" opens their hero card. */
-  constructor(container: HTMLElement, private readonly onPlay: (hero: CharacterId) => void = () => {}) {
+  /** `onDuel`: between runs, "Desafiar" opens a Taverna em Turnos duel with the regulars who have one;
+   *  `onSkills`: "Habilidades" opens their skill tree. */
+  constructor(container: HTMLElement, private readonly onPlay: (hero: CharacterId) => void = () => {}, private readonly onDuel: (duel: DuelId) => void = () => {}, private readonly onSkills: (regular: string) => void = () => {}) {
     this.root = document.createElement('div');
     this.root.className = 'tavern-dialog';
     this.root.setAttribute('role', 'dialog');
@@ -108,7 +112,9 @@ export class TavernDialog {
         this.onPlay(id);
       }));
     }
-    actions.appendChild(this.button('Até mais (Esc)', joined ? '' : 'primary', () => this.session?.closeDialogue()));
+    if (id in DUELS) actions.appendChild(this.button('Desafiar para um duelo', joined ? '' : 'primary', () => this.onDuel(id as DuelId)));
+    if (id in SKILL_TREES) actions.appendChild(this.button('Habilidades', '', () => this.onSkills(id)));
+    actions.appendChild(this.button('Até mais (Esc)', joined || id in DUELS ? '' : 'primary', () => this.session?.closeDialogue()));
     actions.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
   }
 

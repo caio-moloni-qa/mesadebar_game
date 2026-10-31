@@ -1,3 +1,4 @@
+import { BOON_TUNING } from '../../config/tavernBattle';
 import { SnowfieldAttacks, SnowAttackKind } from './SnowfieldAttacks';
 import { ArenaLayout, ZoneKind } from '../../config/arenaLayout';
 import { MINI_BOSS_VARIANTS } from '../../config/balance';
@@ -210,7 +211,8 @@ export interface MiniBossState {
 
 export interface MiniBossEvents extends Record<string, unknown> {
   'miniboss-warning': { kind: MiniBossKind };
-  'miniboss-spawned': { kind: MiniBossKind; enemy: EnemyState };
+  /** `foreseen`: Zora's vision (a duel won in the tavern) weakened it. */
+  'miniboss-spawned': { kind: MiniBossKind; enemy: EnemyState; foreseen: boolean };
   'miniboss-impact': { kind: MiniBossKind; attack: MiniBossAttackType; x: number; y: number; radius: number };
   'miniboss-stunned': { kind: MiniBossKind; enemy: EnemyState };
   'miniboss-defeated': { kind: MiniBossKind; x: number; y: number };
@@ -245,6 +247,8 @@ export class MiniBossSystem {
   readonly icePillars: IcePillarState[] = [];
   /** Announced, spawning when the countdown ends. */
   pending: { kind: MiniBossKind; inMs: number } | null = null;
+  /** Uma visão (won in Zora's duel): the next this-many guardians rise weakened. */
+  visions = 0;
 
   readonly snow: SnowfieldAttacks;
   constructor(private readonly host: MiniBossHost) { this.snow = new SnowfieldAttacks(host); }
@@ -372,8 +376,10 @@ export class MiniBossSystem {
     const spec = MINI_BOSSES[kind];
     const anchor = spec.anchor(this.host.arena.layout);
     const spot = spec.spawnInWater ? { ...anchor } : this.host.arena.nearestWalkable(anchor.x, anchor.y, 40);
-    const enemy = this.host.spawnEnemy(kind, spot.x, spot.y, MINI_BOSS_VARIANTS[kind].maxHealth * this.host.healthMultiplier());
+    const foreseen = this.visions > 0;
+    const enemy = this.host.spawnEnemy(kind, spot.x, spot.y, MINI_BOSS_VARIANTS[kind].maxHealth * this.host.healthMultiplier() * (foreseen ? 1 - BOON_TUNING.visionHealthCut : 1));
     if (!enemy) return;
+    if (foreseen) this.visions -= 1;
     // The spawn snapped it to dry land; the lake spirit really is in the middle of the water.
     enemy.x = enemy.prevX = spot.x;
     enemy.y = enemy.prevY = spot.y;
@@ -392,7 +398,7 @@ export class MiniBossSystem {
       enraged: false
     });
     if (kind === 'lakeSpirit') this.bosses[this.bosses.length - 1].attack = { type: 'drain', phase: 'active', elapsedMs: 0, x: spot.x, y: spot.y, dirX: 0, dirY: 0, hit: false, count: 0 };
-    this.host.events.emit('miniboss-spawned', { kind, enemy });
+    this.host.events.emit('miniboss-spawned', { kind, enemy, foreseen });
   }
 
   /** Beyond its zone, the mini-boss gives up the chase: it walks home, regenerating, until the player comes back. */

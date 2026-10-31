@@ -1,0 +1,4 @@
+Same built-in image_gen source and exact prompt as bellringer-poses_v1-raw.png / bellringer-poses_v1-generation-prompt.txt.
+Corrected export only: source connected components with row==0, l>=370 and r<600 belong to pose1 (primary bell swing), including detached arcs across the nominal first-column boundary.
+Nearest-neighbor export, one shared scale 0.236286919831224, horizontal content centered, alpha content bottom119, 512x256 RGBA. See tools/discord/.state/export-bellringer-v2.ps1.
+Preserves v1 without overwrite. Integrate v2.

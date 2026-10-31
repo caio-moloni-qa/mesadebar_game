@@ -30,10 +30,16 @@ import { CompanionViews, MiniBossViews } from './views/ZoneActorViews';
 import { MerchantRoom } from './world/MerchantRoom';
 import { QuestBarrels } from './world/QuestBarrels';
 import { TavernDialog } from './ui/TavernDialog';
+import { TavernDuel } from './tavern/TavernDuel';
+import { SkillTreeScreen } from './tavern/SkillTreeScreen';
+import { DICE_RULE, DUELS, DUEL_REWARDS, DuelId } from '../config/tavernBattle';
+import { activeKit, duelXp, grantXp, regularState, resetTree, treeFor, withRegular } from '../core/tavern/SkillTree';
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
-import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses } from '../core/progress/Progress';
+import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, bankTowerClimb, bankTowerFloor, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses } from '../core/progress/Progress';
+import { TOWERS, TowerId } from '../config/tavernTowers';
+import { RosterId } from '../config/tavernRoster';
 import { HeroKitViews } from './views/HeroKitViews';
 import { PowerViews } from './views/PowerViews';
 import { PowerBanner } from './ui/PowerBanner';
@@ -80,6 +86,14 @@ export interface Game3DOptions {
   /** Test keys: U random upgrade, I +5 upgrades on every weapon, O add another weapon, T toggle enemy separation,
    *  V spawn one of each enemy variant around the hero, B start this cycle's boss wave now. */
   debug?: boolean;
+  /** Test URLs: open a Taverna em Turnos duel straight from the tavern (?duel=brom). */
+  duel?: DuelId;
+  /** Test URLs: Grimbo's bet, skipping the question (?bet=10). */
+  duelBet?: number;
+  /** Test URLs: open a tower of O Coliseu do Sergio straight from the tavern (?tower=taverna). */
+  tower?: TowerId;
+  /** Test URLs: the tower's squad, skipping the picker (?squad=eskimo,frostKnight). */
+  squad?: RosterId[];
 }
 
 /** Floating callout colours per player-status tone. */
@@ -123,6 +137,8 @@ export class Game3D {
   private readonly heroKitViews = new HeroKitViews();
   /** Sandbox: every hero playable, without touching the save. */
   private allHeroesUnlocked = false;
+  /** Sandbox: every fighter (the towers' locals too) pickable in the Coliseu, without touching the save. */
+  private allFightersUnlocked = false;
   private merchantRoom?: MerchantRoom;
   /** The Nevasca's torches and storm snow, rebuilt with every session (empty where the arena has no blizzard). */
   private blizzardView?: BlizzardView;
@@ -135,6 +151,10 @@ export class Game3D {
   private readonly showJoystick: boolean;
   private readonly choices: ChoiceOverlay;
   private readonly tavernDialog: TavernDialog;
+  /** Taverna em Turnos: the duel overlay (the 3D loop pauses while it's open). Public for the probe. */
+  readonly duel: TavernDuel;
+  /** Taverna em Turnos: a regular's skill tree ("Habilidades" in their dialogue). Public for the probe. */
+  readonly skillTree: SkillTreeScreen;
   private readonly companionBars: CompanionBars;
   private readonly questBarrels = new QuestBarrels();
   private readonly menu: StartMenu;
@@ -217,6 +237,10 @@ export class Game3D {
         this.allHeroesUnlocked = true;
         this.floatAboveHero('Sandbox: todos os heróis liberados', '#8bff8b');
       },
+      unlockAllFighters: () => {
+        this.allFightersUnlocked = true;
+        this.floatAboveHero('Sandbox: todos os lutadores do Coliseu liberados', '#8bff8b');
+      },
       addFichas: (amount) => {
         this.saveProgress({ fichas: this.progress.fichas + amount });
         this.floatAboveHero(`Sandbox: +${amount} Fichas`, '#8bff8b');
@@ -231,6 +255,7 @@ export class Game3D {
       resetProgress: () => {
         if (!window.confirm('Apagar todo o progresso salvo (Fichas, maestria, missões, heróis liberados, dicas vistas)?')) return;
         this.allHeroesUnlocked = false;
+        this.allFightersUnlocked = false;
         this.progress = emptySave();
         SaveStore.save(this.progress);
         this.showMenu();
@@ -252,7 +277,62 @@ export class Game3D {
       }
     });
     this.choices = new ChoiceOverlay(container);
-    this.tavernDialog = new TavernDialog(container, (hero) => this.menu.showCharacters(hero));
+    this.tavernDialog = new TavernDialog(container, (hero) => this.menu.showCharacters(hero), (duel) => this.startDuel(duel), (regular) => this.openSkillTree(regular));
+    this.duel = new TavernDuel(container, {
+      settings: () => ({ assisted: this.progress.tavern.assisted, timingTrack: this.progress.tavern.timingTrack }),
+      saveSettings: (settings) => this.saveProgress({ tavern: { ...this.progress.tavern, ...settings } }),
+      // The hero fights with what the dueled regular has taught them.
+      kit: (duel) => {
+        const tree = treeFor(duel);
+        return tree ? activeKit(tree, regularState(this.progress, duel)) : [];
+      },
+      finished: (duel, { won, parries, bet, loot }) => {
+        if (!treeFor(duel)) return null;
+        const xp = duelXp(won, parries);
+        const { state, levelsGained } = grantXp(regularState(this.progress, duel), xp);
+        // Grimbo's bet pays double on a win; what Mão Leve pocketed comes along either way.
+        const fichas = (won ? bet * DICE_RULE.payout : 0) + loot;
+        // A small gift for the next run (one of each waits in the save).
+        const reward = won ? DUEL_REWARDS[duel] : undefined;
+        const saved = withRegular(this.progress, duel, state);
+        const boons = reward && !saved.tavern.boons.includes(reward.id) ? [...saved.tavern.boons, reward.id] : saved.tavern.boons;
+        this.saveProgress({ ...saved, fichas: saved.fichas + fichas, tavern: { ...saved.tavern, boons } });
+        return { xp, level: state.level, levelsGained, fichas, boon: reward ? `${reward.name} (${reward.description})` : null };
+      },
+      fichas: () => this.progress.fichas,
+      stake: (amount) => {
+        if (this.progress.fichas < amount) return false;
+        this.saveProgress({ fichas: this.progress.fichas - amount });
+        return true;
+      },
+      // Back in the 3D tavern where it was left: no catch-up for the time spent duelling.
+      closed: () => {
+        this.keys.clear();
+        this.accumulator = 0;
+        this.lastFrameAt = performance.now();
+      },
+      // O Coliseu do Sergio: each floor's mastery goes to the hero climbing, saved at once.
+      towerFloor: (tower, cleared, masteryXp) => {
+        const outcome = bankTowerFloor(this.progress, this.run.characterId, tower, cleared, masteryXp);
+        this.saveProgress(outcome.save);
+        const level = masteryLevel(outcome.xpAfter);
+        return { level, levelsGained: level - masteryLevel(outcome.xpBefore), joined: outcome.joined.map((hero) => CHARACTERS[hero]?.name ?? hero) };
+      },
+      towerEnded: (tower, fichas, reachedTop) => this.saveProgress(bankTowerClimb(this.progress, tower, fichas, reachedTop)),
+      mentors: () => (Object.keys(DUELS) as DuelId[]).filter((regular) => regularState(this.progress, regular).learned.length > 0),
+      roster: () => this.roster(),
+      allFighters: () => this.allFightersUnlocked
+    });
+    this.skillTree = new SkillTreeScreen(container, {
+      state: (regular) => ({ regular: regularState(this.progress, regular), fichas: this.progress.fichas }),
+      save: (regular, state) => this.saveProgress(withRegular(this.progress, regular, state)),
+      reset: (regular) => {
+        const reset = resetTree(this.progress, regular);
+        if (reset) this.saveProgress(reset);
+        return reset !== null;
+      },
+      closed: () => this.keys.clear()
+    });
     this.companionBars = new CompanionBars(container);
     this.scene.add(this.snowfieldView.root, this.questBarrels.root, this.heroKitViews.root, this.powerViews.root);
     this.chestRoll = new ChestRoll(container);
@@ -303,6 +383,19 @@ export class Game3D {
         });
       },
       close: () => this.shop.hide(),
+      // Taverna em Turnos: Sergio isn't a mission regular, so his duel and tree open from his counter.
+      duel: () => {
+        this.shop.hide();
+        this.startDuel('sergio');
+      },
+      skills: () => {
+        this.shop.hide();
+        this.openSkillTree('sergio');
+      },
+      tower: (tower) => {
+        this.shop.hide();
+        this.startTower(tower);
+      },
       canPlaySergio: () => this.roster().includes('sergio'),
       playSergio: () => {
         this.shop.hide();
@@ -333,7 +426,15 @@ export class Game3D {
       roster: () => this.roster()
     });
     if (options.arena) this.useArena(options.arena);
-    if (options.initialRun) this.startRun(options.initialRun);
+    if (options.duel) {
+      if (options.initialRun) this.run = options.initialRun;
+      this.enterHub();
+      this.startDuel(options.duel, options.duelBet);
+    } else if (options.tower) {
+      if (options.initialRun) this.run = options.initialRun;
+      this.enterHub();
+      this.startTower(options.tower);
+    } else if (options.initialRun) this.startRun(options.initialRun);
     else this.showMenu();
     this.bindInput();
     this.resize();
@@ -401,6 +502,30 @@ export class Game3D {
     } else {
       this.welcomeNewHeroes();
     }
+  }
+
+  /** "Desafiar" in a regular's dialogue: the duel takes the screen over the paused tavern. */
+  startDuel(duel: DuelId, bet?: number): void {
+    if (this.session.dialogue !== null) this.session.closeDialogue();
+    this.keys.clear();
+    this.duel.start(duel, this.run.characterId, this.options.seed ?? randomSeed(), bet);
+  }
+
+  /** O Coliseu do Sergio: a climb up a tower with the hero chosen in the tavern (it earns their mastery). */
+  startTower(tower: TowerId): void {
+    if (!TOWERS[tower] || TOWERS[tower].comingSoon) return;
+    if (this.session.dialogue !== null) this.session.closeDialogue();
+    this.keys.clear();
+    this.duel.startTower(tower, this.run.characterId, this.options.seed ?? randomSeed(), this.options.squad);
+  }
+
+  /** "Habilidades" in a regular's dialogue: their skill tree over the tavern. */
+  openSkillTree(regular: string): void {
+    const tree = treeFor(regular);
+    if (!tree) return;
+    if (this.session.dialogue !== null) this.session.closeDialogue();
+    this.keys.clear();
+    this.skillTree.show(tree, DUELS[regular as DuelId]?.enemy.name ?? regular);
   }
 
   /** The heroes the player may pick: the save's roster (or everyone, with the sandbox toggle). */
@@ -501,6 +626,8 @@ export class Game3D {
     });
     // The pack is spent on the run it came into.
     if (!attract && !hub && this.progress.pack.length > 0) this.saveProgress({ pack: [] });
+    // So are the duel gifts (Taverna em Turnos).
+    if (!attract && !hub && this.progress.tavern.boons.length > 0) this.saveProgress({ tavern: { ...this.progress.tavern, boons: [] } });
     this.audio.bind(this.session);
     this.merchantRoom = new MerchantRoom(this.session.merchant, this.session.quests);
     this.scene.add(this.merchantRoom.root, this.merchantRoom.characters);
@@ -724,8 +851,10 @@ export class Game3D {
       this.cameraRig.shake(attack === 'shockwave' || attack === 'charge' ? 0.35 : 0.2, 0.3);
     });
     // A guardian's entrance: the game holds while the camera goes to watch it rise (not from inside the tavern).
-    events.on('miniboss-spawned', ({ kind, enemy }) => {
+    events.on('miniboss-spawned', ({ kind, enemy, foreseen }) => {
       if (this.mode !== 'run' || this.attract || this.session.merchant.inside || this.session.over) return;
+      // Zora's vision (a duel won in the tavern) weakened it.
+      if (foreseen) this.floating.spawn(simToWorld(enemy.x, enemy.y, 9, this.scratch), 'VISÃO DA ZORA: -25% VIDA', { color: '#c58bff', size: 28, rise: 40, durationMs: 2200 }, performance.now());
       this.miniBossViews.playEntrance(enemy);
       this.guardianIntro.start(kind, enemy);
       this.session.revealing = true;
@@ -1051,6 +1180,14 @@ export class Game3D {
 
   private bindInput(): void {
     window.addEventListener('keydown', (event) => {
+      if (this.duel.open) {
+        this.duel.keydown(event);
+        return;
+      }
+      if (this.skillTree.open) {
+        this.skillTree.keydown(event);
+        return;
+      }
       if (this.inMenu) return;
       this.keys.add(event.code);
       // ESC stays blocked while a choice screen is open.
@@ -1152,6 +1289,11 @@ export class Game3D {
   private frame(now: number): void {
     const frameMs = Math.min(MAX_FRAME_MS, now - this.lastFrameAt);
     this.lastFrameAt = now;
+    // A duel pauses the 3D world: only the 2D stage draws.
+    if (this.duel.open) {
+      this.duel.frame(now);
+      return;
+    }
     this.readMoveInput();
     this.audio.update(this.session, this.inMenu);
     this.menu.update(frameMs / 1000);
