@@ -43,7 +43,7 @@ function fromTree(regular: DuelId, ids: string[]): SkillNode[] {
 export const ROSTER: Record<RosterId, RosterFighter> = {
   barbarian: {
     id: 'barbarian', name: 'Bárbaro', region: 'taverna', color: 0x8a3324,
-    stats: { name: 'Bárbaro', maxHp: 115, attack: 13, speed: 9 },
+    stats: { name: 'Bárbaro', maxHp: 125, attack: 13, speed: 9 },
     kit: [
       node('investida', 'Investida', 'Corre com o espadão: 1,7× o ataque.', 'active', 2, { type: 'damage', ratio: 1.7 }),
       node('grito-de-guerra', 'Grito de Guerra', 'Chama a briga pra si: os inimigos atacam só ele até a próxima vez dele, e o próximo golpe bate pela metade.', 'active', 1, { type: 'taunt', weaken: 0.5 }),
