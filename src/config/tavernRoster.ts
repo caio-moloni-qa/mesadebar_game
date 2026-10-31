@@ -127,7 +127,7 @@ export const ROSTER: Record<RosterId, RosterFighter> = {
   },
   iceSerpent: {
     id: 'iceSerpent', name: 'Serpente do Gelo', region: 'snowfield', color: 0x5fc8d8,
-    stats: { name: 'Serpente do Gelo', maxHp: 120, attack: 12, speed: 12 },
+    stats: { name: 'Serpente do Gelo', maxHp: 120, attack: 15, speed: 12 },
     kit: [
       node('cuspe-gelido', 'Cuspe Gélido', 'Metade do ataque e queimadura de frio: 4 de dano no começo das próximas 3 rodadas.', 'active', 1, { type: 'poison', ratio: 0.5, perRound: 4, rounds: 3 }),
       node('bote', 'Bote', 'O ataque inteiro e o alvo demora mais pra agir.', 'active', 2, { type: 'stun', ratio: 1, delay: 60 }),
