@@ -266,3 +266,94 @@ sharper than a real good player and the target should be read against a human-ca
 
 **Decision:** the tempo model is kept (measurement); both game levers reverted, pending the owner's call. The lever's
 patch: `tmp/claude-b1/tempo-lever.patch` (not committed).
+
+## 2026-10-31 · Towers: the target moves to the `average` bot (owner)
+
+**Owner:** "the skilled bot clearing everything is expected; move the rule to the average bot." New contract
+(`venivium-balance` §2): the `average` bot, solo, reaches the top **~70%** with each hero; `skilled` ~100% is fine.
+The skilled-70% tries above are dropped.
+
+**Gap today** (`tempo-model`, average bot, solo, top %):
+
+| tower | above 70 | near (55–85) | below |
+|---|---|---|---|
+| taverna | fabri 93, brom 93 | sergio 82, barbarian 61 | mage 27, reliquia 27, grimbo 24, lyra 18, zora 7 |
+| snowfield | eskimo 94 | — | ancientYeti 19, barbarian 2, mage 1, iceSerpent 1, frostKnight 0, bellringer 0 |
+
+Most climbs of the weak heroes end on taverna floor 7 (Lyra + Zora duo, 34–57% of climbs) and on snowfield floors
+6–10. So the work is mostly lifting the middle of the roster and softening the floor-7 cliff, with a small trim on
+fabri / brom / eskimo; it is no longer about making the top harder.
+
+## 2026-10-31 · Tavern: lifting the weak heroes (average bot, solo)
+
+**Goal:** each hero's `average` bot reaches the taverna top ~70% solo. Order set by the balance advisor (sub agent).
+Same seeds; one lever per commit; each batch compared with the one before it.
+
+| commit | lever | batch | average solo, top % | floor 7 share of falls |
+|---|---|---|---|---|
+| `8800f89` | `tavernRoster.ts` zora `maxHp` 105 → 120 (player side) | `z-hp120` vs `advisor-base` | zora 7 → 17 | zora 57 → 38% |
+| `097639b` | `tavernTowers.ts` floor "Flecha e feitiço" lyra/zora `hpScale` 0.6 → 0.5 | `f7-hp50` vs `z-hp120` | lyra 18→25, zora 17→23, reliquia 27→33, mage 27→31, barbarian 61→66, sergio 82→87, grimbo 24, fabri/brom ~93 | weak 34–42 → 27–34% |
+| `ef6f7f9` | `tavernRoster.ts` lyra `maxHp` 100 → 115 (player side) | `l-hp115` vs `f7-hp50` | lyra 25 → 43 (worst floor moves to 10) | lyra 27% |
+
+Skilled stays 100% everywhere. Side effect: `newcomerAssisted` rises (weak heroes 43–55 → 50–85%), which feeds the
+open M1b question (the newcomer wins too early); only a playtest settles it.
+
+**Decision:** all three kept. **Now (average, solo):** fabri 94, brom 92, sergio 87, barbarian 66, lyra 43,
+reliquia 33, mage 31, zora 23, grimbo 24. Next: grimbo, zora, mage, reliquia one number at a time; then trim
+fabri/brom; then the snowfield.
+
+## 2026-10-31 · Tavern + igloo: the rest of the roster to ~70% (average bot, solo)
+
+**Owner:** "do it for all the rest, no approval needed." Same seeds (200 / tower 100), one lever per commit, each batch
+compared with the one before it (`tmp/claude-b1/cmp-<label>.txt`). All stats are the **player's side**
+(`tavernRoster.ts`); the regulars as foes are untouched.
+
+**Taverna** (from `l-hp115`):
+
+| commit | lever | top %, average solo |
+|---|---|---|
+| `b8b42aa` | grimbo `maxHp` 110 → 125 | grimbo 24 → 44 |
+| `1b65586` | mage `maxHp` 90 → 105 | mage 31 → 53 |
+| `1a8331e` | reliquia `maxHp` 100 → 115 | reliquia 33 → 55 |
+| `bfb295e` | zora `maxHp` 120 → 135 | zora 23 → 34 (worst floor moves to 10) |
+| `3ee91be` | zora `attack` 12 → 14 | zora 34 → 53 |
+| `cb89a2b` | grimbo `attack` 10 → 12 | grimbo 44 → 61 |
+| `49ba1fb` | lyra `attack` 11 → 13 | lyra 43 → 64 |
+| `5980c3b` | mage `attack` 13 → 15 | mage 53 → 67 |
+| `3ff10fe` | reliquia `attack` 11 → 13 | reliquia 55 → 73 |
+| `9ab8110` | zora `maxHp` 135 → 150 | zora 53 → 73 |
+| `c182b5e` | grimbo `maxHp` 125 → 135 | grimbo 61 → 74 |
+| `0258d40` | lyra `maxHp` 115 → 125 | lyra 64 → 75 |
+| `31362a7` | barbarian `maxHp` 115 → 125 | barbarian 66 → 79 |
+| `4553a16` | mage `maxHp` 105 → 112 | mage 67 → 75 |
+| — | fabri `maxHp` 95 → 85 / brom 120 → 108 | 94 → 91 / 92 → 90: too weak a lever, **reverted** (their edge is the kit: heal, dodge, counter) |
+
+**Igloo** (from `m-hp112`):
+
+| commit | lever | top %, average solo |
+|---|---|---|
+| `7bdf395` `11255c3` `7e50a5b` | frostKnight 120 → 150, iceSerpent 95 → 120, bellringer 105 → 130 `maxHp` | +0–2 each on their own (they matter later, see the advisor's check) |
+| `b308ebb` → `50c69af` | ancientYeti `maxHp` 135 → 165, later back to 135 | 19 → 47; after the campfire it overshot (96), back to 135 → 76 |
+| `cf345dc` | `tavernTowers.ts` Winter King `hpScale` 1.2 → 1.0 | +2–7 |
+| `0ee4e81` | Winter King `damageScale` 1.1 → 0.95 | eskimo 94 → 98, yeti 54 → 67, rest +1–4 |
+| `053605a` | iceSerpent `attack` 12 → 15 | 7 → 34 |
+| `a2d4a99` | frostKnight `attack` 12 → 15 | 2 → 24 |
+| `61769fe` | bellringer `attack` 10 → 13 | 0 → 2 |
+| `ced8a97` | **new "Fogueira" rest between "Guardiões juntos" and the King** (igloo now 12 floors) | knight 24→56, serpent 34→66, bellringer 2→35, yeti 67→96, mage 18→53, barbarian 9→44 |
+| `73b8af7` | "Guardiões juntos" `hpScale` 0.7 → 0.55 | knight 56→74, bellringer 35→41, mage 53→58, barbarian 44→53 |
+| `692da06` | bellringer `attack` 13 → 16 | 41 → 67 |
+| — | eskimo soup `healAll` 12 → 9 | 98 → 98: no effect, **reverted** |
+
+The advisor (sub agent) found the igloo cliff was **attrition, not the King**: at full HP the average bot beats the
+King 83–99% with every hero, but it arrived with 24–62% HP after the guardians floor (no rest between them). Hence the
+campfire. It also checked that the three small HP raises now carry weight (reverting them drops knight/serpent/
+bellringer to ~30%), and that the bot seems never to use the Bellringer's Badalada (worth a look in `tavernBots.ts`).
+
+**Now (average, solo, top %):** taverna barbarian 79, mage 75, reliquia 73, fabri 94, brom 92, lyra 75, grimbo 74,
+zora 73, sergio 87 · igloo eskimo 98, frostKnight 74, iceSerpent 68, bellringer 67, ancientYeti 76; tavern heroes in
+the igloo mage 58, barbarian 53. `skilled` 100% everywhere. tsc ok, 612 tests pass.
+
+**Not solved / risks:** fabri, brom and eskimo sit 14–21 points above the rest (out of the ±10 band); HP trims don't
+move them, it would take a kit number. `newcomerAssisted` and the squads got much easier (taverna weak heroes 81–97%,
+newcomer squads 50–92%, igloo squads 100%), which leans on M1b (the newcomer wins too early). Simulation only: the
+campfire and the stronger player stats need a human playtest, and the new igloo floor was not looked at in the game.
