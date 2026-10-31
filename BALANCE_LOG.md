@@ -234,3 +234,35 @@ for the weakest hero leaving is the better bet, and for a newcomer leaving early
 still climbs (and should). Fichas/min of the average bot −1–3 (economy, m3).
 
 **Decision:** kept.
+
+## 2026-10-31 · Towers: the skilled bot at ~70% (owner target) · measurement + two tries, no game change
+
+**Goal (owner, 2026-10-30):** the best bot (`skilled`) reaches the top of a tower ~70% of the time (today 100%).
+
+**Measurement change** (`tools/balance/tavernBots.ts` → `TEMPO_PRESSURE`, kept): the bots timed a 150 ms flurry as
+well as a lone swing, so a faster rhythm was invisible to the batches. Now a hit that follows the previous one closer
+than 400 ms is timed with a wider spread (× 1.5 at a 200 ms gap, up to × 2 at 0 ms). An assumption, not a
+measurement: calibrate it with a human playtest. Game unchanged; new baseline `tempo-model`.
+
+| tower · solo | average, before → after the model | skilled |
+|---|---|---|
+| taverna, middle of the roster | 34–38% → 18–27% | 100% |
+| taverna, zora | 18% → 7% | 100% |
+| taverna, fabri / brom | 98 / 97% → 93 / 93% | 100% |
+| snowfield, eskimo | 98% → 94% | 100% |
+
+**Try 1 (reverted):** the upper floors fight faster: from floor 6 up, the gaps between hits shrink 10% per floor
+(never below 150 ms). `t1-tempo10`: skilled 99–100% in the tavern, 86–100% in the igloo; average 5–15 points lower
+(lyra 18 → 11%, barbarian 61 → 46%).
+
+**Try 2 (reverted):** the same at 25% per floor (the top floors all at 150 ms). `x-tempo25`: skilled still 99–100% in
+the tavern (73–100% in the igloo); average lyra 7%, zora 2%, the igloo 0% for most.
+
+**Reading:** the skilled bot misses 2–7% of hits, the average bot 15–29%; their climbs don't overlap. Speed hurts the
+skilled bot relatively more (its misses × 4 vs × 2), but the tavern's damage comes mostly from lone swings, which
+speed doesn't touch. Any lever that brings skilled to ~70% leaves average near 0% except Fabri/Brom (see also
+`x-dmg12`). Either the towers become a mastery-only mountain, or the `skilled` bot (sigma 40 ms, parries 90%) is
+sharper than a real good player and the target should be read against a human-calibrated profile.
+
+**Decision:** the tempo model is kept (measurement); both game levers reverted, pending the owner's call. The lever's
+patch: `tmp/claude-b1/tempo-lever.patch` (not committed).

@@ -31,7 +31,17 @@ export const PROFILES: Record<string, ReactionProfile> = {
   perfect: { id: 'perfect', sigma: 0, bias: 0, parryRate: 1, bite: 0, readsArrows: true }
 };
 
-export type ActionPolicy = 'attackOnly' | 'skillGreedy' | 'sensible';
+/** Tempo pressure (a modelling assumption, not a measurement): a hit that follows the previous one closely is timed
+ *  worse. Below `refMs` the press spread grows linearly, up to × (1 + `penalty`) at a 0 ms gap. Without it every bot
+ *  times a 150 ms flurry as well as a lone swing, and a faster rhythm would be invisible to the batches. */
+export const TEMPO_PRESSURE = { refMs: 400, penalty: 1 } as const;
+
+/** The press spread for a hit `gapMs` after the previous one in the same attack (Infinity for the first). */
+export function tempoSigma(sigma: number, gapMs: number): number {
+  return sigma * (1 + TEMPO_PRESSURE.penalty * Math.max(0, 1 - gapMs / TEMPO_PRESSURE.refMs));
+}
+
+export type ActionPolicy ='attackOnly' | 'skillGreedy' | 'sensible';
 
 export interface BattleStats {
   won: boolean;
@@ -141,7 +151,9 @@ export function playBattle(battle: TurnBattle, profile: ReactionProfile, policy:
           else if (hit.dodgeOnly && profile.readsArrows) kind = 'dodge';
           else kind = rng() < profile.parryRate ? 'parry' : 'dodge';
         }
-        plan = { at: hit.at + profile.bias + normal(rng) * profile.sigma, kind, done: false };
+        const previous = battle.attack!.hits[hit.index - 1];
+        const sigma = tempoSigma(profile.sigma, previous ? hit.at - previous.at : Infinity);
+        plan = { at: hit.at + profile.bias + normal(rng) * sigma, kind, done: false };
         plans.set(hit, plan);
       }
       const windows = battle.windowsFor(defender);
