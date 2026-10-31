@@ -63,7 +63,7 @@ export const ROSTER: Record<RosterId, RosterFighter> = {
   },
   reliquia: {
     id: 'reliquia', name: 'Relíquia', region: 'taverna', color: 0xa8541a,
-    stats: { name: 'Relíquia', maxHp: 100, attack: 11, speed: 10 },
+    stats: { name: 'Relíquia', maxHp: 115, attack: 11, speed: 10 },
     kit: [
       node('brilho-da-reliquia', 'Brilho da Relíquia', 'A aura dourada cura 10 de vida em todo o grupo.', 'active', 2, { type: 'healAll', amount: 10 }),
       node('olho-do-cacador', 'Olho do Caçador', 'Marca o alvo: os próximos 3 golpes do grupo nele batem 50% mais forte.', 'active', 1, { type: 'mark', ratio: 0.5, hits: 3 }),
