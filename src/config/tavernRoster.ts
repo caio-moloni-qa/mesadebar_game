@@ -53,7 +53,7 @@ export const ROSTER: Record<RosterId, RosterFighter> = {
   },
   mage: {
     id: 'mage', name: 'Mago', region: 'taverna', color: 0x2c4f8c,
-    stats: { name: 'Mago', maxHp: 105, attack: 15, speed: 11 },
+    stats: { name: 'Mago', maxHp: 112, attack: 15, speed: 11 },
     kit: [
       node('raio-arcano', 'Raio Arcano', 'Um raio do cajado: 1,5× o ataque.', 'active', 1, { type: 'damage', ratio: 1.5 }),
       node('barreira-arcana', 'Barreira Arcana', 'Um escudo de 12 em todo o grupo.', 'active', 2, { type: 'shieldAll', amount: 12 }),
