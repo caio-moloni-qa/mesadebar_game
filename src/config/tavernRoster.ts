@@ -137,7 +137,7 @@ export const ROSTER: Record<RosterId, RosterFighter> = {
   },
   bellringer: {
     id: 'bellringer', name: 'Sineiro', region: 'snowfield', color: 0x9a8a5a,
-    stats: { name: 'Sineiro', maxHp: 105, attack: 10, speed: 10 },
+    stats: { name: 'Sineiro', maxHp: 130, attack: 10, speed: 10 },
     kit: [
       node('badalada', 'Badalada', 'O som pega todo mundo: 0,7× o ataque em cada inimigo.', 'active', 2, { type: 'damageAll', ratio: 0.7 }),
       node('toque-sereno', 'Toque Sereno', 'Um toque baixinho: o próximo ataque do alvo bate pela metade.', 'active', 1, { type: 'weaken', ratio: 0.5 }),
