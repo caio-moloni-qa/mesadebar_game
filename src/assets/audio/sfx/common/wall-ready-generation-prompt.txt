@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "wall-ready",
+  "seconds": 0.7,
+  "prompt": "Impenetrable guard readied: deep resonant metal hum locking into place with a heavy clunk, mono.",
+  "speech": false,
+  "seed": 3930862729,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/wall-ready.mp3",
+  "raw": "src/assets/audio/sfx/common/wall-ready-raw.wav",
+  "wav": "src/assets/audio/sfx/common/wall-ready.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08670012629458264,
+  "sha256": "e6d89ac956381ab7570b0707c577c9db74a2332f1278451cb87d281dbf8b5657"
+}

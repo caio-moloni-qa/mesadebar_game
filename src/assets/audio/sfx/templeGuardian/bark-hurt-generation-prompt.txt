@@ -1,0 +1,18 @@
+{
+  "character": "templeGuardian",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Rock cracking with a rune hum flicker, mono.",
+  "speech": false,
+  "seed": 2449884139,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/templeGuardian/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/templeGuardian/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/templeGuardian/bark-hurt.wav",
+  "peak": 0.499542236328125,
+  "rms": 0.1258887175990684,
+  "sha256": "a0339e432d16977d47ecb5834b37a4ecaf72c18f1b47c66c8441164de714848f"
+}

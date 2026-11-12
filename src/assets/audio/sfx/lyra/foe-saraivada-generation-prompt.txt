@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "foe-saraivada",
+  "seconds": 1.0,
+  "prompt": "Volley of four rapid arrows twanging in sequence, mono.",
+  "speech": false,
+  "seed": 551846347,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/foe-saraivada.mp3",
+  "raw": "src/assets/audio/sfx/lyra/foe-saraivada-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/foe-saraivada.wav",
+  "peak": 0.702484130859375,
+  "rms": 0.12588875140901978,
+  "sha256": "3b18fbcbf5d257f9f5d6999e93768c516b78d50da0fd7d4ea658d1113308e247"
+}

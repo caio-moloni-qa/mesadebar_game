@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Crystal ball flash: glassy zap with a short shimmer, mono.",
+  "speech": false,
+  "seed": 3276904473,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/attack.mp3",
+  "raw": "src/assets/audio/sfx/zora/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/attack.wav",
+  "peak": 0.697540283203125,
+  "rms": 0.12588859249257367,
+  "sha256": "afd71d899ad82cf96a4e0ab451c23489a9d0d60666668d6a9c0aa4a45aad3c13"
+}

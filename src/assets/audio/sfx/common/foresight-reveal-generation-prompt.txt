@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "foresight-reveal",
+  "seconds": 0.5,
+  "prompt": "Mystic insight: soft purple-feeling crystal chime with a whispery shimmer, mono.",
+  "speech": false,
+  "seed": 3974207505,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/foresight-reveal.mp3",
+  "raw": "src/assets/audio/sfx/common/foresight-reveal-raw.wav",
+  "wav": "src/assets/audio/sfx/common/foresight-reveal.wav",
+  "peak": 0.811126708984375,
+  "rms": 0.12588862084826175,
+  "sha256": "ffba6d301cd6312332a2431301efbaf1653d4791e04ebb30e8e6e23bb528362c"
+}

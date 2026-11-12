@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "bark-victory",
+  "seconds": 1.2,
+  "prompt": "Excited monkey hooting and chest-thumping in celebration, mono.",
+  "speech": false,
+  "seed": 28846964,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/fabri/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/bark-victory.wav",
+  "peak": 0.35406494140625,
+  "rms": 0.12588864652046763,
+  "sha256": "a5bba53d33fa35c484bc24019b9d9f662e4567552a63541e9a89c1d7ead70a44"
+}

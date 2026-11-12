@@ -1,0 +1,75 @@
+{
+  "id": "tower-igloo-battle",
+  "bpm": 116,
+  "bars": 60,
+  "base": 50,
+  "key": "D minor",
+  "kind": "ice",
+  "meter": 4,
+  "loop": true,
+  "seconds": 124.13793103448276,
+  "noteCount": 810,
+  "hitCount": 480,
+  "instruments": [
+    "cello",
+    "harp",
+    "box",
+    "glass"
+  ],
+  "percussion": [
+    "frame",
+    "rattle"
+  ],
+  "seed": "tower-igloo-battle",
+  "rate": 44100,
+  "frames": 5474483,
+  "rawSeconds": 128.1379365079365,
+  "rawPeak": 0.10479598492383957,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.14057451970470985,
+  "gain": 8.015574266614028,
+  "seam": [
+    0.0004372522234916687,
+    0.002143584191799164
+  ],
+  "end": [
+    -0.06457824259996414,
+    -0.06365500390529633
+  ],
+  "file": "tower-igloo-battle.wav",
+  "rawFile": "tower-igloo-battle-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/tower-igloo-battle.mp3",
+  "wav": "src/assets/audio/music/tower/tower-igloo-battle.wav",
+  "raw": "src/assets/audio/music/tower/tower-igloo-battle-raw.wav",
+  "prompt": "Turn-based frozen skirmish, 116 BPM, D minor: plucked harp and pizzicato ostinato with a very clear pulse, skin frame drums, bone-rattle percussion, icy celesta motif and sleigh bells, wind gusts in the background. Tense but readable, seamless loop, no intro, no ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-15.39",
+    "input_tp": "-1.51",
+    "input_lra": "0.80",
+    "input_thresh": "-25.39",
+    "output_i": "-14.27",
+    "output_tp": "-2.50",
+    "output_lra": "0.80",
+    "output_thresh": "-24.27",
+    "normalization_type": "dynamic",
+    "target_offset": "0.27"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.50",
+    "input_tp": "-2.92",
+    "input_lra": "0.70",
+    "input_thresh": "-24.50",
+    "output_i": "-14.01",
+    "output_tp": "-2.50",
+    "output_lra": "0.70",
+    "output_thresh": "-24.01",
+    "normalization_type": "dynamic",
+    "target_offset": "0.01"
+  },
+  "sha256": "30d4048b06c412c2f613593ea66972cb9094b8857f5845165778f1dca9dc9436"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "impact-snowball",
+  "seconds": 0.3,
+  "prompt": "Snowball splat on a body, soft crunchy puff, mono.",
+  "speech": false,
+  "seed": 2325604349,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/impact-snowball.mp3",
+  "raw": "src/assets/audio/sfx/common/impact-snowball-raw.wav",
+  "wav": "src/assets/audio/sfx/common/impact-snowball.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08871749088929944,
+  "sha256": "013dea594b3b882f31639a03cb8e77ccec73904edd46fcc9e2b9e08ae9030601"
+}

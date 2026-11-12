@@ -1,0 +1,18 @@
+{
+  "character": "lakeSpirit",
+  "event": "bark-hurt",
+  "seconds": 0.5,
+  "prompt": "Watery splash with a pained ghostly cry, mono.",
+  "speech": false,
+  "seed": 2798709252,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lakeSpirit/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/lakeSpirit/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/lakeSpirit/bark-hurt.wav",
+  "peak": 0.552337646484375,
+  "rms": 0.12588880632274355,
+  "sha256": "16eff0fa224ae7f50011b979bd0806b34307e2b976dc635b438b743f08075397"
+}

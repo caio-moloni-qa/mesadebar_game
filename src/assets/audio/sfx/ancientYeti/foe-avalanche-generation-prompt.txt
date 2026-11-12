@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "foe-avalanche",
+  "seconds": 2.0,
+  "prompt": "Yeti charging a huge attack, rumble building into a massive snow avalanche impact, mono.",
+  "speech": false,
+  "seed": 3065903711,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/foe-avalanche.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/foe-avalanche-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/foe-avalanche.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.04731089394381171,
+  "sha256": "6dcb288646c3300a2cc1bd39f3b7c85ea5c79026aa4bdc461d424ad8b973350b"
+}

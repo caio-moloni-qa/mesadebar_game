@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "counter",
+  "seconds": 0.5,
+  "prompt": "Fast counter-attack: quick whoosh into a heavy satisfying hit with a bright accent, fantasy game, mono.",
+  "speech": false,
+  "seed": 2266931847,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/counter.mp3",
+  "raw": "src/assets/audio/sfx/common/counter-raw.wav",
+  "wav": "src/assets/audio/sfx/common/counter.wav",
+  "peak": 0.470794677734375,
+  "rms": 0.1258886512445967,
+  "sha256": "467f571e6bcf7dc2bcb7a89fe4aa76eebfae8488a8d15d14b6145b04ab49287e"
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "arena-snowfield-intense",
+    "decoded_frames": 5603294,
+    "duration_seconds": 127.058820861678,
+    "sha256_verified": true
+  },
+  {
+    "id": "arena-snowfield",
+    "decoded_frames": 5644800,
+    "duration_seconds": 128.0,
+    "sha256_verified": true
+  },
+  {
+    "id": "duel-brom",
+    "decoded_frames": 4233600,
+    "duration_seconds": 96.0,
+    "sha256_verified": true
+  },
+  {
+    "id": "duel-grimbo",
+    "decoded_frames": 4536000,
+    "duration_seconds": 102.85714285714286,
+    "sha256_verified": true
+  },
+  {
+    "id": "duel-lyra",
+    "decoded_frames": 4097032,
+    "duration_seconds": 92.90321995464852,
+    "sha256_verified": true
+  },
+  {
+    "id": "duel-zora",
+    "decoded_frames": 4601739,
+    "duration_seconds": 104.3478231292517,
+    "sha256_verified": true
+  },
+  {
+    "id": "menu",
+    "decoded_frames": 4410000,
+    "duration_seconds": 100.0,
+    "sha256_verified": true
+  },
+  {
+    "id": "sting-cashout",
+    "decoded_frames": 110250,
+    "duration_seconds": 2.5,
+    "sha256_verified": true
+  },
+  {
+    "id": "sting-champion",
+    "decoded_frames": 198450,
+    "duration_seconds": 4.5,
+    "sha256_verified": true
+  },
+  {
+    "id": "sting-duel-start",
+    "decoded_frames": 110250,
+    "duration_seconds": 2.5,
+    "sha256_verified": true
+  },
+  {
+    "id": "sting-floor-cleared",
+    "decoded_frames": 154350,
+    "duration_seconds": 3.5,
+    "sha256_verified": true
+  },
+  {
+    "id": "sting-tower-defeat",
+    "decoded_frames": 220500,
+    "duration_seconds": 5.0,
+    "sha256_verified": true
+  },
+  {
+    "id": "sting-tower-victory",
+    "decoded_frames": 352800,
+    "duration_seconds": 8.0,
+    "sha256_verified": true
+  },
+  {
+    "id": "tower-igloo-battle",
+    "decoded_frames": 5474483,
+    "duration_seconds": 124.1379365079365,
+    "sha256_verified": true
+  },
+  {
+    "id": "tower-igloo-champion",
+    "decoded_frames": 5292000,
+    "duration_seconds": 120.0,
+    "sha256_verified": true
+  },
+  {
+    "id": "tower-igloo-rest",
+    "decoded_frames": 4116000,
+    "duration_seconds": 93.33333333333333,
+    "sha256_verified": true
+  },
+  {
+    "id": "tower-select",
+    "decoded_frames": 4070769,
+    "duration_seconds": 92.30768707482993,
+    "sha256_verified": true
+  },
+  {
+    "id": "tower-taverna-battle",
+    "decoded_frames": 5381695,
+    "duration_seconds": 122.03390022675737,
+    "sha256_verified": true
+  },
+  {
+    "id": "tower-taverna-champion",
+    "decoded_frames": 5452364,
+    "duration_seconds": 123.63637188208617,
+    "sha256_verified": true
+  },
+  {
+    "id": "tower-taverna-rest",
+    "decoded_frames": 4032000,
+    "duration_seconds": 91.42857142857143,
+    "sha256_verified": true
+  }
+]

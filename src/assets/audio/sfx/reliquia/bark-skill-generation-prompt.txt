@@ -1,0 +1,18 @@
+{
+  "character": "reliquia",
+  "event": "bark-skill",
+  "seconds": 0.6,
+  "prompt": "Adventurer excited \"hah!\" with a warm golden shimmer, mono.",
+  "speech": false,
+  "seed": 956615181,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/reliquia/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/reliquia/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/reliquia/bark-skill.wav",
+  "peak": 0.37353515625,
+  "rms": 0.12588873292541763,
+  "sha256": "896bf3f48027123f311c7f60e96df4a180c83b0aaa76109e8c13b009ae249d2c"
+}

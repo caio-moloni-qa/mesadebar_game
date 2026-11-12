@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "shield-hit",
+  "seconds": 0.3,
+  "prompt": "Hit absorbed by a magic barrier: muffled thump with a glassy ripple, mono.",
+  "speech": false,
+  "seed": 1248742220,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/shield-hit.mp3",
+  "raw": "src/assets/audio/sfx/common/shield-hit-raw.wav",
+  "wav": "src/assets/audio/sfx/common/shield-hit.wav",
+  "peak": 0.762237548828125,
+  "rms": 0.12588869094354058,
+  "sha256": "9b11a7140f259a2505c02271ebee6cd535a808cf528bbfcfabefaaf78a6c86eb"
+}

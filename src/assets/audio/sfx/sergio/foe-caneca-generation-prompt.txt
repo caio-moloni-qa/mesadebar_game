@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "foe-caneca",
+  "seconds": 0.6,
+  "prompt": "Mug hurled across the tavern with a grunt, mono.",
+  "speech": false,
+  "seed": 3241882204,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/foe-caneca.mp3",
+  "raw": "src/assets/audio/sfx/sergio/foe-caneca-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/foe-caneca.wav",
+  "peak": 0.46112060546875,
+  "rms": 0.1258887094035514,
+  "sha256": "9a18b98b35d5267a2505d8722222e65a61b0454d8417bee194b92e43849b7002"
+}

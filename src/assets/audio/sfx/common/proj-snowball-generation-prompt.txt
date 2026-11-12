@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-snowball",
+  "seconds": 0.4,
+  "prompt": "Snowball thrown, soft whoosh, mono.",
+  "speech": false,
+  "seed": 1973461445,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-snowball.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-snowball-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-snowball.wav",
+  "peak": 0.5030517578125,
+  "rms": 0.12588873107899765,
+  "sha256": "e34a70b61efca3566ba3a391370a1fa9ea8580472dcd681ae58682736ad620ac"
+}

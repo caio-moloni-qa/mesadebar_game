@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "arena-roar",
+  "seconds": 1.0,
+  "prompt": "Eerie howling shout echoing through a chapel, mono.",
+  "speech": false,
+  "seed": 2106756849,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/arena-roar.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/arena-roar-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/arena-roar.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.053722365329801756,
+  "sha256": "e43a00343c359260004ec677926c7b7a528a97f6b2fec693d9f73f403a5348ea"
+}

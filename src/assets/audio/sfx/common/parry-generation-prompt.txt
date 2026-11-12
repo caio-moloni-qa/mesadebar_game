@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Sharp metal weapon parry clang with a short bright ring, punchy, video game, mono.",
+  "speech": false,
+  "seed": 12600928,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/parry.mp3",
+  "raw": "src/assets/audio/sfx/common/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/common/parry.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09419816646625456,
+  "sha256": "3a39cf432102287204f60632c115990a5a6f0989695c5ee78d352b016581e7f8"
+}

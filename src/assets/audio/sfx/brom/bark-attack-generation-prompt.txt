@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Stout dwarf deep gruff grunt \"HUAH!\", mono.",
+  "speech": false,
+  "seed": 231735961,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/brom/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/bark-attack.wav",
+  "peak": 0.479827880859375,
+  "rms": 0.1258887132168958,
+  "sha256": "bd35d67c010f232d24acdf5fbe749866c62afeb4be7af0d0939fec0e26a46b23"
+}

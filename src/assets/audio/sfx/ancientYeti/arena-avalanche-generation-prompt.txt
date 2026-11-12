@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "arena-avalanche",
+  "seconds": 2.0,
+  "prompt": "Avalanche of snow and ice rushing down, mono.",
+  "speech": false,
+  "seed": 2870565234,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/arena-avalanche.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/arena-avalanche-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/arena-avalanche.wav",
+  "peak": 0.82025146484375,
+  "rms": 0.12588870882763545,
+  "sha256": "a533fa38716674fb86ab19e8ba01cd2d8c2879c5f4eb746d3f05945b829e34be"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "bark-skill",
+  "seconds": 0.6,
+  "prompt": "Monkey rapid excited chatter, mono.",
+  "speech": false,
+  "seed": 2706701399,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/fabri/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/bark-skill.wav",
+  "peak": 0.35198974609375,
+  "rms": 0.12588875435803495,
+  "sha256": "9b93d141abc062a0cec824776da1a71aa5815ef02ee5426668c987d2f8e79163"
+}

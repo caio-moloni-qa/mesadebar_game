@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-praga",
+  "seconds": 0.8,
+  "prompt": "Curse plague: buzzing flies and sickly whisper, mono.",
+  "speech": false,
+  "seed": 2804864993,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-praga.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-praga-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-praga.wav",
+  "peak": 0.810699462890625,
+  "rms": 0.12588866578853875,
+  "sha256": "ef763804dfd36297bd730937b79b750605db1c0a652de0fa9e5b3095a03aafc5"
+}

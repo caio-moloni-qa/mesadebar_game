@@ -1,0 +1,35 @@
+{
+  "id": "sting-champion",
+  "seconds": 4.5,
+  "kind": "champion",
+  "loop": false,
+  "noteCount": 7,
+  "hitCount": 4,
+  "instruments": [
+    "horn",
+    "strings"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-champion",
+  "rate": 44100,
+  "frames": 198450,
+  "rawSeconds": 8.5,
+  "rawPeak": 0.052425045520067215,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.22270848653647762,
+  "gain": 16.022875930140405,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-champion.wav",
+  "rawFile": "sting-champion-raw.wav"
+}

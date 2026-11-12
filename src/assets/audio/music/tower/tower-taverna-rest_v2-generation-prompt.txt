@@ -1,0 +1,69 @@
+{
+  "id": "tower-taverna-rest",
+  "bpm": 84,
+  "bars": 32,
+  "base": 50,
+  "key": "D major",
+  "kind": "rest",
+  "meter": 4,
+  "loop": true,
+  "seconds": 91.42857142857143,
+  "noteCount": 288,
+  "hitCount": 0,
+  "instruments": [
+    "lute"
+  ],
+  "percussion": [],
+  "seed": "tower-taverna-rest",
+  "rate": 44100,
+  "frames": 4032000,
+  "rawSeconds": 95.42857142857143,
+  "rawPeak": 0.04310182109475136,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.13147071074321703,
+  "gain": 19.488735711500816,
+  "seam": [
+    0.002492642030119896,
+    8.361600339412689e-05
+  ],
+  "end": [
+    -0.018615925684571266,
+    -0.01732163317501545
+  ],
+  "file": "tower-taverna-rest.wav",
+  "rawFile": "tower-taverna-rest-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/tower-taverna-rest_v2.mp3",
+  "wav": "src/assets/audio/music/tower/tower-taverna-rest.wav",
+  "raw": "src/assets/audio/music/tower/tower-taverna-rest-raw.wav",
+  "prompt": "Calm cozy tavern counter between fights, 84 BPM, D major: slow solo nylon guitar and lute in a gentle choro feel, soft accordion pads, distant mug clinks and crackling hearth. Relaxed and warm, seamless loop, no intro, no ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-15.76",
+    "input_tp": "-1.50",
+    "input_lra": "1.40",
+    "input_thresh": "-25.77",
+    "output_i": "-14.56",
+    "output_tp": "-2.50",
+    "output_lra": "1.50",
+    "output_thresh": "-24.56",
+    "normalization_type": "dynamic",
+    "target_offset": "0.56"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.00",
+    "input_tp": "-2.20",
+    "input_lra": "1.40",
+    "input_thresh": "-24.00",
+    "output_i": "-14.12",
+    "output_tp": "-2.50",
+    "output_lra": "1.40",
+    "output_thresh": "-24.12",
+    "normalization_type": "dynamic",
+    "target_offset": "0.12"
+  },
+  "sha256": "439026a1196c75049e0b5b41484b07c94dc9441ffbe73d1674d423db28b61d0d"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "bark-ko",
+  "seconds": 1.5,
+  "prompt": "Frozen knight collapsing, ice armor shattering, final hollow exhale, mono.",
+  "speech": false,
+  "seed": 1494138483,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/bark-ko.wav",
+  "peak": 0.52154541015625,
+  "rms": 0.1258887047698303,
+  "sha256": "4569f8f15943192f08fdff40448697933c3948ec6a1d3d2b7f1542621ad290d9"
+}

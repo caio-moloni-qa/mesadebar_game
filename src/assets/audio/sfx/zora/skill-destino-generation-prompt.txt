@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-destino",
+  "seconds": 0.4,
+  "prompt": "Fate riposte: quick tarot card flick and a sharp mystic hit, mono.",
+  "speech": false,
+  "seed": 2308645544,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-destino.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-destino-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-destino.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09144221741958089,
+  "sha256": "22e3c96c89f4140c77687f477448c92db732f739229808a4abc318c6e87f3bee"
+}

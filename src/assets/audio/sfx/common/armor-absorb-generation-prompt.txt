@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "armor-absorb",
+  "seconds": 0.25,
+  "prompt": "Blow deflected by thick hide or armor: dull leather thud with a metal tick, mono.",
+  "speech": false,
+  "seed": 2401936545,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/armor-absorb.mp3",
+  "raw": "src/assets/audio/sfx/common/armor-absorb-raw.wav",
+  "wav": "src/assets/audio/sfx/common/armor-absorb.wav",
+  "peak": 0.834564208984375,
+  "rms": 0.1258886593947957,
+  "sha256": "f546df7cc4176a9c391c23d49018c0ddc4f009b5261d28e714bda6b3f1708a64"
+}

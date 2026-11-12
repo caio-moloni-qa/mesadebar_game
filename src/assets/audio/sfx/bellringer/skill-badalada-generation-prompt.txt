@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "skill-badalada",
+  "seconds": 1.5,
+  "prompt": "Huge church bell toll with a shockwave rumble, mono.",
+  "speech": false,
+  "seed": 2039435636,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/skill-badalada.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/skill-badalada-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/skill-badalada.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.045963335640653774,
+  "sha256": "48eb923cf45d37097433e2b79fa78228844e9e1f7ee94458bb6f2b523804e31d"
+}

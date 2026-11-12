@@ -1,0 +1,74 @@
+{
+  "id": "menu",
+  "bpm": 96,
+  "bars": 40,
+  "base": 50,
+  "key": "D dorian",
+  "kind": "menu",
+  "meter": 4,
+  "loop": true,
+  "seconds": 100,
+  "noteCount": 580,
+  "hitCount": 320,
+  "instruments": [
+    "lute",
+    "choir",
+    "fiddle"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "menu",
+  "rate": 44100,
+  "frames": 4410000,
+  "rawSeconds": 104,
+  "rawPeak": 0.11238206923007965,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.09548534397570943,
+  "gain": 7.474501989105301,
+  "seam": [
+    0.004405669867992401,
+    0.003884134814143181
+  ],
+  "end": [
+    0.03920891880989075,
+    -0.004850866738706827
+  ],
+  "file": "menu.wav",
+  "rawFile": "menu-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/menu.mp3",
+  "wav": "src/assets/audio/music/tower/menu.wav",
+  "raw": "src/assets/audio/music/tower/menu-raw.wav",
+  "prompt": "Warm, slightly epic fantasy tavern main-menu theme, 96 BPM, D dorian: lute and fiddle melody over a hurdy-gurdy drone, gentle Brazilian pandeiro and cavaquinho strumming, a soft wordless low choir swelling every 8 bars. Seamless loop, no intro, no fade, no ending; instrumental, no vocals, no lyrics.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-18.36",
+    "input_tp": "-1.51",
+    "input_lra": "1.20",
+    "input_thresh": "-28.36",
+    "output_i": "-14.52",
+    "output_tp": "-2.50",
+    "output_lra": "0.70",
+    "output_thresh": "-24.52",
+    "normalization_type": "dynamic",
+    "target_offset": "0.52"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.55",
+    "input_tp": "-2.64",
+    "input_lra": "0.70",
+    "input_thresh": "-24.55",
+    "output_i": "-14.01",
+    "output_tp": "-2.50",
+    "output_lra": "0.70",
+    "output_thresh": "-24.01",
+    "normalization_type": "dynamic",
+    "target_offset": "0.01"
+  },
+  "sha256": "f044c1f0b0c4272d1af8c42af064bdc25cea809c742b99fbe282994629abb4e7"
+}

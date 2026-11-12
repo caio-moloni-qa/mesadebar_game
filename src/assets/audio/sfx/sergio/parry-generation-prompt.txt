@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Frying pan blocking a blow, loud pan clang, mono.",
+  "speech": false,
+  "seed": 2511886935,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/parry.mp3",
+  "raw": "src/assets/audio/sfx/sergio/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/parry.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11135872654015679,
+  "sha256": "453bc88123a3805427ed333be9db85a7bb4ebac4303b982788f3ed64082daa21"
+}

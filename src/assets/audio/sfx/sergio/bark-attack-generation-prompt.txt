@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Middle-aged burly innkeeper effort grunt \"hup!\", mono.",
+  "speech": false,
+  "seed": 344127371,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/sergio/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/bark-attack.wav",
+  "peak": 0.436187744140625,
+  "rms": 0.12588884248127674,
+  "sha256": "857e46b723486822bcadfe97973dccb9a65c673391be85c4ff6b2e2ab62c4fae"
+}

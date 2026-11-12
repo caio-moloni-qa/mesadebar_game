@@ -1,0 +1,18 @@
+{
+  "character": "gravedigger",
+  "event": "arena-raise",
+  "seconds": 1.5,
+  "prompt": "Skeletons clawing out of graves, eerie green-magic hum, mono.",
+  "speech": false,
+  "seed": 3794160723,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/gravedigger/arena-raise.mp3",
+  "raw": "src/assets/audio/sfx/gravedigger/arena-raise-raw.wav",
+  "wav": "src/assets/audio/sfx/gravedigger/arena-raise.wav",
+  "peak": 0.687103271484375,
+  "rms": 0.12588866858417916,
+  "sha256": "b8d902ac4ed55affcea956a3a07910416d653c1a29509d04a4e1211093cb5048"
+}

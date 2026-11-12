@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "turn-start",
+  "seconds": 0.3,
+  "prompt": "Soft wooden tick and short pluck, your turn, UI, mono.",
+  "speech": false,
+  "seed": 3865841757,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/turn-start.mp3",
+  "raw": "src/assets/audio/sfx/common/turn-start-raw.wav",
+  "wav": "src/assets/audio/sfx/common/turn-start.wav",
+  "peak": 0.57281494140625,
+  "rms": 0.06309369402953593,
+  "sha256": "06554afc198b9471a16758e7a8c9c6b9045a8e3168fdd45c16c2fa6253ad0168"
+}

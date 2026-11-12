@@ -1,0 +1,35 @@
+{
+  "id": "sting-tower-defeat",
+  "seconds": 5,
+  "kind": "lose",
+  "loop": false,
+  "noteCount": 8,
+  "hitCount": 5,
+  "instruments": [
+    "hurdy",
+    "strings"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-tower-defeat",
+  "rate": 44100,
+  "frames": 220500,
+  "rawSeconds": 9,
+  "rawPeak": 0.05771493911743164,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.1260018779103338,
+  "gain": 14.554290671447573,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-tower-defeat.wav",
+  "rawFile": "sting-tower-defeat-raw.wav"
+}

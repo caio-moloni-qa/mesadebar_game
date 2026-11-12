@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "poison-tick",
+  "seconds": 0.4,
+  "prompt": "Small bubbling poison hiss with a sickly squelch, mono.",
+  "speech": false,
+  "seed": 2989642085,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/poison-tick.mp3",
+  "raw": "src/assets/audio/sfx/common/poison-tick-raw.wav",
+  "wav": "src/assets/audio/sfx/common/poison-tick.wav",
+  "peak": 0.42578125,
+  "rms": 0.06309387034643975,
+  "sha256": "a9cd78e641b526155c1ca7454808a145b3fe6b657c5ad6ae0affab2bdc3229d2"
+}

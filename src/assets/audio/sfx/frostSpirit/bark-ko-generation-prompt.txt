@@ -1,0 +1,18 @@
+{
+  "character": "frostSpirit",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Frost spirit dissipating into wind with a fading wail, mono.",
+  "speech": false,
+  "seed": 1073603528,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSpirit/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/frostSpirit/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSpirit/bark-ko.wav",
+  "peak": 0.372802734375,
+  "rms": 0.12588870855767614,
+  "sha256": "5d953d647ac694e61dae8330a0fe65a8b4f99922cb18867c898eab66fd3f6d6e"
+}

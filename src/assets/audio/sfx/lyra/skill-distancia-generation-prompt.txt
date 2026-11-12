@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "skill-distancia",
+  "seconds": 0.5,
+  "prompt": "Quick backflip leap away, cloth snap and soft landing, mono.",
+  "speech": false,
+  "seed": 512342168,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/skill-distancia.mp3",
+  "raw": "src/assets/audio/sfx/lyra/skill-distancia-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/skill-distancia.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08404274113655498,
+  "sha256": "5d0e94860cf4b10d5f3317f82ac2e871c389c432d55c1368c0c21197713406cc"
+}

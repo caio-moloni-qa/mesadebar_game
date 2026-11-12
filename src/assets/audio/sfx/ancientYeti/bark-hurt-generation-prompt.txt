@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "bark-hurt",
+  "seconds": 0.5,
+  "prompt": "Yeti angry pained snarl, mono.",
+  "speech": false,
+  "seed": 2706261071,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/bark-hurt.wav",
+  "peak": 0.546905517578125,
+  "rms": 0.12588869407742292,
+  "sha256": "23bfc558dd91f115090b1f91a088a1acee6195a8ccd1e83de4df28f9d42e4350"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostSpirit",
+  "event": "foe-toque",
+  "seconds": 0.5,
+  "prompt": "Cold ghostly touch, freezing hiss, mono.",
+  "speech": false,
+  "seed": 139286367,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSpirit/foe-toque.mp3",
+  "raw": "src/assets/audio/sfx/frostSpirit/foe-toque-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSpirit/foe-toque.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07824801644335781,
+  "sha256": "4ebcaea39489f56079b57f4d5a750f4101ef2392f75a6251482b56c15c4a1989"
+}

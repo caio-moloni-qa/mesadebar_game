@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "bark-victory",
+  "seconds": 1.5,
+  "prompt": "Cold majestic low laugh echoing in a frozen hall, mono.",
+  "speech": false,
+  "seed": 1611531184,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/bark-victory.wav",
+  "peak": 0.7867431640625,
+  "rms": 0.12588868030011643,
+  "sha256": "8550d46746e6198afc22a92925a407207ecb17146467010c66d1869d33d6561d"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "arena-destino-selado",
+  "seconds": 1.2,
+  "prompt": "Fate sealed: three tarot cards slapped down and a doom bell toll, mono.",
+  "speech": false,
+  "seed": 2257119928,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/arena-destino-selado.mp3",
+  "raw": "src/assets/audio/sfx/zora/arena-destino-selado-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/arena-destino-selado.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10406593668840318,
+  "sha256": "ef544e86df42b5574c4cd8917ed2b3d20732a641da676f355c0f69a9bb75fc17"
+}

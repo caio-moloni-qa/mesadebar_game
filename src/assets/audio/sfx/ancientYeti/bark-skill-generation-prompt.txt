@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "bark-skill",
+  "seconds": 0.6,
+  "prompt": "Yeti deep huffing breath building rage, mono.",
+  "speech": false,
+  "seed": 3874272599,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/bark-skill.wav",
+  "peak": 0.51702880859375,
+  "rms": 0.12588880810731692,
+  "sha256": "f1061bec8867b828ef6dcc12aaacfa3d04389b60943ca842899837293a2ee2f7"
+}

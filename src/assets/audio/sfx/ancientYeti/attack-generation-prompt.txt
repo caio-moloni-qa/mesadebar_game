@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "attack",
+  "seconds": 0.5,
+  "prompt": "Huge furry fist punch, heavy thump, mono.",
+  "speech": false,
+  "seed": 2221923757,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/attack.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/attack.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09309678305352141,
+  "sha256": "75cb9944931715871aebc39f83c844c601207e203acf9385f4c0d2a4fd6c98ca"
+}

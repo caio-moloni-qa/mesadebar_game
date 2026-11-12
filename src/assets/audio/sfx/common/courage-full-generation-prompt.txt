@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "courage-full",
+  "seconds": 0.8,
+  "prompt": "Full power meter: bright ascending arpeggio with a warm brass swell, mono.",
+  "speech": false,
+  "seed": 423254148,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/courage-full.mp3",
+  "raw": "src/assets/audio/sfx/common/courage-full-raw.wav",
+  "wav": "src/assets/audio/sfx/common/courage-full.wav",
+  "peak": 0.818328857421875,
+  "rms": 0.06309372215189211,
+  "sha256": "febb7a5bb257a71c5903d8b8e5f080a02052edad4cde8b569f0d71b45c757632"
+}

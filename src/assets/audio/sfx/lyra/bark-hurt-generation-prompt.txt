@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "bark-hurt",
+  "seconds": 0.3,
+  "prompt": "Young woman sharp pained gasp, mono.",
+  "speech": false,
+  "seed": 1528033244,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/lyra/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/bark-hurt.wav",
+  "peak": 0.3885498046875,
+  "rms": 0.1258887814611746,
+  "sha256": "3e39c9b6fa42670b1d809a5e8094970f64936315a1d38fcc17207fd26e5a4f2c"
+}

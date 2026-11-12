@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "skill-flecha-fantasma",
+  "seconds": 1.2,
+  "prompt": "Ghostly invisible arrow: eerie reversed whisper then a sudden devastating piercing impact, mono.",
+  "speech": false,
+  "seed": 2524968453,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/skill-flecha-fantasma.mp3",
+  "raw": "src/assets/audio/sfx/lyra/skill-flecha-fantasma-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/skill-flecha-fantasma.wav",
+  "peak": 0.581451416015625,
+  "rms": 0.12588866531089196,
+  "sha256": "8c4877db7052e329b78238fb59ce7c6a28e8f7fe84110113b3dba80be58a7cdb"
+}

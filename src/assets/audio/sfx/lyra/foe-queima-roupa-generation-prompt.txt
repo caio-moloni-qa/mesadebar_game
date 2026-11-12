@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "foe-queima-roupa",
+  "seconds": 0.8,
+  "prompt": "Point-blank heavy arrow shot, deep twang and brutal close impact, mono.",
+  "speech": false,
+  "seed": 1074905997,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/foe-queima-roupa.mp3",
+  "raw": "src/assets/audio/sfx/lyra/foe-queima-roupa-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/foe-queima-roupa.wav",
+  "peak": 0.478729248046875,
+  "rms": 0.1258887328953616,
+  "sha256": "ddf8bb03a34b87d23f0329d9e457d84c1fcab84d75a9354144c94aa6debc1c79"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Heavy man sidestep with a jangling backpack of pans, mono.",
+  "speech": false,
+  "seed": 99028993,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/dodge.mp3",
+  "raw": "src/assets/audio/sfx/sergio/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/dodge.wav",
+  "peak": 0.481353759765625,
+  "rms": 0.12588880519610368,
+  "sha256": "0dc900ca8200d9c1cfab94a030d3dbec36575f0b050c22067ac27d5a9df8af3b"
+}

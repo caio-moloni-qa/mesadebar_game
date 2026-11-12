@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "bark-ko",
+  "seconds": 2.5,
+  "prompt": "Lich dissolving with a long echoing scream and soul-fire fading, mono.",
+  "speech": false,
+  "seed": 3197882491,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/bark-ko.wav",
+  "peak": 0.536041259765625,
+  "rms": 0.12588871953161943,
+  "sha256": "e8bc3c4113bc80c9c069e5f15abdef48692390ef3edcfca87e30a1a9b56237af"
+}

@@ -318,7 +318,10 @@ export class Game3D {
         const level = masteryLevel(outcome.xpAfter);
         return { level, levelsGained: level - masteryLevel(outcome.xpBefore), joined: outcome.joined.map((hero) => CHARACTERS[hero]?.name ?? hero) };
       },
-      towerEnded: (tower, fichas, reachedTop) => this.saveProgress(bankTowerClimb(this.progress, tower, fichas, reachedTop)),
+      towerEnded: (tower, fichas, reachedTop) => {
+        this.saveProgress(bankTowerClimb(this.progress, tower, fichas, reachedTop));
+        this.audio.towerPayout(fichas, reachedTop);
+      },
       mentors: () => (Object.keys(DUELS) as DuelId[]).filter((regular) => regularState(this.progress, regular).learned.length > 0),
       roster: () => this.roster(),
       allFighters: () => this.allFightersUnlocked
@@ -1291,6 +1294,7 @@ export class Game3D {
     this.lastFrameAt = now;
     // A duel pauses the 3D world: only the 2D stage draws.
     if (this.duel.open) {
+      this.audio.updateDuel(this.duel);
       this.duel.frame(now);
       return;
     }

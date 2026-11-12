@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Huge barbarian collapsing with a long defeated groan, mono.",
+  "speech": false,
+  "seed": 598000354,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/bark-ko.wav",
+  "peak": 0.495025634765625,
+  "rms": 0.12588872250211916,
+  "sha256": "7483e124cff4216484afa511c2dc9d0a575bc86b80382d56ffaa8051b78d0549"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "foe-badalada",
+  "seconds": 0.8,
+  "prompt": "Bell swung down onto a target, heavy clang, mono.",
+  "speech": false,
+  "seed": 479514533,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/foe-badalada.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/foe-badalada-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/foe-badalada.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0851291401555837,
+  "sha256": "647063e0b245e20bc5afde8823ea01a27cfed55771f2c4fbb5f41f4e3eea3c33"
+}

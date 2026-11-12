@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "bark-ko",
+  "seconds": 2.0,
+  "prompt": "Ice king's crown shattering, a long fading echoing moan and collapsing ice, mono.",
+  "speech": false,
+  "seed": 2311323566,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/bark-ko.wav",
+  "peak": 0.51947021484375,
+  "rms": 0.12588868670317577,
+  "sha256": "4f0da2ba288ee29d1123095a213cef538c69a48ac78699909ebbaa542f48bc21"
+}

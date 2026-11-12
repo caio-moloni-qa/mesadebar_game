@@ -1,0 +1,42 @@
+{
+  "id": "tower-igloo-battle",
+  "bpm": 116,
+  "bars": 60,
+  "base": 50,
+  "key": "D minor",
+  "kind": "ice",
+  "meter": 4,
+  "loop": true,
+  "seconds": 124.13793103448276,
+  "noteCount": 810,
+  "hitCount": 480,
+  "instruments": [
+    "cello",
+    "harp",
+    "box",
+    "glass"
+  ],
+  "percussion": [
+    "frame",
+    "rattle"
+  ],
+  "seed": "tower-igloo-battle",
+  "rate": 44100,
+  "frames": 5474483,
+  "rawSeconds": 128.1379365079365,
+  "rawPeak": 0.10479598492383957,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.14057451970470985,
+  "gain": 8.015574266614028,
+  "seam": [
+    0.0004372522234916687,
+    0.002143584191799164
+  ],
+  "end": [
+    -0.06457824259996414,
+    -0.06365500390529633
+  ],
+  "file": "tower-igloo-battle.wav",
+  "rawFile": "tower-igloo-battle-raw.wav"
+}

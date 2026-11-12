@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "brinde",
+  "seconds": 1.0,
+  "prompt": "Dwarf gulping a big mug of ale and slamming it on the table with a satisfied \"ahh\", mono.",
+  "speech": false,
+  "seed": 3596892383,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/brinde.mp3",
+  "raw": "src/assets/audio/sfx/brom/brinde-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/brinde.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.12268862524853011,
+  "sha256": "1a2e027b096dfd007af7f44b734c6c9660838c912f7267e2977a0ed3ed986a8b"
+}

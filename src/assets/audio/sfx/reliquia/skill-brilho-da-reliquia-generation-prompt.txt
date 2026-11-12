@@ -1,0 +1,18 @@
+{
+  "character": "reliquia",
+  "event": "skill-brilho-da-reliquia",
+  "seconds": 1.0,
+  "prompt": "Golden relic glow healing the party: warm choir-like hum and sparkling bells, mono.",
+  "speech": false,
+  "seed": 3387462212,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/reliquia/skill-brilho-da-reliquia.mp3",
+  "raw": "src/assets/audio/sfx/reliquia/skill-brilho-da-reliquia-raw.wav",
+  "wav": "src/assets/audio/sfx/reliquia/skill-brilho-da-reliquia.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0990666219995082,
+  "sha256": "c2c78f9cf9ae19de37196e7f3938c90f0c6fbe07f2e851f9d30b2f31c78f81f7"
+}

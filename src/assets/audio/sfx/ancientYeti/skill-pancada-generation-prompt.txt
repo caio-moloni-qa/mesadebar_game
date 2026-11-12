@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "skill-pancada",
+  "seconds": 0.8,
+  "prompt": "Two giant fists slamming down together, crushing thud, mono.",
+  "speech": false,
+  "seed": 1619256361,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/skill-pancada.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/skill-pancada-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/skill-pancada.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08397592335323399,
+  "sha256": "d7ac30e4278d106323e966c5c2c2c5588a490a3fa8f70acd9c0006d67be714aa"
+}

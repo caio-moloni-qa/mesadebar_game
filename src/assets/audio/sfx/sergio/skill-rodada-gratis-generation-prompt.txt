@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-rodada-gratis",
+  "seconds": 1.2,
+  "prompt": "Generous pour from a big bottle with cheering tavern crowd, mono.",
+  "speech": false,
+  "seed": 820538341,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-rodada-gratis.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-rodada-gratis-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-rodada-gratis.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11752590163816715,
+  "sha256": "8cf458d6abd72a52c33d7f5805e4c7594eacb9362a62820a95a0c5a95dff4ea7"
+}

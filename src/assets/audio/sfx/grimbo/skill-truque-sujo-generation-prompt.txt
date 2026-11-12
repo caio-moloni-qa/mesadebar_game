@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "skill-truque-sujo",
+  "seconds": 0.5,
+  "prompt": "Sneaky foot stomp on toes and a yelp, comic, mono.",
+  "speech": false,
+  "seed": 3816545927,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/skill-truque-sujo.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/skill-truque-sujo-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/skill-truque-sujo.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08274202940335348,
+  "sha256": "c954d49a0fa4e801a8df7cc684b3acdfc10fee78f28840b63a45649a5b9aa000"
+}

@@ -1,0 +1,70 @@
+{
+  "id": "sting-floor-cleared",
+  "seconds": 3.5,
+  "kind": "floor",
+  "loop": false,
+  "noteCount": 26,
+  "hitCount": 4,
+  "instruments": [
+    "trumpet",
+    "strings",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-floor-cleared",
+  "rate": 44100,
+  "frames": 154350,
+  "rawSeconds": 7.5,
+  "rawPeak": 0.07965853065252304,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.133804151273709,
+  "gain": 10.545009970923868,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-floor-cleared.wav",
+  "rawFile": "sting-floor-cleared-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/sting-floor-cleared.mp3",
+  "wav": "src/assets/audio/music/tower/sting-floor-cleared.wav",
+  "raw": "src/assets/audio/music/tower/sting-floor-cleared-raw.wav",
+  "prompt": "Short cheerful folk victory sting for clearing a tower floor: quick cavaquinho and fiddle run, pandeiro hit, coins jingle, ends on a bright major chord, 3 seconds, instrumental.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-13.12",
+    "input_tp": "-1.48",
+    "input_lra": "1.20",
+    "input_thresh": "-24.62",
+    "output_i": "-13.25",
+    "output_tp": "-2.50",
+    "output_lra": "0.00",
+    "output_thresh": "-24.66",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.75"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.51",
+    "input_tp": "-2.97",
+    "input_lra": "1.20",
+    "input_thresh": "-26.01",
+    "output_i": "-13.25",
+    "output_tp": "-2.50",
+    "output_lra": "0.00",
+    "output_thresh": "-24.66",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.75"
+  },
+  "sha256": "486923fdbf05e17a6c6ffd8cfd6edc7125aa75930f38e56053a39ccab024700c"
+}

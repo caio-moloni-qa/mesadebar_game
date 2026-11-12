@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "bark-skill",
+  "seconds": 0.6,
+  "prompt": "Knight resolute deep breath through helmet, mono.",
+  "speech": false,
+  "seed": 3875450328,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/bark-skill.wav",
+  "peak": 0.520965576171875,
+  "rms": 0.1258887180264235,
+  "sha256": "79e221639ac7b77402c7028e1e17645a934fda1c42d5499897afab8f966c5429"
+}

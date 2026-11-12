@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "foe-rajada",
+  "seconds": 1.0,
+  "prompt": "Three rapid ice spits in a row, mono.",
+  "speech": false,
+  "seed": 1641136982,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/foe-rajada.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/foe-rajada-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/foe-rajada.wav",
+  "peak": 0.75628662109375,
+  "rms": 0.12588874996473595,
+  "sha256": "16f1703754940327661e1cdac4df560f57836bb64aff1e4d9d25335a8a60aada"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-plate",
+  "seconds": 0.4,
+  "prompt": "Ceramic plate spinning through the air like a frisbee, mono.",
+  "speech": false,
+  "seed": 2432352356,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-plate.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-plate-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-plate.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07865884900317377,
+  "sha256": "d1b90de8d069065ca8695e372c995991c664b59fdd37881b73998f1dde2ec058"
+}

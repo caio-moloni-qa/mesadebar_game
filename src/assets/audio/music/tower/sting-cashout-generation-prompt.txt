@@ -1,0 +1,70 @@
+{
+  "id": "sting-cashout",
+  "seconds": 2.5,
+  "kind": "cash",
+  "loop": false,
+  "noteCount": 26,
+  "hitCount": 4,
+  "instruments": [
+    "lute",
+    "strings",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-cashout",
+  "rate": 44100,
+  "frames": 110250,
+  "rawSeconds": 6.5,
+  "rawPeak": 0.0814763531088829,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.13161839456433252,
+  "gain": 10.309739795023049,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-cashout.wav",
+  "rawFile": "sting-cashout-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/sting-cashout.mp3",
+  "wav": "src/assets/audio/music/tower/sting-cashout.wav",
+  "raw": "src/assets/audio/music/tower/sting-cashout-raw.wav",
+  "prompt": "Short satisfying cash-out sting: coins pouring into a leather pouch, a cheeky clarinet trill and a final pandeiro hit, 2.5 seconds, instrumental.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-12.63",
+    "input_tp": "-1.51",
+    "input_lra": "0.00",
+    "input_thresh": "-24.26",
+    "output_i": "-14.01",
+    "output_tp": "-2.88",
+    "output_lra": "0.00",
+    "output_thresh": "-25.65",
+    "normalization_type": "linear",
+    "target_offset": "0.01"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.46",
+    "input_tp": "-3.30",
+    "input_lra": "0.00",
+    "input_thresh": "-26.09",
+    "output_i": "-13.99",
+    "output_tp": "-2.84",
+    "output_lra": "0.00",
+    "output_thresh": "-25.62",
+    "normalization_type": "linear",
+    "target_offset": "-0.01"
+  },
+  "sha256": "54dc65273529097cc9abde5bdf5456a963f93d56e3bebf0dab7b17802101fbec"
+}

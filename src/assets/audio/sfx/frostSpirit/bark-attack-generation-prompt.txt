@@ -1,0 +1,18 @@
+{
+  "character": "frostSpirit",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Ghostly icy whisper, breathy and cold, mono.",
+  "speech": false,
+  "seed": 4094789533,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSpirit/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/frostSpirit/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSpirit/bark-attack.wav",
+  "peak": 0.3634033203125,
+  "rms": 0.125888642421239,
+  "sha256": "09336e1471629a9a9de32a22f0ddb17bbd8c0dd3bfa84f9eee306e81797a7f32"
+}

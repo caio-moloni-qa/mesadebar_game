@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "intent-arremesso",
+  "seconds": 0.4,
+  "prompt": "Arm wind-up for a throw: cloth swish and grunt-less effort whoosh, mono.",
+  "speech": false,
+  "seed": 4157254602,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/intent-arremesso.mp3",
+  "raw": "src/assets/audio/sfx/common/intent-arremesso-raw.wav",
+  "wav": "src/assets/audio/sfx/common/intent-arremesso.wav",
+  "peak": 0.213409423828125,
+  "rms": 0.0630937909161569,
+  "sha256": "a89eb75342ff9cb0c81ade0225bbfeff83ae529f9473c2bebd77d1dd2fb4bf2e"
+}

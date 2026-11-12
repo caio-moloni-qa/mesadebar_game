@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "arena-dash",
+  "seconds": 0.7,
+  "prompt": "King dashing across ice, frosty rush, mono.",
+  "speech": false,
+  "seed": 1308183396,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/arena-dash.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/arena-dash-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/arena-dash.wav",
+  "peak": 0.66632080078125,
+  "rms": 0.1258886762834123,
+  "sha256": "79799cd02aceda65f833513bce082c7b31781f1a4a7ca60a36a5df663d843a49"
+}

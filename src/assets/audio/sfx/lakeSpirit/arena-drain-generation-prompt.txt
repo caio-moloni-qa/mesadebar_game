@@ -1,0 +1,18 @@
+{
+  "character": "lakeSpirit",
+  "event": "arena-drain",
+  "seconds": 2.0,
+  "prompt": "Lake draining, huge swirling suction of water, mono.",
+  "speech": false,
+  "seed": 3745275787,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lakeSpirit/arena-drain.mp3",
+  "raw": "src/assets/audio/sfx/lakeSpirit/arena-drain-raw.wav",
+  "wav": "src/assets/audio/sfx/lakeSpirit/arena-drain.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.1112668259911586,
+  "sha256": "98ebcde12cc34400beb58c00f8ba5408f19606239f2b92ea4b42bc30d8b7f130"
+}

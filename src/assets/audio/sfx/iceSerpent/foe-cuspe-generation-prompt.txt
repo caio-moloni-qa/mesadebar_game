@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "foe-cuspe",
+  "seconds": 0.6,
+  "prompt": "Ice spit launched from afar, mono.",
+  "speech": false,
+  "seed": 2992444169,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/foe-cuspe.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/foe-cuspe-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/foe-cuspe.wav",
+  "peak": 0.712615966796875,
+  "rms": 0.12588875060662125,
+  "sha256": "7999b5b45c5f76b8f1630a1e3f475d78d3d5ccdd2dce1e64576a4edc32c5637a"
+}

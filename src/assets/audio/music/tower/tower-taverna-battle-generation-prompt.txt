@@ -1,0 +1,73 @@
+{
+  "id": "tower-taverna-battle",
+  "bpm": 118,
+  "bars": 60,
+  "base": 55,
+  "key": "G mixolydian",
+  "kind": "brawl",
+  "meter": 4,
+  "loop": true,
+  "seconds": 122.03389830508475,
+  "noteCount": 1020,
+  "hitCount": 480,
+  "instruments": [
+    "lute",
+    "fiddle"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "tower-taverna-battle",
+  "rate": 44100,
+  "frames": 5381695,
+  "rawSeconds": 126.03390022675737,
+  "rawPeak": 0.11424410343170166,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.09603469087896377,
+  "gain": 7.352677072757419,
+  "seam": [
+    0.005653657019138336,
+    0.007407192140817642
+  ],
+  "end": [
+    -0.02028726413846016,
+    -0.04176250472664833
+  ],
+  "file": "tower-taverna-battle.wav",
+  "rawFile": "tower-taverna-battle-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/tower-taverna-battle.mp3",
+  "wav": "src/assets/audio/music/tower/tower-taverna-battle.wav",
+  "raw": "src/assets/audio/music/tower/tower-taverna-battle-raw.wav",
+  "prompt": "Rowdy fantasy tavern brawl in a turn-based duel, 118 BPM, G mixolydian: fast fiddle and cavaquinho riffs, Brazilian pandeiro and tamborim in a baião groove, hurdy-gurdy drone, comic tuba bass, table knocks on the backbeat. Very clear steady pulse, playful but competitive, seamless loop, no intro or ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-18.04",
+    "input_tp": "-1.51",
+    "input_lra": "0.70",
+    "input_thresh": "-28.04",
+    "output_i": "-14.53",
+    "output_tp": "-2.50",
+    "output_lra": "0.50",
+    "output_thresh": "-24.53",
+    "normalization_type": "dynamic",
+    "target_offset": "0.53"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.54",
+    "input_tp": "-2.60",
+    "input_lra": "0.40",
+    "input_thresh": "-24.54",
+    "output_i": "-14.02",
+    "output_tp": "-2.50",
+    "output_lra": "0.30",
+    "output_thresh": "-24.02",
+    "normalization_type": "dynamic",
+    "target_offset": "0.02"
+  },
+  "sha256": "2b5cda8779ca17549385a09b73b353a3a9ef1674e81962bac3ab75665fd4865a"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Small metal bracer blocking a blow, quick clang, mono.",
+  "speech": false,
+  "seed": 2021042742,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/parry.mp3",
+  "raw": "src/assets/audio/sfx/fabri/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/parry.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09416560896020257,
+  "sha256": "659c95f7f509f9e25f22c6f65c2785c900bb65b3d861fa7f2108a38b0a4dbb68"
+}

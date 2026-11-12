@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Serpent fangs snapping, quick bite with icy crunch, mono.",
+  "speech": false,
+  "seed": 952154637,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/attack.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/attack.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09353388262265651,
+  "sha256": "1c2bd9b5c3cdfeaf38f624e1040984665cd30d9c071f896140b413f5fbc7e04f"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "reliquia",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Adventurer falling with a sighing groan, golden amulet jingling, mono.",
+  "speech": false,
+  "seed": 4195303375,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/reliquia/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/reliquia/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/reliquia/bark-ko.wav",
+  "peak": 0.39697265625,
+  "rms": 0.12588875793710866,
+  "sha256": "8485a37e62b4e8f81d53571c867651d5ef78de91fa781cf9c96bba51632125a8"
+}

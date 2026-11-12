@@ -1,0 +1,73 @@
+{
+  "id": "tower-select",
+  "bpm": 104,
+  "bars": 40,
+  "base": 55,
+  "key": "G major",
+  "kind": "lobby",
+  "meter": 4,
+  "loop": true,
+  "seconds": 92.3076923076923,
+  "noteCount": 535,
+  "hitCount": 320,
+  "instruments": [
+    "lute",
+    "trumpet"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "tower-select",
+  "rate": 44100,
+  "frames": 4070769,
+  "rawSeconds": 96.30768707482993,
+  "rawPeak": 0.1255710870027542,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.08218591421785985,
+  "gain": 6.689471331716525,
+  "seam": [
+    0.00017609435599297285,
+    0.0005565197570831515
+  ],
+  "end": [
+    0.0016835253918543458,
+    4.571965109789744e-05
+  ],
+  "file": "tower-select.wav",
+  "rawFile": "tower-select-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/tower-select_v2.mp3",
+  "wav": "src/assets/audio/music/tower/tower-select.wav",
+  "raw": "src/assets/audio/music/tower/tower-select-raw.wav",
+  "prompt": "Coliseum-in-a-tavern lobby, 104 BPM, G major: confident lute and cavaquinho strumming, pandeiro shuffle, a cheeky brass fanfare motif every 8 bars, crowd murmur under it. Anticipation before a challenge, seamless loop, no intro, no ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-19.58",
+    "input_tp": "-1.51",
+    "input_lra": "1.90",
+    "input_thresh": "-29.58",
+    "output_i": "-14.79",
+    "output_tp": "-2.50",
+    "output_lra": "1.80",
+    "output_thresh": "-24.79",
+    "normalization_type": "dynamic",
+    "target_offset": "0.79"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-13.99",
+    "input_tp": "-1.87",
+    "input_lra": "1.50",
+    "input_thresh": "-23.99",
+    "output_i": "-14.04",
+    "output_tp": "-2.50",
+    "output_lra": "1.50",
+    "output_thresh": "-24.04",
+    "normalization_type": "dynamic",
+    "target_offset": "0.04"
+  },
+  "sha256": "256db7f177a0c80e2b54880fa729098f7339b5553d27cd988007bfbb6cbad278"
+}

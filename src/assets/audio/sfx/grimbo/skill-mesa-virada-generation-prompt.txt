@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "skill-mesa-virada",
+  "seconds": 1.0,
+  "prompt": "Wooden table flipped over with mugs and coins crashing, mono.",
+  "speech": false,
+  "seed": 3236993060,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/skill-mesa-virada.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/skill-mesa-virada-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/skill-mesa-virada.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.051138958902852034,
+  "sha256": "5a8cbf1dfea6a543d74bb07c76926e035a1fd5b6845dd639f1b5a2784ad02172"
+}

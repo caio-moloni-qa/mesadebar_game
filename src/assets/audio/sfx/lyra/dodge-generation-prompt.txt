@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Light agile leap with leaves rustling, mono.",
+  "speech": false,
+  "seed": 1345092328,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/dodge.mp3",
+  "raw": "src/assets/audio/sfx/lyra/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/dodge.wav",
+  "peak": 0.50164794921875,
+  "rms": 0.125888651832074,
+  "sha256": "354d7be9ce39b5762d9090b593ff6ca0809704dd060a73a5f2fbdd28b5b52f11"
+}

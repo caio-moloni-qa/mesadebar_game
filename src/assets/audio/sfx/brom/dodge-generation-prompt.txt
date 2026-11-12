@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Short stocky dwarf sidestep, heavy boots and chainmail jingle, mono.",
+  "speech": false,
+  "seed": 2945685548,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/dodge.mp3",
+  "raw": "src/assets/audio/sfx/brom/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/dodge.wav",
+  "peak": 0.461517333984375,
+  "rms": 0.12588889994386418,
+  "sha256": "f82412070aeba5379781bd54c0094a27cb25c695354ae56e1669890c8b877a72"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "rest-eat",
+  "seconds": 1.0,
+  "prompt": "Hearty eating: spoon in a stew bowl, a satisfied munch, mono.",
+  "speech": false,
+  "seed": 3107537843,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/rest-eat.mp3",
+  "raw": "src/assets/audio/sfx/common/rest-eat-raw.wav",
+  "wav": "src/assets/audio/sfx/common/rest-eat.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06326839036511617,
+  "sha256": "ff4087e9f024471e72536a7244e20b1b947d6a794a1e3b8db56e2cd49260f657"
+}

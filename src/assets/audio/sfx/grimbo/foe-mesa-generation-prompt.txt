@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "foe-mesa",
+  "seconds": 1.0,
+  "prompt": "Goblin heaving a heavy table onto someone, wood crash, mono.",
+  "speech": false,
+  "seed": 3652847015,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/foe-mesa.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/foe-mesa-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/foe-mesa.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07503115511343617,
+  "sha256": "6aecb95b83e27ed3bd71db9ea6ff44eccbdc897fd87195a3774be7616dc87f00"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "foe-barril-costas",
+  "seconds": 1.2,
+  "prompt": "Dwarf heaving a full barrel overhead with a strained grunt and smashing it down, mono.",
+  "speech": false,
+  "seed": 2126664201,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/foe-barril-costas.mp3",
+  "raw": "src/assets/audio/sfx/brom/foe-barril-costas-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/foe-barril-costas.wav",
+  "peak": 0.49798583984375,
+  "rms": 0.12588877970093926,
+  "sha256": "ed2337974a316868613699e2fd816d8e8f5152de104f72635abf5f5e5bae9fdb"
+}

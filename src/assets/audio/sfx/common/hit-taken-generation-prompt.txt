@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "hit-taken",
+  "seconds": 0.3,
+  "prompt": "Meaty body hit, cloth and leather thump, punchy, mono.",
+  "speech": false,
+  "seed": 3643245854,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/hit-taken.mp3",
+  "raw": "src/assets/audio/sfx/common/hit-taken-raw.wav",
+  "wav": "src/assets/audio/sfx/common/hit-taken.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09853720134536934,
+  "sha256": "5c716dcd85ccd0e8c6701d46771a3ba4609f61d49bef27261040c57bf1009c58"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "arena-dash",
+  "seconds": 0.7,
+  "prompt": "Lich dashing, rushing ghostly wind, mono.",
+  "speech": false,
+  "seed": 1493932286,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/arena-dash.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/arena-dash-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/arena-dash.wav",
+  "peak": 0.5589599609375,
+  "rms": 0.12588868320749017,
+  "sha256": "f9faf8690359b48582e1d2bc766561562788f758b3c5ceb26c6ccb6da428508f"
+}

@@ -1,0 +1,74 @@
+{
+  "id": "duel-brom",
+  "bpm": 100,
+  "bars": 40,
+  "base": 50,
+  "key": "D major",
+  "kind": "brom",
+  "meter": 4,
+  "loop": true,
+  "seconds": 96,
+  "noteCount": 920,
+  "hitCount": 320,
+  "instruments": [
+    "horn",
+    "lute",
+    "hurdy"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "duel-brom",
+  "rate": 44100,
+  "frames": 4233600,
+  "rawSeconds": 100,
+  "rawPeak": 0.18568487465381622,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.07501921130723553,
+  "gain": 4.523793343782383,
+  "seam": [
+    0.0018651504069566727,
+    0.0007531002629548311
+  ],
+  "end": [
+    -0.012371613644063473,
+    -0.0031363407615572214
+  ],
+  "file": "duel-brom.wav",
+  "rawFile": "duel-brom-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/duel-brom.mp3",
+  "wav": "src/assets/audio/music/tower/duel-brom.wav",
+  "raw": "src/assets/audio/music/tower/duel-brom-raw.wav",
+  "prompt": "Jolly dwarven drinking-duel theme, 100 BPM, D major: oompah tuba and accordion, lute strums, pandeiro, clinking beer mugs and anvil taps as percussion, a swaying slightly tipsy swing feel. Cheerful and sturdy, seamless loop, no intro, no ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-20.99",
+    "input_tp": "-1.42",
+    "input_lra": "1.20",
+    "input_thresh": "-30.99",
+    "output_i": "-14.16",
+    "output_tp": "-2.50",
+    "output_lra": "1.20",
+    "output_thresh": "-24.16",
+    "normalization_type": "dynamic",
+    "target_offset": "0.16"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.46",
+    "input_tp": "-2.75",
+    "input_lra": "1.20",
+    "input_thresh": "-24.46",
+    "output_i": "-14.01",
+    "output_tp": "-2.50",
+    "output_lra": "1.20",
+    "output_thresh": "-24.01",
+    "normalization_type": "dynamic",
+    "target_offset": "0.01"
+  },
+  "sha256": "fbe58eadc00017c5c6bdba8d10c2763d267073759568c6f55320180ca1553351"
+}

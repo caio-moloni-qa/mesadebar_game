@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "foe-cristal",
+  "seconds": 0.5,
+  "prompt": "Crystal beam zap, bright glassy blast, mono.",
+  "speech": false,
+  "seed": 1644410061,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/foe-cristal.mp3",
+  "raw": "src/assets/audio/sfx/zora/foe-cristal-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/foe-cristal.wav",
+  "peak": 0.73516845703125,
+  "rms": 0.1258887449055905,
+  "sha256": "5b426a3c48601545bcc0cdb81b3e9e7b04f0b3ab5da893374825729fdef7169d"
+}

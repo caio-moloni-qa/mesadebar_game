@@ -1,0 +1,18 @@
+{
+  "character": "frostSkeleton",
+  "event": "foe-chacoalhar",
+  "seconds": 0.7,
+  "prompt": "Rattling bones and two quick hits, mono.",
+  "speech": false,
+  "seed": 1975605431,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSkeleton/foe-chacoalhar.mp3",
+  "raw": "src/assets/audio/sfx/frostSkeleton/foe-chacoalhar-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSkeleton/foe-chacoalhar.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11428844019441478,
+  "sha256": "81c7109b66afd9104509bbb201fbeaeb4a4f0d56f944ba2196c591c54c02973c"
+}

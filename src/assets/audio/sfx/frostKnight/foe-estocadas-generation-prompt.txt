@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "foe-estocadas",
+  "seconds": 1.0,
+  "prompt": "Three measured sword thrusts with icy hisses, mono.",
+  "speech": false,
+  "seed": 3324012873,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/foe-estocadas.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/foe-estocadas-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/foe-estocadas.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08752321645203463,
+  "sha256": "e3032ba4b14044ddd47787cd77787ebd5dfee62413519afbbe790bb91e41ee19"
+}

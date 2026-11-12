@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "impact-fish",
+  "seconds": 0.3,
+  "prompt": "Wet frozen fish slapping a face, comic, mono.",
+  "speech": false,
+  "seed": 1522730570,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/impact-fish.mp3",
+  "raw": "src/assets/audio/sfx/common/impact-fish-raw.wav",
+  "wav": "src/assets/audio/sfx/common/impact-fish.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10242152987065506,
+  "sha256": "2bdd0699bc56a71d09e2b2c23d15b63f3adf3f19f4d3ff3e7a16a69461069fc7"
+}

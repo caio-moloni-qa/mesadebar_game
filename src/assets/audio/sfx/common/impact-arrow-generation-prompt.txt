@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "impact-arrow",
+  "seconds": 0.25,
+  "prompt": "Arrow thudding into leather armor, mono.",
+  "speech": false,
+  "seed": 1649450599,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/impact-arrow.mp3",
+  "raw": "src/assets/audio/sfx/common/impact-arrow-raw.wav",
+  "wav": "src/assets/audio/sfx/common/impact-arrow.wav",
+  "peak": 0.46136474609375,
+  "rms": 0.1258888497322571,
+  "sha256": "7c95828d5f4273f077881193833d3636d84b47e17c2c22a3c2b74bc3da7f0445"
+}

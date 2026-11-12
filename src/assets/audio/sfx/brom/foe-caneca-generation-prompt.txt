@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "foe-caneca",
+  "seconds": 0.4,
+  "prompt": "Beer mug swung into a face, wooden clonk with beer splash, mono.",
+  "speech": false,
+  "seed": 4113492258,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/foe-caneca.mp3",
+  "raw": "src/assets/audio/sfx/brom/foe-caneca-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/foe-caneca.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11045283205696482,
+  "sha256": "fda555a73b3416349ab4e2cd95ee77e1e2a97395cad910a8b8d7697f4ee7a7d1"
+}

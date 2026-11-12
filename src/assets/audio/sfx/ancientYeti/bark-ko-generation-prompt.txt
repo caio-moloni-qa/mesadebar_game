@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "bark-ko",
+  "seconds": 1.8,
+  "prompt": "Massive yeti collapsing into snow with a long fading groan and ground thud, mono.",
+  "speech": false,
+  "seed": 2862390613,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/bark-ko.wav",
+  "peak": 0.5391845703125,
+  "rms": 0.12588870609598737,
+  "sha256": "c066ada5d45962167a1c8b04fd8e7144c80aced1974fda053e2acdf5446bf57d"
+}

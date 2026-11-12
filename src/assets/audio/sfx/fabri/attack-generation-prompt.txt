@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "attack",
+  "seconds": 0.5,
+  "prompt": "Runic boomerang thrown: whirring spin going out and back, light hit, mono.",
+  "speech": false,
+  "seed": 3072458625,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/attack.mp3",
+  "raw": "src/assets/audio/sfx/fabri/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/attack.wav",
+  "peak": 0.529388427734375,
+  "rms": 0.1258887493361592,
+  "sha256": "15020d5d2983c37c24d4d6037b63e42d8a0eb0b546c17c83b9d821eb923b5420"
+}

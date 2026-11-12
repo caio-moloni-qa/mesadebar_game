@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "dodge",
+  "seconds": 0.3,
+  "prompt": "Heavy armored step back, plate armor and ice crunch, mono.",
+  "speech": false,
+  "seed": 2299725201,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/dodge.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/dodge.wav",
+  "peak": 0.51190185546875,
+  "rms": 0.1258887173568026,
+  "sha256": "937e25a7e2b01c959414496a4a4bafbb8c09a503cadb63a6840508e9d829a5ef"
+}

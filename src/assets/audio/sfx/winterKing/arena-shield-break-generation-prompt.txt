@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "arena-shield-break",
+  "seconds": 1.0,
+  "prompt": "Thick ice shield shattering, mono.",
+  "speech": false,
+  "seed": 1087354438,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/arena-shield-break.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/arena-shield-break-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/arena-shield-break.wav",
+  "peak": 0.732269287109375,
+  "rms": 0.12588872442249116,
+  "sha256": "a3f00efc6118a3cb9cf36ebd90759a10688552f840bfa469908974875430650c"
+}

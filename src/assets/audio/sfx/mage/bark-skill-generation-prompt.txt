@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "bark-skill",
+  "seconds": 0.8,
+  "prompt": "Wizard murmuring arcane gibberish incantation, mono.",
+  "speech": false,
+  "seed": 4031608800,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/mage/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/bark-skill.wav",
+  "peak": 0.398223876953125,
+  "rms": 0.12588873593130212,
+  "sha256": "a9d17b420a97e750e83cc635c4311204da04642909f5623aaa933d65b2b8267b"
+}

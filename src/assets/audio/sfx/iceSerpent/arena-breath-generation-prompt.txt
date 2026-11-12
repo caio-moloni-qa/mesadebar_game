@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "arena-breath",
+  "seconds": 1.5,
+  "prompt": "Long cone of freezing breath, roaring frost wind, mono.",
+  "speech": false,
+  "seed": 3582626369,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/arena-breath.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/arena-breath-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/arena-breath.wav",
+  "peak": 0.5888671875,
+  "rms": 0.12588870139505243,
+  "sha256": "662db6ee99bc592e6f79c50771e970f6685dbd12b64c6e091434025e2a84e279"
+}

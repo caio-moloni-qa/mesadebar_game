@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "bark-victory",
+  "seconds": 1.0,
+  "prompt": "Creepy old man cackling laugh with a small bell jingle, mono.",
+  "speech": false,
+  "seed": 1040694783,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/bark-victory.wav",
+  "peak": 0.801544189453125,
+  "rms": 0.12588871734458448,
+  "sha256": "24d87754b8d1dfc47d7df6b735aad91b93aa491093f9800226aec56ad2f04c0e"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "gravedigger",
+  "event": "bark-ko",
+  "seconds": 1.5,
+  "prompt": "Gravedigger collapsing into bones, shovel clanging, lantern glass breaking, mono.",
+  "speech": false,
+  "seed": 376884451,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/gravedigger/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/gravedigger/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/gravedigger/bark-ko.wav",
+  "peak": 0.44952392578125,
+  "rms": 0.1258887651785738,
+  "sha256": "a0e17f3229f03484f4f3fd5d4deea55d0350c8d9c012595e05df60943d256d28"
+}

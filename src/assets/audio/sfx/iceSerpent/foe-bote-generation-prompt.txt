@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "foe-bote",
+  "seconds": 0.7,
+  "prompt": "Two fast serpent strikes, snapping jaws, mono.",
+  "speech": false,
+  "seed": 1274527642,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/foe-bote.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/foe-bote-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/foe-bote.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0629917794779618,
+  "sha256": "893be1657369462e2921d680266b5092d1ed84116532edf0f2f52e92ea878810"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "charge-broken",
+  "seconds": 0.6,
+  "prompt": "Interrupted wind-up: rising energy suddenly snapping and fizzling out with a glassy crack, mono.",
+  "speech": false,
+  "seed": 948310571,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/charge-broken.mp3",
+  "raw": "src/assets/audio/sfx/common/charge-broken-raw.wav",
+  "wav": "src/assets/audio/sfx/common/charge-broken.wav",
+  "peak": 0.510589599609375,
+  "rms": 0.1258886646409912,
+  "sha256": "0e756693d6f77b56ea62df27bbf290e709247492ab0154bf29ef62193f48edf0"
+}

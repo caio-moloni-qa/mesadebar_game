@@ -1,0 +1,42 @@
+{
+  "id": "tower-taverna-champion",
+  "bpm": 132,
+  "bars": 68,
+  "base": 48,
+  "key": "C minor / Eb major",
+  "kind": "sergio",
+  "meter": 4,
+  "loop": true,
+  "seconds": 123.63636363636364,
+  "noteCount": 1904,
+  "hitCount": 680,
+  "instruments": [
+    "lute",
+    "choir",
+    "horn",
+    "trumpet"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "tower-taverna-champion",
+  "rate": 44100,
+  "frames": 5452364,
+  "rawSeconds": 127.63637188208617,
+  "rawPeak": 0.11666988581418991,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.14593570473496875,
+  "gain": 7.199801338091611,
+  "seam": [
+    0.00251828134059906,
+    0.0028620424563996494
+  ],
+  "end": [
+    0.028277212753891945,
+    0.0006063435575924814
+  ],
+  "file": "tower-taverna-champion_v2.wav",
+  "rawFile": "tower-taverna-champion-raw_v2.wav"
+}

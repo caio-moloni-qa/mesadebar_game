@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "arena-phase-two",
+  "seconds": 2.0,
+  "prompt": "Ice king's crown cracking and a furious echoing roar, blizzard surging, mono.",
+  "speech": false,
+  "seed": 1917424491,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/arena-phase-two.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/arena-phase-two-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/arena-phase-two.wav",
+  "peak": 0.741241455078125,
+  "rms": 0.1258887055309615,
+  "sha256": "ac2a2adab4bbf103e765aa7866fda7ef79bcf09db0c9e588c6655ea232b83b6f"
+}

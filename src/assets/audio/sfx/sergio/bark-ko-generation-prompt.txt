@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "bark-ko",
+  "seconds": 1.2,
+  "prompt": "Innkeeper collapsing onto a pile of pots and bottles, groan and clatter, mono.",
+  "speech": false,
+  "seed": 1092712911,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/sergio/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/bark-ko.wav",
+  "peak": 0.4520263671875,
+  "rms": 0.12588867270852816,
+  "sha256": "4cf112e5576226fe6f191c667eb38766a9e42ca9242d1380de94cf5811d0a399"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Serpent pained screeching hiss, mono.",
+  "speech": false,
+  "seed": 2132235871,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/bark-hurt.wav",
+  "peak": 0.5294189453125,
+  "rms": 0.1258885511856537,
+  "sha256": "ebe3dcaf7d6fb1b76a1eca43fad9e4bc44203150d8b6fad291828b08a98db9be"
+}

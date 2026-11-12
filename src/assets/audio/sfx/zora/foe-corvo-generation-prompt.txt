@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "foe-corvo",
+  "seconds": 1.0,
+  "prompt": "Raven caw and wingbeat feint followed by a heavy dark strike, mono.",
+  "speech": false,
+  "seed": 3899155729,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/foe-corvo.mp3",
+  "raw": "src/assets/audio/sfx/zora/foe-corvo-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/foe-corvo.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0744109946166519,
+  "sha256": "a2d4007b7672bac2663edd66d6e891ef79f648a22b2b1943189f10b6bd0a3a2a"
+}

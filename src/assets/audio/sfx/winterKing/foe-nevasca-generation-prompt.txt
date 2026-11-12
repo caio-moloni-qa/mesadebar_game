@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "foe-nevasca",
+  "seconds": 1.8,
+  "prompt": "Royal blizzard feint followed by a massive icy blow, mono.",
+  "speech": false,
+  "seed": 2617188200,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/foe-nevasca.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/foe-nevasca-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/foe-nevasca.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06840033466991176,
+  "sha256": "f2949fcf7ac8775f693a31a55122d60eae9c9ea92656ba64822e0c4b0dd72b6c"
+}

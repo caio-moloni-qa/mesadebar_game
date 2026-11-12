@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "skill-bote",
+  "seconds": 0.6,
+  "prompt": "Lightning-fast serpent strike, whip whoosh and heavy bite, mono.",
+  "speech": false,
+  "seed": 3399525239,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/skill-bote.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/skill-bote-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/skill-bote.wav",
+  "peak": 0.499755859375,
+  "rms": 0.1258886750181619,
+  "sha256": "98e53cbfd3041bbc18c5a9e314e94c79c5ac55a24f2ed7987912779a220544b0"
+}

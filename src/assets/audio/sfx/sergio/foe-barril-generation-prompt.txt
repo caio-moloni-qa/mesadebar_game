@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "foe-barril",
+  "seconds": 1.5,
+  "prompt": "Barrel kicked off and rolling toward the player, rumbling, mono.",
+  "speech": false,
+  "seed": 257069566,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/foe-barril.mp3",
+  "raw": "src/assets/audio/sfx/sergio/foe-barril-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/foe-barril.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.12565309582404974,
+  "sha256": "daa8c7309e6a61d94de5dda73ec87218fe7fae1cc69bd7e067cbb5a42ff9867e"
+}

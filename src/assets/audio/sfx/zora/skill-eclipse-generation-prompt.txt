@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-eclipse",
+  "seconds": 1.8,
+  "prompt": "Eclipse: deep cosmic drone, light swallowed, a heavy stunning blast with ringing silence, mono.",
+  "speech": false,
+  "seed": 3518565149,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-eclipse.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-eclipse-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-eclipse.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.060044586902774366,
+  "sha256": "87667a502077e4806ba3f41ccccdb826d7e7fcd849719323b712651d928dcda8"
+}

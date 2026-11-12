@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "courage-gain",
+  "seconds": 0.3,
+  "prompt": "Small uplifting pluck and spark, rising two notes, UI reward, mono.",
+  "speech": false,
+  "seed": 777213875,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/courage-gain.mp3",
+  "raw": "src/assets/audio/sfx/common/courage-gain-raw.wav",
+  "wav": "src/assets/audio/sfx/common/courage-gain.wav",
+  "peak": 0.49017333984375,
+  "rms": 0.06309391820248908,
+  "sha256": "62de5a27966413f49f9074c7743c10a50a915d602f5a3337c90da94fe8f1a12b"
+}

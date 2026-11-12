@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "skill-muralha-congelada",
+  "seconds": 1.2,
+  "prompt": "Wall of ice erupting around a knight, deep cracking and humming, mono.",
+  "speech": false,
+  "seed": 1028309395,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/skill-muralha-congelada.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/skill-muralha-congelada-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/skill-muralha-congelada.wav",
+  "peak": 0.718902587890625,
+  "rms": 0.12588869443102196,
+  "sha256": "36805d163e5a30db38bdb5c8154a20e6579e8197804fb98967aa205d6c7d2116"
+}

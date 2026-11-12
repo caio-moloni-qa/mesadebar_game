@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "charge-start",
+  "seconds": 1.0,
+  "prompt": "Ominous power wind-up: deep rumbling rise with creaking strain, building tension, mono.",
+  "speech": false,
+  "seed": 2569456728,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/charge-start.mp3",
+  "raw": "src/assets/audio/sfx/common/charge-start-raw.wav",
+  "wav": "src/assets/audio/sfx/common/charge-start.wav",
+  "peak": 0.569427490234375,
+  "rms": 0.1258886845744518,
+  "sha256": "90dd84cd14f5b2734b18026bff63b89f1b9ca16fa1a38e55dff1fc4ebd5ceb07"
+}

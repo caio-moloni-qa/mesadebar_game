@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-pinga-boa",
+  "seconds": 0.8,
+  "prompt": "Cachaça poured into a small glass, a sip and a satisfied \"ahh\", mono.",
+  "speech": false,
+  "seed": 3022354734,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-pinga-boa.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-pinga-boa-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-pinga-boa.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.12235248464291627,
+  "sha256": "2bd13590f63a910077861b51b36cdf87f64f2943342bb5f6a54ce7f64702f456"
+}

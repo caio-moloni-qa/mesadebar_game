@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "bark-skill",
+  "seconds": 0.5,
+  "prompt": "Goblin sneaky snickering gibberish, mono.",
+  "speech": false,
+  "seed": 112534375,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/bark-skill.wav",
+  "peak": 0.30645751953125,
+  "rms": 0.12588873614292465,
+  "sha256": "ab5671b14a8cc6211675892079327dae82ded3996062a21dc26dad1ecd960dff"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Male wizard surprised pained gasp, mono.",
+  "speech": false,
+  "seed": 879818810,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/mage/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/bark-hurt.wav",
+  "peak": 0.402587890625,
+  "rms": 0.12588856258523012,
+  "sha256": "58dfa444a8383836893460fddc4492357f7290185078c72ce61c84d83f10e304"
+}

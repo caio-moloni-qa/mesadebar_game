@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "intent-combo",
+  "seconds": 0.4,
+  "prompt": "Warning: three quick rapid wooden knocks, mono.",
+  "speech": false,
+  "seed": 801132763,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/intent-combo.mp3",
+  "raw": "src/assets/audio/sfx/common/intent-combo-raw.wav",
+  "wav": "src/assets/audio/sfx/common/intent-combo.wav",
+  "peak": 0.389739990234375,
+  "rms": 0.06309387786998179,
+  "sha256": "1b8caf4e0505aae832327cf76fdd2715ea21072b6c314daccab0b56d9f2fb946"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "foe-peixe",
+  "seconds": 0.6,
+  "prompt": "Frozen fish hurled with a cook's grunt, mono.",
+  "speech": false,
+  "seed": 3227165473,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/foe-peixe.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/foe-peixe-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/foe-peixe.wav",
+  "peak": 0.447601318359375,
+  "rms": 0.12588870319341114,
+  "sha256": "76c30dd182a4067758f951bc02afc4a263b83540d88b9af4ffe6c4023b938bab"
+}

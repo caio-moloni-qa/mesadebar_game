@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "fichas-coin",
+  "seconds": 0.3,
+  "prompt": "Single gold coin flip and clink, bright, mono.",
+  "speech": false,
+  "seed": 2969616590,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/fichas-coin.mp3",
+  "raw": "src/assets/audio/sfx/common/fichas-coin-raw.wav",
+  "wav": "src/assets/audio/sfx/common/fichas-coin.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.12332851214501803,
+  "sha256": "d4e1f6b773ea6b0795ec66c13752647da7cb94e2e1e65399175233251f21b8fe"
+}

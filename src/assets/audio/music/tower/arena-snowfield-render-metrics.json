@@ -1,0 +1,43 @@
+{
+  "id": "arena-snowfield",
+  "bpm": 120,
+  "bars": 64,
+  "base": 50,
+  "key": "D harmonic minor",
+  "kind": "snow",
+  "meter": 4,
+  "loop": true,
+  "seconds": 128,
+  "noteCount": 864,
+  "hitCount": 512,
+  "instruments": [
+    "cello",
+    "harp",
+    "recorder",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "rattle"
+  ],
+  "seed": "arena-snowfield",
+  "rate": 44100,
+  "frames": 5644800,
+  "rawSeconds": 132,
+  "rawPeak": 0.11550845205783844,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.14548893930196222,
+  "gain": 7.272195108106787,
+  "seam": [
+    0.0023469291627407074,
+    0.0005033835768699646
+  ],
+  "end": [
+    -0.05874163284897804,
+    -0.06964336335659027
+  ],
+  "file": "arena-snowfield.wav",
+  "rawFile": "arena-snowfield-raw.wav"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "bark-victory",
+  "seconds": 1.0,
+  "prompt": "Jolly cook belly laugh, mono.",
+  "speech": false,
+  "seed": 3210020900,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/bark-victory.wav",
+  "peak": 0.681610107421875,
+  "rms": 0.125888631191941,
+  "sha256": "986d50cf1c96065f94106760fec72d90e993fc08b0c921af7ecb0c263f95e76e"
+}

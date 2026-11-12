@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "ui-back",
+  "seconds": 0.2,
+  "prompt": "Wooden UI back: soft lower knock, mono.",
+  "speech": false,
+  "seed": 2551763989,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/ui-back.mp3",
+  "raw": "src/assets/audio/sfx/common/ui-back-raw.wav",
+  "wav": "src/assets/audio/sfx/common/ui-back.wav",
+  "peak": 0.543121337890625,
+  "rms": 0.06309394189912908,
+  "sha256": "acb7075ee4bdf22561d78278c2b3ce8edb3ac38656454cf508923c7daca7ace0"
+}

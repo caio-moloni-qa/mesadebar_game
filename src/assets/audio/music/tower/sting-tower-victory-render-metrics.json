@@ -1,0 +1,36 @@
+{
+  "id": "sting-tower-victory",
+  "seconds": 8,
+  "kind": "win",
+  "loop": false,
+  "noteCount": 20,
+  "hitCount": 4,
+  "instruments": [
+    "trumpet",
+    "strings",
+    "lute"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-tower-victory",
+  "rate": 44100,
+  "frames": 352800,
+  "rawSeconds": 12,
+  "rawPeak": 0.06991489976644516,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.09924494049290676,
+  "gain": 12.014606368686351,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-tower-victory.wav",
+  "rawFile": "sting-tower-victory-raw.wav"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "foe-lamina",
+  "seconds": 1.5,
+  "prompt": "Long ominous blade wind-up with frost forming, then a crushing icy strike, mono.",
+  "speech": false,
+  "seed": 1737285797,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/foe-lamina.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/foe-lamina-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/foe-lamina.wav",
+  "peak": 0.528839111328125,
+  "rms": 0.12588872928718178,
+  "sha256": "2433c05826f11322fbc10f94e86c451c2343521a42f0edb3a45c46ee5a6faa53"
+}

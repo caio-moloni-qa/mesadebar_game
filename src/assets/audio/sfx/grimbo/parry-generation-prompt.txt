@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Small dagger or coin purse deflecting a blow, quick clink, mono.",
+  "speech": false,
+  "seed": 4196352704,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/parry.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/parry.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11015137434002654,
+  "sha256": "ac70c1c67881f4acdd15ad27480c6fcdfa006d5cb065eed5cce868402e245dd9"
+}
