@@ -67,6 +67,30 @@ export const TOWER_TUNING = {
   damagePerAlly: 0.18
 } as const;
 
+export type TowerDifficulty = 'normal' | 'dificil' | 'cruel';
+
+export interface TowerDifficultySpec {
+  /** pt-BR, the picker. */
+  name: string;
+  blurb: string;
+  /** Multiplies every foe's health and every hit's damage (on top of the floor and squad scaling). */
+  hp: number;
+  damage: number;
+  /** Multiplies the fichas each floor adds to the pot (the risk pays). */
+  fichas: number;
+}
+
+/** The towers' difficulty, picked before a climb. Targets (average bot, solo, reaches the top): Normal ~70%,
+ *  Difícil 40–60%, Cruel 15–30% (see BALANCE_LOG "Tower difficulty"). The reaction windows never shrink: a harder
+ *  tower hits harder and lasts longer, it never asks for faster hands. */
+export const TOWER_DIFFICULTIES: Record<TowerDifficulty, TowerDifficultySpec> = {
+  normal: { name: 'Normal', blurb: 'A torre como ela é.', hp: 1, damage: 1, fichas: 1 },
+  dificil: { name: 'Difícil', blurb: 'Inimigos mais fortes. Paga 50% a mais.', hp: 1.1, damage: 1.15, fichas: 1.5 },
+  cruel: { name: 'Cruel', blurb: 'Pra quem já domina o aparar. Paga o dobro.', hp: 1.25, damage: 1.3, fichas: 2 }
+};
+
+export const TOWER_DIFFICULTY_ORDER: TowerDifficulty[] = ['normal', 'dificil', 'cruel'];
+
 export const TOWERS: Record<TowerId, TowerSpec> = {
   taverna: {
     id: 'taverna',

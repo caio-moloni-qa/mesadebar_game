@@ -111,11 +111,11 @@ describe('progress', () => {
   it('loads saves from before the Taverna em Turnos with empty duel defaults, and round-trips its settings', () => {
     const old = parseSave(JSON.stringify({ fichas: 40, mastery: { mage: 600 } }));
     expect(old.fichas).toBe(40);
-    expect(old.tavern).toEqual({ regulars: {}, assisted: false, timingTrack: true, boons: [], towers: {} });
-    const tavern = { regulars: { brom: { xp: 30, level: 2, learned: ['contragolpe'], finisher: 'golpe-da-forja' } }, assisted: true, timingTrack: false, boons: ['flecha-marcada' as const], towers: { taverna: { best: 4, climbs: 2, tops: 0 } } };
+    expect(old.tavern).toEqual({ regulars: {}, assisted: false, timingTrack: true, lessons: [], reducedMotion: false, difficulty: 'normal', boons: [], towers: {} });
+    const tavern = { regulars: { brom: { xp: 30, level: 2, learned: ['contragolpe'], finisher: 'golpe-da-forja' } }, assisted: true, timingTrack: false, lessons: ['feint', 'fury'], reducedMotion: true, difficulty: 'cruel' as const, boons: ['flecha-marcada' as const], towers: { taverna: { best: 4, climbs: 2, tops: 0 } } };
     expect(parseSave(serializeSave({ ...emptySave(), tavern })).tavern).toEqual(tavern);
-    expect(parseSave(JSON.stringify({ tavern: { regulars: { brom: 'x', lyra: { xp: -3, learned: [1, 'a'] } }, assisted: 'yes', boons: ['uma-visao', 'nope', 'uma-visao'], towers: { taverna: { best: -1, climbs: 'x' }, atlantis: { best: 3 } } } })).tavern)
-      .toEqual({ regulars: { lyra: { xp: 0, level: 1, learned: ['a'] } }, assisted: false, timingTrack: true, boons: ['uma-visao'], towers: { taverna: { best: 0, climbs: 0, tops: 0 } } });
+    expect(parseSave(JSON.stringify({ tavern: { regulars: { brom: 'x', lyra: { xp: -3, learned: [1, 'a'] } }, assisted: 'yes', lessons: ['feint', 3, 'feint'], reducedMotion: 'yes', difficulty: 'impossivel', boons: ['uma-visao', 'nope', 'uma-visao'], towers: { taverna: { best: -1, climbs: 'x' }, atlantis: { best: 3 } } } })).tavern)
+      .toEqual({ regulars: { lyra: { xp: 0, level: 1, learned: ['a'] } }, assisted: false, timingTrack: true, lessons: ['feint'], reducedMotion: false, difficulty: 'normal', boons: ['uma-visao'], towers: { taverna: { best: 0, climbs: 0, tops: 0 } } });
   });
 });
 

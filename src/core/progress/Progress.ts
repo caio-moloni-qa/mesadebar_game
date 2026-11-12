@@ -1,5 +1,5 @@
 import { BOON_TUNING, DUEL_REWARDS, TavernBoonId } from '../../config/tavernBattle';
-import { TOWERS, TOWER_UNLOCKS, TowerId } from '../../config/tavernTowers';
+import { TOWERS, TOWER_DIFFICULTIES, TOWER_UNLOCKS, TowerDifficulty, TowerId } from '../../config/tavernTowers';
 import { AREAS, AreaConfig } from '../../config/areas';
 import { CHARACTERS, CharacterId } from '../../config/characters';
 import { QuestNpcId } from '../systems/QuestSystem';
@@ -540,10 +540,24 @@ export interface TavernSave {
   assisted: boolean;
   /** Show the timing track under the stage (off: read the animation only). */
   timingTrack: boolean;
+  /** Lesson cards the duel has shown (each mechanic is taught once, ever). */
+  lessons: string[];
+  /** Reduced motion in the duel: no shake, no hitstop, no flicker (also on when the system asks for it). */
+  reducedMotion: boolean;
+  /** The towers' difficulty (Normal / Difícil / Cruel), picked at Sergio's counter. */
+  difficulty: TowerDifficulty;
   /** Duel gifts waiting for the next run (one of each). */
   boons: TavernBoonId[];
   /** O Coliseu do Sergio: the best floor beaten per tower, climbs started and tops reached. */
   towers: Partial<Record<TowerId, TowerRecord>>;
+}
+
+/** The duel's settings the overlay reads and writes (the rest of the tavern save stays out of its hands). */
+export type TavernSettings = Pick<TavernSave, 'assisted' | 'timingTrack' | 'lessons' | 'reducedMotion' | 'difficulty'>;
+
+export function tavernSettings(tavern: TavernSave): TavernSettings {
+  const { assisted, timingTrack, lessons, reducedMotion, difficulty } = tavern;
+  return { assisted, timingTrack, lessons, reducedMotion, difficulty };
 }
 
 export interface TowerRecord { best: number; climbs: number; tops: number }
@@ -560,6 +574,10 @@ function parseTavern(raw: unknown): TavernSave {
     })),
     assisted: tavern.assisted === true,
     timingTrack: tavern.timingTrack !== false,
+    // Saves from before the cards have seen none.
+    lessons: Array.isArray(tavern.lessons) ? tavern.lessons.filter((id): id is string => typeof id === 'string').filter((id, i, all) => all.indexOf(id) === i) : [],
+    reducedMotion: tavern.reducedMotion === true,
+    difficulty: typeof tavern.difficulty === 'string' && tavern.difficulty in TOWER_DIFFICULTIES ? tavern.difficulty as TowerDifficulty : 'normal',
     boons: Array.isArray(tavern.boons)
       ? tavern.boons.filter((id): id is TavernBoonId => Object.values(DUEL_REWARDS).some((reward) => reward?.id === id)).filter((id, i, all) => all.indexOf(id) === i)
       : [],
@@ -591,7 +609,7 @@ export function emptySave(): SaveData {
     guardianTipSeen: false,
     firstRunTipSeen: false,
     welcomed: [...STARTING_HEROES],
-    tavern: { regulars: {}, assisted: false, timingTrack: true, boons: [], towers: {} }
+    tavern: { regulars: {}, assisted: false, timingTrack: true, lessons: [], reducedMotion: false, difficulty: 'normal', boons: [], towers: {} }
   };
 }
 

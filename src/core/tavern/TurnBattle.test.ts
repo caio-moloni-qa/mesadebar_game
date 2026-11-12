@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DUELS, DUEL_HERO, DuelSpec, REACTION_WINDOWS } from '../../config/tavernBattle';
+import { AttackPattern, DEFENSE_RULES, DUELS, DUEL_HERO, DuelSpec, REACTION_WINDOWS } from '../../config/tavernBattle';
+import { SkillNode } from '../../config/tavernSkills';
 import { createRng } from '../math';
 import { isPerfectDodge, judgeReaction, reactionWindows } from './Reaction';
 import { TurnBattle, tipsyOffsets } from './TurnBattle';
@@ -220,5 +221,78 @@ describe('TurnBattle', () => {
   it('is deterministic: the same seed and presses give the same battle', () => {
     const summary = (battle: TurnBattle) => ({ phase: battle.phase, now: battle.clock.now, hp: battle.fighters.map((f) => f.hp), tally: { ...battle.tally } });
     expect(summary(scriptedDuel('parry', 'attack'))).toEqual(summary(scriptedDuel('parry', 'attack')));
+  });
+});
+
+describe('defence rules: no single button answers everything', () => {
+  /** A Brom with exactly one pattern (no drinking, no jitter). */
+  const only = (pattern: AttackPattern, enemy: Partial<DuelSpec['enemy']> = {}): DuelSpec => ({ ...DUELS.brom, rule: 'none', enemy: { ...DUELS.brom.enemy, ...enemy }, patterns: [pattern] });
+  const charge: AttackPattern = { id: 'carga', name: 'Carga', intent: 'carregado', leadMs: 1600, hits: [{ offsetMs: 0, damage: 0 }], charge: { turns: 1, hpShare: 0.6 }, weight: 1 };
+
+  it('a dodge on a feint throws you off balance: the feint lands', () => {
+    const battle = new TurnBattle({ duel: only({ id: 'f', name: 'F', intent: 'combo', leadMs: 1000, hits: [{ offsetMs: 0, damage: 8, feint: true }, { offsetMs: 600, damage: 5 }], weight: 1 }, { speed: 50 }), hero: DUEL_HERO, seed: 3 });
+    const offBalance: string[] = [];
+    battle.events.on('offBalance', ({ fighterId }) => offBalance.push(fighterId));
+    runUntil(battle, 'enemy-attack');
+    advanceTo(battle, battle.attack!.hits[0].at);
+    expect(battle.react('dodge')).toBe('taken');
+    expect(battle.party[0].hp).toBe(DUEL_HERO.maxHp - 8);
+    expect(offBalance).toEqual(['hero']);
+  });
+
+  it('a Golpe Inquebrável can only be parried', () => {
+    const play = (kind: 'parry' | 'dodge') => {
+      const battle = new TurnBattle({ duel: only({ id: 'i', name: 'I', intent: 'pesado', leadMs: 1000, parryOnly: true, hits: [{ offsetMs: 0, damage: 12 }], weight: 1 }, { speed: 50 }), hero: DUEL_HERO, seed: 3 });
+      runUntil(battle, 'enemy-attack');
+      expect(battle.attack!.hits[0].parryOnly).toBe(true);
+      advanceTo(battle, battle.attack!.hits[0].at);
+      return { result: battle.react(kind), hp: battle.party[0].hp };
+    };
+    expect(play('dodge')).toEqual({ result: 'taken', hp: DUEL_HERO.maxHp - 12 });
+    expect(play('parry')).toEqual({ result: 'parry', hp: DUEL_HERO.maxHp });
+  });
+
+  it('a Golpe Carregado winds up for a turn, then lands for its share of the target\'s HP; Firmar cuts it', () => {
+    const play = (firm: boolean) => {
+      const battle = new TurnBattle({ duel: only(charge, { speed: 10, maxHp: 999 }), hero: { ...DUEL_HERO, speed: 10 }, seed: 5 });
+      const charging: number[] = [];
+      battle.events.on('charging', ({ turnsLeft }) => charging.push(turnsLeft));
+      // Brom acts first on this seed: he starts the charge (no hit comes), then it's the hero's turn.
+      runUntil(battle, 'player-turn');
+      expect(battle.enemies[0].charging).toMatchObject({ turnsLeft: 1, targetId: 'hero' });
+      expect(battle.party[0].hp).toBe(DUEL_HERO.maxHp);
+      if (firm) battle.firm(); else battle.attackTarget();
+      runUntil(battle, 'enemy-attack');
+      const hit = battle.attack!.hits[0];
+      expect(hit).toMatchObject({ charged: true, parryOnly: true, damage: Math.round(DUEL_HERO.maxHp * 0.6) });
+      advanceTo(battle, hit.at);
+      expect(battle.react('dodge')).toBe('taken');
+      return { charging, hp: battle.party[0].hp, after: battle.enemies[0].charging };
+    };
+    expect(play(false)).toEqual({ charging: [1], hp: DUEL_HERO.maxHp - 60, after: null });
+    expect(play(true).hp).toBe(DUEL_HERO.maxHp - Math.round(60 * DEFENSE_RULES.firmChargeCut));
+  });
+
+  it('after a charge lands, the next turns can\'t start another', () => {
+    const jab: AttackPattern = { id: 'jab', name: 'Jab', intent: 'golpe', leadMs: 800, hits: [{ offsetMs: 0, damage: 1 }], weight: 1 };
+    const battle = new TurnBattle({ duel: { ...only(charge, { speed: 50, maxHp: 999 }), patterns: [{ ...charge, weight: 1000 }, jab] }, hero: { ...DUEL_HERO, maxHp: 999 }, seed: 5 });
+    const picked: string[] = [];
+    battle.events.on('charging', ({ started }) => { if (started) picked.push('charge'); });
+    battle.events.on('attackAnnounced', ({ pattern }) => picked.push(pattern.id));
+    for (let i = 0; i < 20000 && picked.length < 5; i += 1) battle.advance(1);
+    // Start, release, then the rest turns only jab.
+    expect(picked.slice(0, 2 + DEFENSE_RULES.chargeRestTurns)).toEqual(['charge', 'carga', ...Array(DEFENSE_RULES.chargeRestTurns).fill('jab')]);
+  });
+
+  it('a stun breaks the wind-up', () => {
+    const stun = { id: 'tonto', name: 'Tonto', kind: 'active', cost: 0, description: '', effect: { type: 'stun', ratio: 1, delay: 0 } } as unknown as SkillNode;
+    const battle = new TurnBattle({ duel: only(charge, { speed: 10, maxHp: 999 }), hero: { ...DUEL_HERO, speed: 10 }, kit: [stun], seed: 5 });
+    const broken: string[] = [];
+    battle.events.on('chargeBroken', ({ fighterId }) => broken.push(fighterId));
+    runUntil(battle, 'player-turn');
+    expect(battle.enemies[0].charging).not.toBeNull();
+    expect(battle.useSkill('tonto')).toBe(true);
+    expect(battle.enemies[0].charging).toBeNull();
+    expect(broken).toHaveLength(1);
   });
 });

@@ -16,6 +16,12 @@ export interface ReactionProfile {
   bite: number;
   /** Knows arrows from range can only be dodged (always dodges a dodge-only hit). */
   readsArrows: boolean;
+  /** Presses dodge on a feint instead of holding (a K masher can't tell them apart). */
+  dodgesFeints?: boolean;
+  /** Only ever presses dodge, Golpes Inquebráveis included. */
+  onlyDodges?: boolean;
+  /** Chance of Firmar on its turn when a Golpe Carregado is aimed at it (default 1). */
+  firmsCharges?: number;
   /** Never presses. */
   idle?: boolean;
   assisted?: boolean;
@@ -24,9 +30,14 @@ export interface ReactionProfile {
 export const PROFILES: Record<string, ReactionProfile> = {
   none: { id: 'none', sigma: 0, bias: 0, parryRate: 0, bite: 0, readsArrows: false, idle: true },
   dodgeOnly: { id: 'dodgeOnly', sigma: 60, bias: 0, parryRate: 0, bite: 0, readsArrows: true },
-  newcomer: { id: 'newcomer', sigma: 110, bias: -30, parryRate: 0.3, bite: 0.7, readsArrows: false },
-  newcomerAssisted: { id: 'newcomerAssisted', sigma: 110, bias: -30, parryRate: 0.3, bite: 0.7, readsArrows: false, assisted: true },
+  newcomer: { id: 'newcomer', sigma: 110, bias: -30, parryRate: 0.3, bite: 0.7, readsArrows: false, firmsCharges: 0.5 },
+  newcomerAssisted: { id: 'newcomerAssisted', sigma: 110, bias: -30, parryRate: 0.3, bite: 0.7, readsArrows: false, assisted: true, firmsCharges: 0.5 },
+  /** The assisted newcomer after the one-line cards: reads the tags (só esquiva / só apara) and braces for a charge. */
+  newcomerAssistedReads: { id: 'newcomerAssistedReads', sigma: 110, bias: -30, parryRate: 0.3, bite: 0.7, readsArrows: true, assisted: true },
   average: { id: 'average', sigma: 70, bias: 0, parryRate: 0.6, bite: 0.4, readsArrows: true },
+  /** The average player who found out K is enough (the playtester's "só esquivar faz tudo"): same hands, never parries,
+   *  mashes K on everything, feints included. */
+  averageDodge: { id: 'averageDodge', sigma: 70, bias: 0, parryRate: 0, bite: 0, readsArrows: true, dodgesFeints: true, onlyDodges: true },
   skilled: { id: 'skilled', sigma: 40, bias: 0, parryRate: 0.9, bite: 0.1, readsArrows: true },
   perfect: { id: 'perfect', sigma: 0, bias: 0, parryRate: 1, bite: 0, readsArrows: true }
 };
@@ -77,7 +88,7 @@ const SKILL_RANK: Record<string, number> = { finisher: 3, active: 1, passive: 0 
 /** The skill a policy spends Coragem on, or null to just attack. */
 function pickSkill(policy: ActionPolicy, actor: Fighter, battle: TurnBattle): SkillNode | null {
   if (policy === 'attackOnly') return null;
-  const affordable = actor.skills.filter((skill) => skill.cost <= actor.courage);
+  const affordable = actor.skills.filter((skill) => battle.skillCost(actor, skill) <= actor.courage);
   if (affordable.length === 0) return null;
   const useful = affordable.filter((skill) => {
     const e = skill.effect;
@@ -122,7 +133,7 @@ export function playBattle(battle: TurnBattle, profile: ReactionProfile, policy:
   });
   battle.events.on('counter', () => { counters += 1; });
   battle.events.on('turnStarted', ({ fighterId }) => { if (battle.fighter(fighterId)?.side === 'party') partyTurns += 1; });
-  battle.events.on('skillUsed', ({ skill }) => { skillsUsed[skill.id] = (skillsUsed[skill.id] ?? 0) + 1; courageSpent += skill.cost; });
+  battle.events.on('skillUsed', ({ skill, cost }) => { skillsUsed[skill.id] = (skillsUsed[skill.id] ?? 0) + 1; courageSpent += cost; });
   const courageBefore = () => battle.party.reduce((sum, f) => sum + f.courage, 0);
   battle.assisted = Boolean(profile.assisted);
   let guard = 0;
@@ -131,12 +142,16 @@ export function playBattle(battle: TurnBattle, profile: ReactionProfile, policy:
     battle.party.forEach((f) => { minHpRatio = Math.min(minHpRatio, f.hp / f.maxHp); });
     if (battle.phase === 'player-turn') {
       const actor = battle.active!;
+      // A Golpe Carregado aimed at this fighter: brace.
+      const aimed = battle.enemies.some((e) => e.hp > 0 && e.charging?.targetId === actor.id);
+      if (aimed && !profile.idle && rng() < (profile.firmsCharges ?? 1) && battle.firm()) continue;
       const skill = pickSkill(policy, actor, battle);
       const target = [...battle.enemies].filter((e) => e.hp > 0).sort((a, b) => a.hp - b.hp)[0];
       const before = courageBefore();
+      const paid = skill ? battle.skillCost(actor, skill) : 0;
       const used = Boolean(skill && battle.useSkill(skill.id, target?.id));
       if (!used) battle.attackTarget(target?.id);
-      courageEarned += Math.max(0, courageBefore() - before + (used ? skill!.cost : 0));
+      courageEarned += Math.max(0, courageBefore() - before + (used ? paid : 0));
       continue;
     }
     if (battle.phase === 'enemy-attack') {
@@ -147,8 +162,10 @@ export function playBattle(battle: TurnBattle, profile: ReactionProfile, policy:
       if (!plan) {
         let kind: 'parry' | 'dodge' | null = null;
         if (!profile.idle && !defender.wall) {
-          if (hit.feint) kind = rng() < profile.bite ? 'parry' : null;
+          if (hit.feint) kind = rng() < profile.bite ? 'parry' : profile.dodgesFeints ? 'dodge' : null;
           else if (hit.dodgeOnly && profile.readsArrows) kind = 'dodge';
+          else if (profile.onlyDodges) kind = 'dodge';
+          else if (hit.parryOnly && profile.readsArrows) kind = 'parry';
           else kind = rng() < profile.parryRate ? 'parry' : 'dodge';
         }
         const previous = battle.attack!.hits[hit.index - 1];

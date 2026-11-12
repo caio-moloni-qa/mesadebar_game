@@ -37,7 +37,7 @@ import { activeKit, duelXp, grantXp, regularState, resetTree, treeFor, withRegul
 import { CompanionBars } from './ui/CompanionBars';
 import { rewardText } from './ui/questText';
 import { SheetEffects } from './vfx/SheetEffects';
-import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, bankTowerClimb, bankTowerFloor, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses } from '../core/progress/Progress';
+import { MASTERY_THRESHOLDS, MAX_MASTERY, SaveData, applyRun, bankTowerClimb, bankTowerFloor, buyConsumable, buyUpgrade, emptySave, heroesToWelcome, masteryLevel, rosterFor, runBonuses, tavernSettings } from '../core/progress/Progress';
 import { TOWERS, TowerId } from '../config/tavernTowers';
 import { RosterId } from '../config/tavernRoster';
 import { HeroKitViews } from './views/HeroKitViews';
@@ -279,7 +279,7 @@ export class Game3D {
     this.choices = new ChoiceOverlay(container);
     this.tavernDialog = new TavernDialog(container, (hero) => this.menu.showCharacters(hero), (duel) => this.startDuel(duel), (regular) => this.openSkillTree(regular));
     this.duel = new TavernDuel(container, {
-      settings: () => ({ assisted: this.progress.tavern.assisted, timingTrack: this.progress.tavern.timingTrack }),
+      settings: () => tavernSettings(this.progress.tavern),
       saveSettings: (settings) => this.saveProgress({ tavern: { ...this.progress.tavern, ...settings } }),
       // The hero fights with what the dueled regular has taught them.
       kit: (duel) => {

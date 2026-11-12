@@ -31,8 +31,36 @@ export const REACTION_WINDOWS: ReactionWindowsConfig = {
 export interface AttackHit {
   offsetMs: number;
   damage: number;
-  /** Zora's feint: the arm goes up and never comes down. Parrying it is punished (this damage); holding still pays. */
+  /** Zora's feint: the arm goes up and never comes down. Parrying or dodging it is punished (this damage); holding
+   *  still pays. */
   feint?: boolean;
+  /** Golpe Inquebrável: too wide to step away from, only a parry stops it (a dodge is taken). */
+  parryOnly?: boolean;
+}
+
+/** The defence rules that keep "just mash K" from being the answer to everything (the playtesters found it: a bot
+ *  that only dodges reached the top of both towers 100% of the time with average hands). */
+export const DEFENSE_RULES = {
+  /** A dodge on a feint throws you off balance: the feint lands like a bitten parry. */
+  feintPunishesDodge: true,
+  /** Coragem lost by a defender when an enemy attack lands on them (once per attack, not per hit). Off on Normal: it
+   *  cost the average bot 5–25 points of tower tops, punishing everyone rather than the K masher (a harder tier's
+   *  lever). */
+  courageLostOnHit: 0,
+  /** Golpe Carregado: a defender who Firmou takes only this share if they don't parry it. */
+  firmChargeCut: 0.25,
+  /** After releasing a charge, the enemy's next turns can't start another one. */
+  chargeRestTurns: 2,
+  /** How long the "carregando..." beat plays before the next turn. */
+  chargeTickMs: 900
+} as const;
+
+/** Golpe Carregado: the enemy spends `turns` of its own turns winding up (a countdown everyone sees), then lets go one
+ *  hit worth `hpShare` of the target's max HP. It can only be parried; Firmar first cuts it to firmChargeCut; a stun
+ *  breaks the wind-up. */
+export interface ChargeSpec {
+  turns: number;
+  hpShare: number;
 }
 
 /** What a ranged attack throws: drawn flying from the attacker, who stays home. */
@@ -43,7 +71,7 @@ export interface AttackPattern {
   /** Shown in the intent badge and the announcement. */
   name: string;
   /** The intent badge's kind (icon and colour). */
-  intent: 'golpe' | 'combo' | 'pesado' | 'flecha' | 'dados' | 'arremesso';
+  intent: 'golpe' | 'combo' | 'pesado' | 'flecha' | 'dados' | 'arremesso' | 'carregado';
   /** Time from the announcement to the first hit (the wind-up the player reads). */
   leadMs: number;
   hits: AttackHit[];
@@ -51,6 +79,10 @@ export interface AttackPattern {
   projectile?: Projectile;
   /** Lyra's arrows from range: they can only be dodged (a parry inside the dodge window is taken). */
   dodgeOnly?: boolean;
+  /** Every hit of it is a Golpe Inquebrável (see AttackHit.parryOnly). */
+  parryOnly?: boolean;
+  /** A Golpe Carregado (see ChargeSpec): hits[0] is the release, its damage comes from hpShare. */
+  charge?: ChargeSpec;
   /** How long a projectile flies before its hit lands. */
   flightMs?: number;
   /** Grimbo's dice: the combo has min..max copies of hits[0], intervalMs apart, rolled when announced. */
@@ -58,6 +90,32 @@ export interface AttackPattern {
   /** How often the seeded rng picks it, relative to the fighter's other patterns. */
   weight: number;
 }
+
+/** A boss phase: when the boss's HP first drops to `atHpShare` of its max, the fight changes (a callout, a new move
+ *  set and, for a fury, more turns and harder hits). Phases are entered in order, once each. */
+export interface BossPhase {
+  atHpShare: number;
+  /** The callout (pt-BR, short): "HORA DE FECHAR". */
+  name: string;
+  /** What the boss says as it turns (pt-BR, one line). */
+  line: string;
+  /** Joins the boss's patterns from this phase on. */
+  addPatterns?: AttackPattern[];
+  /** Pattern ids it stops using. */
+  dropPatterns?: string[];
+  /** Fúria: a lasting rage drawn on the boss. Speed and attack multiply its own; leadMul shortens every wind-up
+   *  (never under BOSS_PHASE_RULES.minLeadMs). */
+  fury?: { speedMul: number; attackMul: number; leadMul: number };
+  /** Its next turn opens with this pattern (a Golpe Carregado ignores the rest after a release). */
+  openWith?: string;
+}
+
+export const BOSS_PHASE_RULES = {
+  /** No wind-up gets shorter than this, fury or not (the telegraph contract: ≥ 600 ms on Normal). */
+  minLeadMs: 700,
+  /** The beat the turn holds for the callout and the boss's line before play goes on. */
+  callMs: 1200
+} as const;
 
 export interface DuelFighterSpec {
   name: string;
@@ -89,7 +147,10 @@ export const TAVERN_BATTLE = {
   /** Extra time when the attack ends in a counter (the defender's free swing). */
   counterMs: 550,
   /** A counter hits for this share of the defender's attack. */
-  counterRatio: 1
+  counterRatio: 1,
+  /** Eco: the same skill again, turn after turn, costs this much more Coragem per repeat (capped at the bar), so
+   *  one skill can't carry a fight; any other action (attack, Firmar, another skill) clears it. */
+  skillRepeatSurcharge: 1
 } as const;
 
 /** The duel hero: every hero is scaled to the same duel stats in phase 1 (tune after the owner plays it). */
@@ -145,6 +206,8 @@ export interface DuelSpec {
   legend: string;
   /** What they say at the end (pt-BR). */
   lines: { won: string; lost: string };
+  /** A champion's phases by HP (Sergio, the Rei do Inverno). */
+  phases?: BossPhase[];
 }
 
 export const DUELS: Record<DuelId, DuelSpec> = {
@@ -160,7 +223,8 @@ export const DUELS: Record<DuelId, DuelSpec> = {
       // Parry all three → counter.
       { id: 'socos', name: 'Rodada de Socos', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 6 }, { offsetMs: 380, damage: 6 }, { offsetMs: 760, damage: 6 }], weight: 3 },
       // Slow wind-up that punishes early presses.
-      { id: 'martelada', name: 'Martelada Pesada', intent: 'pesado', leadMs: 2000, hits: [{ offsetMs: 0, damage: 18 }], weight: 2 }
+      { id: 'martelada', name: 'Martelada Pesada', intent: 'pesado', leadMs: 2000, hits: [{ offsetMs: 0, damage: 18 }], weight: 2 },
+      { id: 'barril-costas', name: 'Barril nas Costas', intent: 'carregado', leadMs: 1600, hits: [{ offsetMs: 0, damage: 0 }], charge: { turns: 1, hpShare: 0.3 }, weight: 1 }
     ]
   },
   // When to dodge vs parry: from range only a dodge saves you; up close the dagger can be parried.
@@ -174,7 +238,7 @@ export const DUELS: Record<DuelId, DuelSpec> = {
       { id: 'flecha', name: 'Flecha Rápida', intent: 'flecha', leadMs: 1000, projectile: 'arrow', dodgeOnly: true, flightMs: 380, hits: [{ offsetMs: 0, damage: 9 }], weight: 3 },
       { id: 'saraivada', name: 'Saraivada', intent: 'flecha', leadMs: 1100, projectile: 'arrow', dodgeOnly: true, flightMs: 380, hits: [{ offsetMs: 0, damage: 4 }, { offsetMs: 240, damage: 4 }, { offsetMs: 480, damage: 4 }, { offsetMs: 720, damage: 4 }], weight: 2 },
       { id: 'adaga', name: 'Dança da Adaga', intent: 'combo', leadMs: 1100, hits: [{ offsetMs: 0, damage: 7 }, { offsetMs: 300, damage: 7 }], weight: 3 },
-      { id: 'queima-roupa', name: 'Tiro à Queima-Roupa', intent: 'pesado', leadMs: 1700, hits: [{ offsetMs: 0, damage: 16 }], weight: 2 }
+      { id: 'queima-roupa', name: 'Tiro à Queima-Roupa', intent: 'pesado', leadMs: 1700, parryOnly: true, hits: [{ offsetMs: 0, damage: 16 }], weight: 2 }
     ]
   },
   // Reading the intent: the dice decide how many hits a combo has; a bet shows the roll before it comes.
@@ -187,7 +251,7 @@ export const DUELS: Record<DuelId, DuelSpec> = {
     patterns: [
       { id: 'moeda', name: 'Moeda na Testa', intent: 'golpe', leadMs: 1100, hits: [{ offsetMs: 0, damage: 10 }], weight: 2 },
       { id: 'dados', name: 'Dados Rolando', intent: 'dados', leadMs: 1300, hits: [{ offsetMs: 0, damage: 5 }], dice: { min: 1, max: 6, intervalMs: 330 }, weight: 4 },
-      { id: 'mesa', name: 'Mesa Virada', intent: 'pesado', leadMs: 1900, hits: [{ offsetMs: 0, damage: 17 }], weight: 2 }
+      { id: 'mesa', name: 'Mesa Virada', intent: 'pesado', leadMs: 1900, parryOnly: true, hits: [{ offsetMs: 0, damage: 17 }], weight: 2 }
     ]
   },
   // Patience: the arm goes up and doesn't come down. Parry a feint and she gets you; hold still and it pays.
@@ -201,7 +265,7 @@ export const DUELS: Record<DuelId, DuelSpec> = {
       { id: 'cristal', name: 'Raio de Cristal', intent: 'golpe', leadMs: 1200, hits: [{ offsetMs: 0, damage: 10 }], weight: 2 },
       { id: 'sombras', name: 'Dança das Sombras', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 8, feint: true }, { offsetMs: 520, damage: 7 }, { offsetMs: 880, damage: 7 }], weight: 3 },
       { id: 'olhar', name: 'Olhar Maldito', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 7 }, { offsetMs: 450, damage: 8, feint: true }, { offsetMs: 900, damage: 7 }], weight: 2 },
-      { id: 'corvo', name: 'Finta do Corvo', intent: 'pesado', leadMs: 1600, hits: [{ offsetMs: 0, damage: 10, feint: true }, { offsetMs: 750, damage: 16 }], weight: 2 }
+      { id: 'corvo', name: 'Finta do Corvo', intent: 'pesado', leadMs: 1600, hits: [{ offsetMs: 0, damage: 10, feint: true }, { offsetMs: 750, damage: 16, parryOnly: true }], weight: 2 }
     ]
   },
   // Mixed rhythms: everything in his shop flies, each on its own beat.
@@ -215,7 +279,20 @@ export const DUELS: Record<DuelId, DuelSpec> = {
       { id: 'caneca', name: 'Caneca Arremessada', intent: 'arremesso', leadMs: 1000, projectile: 'mug', flightMs: 500, hits: [{ offsetMs: 0, damage: 10 }], weight: 3 },
       { id: 'pratos', name: 'Chuva de Pratos', intent: 'arremesso', leadMs: 1100, projectile: 'plate', flightMs: 450, hits: [{ offsetMs: 0, damage: 5 }, { offsetMs: 300, damage: 5 }, { offsetMs: 500, damage: 5 }, { offsetMs: 900, damage: 5 }], weight: 3 },
       { id: 'garrafas', name: 'Garrafas de Rolha', intent: 'arremesso', leadMs: 1000, projectile: 'bottle', flightMs: 350, hits: [{ offsetMs: 0, damage: 4 }, { offsetMs: 190, damage: 4 }, { offsetMs: 380, damage: 4 }], weight: 2 },
-      { id: 'barril', name: 'Barril Rolando', intent: 'pesado', leadMs: 1200, projectile: 'barrel', flightMs: 1400, hits: [{ offsetMs: 0, damage: 18 }], weight: 2 }
+      { id: 'barril', name: 'Barril Rolando', intent: 'pesado', leadMs: 1200, projectile: 'barrel', flightMs: 1400, hits: [{ offsetMs: 0, damage: 18 }], weight: 2 },
+      { id: 'fecha-conta', name: 'Fecha a Conta', intent: 'carregado', leadMs: 1600, hits: [{ offsetMs: 0, damage: 0 }], charge: { turns: 2, hpShare: 0.6 }, weight: 1 }
+    ],
+    // Half his HP gone, the shop closes: faster, harder, and the bill comes due right away.
+    phases: [
+      {
+        atHpShare: 0.5, name: 'HORA DE FECHAR', line: 'Acabou a festa. Agora a conta é comigo!',
+        fury: { speedMul: 1.25, attackMul: 1.15, leadMul: 0.85 },
+        openWith: 'fecha-conta',
+        addPatterns: [
+          // Two bottles to make you dodge, then the keg that only a parry stops.
+          { id: 'saideira', name: 'Saideira', intent: 'arremesso', leadMs: 1100, projectile: 'bottle', flightMs: 350, hits: [{ offsetMs: 0, damage: 5 }, { offsetMs: 260, damage: 5 }, { offsetMs: 760, damage: 13, parryOnly: true }], weight: 2 }
+        ]
+      }
     ]
   }
 };

@@ -10,7 +10,7 @@ import { describe, it } from 'vitest';
 import { DUELS, DUEL_HERO, DuelId, REACTION_WINDOWS, AttackPattern } from '../../src/config/tavernBattle';
 import { SKILL_TREES } from '../../src/config/tavernSkills';
 import { ROSTER, ROSTER_ORDER, RosterId } from '../../src/config/tavernRoster';
-import { TOWERS, TowerId } from '../../src/config/tavernTowers';
+import { TOWERS, TowerDifficulty, TowerId } from '../../src/config/tavernTowers';
 import { activeKit, freshRegular, learn } from '../../src/core/tavern/SkillTree';
 import { BattleAlly, TurnBattle } from '../../src/core/tavern/TurnBattle';
 import { TowerRun, floorScale } from '../../src/core/tavern/TowerRun';
@@ -21,6 +21,8 @@ const TOWER_SEEDS = SEEDS.slice(0, Number(process.env.BALANCE_TOWER_SEEDS ?? 100
 const DUEL_ORDER: DuelId[] = ['brom', 'lyra', 'grimbo', 'zora', 'sergio'];
 const commit = (() => { try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return '?'; } })();
 const label = process.env.BALANCE_LABEL ?? 'baseline';
+/** The towers' difficulty for the climbs (BALANCE_DIFFICULTY=normal|dificil|cruel). */
+const difficulty = (process.env.BALANCE_DIFFICULTY ?? 'normal') as TowerDifficulty;
 const report: string[] = [];
 /** A markdown table into the batch report (vitest swallows console output). */
 function table(title: string, rows: Record<string, unknown>[]): void {
@@ -169,10 +171,10 @@ describe.runIf(process.env.BALANCE)('Taverna em Turnos balance', () => {
     for (const towerId of ['taverna', 'snowfield'] as TowerId[]) {
       const tower = TOWERS[towerId];
       for (const squad of squads[towerId]) {
-        for (const bot of ['newcomer', 'newcomerAssisted', 'average', 'skilled']) {
+        for (const bot of (process.env.BALANCE_TOWER_BOTS ?? 'newcomer,newcomerAssisted,average,skilled').split(',')) {
           const climbs = TOWER_SEEDS.map((seed) => {
             const [leader, ...allies] = squad;
-            const run = new TowerRun(tower, ROSTER[leader].stats, allies.map((id): BattleAlly => ({ id: `ally-${id}`, look: id, spec: ROSTER[id].stats, kit: ROSTER[id].kit })));
+            const run = new TowerRun(tower, ROSTER[leader].stats, allies.map((id): BattleAlly => ({ id: `ally-${id}`, look: id, spec: ROSTER[id].stats, kit: ROSTER[id].kit })), difficulty);
             // Between floors: the pot so far and the squad's HP share, to replay leave policies afterwards.
             const steps: Array<{ floor: number; pot: number; hp: number }> = [];
             let elapsed = 0;

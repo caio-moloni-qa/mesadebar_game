@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DUELS, DUEL_HERO } from '../../config/tavernBattle';
-import { TOWERS, TOWER_TUNING, TowerSpec } from '../../config/tavernTowers';
+import { TOWERS, TOWER_DIFFICULTIES, TOWER_TUNING, TowerSpec } from '../../config/tavernTowers';
 import { TowerRun, floorFoes } from './TowerRun';
 import { TurnBattle, TurnBattleOptions } from './TurnBattle';
 
@@ -131,5 +131,24 @@ describe('climbing a tower', () => {
     });
     expect(TOWERS.greenfield.comingSoon).toBe(true);
     expect(TOWERS.snowfield.comingSoon).toBeFalsy();
+  });
+
+  it('a harder difficulty makes every foe tougher and the pot bigger, never the windows shorter', () => {
+    const fight = TOWERS.taverna.floors.findIndex((floor) => floor.kind === 'fight');
+    const options = (difficulty: 'normal' | 'dificil' | 'cruel') => new TowerRun(TOWERS.taverna, DUEL_HERO, [], difficulty).battleOptions({ hero: DUEL_HERO, seed: 1 })!;
+    const normal = options('normal').foes![0];
+    const cruel = options('cruel').foes![0];
+    expect(fight).toBe(0);
+    expect(cruel.enemy.maxHp).toBe(Math.round(normal.enemy.maxHp * TOWER_DIFFICULTIES.cruel.hp));
+    expect(cruel.patterns[0].hits[0].damage).toBeGreaterThan(normal.patterns[0].hits[0].damage);
+    expect(options('cruel').assisted).toBe(options('normal').assisted);
+    const run = new TowerRun(TOWERS.taverna, DUEL_HERO, [], 'dificil');
+    const floor = TOWERS.taverna.floors[0];
+    const prize = run.won(50);
+    expect(prize.fichas).toBe(Math.round((floor.kind === 'fight' ? floor.fichas : 0) * TOWER_DIFFICULTIES.dificil.fichas));
+    expect(run.pot).toBe(prize.fichas);
+    // The difficulties climb in order.
+    expect(TOWER_DIFFICULTIES.normal.hp).toBeLessThan(TOWER_DIFFICULTIES.dificil.hp);
+    expect(TOWER_DIFFICULTIES.dificil.damage).toBeLessThan(TOWER_DIFFICULTIES.cruel.damage);
   });
 });
