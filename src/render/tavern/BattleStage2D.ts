@@ -3,7 +3,8 @@ import { SNOW_FOES } from '../../config/tavernRoster';
 import { TurnBattle, BattleHit, EnemyAttack, Fighter } from '../../core/tavern/TurnBattle';
 import { ReactionResult } from '../../core/tavern/Reaction';
 import { ActiveFx, FX_LIFE_MS, SkillFx, chargeMs, drawSkillFx, impacts, skillFx } from './SkillFx';
-import { StatusBadge, StatusId, badgeLefts, drawStatusBadges, fighterStatuses } from './StatusBadges';
+import { STATUS_COLORS, StatusBadge, StatusId, badgeLefts, drawStatusBadges, fighterStatuses } from './StatusBadges';
+import { FloatText, PRIO, admitFloat, visibleFloats } from './BattleFeedback';
 
 /** The duel's side-view stage: a 960×540 logical canvas scaled by an integer factor with smoothing off, drawn from the
  *  battle's state and the cues its events leave. Codex's art (art-source/tavern-battle/) paints the room and the
@@ -31,7 +32,6 @@ const PLATE_H = 35;
 type Pose = 'idle' | 'windup' | 'feint' | 'strike' | 'counter' | 'parry' | 'dodge' | 'hurt' | 'down' | 'drink' | 'stagger' | 'cast';
 
 interface Cue { kind: string; at: number; fighterId: string; value?: number }
-interface FloatText { text: string; color: string; x: number; y: number; at: number; size: number; life: number }
 interface Spark { x: number; y: number; vx: number; vy: number; at: number; color: string }
 
 /** Placeholder looks of the regulars without art yet (Brom has Codex's atlas, and his own block fallback). */
@@ -62,6 +62,13 @@ const PROJECTILES: Record<Projectile, { color: string; w: number; h: number }> =
   snowball: { color: '#f4f8fc', w: 14, h: 14 }
 };
 const FEINT_COLOR = '#c58bff';
+/** Golpe Carregado: its badge, banner and the countdown. */
+const CHARGE_COLOR = '#ff4ad2';
+/** A Golpe Inquebrável on the track: the parry band's gold (only a parry stops it). */
+const PARRY_ONLY_COLOR = '#ffb020';
+/** Fúria: a champion's last phase (the glow on the body, the callout). */
+const FURY_COLOR = '#ff3b2f';
+const LESSON_MS = 4200;
 
 const RESULT_COLORS: Record<ReactionResult, string> = { parry: '#ffd75a', dodge: '#7fdcff', taken: '#ff5a4a', early: '#9a9a9a', held: '#c58bff' };
 
@@ -101,8 +108,8 @@ const heroAtlas = (id: string): FighterAtlas =>
 /** The Nevado's sheets (Codex, same contract as the heroes'): 1 main attack, 2 a quick second one (also the counter),
  *  3 the heavy one held overhead. Each foe pattern picks its cell by intent. */
 const snowAtlas = (id: keyof typeof SNOW_FOES, file: string, feint?: number): FighterAtlas => ({
-  ...atlas(file, Object.fromEntries(SNOW_FOES[id].patterns.map((pattern) => [pattern.id,
-    pattern.intent === 'pesado' ? { windup: 3, strike: 3, tip: true } : pattern.intent === 'combo' ? { windup: 0, strike: 2 } : { windup: 0, strike: 1 }])), { windup: 0, strike: 1 }, feint),
+  ...atlas(file, Object.fromEntries([...SNOW_FOES[id].patterns, ...(SNOW_FOES[id].phases ?? []).flatMap((phase) => phase.addPatterns ?? [])].map((pattern) => [pattern.id,
+    pattern.intent === 'pesado' || pattern.intent === 'carregado' ? { windup: 3, strike: 3, tip: true } : pattern.intent === 'combo' ? { windup: 0, strike: 2 } : { windup: 0, strike: 1 }])), { windup: 0, strike: 1 }, feint),
   counter: 2
 });
 const ATLASES: Record<string, FighterAtlas> = {
@@ -115,7 +122,7 @@ const ATLASES: Record<string, FighterAtlas> = {
   // 1 crystal bolt, 2 palm strike, 3 the raised palm that never comes down (the feint).
   zora: atlas('zora-poses_v2.png', { cristal: { windup: 0, strike: 1 }, sombras: { windup: 0, strike: 2 }, olhar: { windup: 0, strike: 2 }, corvo: { windup: 3, strike: 2 } }, { windup: 0, strike: 1 }, 3),
   // 1 mug, 2 plate, 3 barrel push; the bottles reuse the throw.
-  sergio: atlas('sergio-poses_v2.png', { caneca: { windup: 0, strike: 1 }, pratos: { windup: 0, strike: 2 }, garrafas: { windup: 0, strike: 1 }, barril: { windup: 3, strike: 3 } }, { windup: 0, strike: 1 }),
+  sergio: atlas('sergio-poses_v2.png', { caneca: { windup: 0, strike: 1 }, pratos: { windup: 0, strike: 2 }, garrafas: { windup: 0, strike: 1 }, barril: { windup: 3, strike: 3 }, saideira: { windup: 0, strike: 1 } }, { windup: 0, strike: 1 }),
   barbarian: heroAtlas('barbarian'),
   mage: heroAtlas('mage'),
   reliquia: heroAtlas('reliquia'),
@@ -150,6 +157,9 @@ function ready(image: HTMLImageElement): boolean {
   return image.complete && image.naturalWidth > 0;
 }
 
+/** The beat a big blow holds the fight (player-experience: 40–90 ms, none on a regular hit). */
+export const HITSTOP_MS = { crit: 60, perfect: 70, knockout: 90 } as const;
+
 export class BattleStage2D {
   readonly canvas = document.createElement('canvas');
   private readonly ctx: CanvasRenderingContext2D;
@@ -158,6 +168,12 @@ export class BattleStage2D {
   private cues: Cue[] = [];
   private floats: FloatText[] = [];
   private sparks: Spark[] = [];
+  /** The lesson card on screen (battle clock), if any. */
+  private card: { text: string; at: number; fighterId?: string; track: boolean } | null = null;
+  /** Lesson cards already shown (from the save: a card shows once per mechanic, ever). */
+  lessonsSeen = new Set<string>();
+  /** Called the first time a lesson card shows (the duel saves it). */
+  onLesson: (id: string) => void = () => {};
   /** The skills playing out (bolts, meteors, signs). */
   private fxs: ActiveFx[] = [];
   /** When the blow that knocks each fighter out lands (a bolt still in the air keeps them up until it hits). */
@@ -181,6 +197,10 @@ export class BattleStage2D {
   private shakeFrom = 0;
   private shakeUntil = 0;
   private shakePower = 0;
+  /** Reduced motion (a setting, or the system's): no shake, no hitstop, no sway, no hurt flicker. */
+  reducedMotion = false;
+  /** Hitstops waiting to land, in battle time (the duel holds its clock for `ms` once it reaches `at`). */
+  private stops: Array<{ at: number; ms: number }> = [];
   private unbind: Array<() => void> = [];
   /** A fighter's colour (the blocks of whoever has no atlas yet), by look. */
   private colorOf: (look: string) => string = () => '#c0502a';
@@ -228,34 +248,73 @@ export class BattleStage2D {
     this.statusAt.clear();
     this.badgeSince.clear();
     this.shownHp.clear();
+    this.card = null;
+    this.stops = [];
     const now = () => battle.clock.now;
     const { events } = battle;
     // Only Brom's duel drinks every round.
     const drinking = battle.duel.rule === 'drinking';
     const round = (n: number) => {
       if (drinking) this.cue('drink', now(), 'all');
-      this.floats.push({ text: drinking ? `Rodada ${n} — Saúde!` : `Rodada ${n}`, color: '#ffe3a0', x: 480, y: 150, at: now(), size: 30, life: 1300 });
+      this.say({ text: drinking ? `Rodada ${n} — Saúde!` : `Rodada ${n}`, color: '#ffe3a0', x: 480, y: 140, at: now(), size: 30, life: 1100, lane: 'callout', prio: PRIO.info });
     };
     const party = (id: string) => battle.fighter(id)?.side === 'party';
     round(1);
     this.unbind = [
       events.on('roundStarted', ({ round: n }) => round(n)),
-      events.on('attackAnnounced', ({ attackerId }) => this.cue('announce', now(), attackerId)),
+      events.on('attackAnnounced', ({ attackerId, hits }) => {
+        this.cue('announce', now(), attackerId);
+        if (hits.some((hit) => hit.charged)) this.lesson('charge-release', 'Lá vem o GOLPE CARREGADO: só dá pra aparar com J.', now());
+        else if (hits.some((hit) => hit.parryOnly)) this.lesson('parry-only', 'Golpe INQUEBRÁVEL (dourado na trilha): só dá pra aparar com J. Esquivar não salva.', now());
+        if (hits.some((hit) => hit.feint)) this.lesson('feint', 'Finta: o braço sobe e não desce. NÃO aperte nada: aparar ou esquivar cai nela.', now());
+        else if (hits.some((hit) => hit.dodgeOnly)) this.lesson('dodge-only', 'De longe (azul na trilha): só dá pra esquivar com K.', now());
+      }),
+      events.on('charging', ({ fighterId, targetId, pattern, turnsLeft, started }) => {
+        this.cue('announce', now(), fighterId);
+        const target = battle.fighter(targetId)?.name ?? '';
+        // The countdown is the banner over them (drawCharges): only the start earns a callout.
+        if (started) this.say({ text: `${pattern.name.toUpperCase()}!`, color: CHARGE_COLOR, x: 480, y: 140, at: now(), size: 30, life: 1100, lane: 'callout', prio: PRIO.status });
+        if (started) this.lesson('charge', `GOLPE CARREGADO em ${target}: solta em ${turnsLeft} turno${turnsLeft === 1 ? '' : 's'} dele. Na vez de ${target}, Firmar (4), e aí apare com J.`, now());
+      }),
+      events.on('chargeBroken', ({ fighterId }) => {
+        this.cue('stagger', now(), fighterId);
+        this.say({ text: 'QUEBROU!', color: '#ffe066', x: this.restX(fighterId), y: FLOOR_Y - 220, at: now(), size: 32, life: 1000, lane: fighterId, prio: PRIO.big });
+      }),
+      // A champion turns: a stagger, a burst, a shake, the phase's name in the centre and the line over them.
+      events.on('phaseChanged', ({ fighterId, phase }) => {
+        const at = now();
+        const x = this.restX(fighterId);
+        this.cue('stagger', at, fighterId);
+        this.burst(x - 20, FLOOR_Y - 110, phase.fury ? FURY_COLOR : '#bfefff', 16, at);
+        this.shake(at, phase.fury ? 10 : 6);
+        this.say({ text: phase.name, color: phase.fury ? FURY_COLOR : '#bfefff', x: 480, y: 140, at, size: 36, life: 1300, lane: 'callout', prio: PRIO.big });
+        this.say({ text: `"${phase.line}"`, color: '#f4e6c8', x, y: FLOOR_Y - 280, at: at + 150, size: 16, life: 1700, lane: 'speech', prio: PRIO.info });
+        // The card waits for the callout to leave (they share the top of the stage).
+        if (phase.fury) this.lesson('fury', 'FÚRIA: ele age mais vezes, bate mais forte e prepara mais rápido. Fica de olho na trilha.', at + 1300);
+      }),
+      events.on('offBalance', ({ fighterId }) => {
+        this.say({ text: 'DESEQUILIBROU', color: FEINT_COLOR, x: this.restX(fighterId), y: FLOOR_Y - 230, at: now(), size: 22, life: 1000, lane: fighterId, prio: PRIO.status });
+      }),
+      events.on('courageLost', ({ fighterId, amount }) => {
+        this.say({ text: `-${amount} CORAGEM`, color: '#c9a0ff', x: this.restX(fighterId), y: FLOOR_Y - 240, at: now() + 150, size: 20, life: 800, lane: fighterId, prio: PRIO.tick, merge: { kind: 'courage', value: amount } });
+      }),
       events.on('strike', ({ attackerId, targetId, damage, crit }) => {
         if (party(attackerId)) this.lastTarget.set(attackerId, targetId);
         this.cue('strike', now(), attackerId);
         this.cue('hurt', now() + 180, targetId);
         this.impactAt.set(targetId, now() + 180);
-        this.floats.push({ text: crit ? `CRÍTICO -${damage}` : `-${damage}`, color: crit ? '#ffb84a' : '#ffffff', x: this.restX(targetId), y: FLOOR_Y - 190, at: now() + 180, size: crit ? 32 : 28, life: 800 });
+        this.say({ text: crit ? `CRÍTICO -${damage}` : `-${damage}`, color: crit ? '#ffb84a' : '#ffffff', x: this.restX(targetId), y: FLOOR_Y - 190, at: now() + 180, size: crit ? 32 : 28, life: 800, lane: targetId, prio: crit ? PRIO.big : PRIO.damage, ...(crit ? {} : { merge: { kind: 'damage' as const, value: damage } }) });
         this.burst(this.restX(targetId) - 30, FLOOR_Y - 100, '#fff3c0', 8, now() + 180);
+        if (battle.fighter(targetId)!.hp <= 0) this.hitstop(now() + 180, HITSTOP_MS.knockout);
+        else if (crit) this.hitstop(now() + 180, HITSTOP_MS.crit);
       }),
       events.on('firmed', ({ fighterId }) => {
         this.cue('firm', now(), fighterId);
-        this.floats.push({ text: 'FIRME', color: '#8fc8ff', x: this.restX(fighterId), y: FLOOR_Y - 190, at: now(), size: 24, life: 800 });
+        this.say({ text: 'FIRME', color: '#8fc8ff', x: this.restX(fighterId), y: FLOOR_Y - 190, at: now(), size: 24, life: 800, lane: fighterId, prio: PRIO.status });
       }),
       events.on('early', ({ fighterId }) => {
         this.cue('stagger', now(), fighterId);
-        this.floats.push({ text: 'CEDO!', color: '#b9b9b9', x: this.restX(fighterId), y: FLOOR_Y - 200, at: now(), size: 22, life: 600 });
+        this.say({ text: 'CEDO!', color: '#b9b9b9', x: this.restX(fighterId), y: FLOOR_Y - 200, at: now(), size: 22, life: 600, lane: fighterId, prio: PRIO.status });
       }),
       events.on('hitResolved', ({ targetId, result, damage, perfect }) => {
         const at = now();
@@ -263,36 +322,40 @@ export class BattleStage2D {
         const home = this.restX(targetId);
         const x = home + 40;
         if (result === 'parry') {
-          this.floats.push({ text: 'PERFEITO!', color: '#ffd75a', x: home, y: FLOOR_Y - 210, at, size: 34, life: 900 });
+          this.say({ text: 'PERFEITO!', color: '#ffd75a', x: home, y: FLOOR_Y - 210, at, size: 34, life: 900, lane: targetId, prio: PRIO.big });
           this.burst(x + 40, FLOOR_Y - 110, '#fff6b0', 14, at);
+          this.hitstop(at, HITSTOP_MS.perfect);
         } else if (result === 'dodge' && perfect) {
-          this.floats.push({ text: 'ESQUIVA PERFEITA!', color: '#7fdcff', x: home - 30, y: FLOOR_Y - 205, at, size: 28, life: 900 });
+          this.say({ text: 'ESQUIVA PERFEITA!', color: '#7fdcff', x: home - 30, y: FLOOR_Y - 205, at, size: 30, life: 900, lane: targetId, prio: PRIO.big });
           this.burst(home - 30, FLOOR_Y - 120, '#c8f2ff', 10, at);
+          this.hitstop(at, HITSTOP_MS.perfect);
         } else if (result === 'dodge') {
-          this.floats.push({ text: 'ESQUIVA', color: '#7fdcff', x: home - 30, y: FLOOR_Y - 200, at, size: 24, life: 700 });
+          this.say({ text: 'ESQUIVA', color: '#7fdcff', x: home - 30, y: FLOOR_Y - 200, at, size: 24, life: 700, lane: targetId, prio: PRIO.status });
         } else if (result === 'held') {
-          this.floats.push({ text: 'SEGUROU! ERA FINTA', color: FEINT_COLOR, x: home + 40, y: FLOOR_Y - 210, at, size: 24, life: 900 });
+          this.say({ text: 'SEGUROU!', color: FEINT_COLOR, x: home, y: FLOOR_Y - 210, at, size: 26, life: 900, lane: targetId, prio: PRIO.status });
         } else if (result === 'taken') {
-          this.floats.push({ text: `-${damage}`, color: '#ff5a4a', x: home, y: FLOOR_Y - 200, at, size: 30, life: 800 });
+          this.say({ text: `-${damage}`, color: '#ff5a4a', x: home, y: FLOOR_Y - 200, at, size: 30, life: 800, lane: targetId, prio: PRIO.damage, merge: { kind: 'damage', value: damage } });
           this.burst(x, FLOOR_Y - 100, '#ff7a5a', 8, at);
           this.shake(at, damage >= 15 ? 9 : 5);
+          if (battle.fighter(targetId)!.hp <= 0) this.hitstop(at, HITSTOP_MS.knockout);
         }
       }),
       events.on('counter', ({ defenderId, attackerId, damage }) => {
         this.cue('counter', now(), defenderId);
         this.cue('hurt', now() + 120, attackerId);
         const x = this.restX(attackerId);
-        this.floats.push({ text: 'CONTRA-ATAQUE!', color: '#ff9a3a', x: 480, y: 140, at: now(), size: 32, life: 1100 });
-        this.floats.push({ text: `-${damage}`, color: '#ffffff', x: x + 20, y: FLOOR_Y - 200, at: now() + 120, size: 28, life: 800 });
+        this.say({ text: 'CONTRA-ATAQUE!', color: '#ff9a3a', x: 480, y: 140, at: now(), size: 32, life: 1100, lane: 'callout', prio: PRIO.status });
+        this.say({ text: `-${damage}`, color: '#ffffff', x: x + 20, y: FLOOR_Y - 200, at: now() + 120, size: 28, life: 800, lane: attackerId, prio: PRIO.damage, merge: { kind: 'damage', value: damage } });
         this.burst(x - 20, FLOOR_Y - 110, '#ffd08a', 12, now() + 120);
         this.shake(now() + 120, 6);
+        if (battle.fighter(attackerId)!.hp <= 0) this.hitstop(now() + 120, HITSTOP_MS.knockout);
       }),
       events.on('skillUsed', ({ fighterId, skill, targetId, damage, heal, crit, splash }) => {
         const at = now();
         const finisher = skill.kind === 'finisher';
         const fx = skillFx(skill);
         const charge = chargeMs(fx);
-        this.floats.push({ text: finisher ? `${skill.name.toUpperCase()}!` : skill.name, color: finisher ? '#ffb84a' : '#ffe3a0', x: 480, y: 140, at, size: finisher ? 34 : 28, life: 1100 });
+        this.say({ text: finisher ? `${skill.name.toUpperCase()}!` : skill.name, color: finisher ? '#ffb84a' : '#ffe3a0', x: 480, y: 140, at, size: finisher ? 34 : 28, life: 1100, lane: 'callout', prio: finisher ? PRIO.status : PRIO.damage });
         // A sweep (Fúria, Avalanche) lands on everyone it hit; a buff on whoever it covers.
         const hits = damage > 0 ? (splash.length > 0 ? splash : [{ targetId, damage }]) : [];
         const caster = battle.fighter(fighterId);
@@ -316,32 +379,35 @@ export class BattleStage2D {
           const landAt = at + hitMs[covered.indexOf(hit.targetId)];
           this.impactAt.set(hit.targetId, landAt);
           this.cue('hurt', landAt, hit.targetId);
-          this.floats.push({ text: crit && hits.length === 1 ? `CRÍTICO -${hit.damage}` : `-${hit.damage}`, color: crit ? '#ffb84a' : '#ffffff', x: this.restX(hit.targetId), y: FLOOR_Y - 190, at: landAt, size: finisher ? 36 : 30, life: 900 });
+          this.say({ text: crit && hits.length === 1 ? `CRÍTICO -${hit.damage}` : `-${hit.damage}`, color: crit ? '#ffb84a' : '#ffffff', x: this.restX(hit.targetId), y: FLOOR_Y - 190, at: landAt, size: finisher ? 36 : 30, life: 900, lane: hit.targetId, prio: crit || finisher ? PRIO.big : PRIO.damage, ...(crit && hits.length === 1 ? {} : { merge: { kind: 'damage' as const, value: hit.damage } }) });
           this.burst(this.restX(hit.targetId) - 30, FLOOR_Y - 100, fx.color, finisher ? 20 : 12, landAt);
           this.burst(this.restX(hit.targetId) - 30, FLOOR_Y - 100, '#fff3c0', finisher ? 8 : 4, landAt);
           this.shake(landAt, battle.fighter(hit.targetId)!.hp <= 0 ? 10 : finisher ? 12 : 6);
+          if (battle.fighter(hit.targetId)!.hp <= 0) this.hitstop(landAt, HITSTOP_MS.knockout);
+          else if (crit || finisher) this.hitstop(landAt, HITSTOP_MS.crit);
         });
         if (hits.length === 0) {
-          if (heal > 0) this.floats.push({ text: `+${heal}`, color: '#8dffa8', x: this.restX(fighterId), y: FLOOR_Y - 200, at: at + charge, size: 28, life: 900 });
+          if (heal > 0) this.say({ text: `+${heal}`, color: '#8dffa8', x: this.restX(fighterId), y: FLOOR_Y - 200, at: at + charge, size: 28, life: 900, lane: fighterId, prio: PRIO.heal, merge: { kind: 'heal', value: heal } });
         }
       }),
       events.on('riposte', ({ defenderId, attackerId, damage, on }) => {
         if (on === 'parry') this.cue('counter', now(), defenderId);
         this.cue('hurt', now() + 100, attackerId);
         const x = this.restX(attackerId);
-        this.floats.push({ text: `${on === 'dodge' ? 'DE VOLTA' : 'CONTRAGOLPE'} -${damage}`, color: '#ff9a3a', x: x + 20, y: FLOOR_Y - 165, at: now() + 100, size: 22, life: 800 });
+        this.say({ text: `${on === 'dodge' ? 'DE VOLTA' : 'CONTRAGOLPE'} -${damage}`, color: '#ff9a3a', x: x + 20, y: FLOOR_Y - 165, at: now() + 100, size: 24, life: 800, lane: attackerId, prio: PRIO.status });
         this.burst(x - 20, FLOOR_Y - 110, '#ffd08a', 8, now() + 100);
       }),
       events.on('poisoned', ({ fighterId, damage }) => {
         this.cue('hurt', now() + 200, fighterId);
-        this.floats.push({ text: `VENENO -${damage}`, color: '#8de05a', x: this.restX(fighterId), y: FLOOR_Y - 220, at: now() + 200, size: 24, life: 900 });
+        this.say({ text: `VENENO -${damage}`, color: '#8de05a', x: this.restX(fighterId), y: FLOOR_Y - 220, at: now() + 200, size: 24, life: 900, lane: fighterId, prio: PRIO.tick, merge: { kind: 'poison', value: damage } });
         this.burst(this.restX(fighterId), FLOOR_Y - 120, '#8de05a', 8, now() + 200);
       }),
       events.on('looted', ({ fighterId, fichas }) => {
-        this.floats.push({ text: `+${fichas} FICHA${fichas === 1 ? '' : 'S'}`, color: '#ffd75a', x: this.restX(fighterId), y: FLOOR_Y - 240, at: now() + 150, size: 22, life: 900 });
+        this.say({ text: `+${fichas} FICHA${fichas === 1 ? '' : 'S'}`, color: '#ffd75a', x: this.restX(fighterId), y: FLOOR_Y - 240, at: now() + 150, size: 22, life: 900, lane: fighterId, prio: PRIO.info, merge: { kind: 'fichas', value: fichas } });
       }),
       events.on('healed', ({ fighterId, amount }) => {
-        this.floats.push({ text: `+${amount}`, color: '#8dffa8', x: this.restX(fighterId), y: FLOOR_Y - 200, at: now() + 300, size: 24, life: 900 });
+        this.burst(this.restX(fighterId), FLOOR_Y - 100, STATUS_COLORS.poison, 5, now() + 300);
+        this.say({ text: `+${amount}`, color: '#8dffa8', x: this.restX(fighterId), y: FLOOR_Y - 200, at: now() + 300, size: 24, life: 900, lane: fighterId, prio: PRIO.heal, merge: { kind: 'heal', value: amount } });
       }),
       // Emitted as the blow is dealt, before the strike or skill that dealt it: the fall itself waits for `impactAt`.
       events.on('fighterDown', ({ fighterId }) => {
@@ -350,6 +416,62 @@ export class BattleStage2D {
         this.shake(now(), 10);
       })
     ];
+  }
+
+  /** Shows a one-line card the first time a mechanic comes up (remembered on this browser). */
+  private lesson(id: string, text: string, at: number): void {
+    if (this.lessonsSeen.has(id)) return;
+    this.lessonsSeen.add(id);
+    const track = !['charge', 'fury'].includes(id);
+    this.card = { text, at, track, fighterId: this.battle?.attack?.attackerId ?? this.battle?.enemies.find(f => f.charging || f.fury)?.id };
+    this.onLesson(id);
+  }
+
+  /** Shows a word through the text budget (BattleFeedback): one slot per fighter, one callout, merges and queues. */
+  private say(float: FloatText): void {
+    // Keep fighter words on the torso: nameplates and status badges must remain readable.
+    if (float.lane !== 'callout' && float.lane !== 'speech') float = { ...float, y: FLOOR_Y - 105 };
+    this.floats = admitFloat(this.floats, float);
+  }
+
+  private drawLesson(now: number): void {
+    const card = this.card;
+    // A card can be queued for a beat later (it waits for a callout).
+    if (!card || now < card.at || now - card.at > LESSON_MS) return;
+    const { ctx } = this;
+    const t = now - card.at;
+    ctx.globalAlpha = Math.min(1, t / 150, (LESSON_MS - t) / 300);
+    ctx.font = 'bold 15px monospace';
+    ctx.textAlign = 'left';
+    const width = 340;
+    const lines: string[] = [];
+    for (const word of card.text.split(' ')) {
+      const last = lines.length - 1;
+      if (last < 0 || ctx.measureText(`${lines[last]} ${word}`).width > width - 28) lines.push(word);
+      else lines[last] += ` ${word}`;
+    }
+    const height = lines.length * 19 + 20;
+    const anchorX = card.track ? TRACK_X + 400 : this.drawnX.get(card.fighterId ?? '') ?? ENEMY_HOME;
+    const anchorY = card.track ? TRACK_Y - 22 : this.plateTop() - 42;
+    const left = card.track ? 580 : Math.max(20, Math.min(STAGE_WIDTH - width - 20, anchorX - width / 2));
+    // Leave the defence prompt and its keys unobstructed below the card.
+    const top = card.track ? 365 - height : 35;
+    ctx.fillStyle = '#140c08f0';
+    ctx.fillRect(left, top, width, height);
+    ctx.fillStyle = '#ffd75a';
+    ctx.fillRect(left, top, 4, height);
+    ctx.strokeStyle = '#ffd75a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(left + width / 2, top + height);
+    ctx.lineTo(anchorX, anchorY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(anchorX, anchorY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff3d6';
+    lines.forEach((line, i) => ctx.fillText(line, left + 14, top + 24 + i * 19));
+    ctx.globalAlpha = 1;
   }
 
   detach(): void {
@@ -379,15 +501,15 @@ export class BattleStage2D {
     const hero = battle.party[0];
     const enemy = battle.enemies[0];
     // The player's drinks sway the room a little (cosmetic in phase 1); hits shake it.
-    const sway = hero.tipsiness * 1.6;
+    const sway = this.reducedMotion ? 0 : hero.tipsiness * 1.6;
     let dx = Math.sin(wallMs / 900) * sway;
     let dy = Math.sin(wallMs / 1300) * sway * 0.4;
-    if (now >= this.shakeFrom && now < this.shakeUntil) {
+    if (!this.reducedMotion && now >= this.shakeFrom && now < this.shakeUntil) {
       dx += (Math.random() * 2 - 1) * this.shakePower;
       dy += (Math.random() * 2 - 1) * this.shakePower * 0.5;
     }
     ctx.setTransform(k, 0, 0, k, Math.round(dx * k), Math.round(dy * k));
-    ctx.rotate(Math.sin(wallMs / 1100) * hero.tipsiness * 0.0018);
+    if (!this.reducedMotion) ctx.rotate(Math.sin(wallMs / 1100) * hero.tipsiness * 0.0018);
     ctx.drawImage(room, 0, 0);
     // The painted tavern has its own light; only the placeholder one needs the flicker.
     if (!art && this.backdrop === 'tavern') this.drawLanternGlow(wallMs);
@@ -434,10 +556,12 @@ export class BattleStage2D {
     battle.fighters.forEach((fighter) => this.drawPlate(now, wallMs, fighter));
     battle.fighters.forEach((fighter) => this.drawStatuses(now, fighter));
     this.drawIntent(now, enemyX);
+    this.drawCharges(wallMs);
     this.drawSparks(now);
     this.drawFloats(now);
     ctx.setTransform(k, 0, 0, k, 0, 0);
     if (this.showTrack) this.drawTrack(now);
+    this.drawLesson(now);
   }
 
   // ── Positions and poses, from the battle state and the cues ──
@@ -585,8 +709,10 @@ export class BattleStage2D {
     if (this.recent(now, enemy.id, ['drink'], 900)) return 'drink';
     if (this.recent(now, enemy.id, ['hurt'], 280)) return 'hurt';
     const attack = this.battle!.attack;
+    // Winding up a Golpe Carregado: the arm stays up, turn after turn.
+    if (enemy.charging) return 'feint';
     if (attack && attack.attackerId === enemy.id && this.battle!.phase === 'enemy-attack') {
-      const heavy = attack.pattern.intent === 'pesado';
+      const heavy = attack.pattern.intent === 'pesado' || attack.pattern.intent === 'carregado';
       // A projectile's swing is its release, a flight before it lands.
       const flight = attack.pattern.projectile ? attack.pattern.flightMs ?? 0 : 0;
       for (const hit of attack.hits) {
@@ -625,6 +751,7 @@ export class BattleStage2D {
     const own = this.battle!.attack?.attackerId === fighter.id ? this.battle!.attack : null;
     // Anyone with a sheet uses it (the party's turned to face the enemies).
     const sheet = ATLASES[fighter.look];
+    if (fighter.fury && fighter.hp > 0) this.drawFuryGlow(x, now);
     if (sheet && ready(sheet.image)) {
       const casting = own ? undefined : this.casting.get(fighter.id);
       const castId = casting ? castCells(casting.fx).find((id) => id === TOAST || id in sheet.attacks) ?? '' : '';
@@ -643,7 +770,7 @@ export class BattleStage2D {
     }
     if (pose === 'dodge') ctx.rotate(-0.22);
     if (pose === 'hurt' || pose === 'stagger') ctx.rotate(-0.12);
-    const flash = pose === 'hurt' && Math.floor(now / 60) % 2 === 0;
+    const flash = pose === 'hurt' && !this.reducedMotion && Math.floor(now / 60) % 2 === 0;
     const block = (bx: number, by: number, w: number, h: number, color: string) => {
       ctx.fillStyle = flash ? '#ffffff' : color;
       ctx.fillRect(bx * U, by * U, w * U, h * U);
@@ -710,7 +837,7 @@ export class BattleStage2D {
     block(4, -23, 3, 1, '#c87050');
     // The arm: what he swings depends on the attack (caneca, socos, martelo).
     const weapon = (hx: number, hy: number) => {
-      if (intent === 'pesado') {
+      if (intent === 'pesado' || intent === 'carregado') {
         block(hx, hy - 12, 2, 14, '#6a4a2a');
         block(hx - 3, hy - 17, 8, 6, iron);
         block(hx - 3, hy - 17, 8, 1, '#c8ccd4');
@@ -864,10 +991,25 @@ export class BattleStage2D {
     ctx.scale(-facing, 1);
     // A gulp: the idle pose already holds the tankard (or the coin, the orb), so they just bob.
     const bob = pose === 'drink' && sheet.drink === undefined ? -Math.abs(Math.sin(now / 120)) * 6 : 0;
-    if (pose === 'hurt' && Math.floor(now / 60) % 2 === 0) ctx.filter = 'brightness(2.6)';
+    if (pose === 'hurt') ctx.filter = this.reducedMotion ? 'brightness(1.5)' : Math.floor(now / 60) % 2 === 0 ? 'brightness(2.6)' : 'none';
     const scale = (sheet.scale ?? ATLAS_SCALE) * this.size;
     ctx.drawImage(sheet.image, sx, sy, ATLAS_CELL, ATLAS_CELL,
       -ATLAS_PIVOT.x * scale, -ATLAS_PIVOT.y * scale + bob, ATLAS_CELL * scale, ATLAS_CELL * scale);
+    ctx.restore();
+  }
+
+  /** A raging champion: a red heat pulsing behind the body (breathing slowly, never a flash). */
+  private drawFuryGlow(x: number, now: number): void {
+    const { ctx } = this;
+    const pulse = 0.35 + 0.2 * Math.sin(now / 260);
+    const cy = FLOOR_Y - 90 * this.size;
+    const radius = 120 * this.size;
+    const glow = ctx.createRadialGradient(x, cy, radius * 0.2, x, cy, radius);
+    glow.addColorStop(0, `rgba(255, 59, 47, ${pulse.toFixed(3)})`);
+    glow.addColorStop(1, 'rgba(255, 59, 47, 0)');
+    ctx.save();
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - radius, cy - radius, radius * 2, radius * 2);
     ctx.restore();
   }
 
@@ -936,6 +1078,14 @@ export class BattleStage2D {
       ctx.fillStyle = '#7fdcffb0';
       ctx.fillRect(barX, barY, Math.min(barW, width(fighter.shield)), 4);
     }
+    // A champion's phase thresholds: a notch on the bar for each one still ahead (the next turn is readable).
+    fighter.phases.slice(fighter.phase).forEach((phase) => {
+      // Teeth above and below the bar, so the HP number in the middle stays clean.
+      const notch = barX + Math.round(phase.atHpShare * barW);
+      ctx.fillStyle = phase.fury ? FURY_COLOR : '#bfefff';
+      ctx.fillRect(notch - 1, barY - 3, 3, 4);
+      ctx.fillRect(notch - 1, barY + barH - 1, 3, 4);
+    });
     ctx.font = 'bold 10px monospace';
     ctx.textAlign = 'center';
     const label = `${Math.max(0, Math.round(shown.hp))}/${fighter.maxHp}`;
@@ -976,16 +1126,63 @@ export class BattleStage2D {
     const badges = fighter.hp > 0 ? fighterStatuses(fighter) : [];
     const key = (id: StatusId) => `${fighter.id}:${id}`;
     const ids = new Set(badges.map((badge) => key(badge.id)));
-    [...this.badgeSince.keys()].forEach((k) => { if (k.startsWith(`${fighter.id}:`) && !ids.has(k)) this.badgeSince.delete(k); });
+    [...this.badgeSince.keys()].forEach((k) => {
+      if (k.startsWith(`${fighter.id}:`) && !ids.has(k)) {
+        this.badgeSince.delete(k);
+        this.burst(this.drawnX.get(fighter.id) ?? this.restX(fighter.id), FLOOR_Y - 110, '#ddd5c6', 3, now);
+      }
+    });
     if (badges.length === 0) return;
     badges.forEach((badge) => {
-      if (!this.badgeSince.has(key(badge.id))) this.badgeSince.set(key(badge.id), Math.max(now, this.statusAt.get(fighter.id) ?? now));
+      if (!this.badgeSince.has(key(badge.id))) {
+        const at = Math.max(now, this.statusAt.get(fighter.id) ?? now);
+        this.badgeSince.set(key(badge.id), at);
+        const words: Partial<Record<StatusId, string>> = { poison: 'ENVENENADO', mark: 'MARCADO', stun: 'ATORDOADO', weak: 'FRACO', shield: 'ESCUDO', wall: 'FIRME', taunt: 'PROVOCOU' };
+        const text = words[badge.id];
+        if (text) this.say({ text, color: STATUS_COLORS[badge.id], x: this.restX(fighter.id), y: FLOOR_Y - 105, at, size: 24, life: 900, lane: fighter.id, prio: PRIO.status });
+      }
     });
     const x = this.drawnX.get(fighter.id) ?? this.restX(fighter.id);
+    // The same status colours as the badges, anchored to the body rather than another word.
+    const ctx = this.ctx;
+    ctx.save();
+    badges.forEach(badge => {
+      const age = now - this.badgeSince.get(key(badge.id))!;
+      if (age < 0) return;
+      const color = STATUS_COLORS[badge.id];
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 3;
+      if (badge.id === 'poison') {
+        for (let i = 0; i < 3; i++) {
+          const t = this.reducedMotion ? i / 3 : ((now / 1600 + i / 3) % 1);
+          ctx.globalAlpha = .65 * (1 - t);
+          ctx.beginPath(); ctx.arc(x - 28 + i * 28, FLOOR_Y - 60 - t * 75, 4, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (badge.id === 'mark') {
+        ctx.globalAlpha = .8;
+        ctx.beginPath(); ctx.arc(x, FLOOR_Y - 100, 24, 0, Math.PI * 2); ctx.stroke();
+        for (const sign of [-1, 1]) {
+          ctx.fillRect(x + sign * 24 - 7, FLOOR_Y - 102, 14, 4);
+          ctx.fillRect(x - 2, FLOOR_Y - 100 + sign * 24 - 7, 4, 14);
+        }
+      } else if (badge.id === 'stun') {
+        ctx.globalAlpha = .9;
+        ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center';
+        for (let i = 0; i < 3; i++) {
+          const angle = (this.reducedMotion ? 0 : now / 500) + i * Math.PI * 2 / 3;
+          ctx.fillText('✦', x + Math.cos(angle) * 30, FLOOR_Y - 155 + Math.sin(angle) * 8);
+        }
+      } else if (age < 600 || badge.id === 'shield' || badge.id === 'wall' || badge.id === 'firm') {
+        ctx.globalAlpha = age < 600 ? .65 * (1 - age / 900) : .25;
+        ctx.beginPath(); ctx.ellipse(x, FLOOR_Y - 85, 43, 70, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    });
+    ctx.restore();
     const bottom = this.plateTop() - 4;
     drawStatusBadges(this.ctx, x, bottom, badges, (id) => {
       const t = now - this.badgeSince.get(key(id))!;
-      return t < 0 ? 0 : t < 220 ? 1 + 0.6 * Math.sin((t / 220) * Math.PI) : 1;
+      return t < 0 ? 0 : !this.reducedMotion && t < 220 ? 1 + 0.6 * Math.sin((t / 220) * Math.PI) : 1;
     });
     const { lefts, side } = badgeLefts(x, badges.length);
     badges.forEach((badge, i) => {
@@ -1004,6 +1201,37 @@ export class BattleStage2D {
     return box ? { fighter: box.fighter, badge: box.badge, left: rect.left + (box.x + box.side / 2) * k, top: rect.top + box.y * k, bottom: rect.top + (box.y + box.side) * k } : null;
   }
 
+  /** Over an enemy winding up a Golpe Carregado, between attacks: what comes, in how many of its turns, and at whom. */
+  private drawCharges(wallMs: number): void {
+    const battle = this.battle!;
+    if (battle.phase === 'enemy-attack') return;
+    const { ctx } = this;
+    battle.enemies.forEach((foe) => {
+      if (!foe.charging || foe.hp <= 0) return;
+      const { pattern, turnsLeft, targetId } = foe.charging;
+      const x = this.drawnX.get(foe.id) ?? this.restX(foe.id);
+      const label = `${pattern.name.toUpperCase()} EM ${turnsLeft} TURNO${turnsLeft === 1 ? '' : 'S'}`;
+      const line = `→ ${battle.fighter(targetId)?.name ?? ''} · FIRME (4) E APARE (J)`;
+      ctx.font = 'bold 17px monospace';
+      ctx.textAlign = 'center';
+      ctx.font = '13px monospace';
+      const lineWidth = ctx.measureText(line).width;
+      ctx.font = 'bold 17px monospace';
+      const width = Math.max(ctx.measureText(label).width, lineWidth) + 24;
+      const y = FLOOR_Y - 250;
+      ctx.fillStyle = '#140c08e0';
+      ctx.fillRect(Math.round(x - width / 2), y - 22, Math.round(width), 48);
+      ctx.fillStyle = CHARGE_COLOR;
+      ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(wallMs / 300));
+      ctx.fillRect(Math.round(x - width / 2), y - 22, Math.round(width), 3);
+      ctx.globalAlpha = 1;
+      ctx.fillText(label, x, y);
+      ctx.font = '13px monospace';
+      ctx.fillStyle = '#e8dcc0';
+      ctx.fillText(line, x, y + 18);
+    });
+  }
+
   /** The intent badge over the enemy while an attack is coming: "18 PESADO", "6 × 3 COMBO". */
   private drawIntent(now: number, enemyX: number): void {
     const battle = this.battle!;
@@ -1013,7 +1241,7 @@ export class BattleStage2D {
     const damage = attack.hits[0].damage;
     const count = attack.hits.length;
     const label = intentLabel(attack, damage, count);
-    const color = pattern.intent === 'pesado' ? '#ff6a4a' : pattern.intent === 'combo' || pattern.intent === 'dados' ? '#ffb84a' : pattern.intent === 'flecha' ? '#7fdcff' : '#ffe08a';
+    const color = pattern.intent === 'carregado' ? CHARGE_COLOR : attack.hits.every((hit) => hit.parryOnly) ? PARRY_ONLY_COLOR : pattern.intent === 'pesado' ? '#ff6a4a' : pattern.intent === 'combo' || pattern.intent === 'dados' ? '#ffb84a' : pattern.intent === 'flecha' ? '#7fdcff' : '#ffe08a';
     const { ctx } = this;
     ctx.font = 'bold 18px monospace';
     ctx.textAlign = 'center';
@@ -1069,7 +1297,7 @@ export class BattleStage2D {
       const x = TRACK_X + (hit.at - now) * TRACK_PX_PER_MS;
       if (x < left - 10 || x > right + 10) return;
       // Pressentimento shows the feints for what they are.
-      const color = hit.result ? RESULT_COLORS[hit.result] : hit.feint && hero.passives.foresight ? FEINT_COLOR : hit.dodgeOnly ? '#7fdcff' : '#ffffff';
+      const color = hit.result ? RESULT_COLORS[hit.result] : hit.feint && hero.passives.foresight ? FEINT_COLOR : hit.dodgeOnly ? '#7fdcff' : hit.parryOnly ? PARRY_ONLY_COLOR : '#ffffff';
       if (hit.result && now - hit.at > 500) return;
       ctx.fillStyle = color;
       const size = hit.damage >= 15 ? 11 : 8;
@@ -1092,10 +1320,25 @@ export class BattleStage2D {
     if (this.sparks.length > 200) this.sparks.splice(0, this.sparks.length - 200);
   }
 
+  /** Holds the fight for a beat when a big blow lands (crit, perfect, knockout): the duel's clock stops, so every
+   *  window and telegraph keeps its length. */
+  private hitstop(at: number, ms: number): void {
+    if (!this.reducedMotion) this.stops.push({ at, ms });
+  }
+
+  /** The earliest hitstop due by battle time `until` (taken off the list), or null. */
+  takeHitstop(until: number): { at: number; ms: number } | null {
+    if (this.reducedMotion) { this.stops = []; return null; }
+    let best = -1;
+    this.stops.forEach((stop, i) => { if (stop.at <= until && (best < 0 || stop.at < this.stops[best].at)) best = i; });
+    return best < 0 ? null : this.stops.splice(best, 1)[0];
+  }
+
   private shake(at: number, power: number): void {
+    if (this.reducedMotion) return;
     this.shakeFrom = at;
     this.shakeUntil = at + 220;
-    this.shakePower = power;
+    this.shakePower = Math.min(12, power);
   }
 
   private drawSparks(now: number): void {
@@ -1113,7 +1356,7 @@ export class BattleStage2D {
     const { ctx } = this;
     this.floats = this.floats.filter((float) => now - float.at < float.life);
     ctx.textAlign = 'center';
-    this.floats.forEach((float) => {
+    visibleFloats(this.floats, now).forEach((float) => {
       const t = now - float.at;
       if (t < 0) return;
       const rise = Math.min(1, t / float.life);
@@ -1121,9 +1364,10 @@ export class BattleStage2D {
       ctx.globalAlpha = rise > 0.7 ? (1 - rise) / 0.3 : 1;
       ctx.font = `bold ${Math.round(float.size * pop)}px monospace`;
       ctx.fillStyle = '#140c08';
-      ctx.fillText(float.text, float.x + 3, float.y - rise * 40 + 3);
+      const lines = float.text.split('\n');
+      lines.forEach((line, i) => ctx.fillText(line, float.x + 3, float.y - rise * 40 + 3 + i * float.size * 1.2));
       ctx.fillStyle = float.color;
-      ctx.fillText(float.text, float.x, float.y - rise * 40);
+      lines.forEach((line, i) => ctx.fillText(line, float.x, float.y - rise * 40 + i * float.size * 1.2));
       ctx.globalAlpha = 1;
     });
   }
@@ -1275,13 +1519,15 @@ export class BattleStage2D {
 
 /** The intent badge's first line: "18 PESADO", "6 × 3 COMBO", "9 FLECHA · SÓ ESQUIVA", "? × 5 DADOS". */
 function intentLabel(attack: EnemyAttack, damage: number, count: number): string {
+  const unbreakable = attack.hits.every((hit) => hit.parryOnly) ? ' · SÓ APARA' : attack.hits.some((hit) => hit.parryOnly) ? ' · TEM INQUEBRÁVEL' : '';
   switch (attack.pattern.intent) {
-    case 'combo': return `${damage} × ${count} COMBO`;
-    case 'pesado': return `${damage} PESADO`;
+    case 'carregado': return `${damage} CARREGADO · SÓ APARA`;
+    case 'combo': return `${damage} × ${count} COMBO${unbreakable}`;
+    case 'pesado': return `${damage} PESADO${unbreakable}`;
     case 'flecha': return count > 1 ? `${damage} × ${count} FLECHAS · SÓ ESQUIVA` : `${damage} FLECHA · SÓ ESQUIVA`;
     case 'dados': return attack.dice && !attack.dice.revealed ? `? × ${damage} DADOS` : `🎲 ${count} × ${damage} DADOS`;
     case 'arremesso': return count > 1 ? `${damage} × ${count} ARREMESSO` : `${damage} ARREMESSO`;
-    default: return `${damage} GOLPE`;
+    default: return `${damage} GOLPE${unbreakable}`;
   }
 }
 

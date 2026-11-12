@@ -78,6 +78,8 @@ describe('the squad', () => {
     expect(battle.party[1].taunting).toBe(true);
     const aimed: string[] = [];
     battle.events.on('attackAnnounced', ({ hits }) => aimed.push(hits[0].targetId));
+    // Brom may wind up his Barril nas Costas instead: it's aimed when it starts.
+    battle.events.on('charging', ({ targetId, started }) => { if (started) aimed.push(targetId); });
     untilTurn(battle, 'ally-ancientYeti');
     expect(aimed.length).toBeGreaterThan(0);
     expect(aimed.every((id) => id === 'ally-ancientYeti')).toBe(true);

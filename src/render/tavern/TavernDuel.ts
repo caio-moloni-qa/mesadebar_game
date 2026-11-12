@@ -1,8 +1,9 @@
 import { CHARACTERS, CharacterId } from '../../config/characters';
-import { DICE_RULE, DUELS, DuelId, TAVERN_BATTLE } from '../../config/tavernBattle';
+import { DEFENSE_RULES, DICE_RULE, DUELS, DuelId, TAVERN_BATTLE } from '../../config/tavernBattle';
 import { ROSTER, ROSTER_ORDER, RosterId, SQUAD_TUNING, foeSpec, isRosterId } from '../../config/tavernRoster';
 import { SkillNode } from '../../config/tavernSkills';
-import { TOWERS, TOWER_TUNING, TowerId } from '../../config/tavernTowers';
+import { TOWERS, TOWER_DIFFICULTIES, TOWER_DIFFICULTY_ORDER, TOWER_TUNING, TowerId } from '../../config/tavernTowers';
+import { TavernSettings } from '../../core/progress/Progress';
 import { TowerRun } from '../../core/tavern/TowerRun';
 import { BattleAlly, Fighter, TurnBattle, TurnBattleOptions } from '../../core/tavern/TurnBattle';
 import { heroName } from '../progress/heroNames';
@@ -10,7 +11,11 @@ import { npcFace, npcPortrait } from '../ui/icons';
 import { BattleStage2D } from './BattleStage2D';
 import { statusInfo } from './StatusBadges';
 
-export interface DuelSettings { assisted: boolean; timingTrack: boolean }
+/** `lessons`: the one-line cards already shown (each mechanic is taught once, ever); `difficulty`: the towers'. */
+export type DuelSettings = TavernSettings;
+
+/** The system asks for less motion (the duel's own setting can also turn it on). */
+const systemReducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** How a duel went, for the save. */
 export interface DuelOutcome { won: boolean; parries: number; /** Grimbo's bet (already paid in). */ bet: number; /** Fichas pocketed with Mão Leve. */ loot: number }
@@ -61,6 +66,8 @@ export class TavernDuel {
   /** Grimbo's duel: the fichas staked this time. */
   private bet = 0;
   private lastAt = 0;
+  /** What is left of the hitstop holding the battle clock (wall ms). */
+  private frozenMs = 0;
   private paused = false;
   private duelId: DuelId = 'brom';
   private heroId: CharacterId = 'mage';
@@ -182,6 +189,11 @@ export class TavernDuel {
       <p class="eyebrow">O Coliseu do Sergio · ${spec.region}</p>
       <h2>${spec.name}: monte o grupo</h2>
       <p class="duel-xp">Até <b>${max}</b> lutadores, cada um com suas habilidades e seu turno. O primeiro é o líder. Quanto maior o grupo, mais fortes os inimigos.</p>
+      <div class="duel-difficulty" role="radiogroup" aria-label="Dificuldade">${TOWER_DIFFICULTY_ORDER.map((id) => {
+        const spec = TOWER_DIFFICULTIES[id];
+        const on = this.hooks.settings().difficulty === id;
+        return `<button type="button" role="radio" aria-checked="${on}" class="duel-difficulty-option ${id}${on ? ' on' : ''}" data-difficulty="${id}"><b>${spec.name}</b><span>${spec.blurb}</span></button>`;
+      }).join('')}<kbd>D</kbd></div>
       <ol class="squad-grid">${options.map((id, i) => {
         const fighter = ROSTER[id];
         const place = this.squad.indexOf(id);
@@ -196,10 +208,17 @@ export class TavernDuel {
         </button></li>`).join('')}</ol>
       <div class="duel-panel-actions"></div>`;
     this.towerEl.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((button) => button.addEventListener('click', () => this.togglePick(button.dataset.pick as RosterId)));
+    this.towerEl.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach((button) => button.addEventListener('click', () => this.setDifficulty(button.dataset.difficulty as DuelSettings['difficulty'])));
     const actions = this.towerEl.querySelector('.duel-panel-actions')!;
     const go = this.button(`Subir com ${this.squad.length} (Enter)`, 'primary', () => this.beginClimb(tower, this.squad));
     go.disabled = this.squad.length === 0;
     actions.append(go, this.button('Voltar (Esc)', '', () => this.close()));
+  }
+
+  /** Picks the towers' difficulty (kept in the save; D cycles it on the squad picker). */
+  private setDifficulty(difficulty: DuelSettings['difficulty']): void {
+    this.hooks.saveSettings({ ...this.hooks.settings(), difficulty });
+    if (this.picking) this.showSquadPicker(this.picking);
   }
 
   private togglePick(id: RosterId): void {
@@ -215,7 +234,7 @@ export class TavernDuel {
     this.squad = squad.filter(isRosterId).slice(0, 1 + SQUAD_TUNING.maxAllies);
     if (this.squad.length === 0) this.squad = [this.heroId];
     const [leader, ...allies] = this.squad;
-    this.climb = new TowerRun(TOWERS[tower], ROSTER[leader].stats, allies.map((id): BattleAlly => ({ id: `ally-${id}`, look: id, spec: ROSTER[id].stats, kit: ROSTER[id].kit })));
+    this.climb = new TowerRun(TOWERS[tower], ROSTER[leader].stats, allies.map((id): BattleAlly => ({ id: `ally-${id}`, look: id, spec: ROSTER[id].stats, kit: ROSTER[id].kit })), this.hooks.settings().difficulty);
     this.showLadder();
   }
 
@@ -260,15 +279,16 @@ export class TavernDuel {
     this.towerEl.hidden = false;
     const number = climb.floor + 1;
     const squadLine = [`${ROSTER[this.squad[0]]?.name ?? 'Você'} ${climb.heroHp}/${climb.heroMaxHp}`, ...climb.allies.map(({ ally, hp }) => `${ROSTER[ally.look as RosterId]?.name ?? ally.look} ${hp}/${ally.spec.maxHp}`)].join(' · ');
+    const difficulty = TOWER_DIFFICULTIES[climb.difficulty];
     const rungs = climb.tower.floors.map((spec, i) => {
       const state = i < climb.floor ? 'done' : i === climb.floor ? 'current' : '';
-      const prize = spec.kind === 'fight' ? `<span>+${spec.fichas} fichas</span>` : '<span>descanso</span>';
+      const prize = spec.kind === 'fight' ? `<span>+${Math.round(spec.fichas * difficulty.fichas)} fichas</span>` : '<span>descanso</span>';
       return `<li class="${state} ${spec.kind === 'fight' && spec.champion ? 'champion' : ''}"><b>${i + 1}</b> ${spec.name} ${prize}</li>`;
     }).reverse().join('');
     const mentorName = this.mentor ? DUELS[this.mentor].enemy.name : null;
     this.towerEl.innerHTML = `
       <p class="eyebrow">O Coliseu do Sergio · ${climb.tower.region}</p>
-      <h2>${climb.tower.name}</h2>
+      <h2>${climb.tower.name}${climb.difficulty === 'normal' ? '' : ` <span class="duel-difficulty-tag ${climb.difficulty}">${difficulty.name}</span>`}</h2>
       <p class="duel-xp">${climb.allies.length > 0 ? `Grupo: <b>${squadLine}</b>` : `Vida <b>${climb.heroHp}/${climb.heroMaxHp}</b>`} · Pote <b>${climb.pot} fichas</b>${climb.masteryXp > 0 ? ` · Maestria <b>+${climb.masteryXp} XP</b>` : ''}${climb.courage > 0 ? ` · Coragem <b>${climb.courage}</b>` : ''}</p>
       <ol class="tower-ladder">${rungs}</ol>
       <p class="duel-result-line">${floor.kind === 'rest' ? `Andar ${number}: o balcão. Um respiro antes de subir.` : `Andar ${number}: ${floor.name}${floor.foes.length > 1 ? ` (${floor.foes.map((foe) => foeSpec(foe.duel).enemy.name).join(' + ')})` : ''}`}</p>
@@ -446,12 +466,16 @@ export class TavernDuel {
     this.battle = new TurnBattle(options);
     this.targetIndex = 0;
     this.stage.showTrack = settings.timingTrack;
+    this.stage.reducedMotion = settings.reducedMotion || systemReducedMotion();
+    this.stage.lessonsSeen = new Set(settings.lessons);
+    this.stage.onLesson = (id) => this.hooks.saveSettings({ ...this.hooks.settings(), lessons: [...this.hooks.settings().lessons.filter((seen) => seen !== id), id] });
     this.stage.attach(this.battle, (look) => ROSTER[look as RosterId]?.color ?? CHARACTERS[this.heroId]?.accentColor ?? 0xc0502a);
     this.battle.events.on('battleEnded', () => this.showResult());
     this.paused = false;
     this.skillMenu = false;
     this.hudKey = '';
     this.lastAt = performance.now();
+    this.frozenMs = 0;
   }
 
   close(): void {
@@ -512,7 +536,26 @@ export class TavernDuel {
     const elapsed = now - this.lastAt;
     this.lastAt = now;
     // A hidden tab or a long hitch doesn't fast-forward the fight.
-    if (!this.paused && elapsed > 0 && this.stage.artReady) this.battle!.advance(Math.min(elapsed, 250));
+    if (this.paused || elapsed <= 0 || !this.stage.artReady) return;
+    const battle = this.battle!;
+    let budget = Math.min(elapsed, 250);
+    // A hitstop holds the whole clock (attacks, windows, telegraphs), so it never shortens a reaction.
+    const held = Math.min(budget, this.frozenMs);
+    this.frozenMs -= held;
+    budget -= held;
+    while (budget > 0) {
+      const stop = this.stage.takeHitstop(battle.clock.now + budget);
+      if (!stop) {
+        battle.advance(budget);
+        break;
+      }
+      const run = Math.max(0, stop.at - battle.clock.now);
+      if (run > 0) battle.advance(run);
+      budget -= run;
+      const hold = Math.min(budget, stop.ms);
+      budget -= hold;
+      this.frozenMs = stop.ms - hold;
+    }
   }
 
   keydown(event: KeyboardEvent): void {
@@ -525,6 +568,10 @@ export class TavernDuel {
       if (code === 'Escape') this.close();
       else if ((code === 'Enter' || code === 'NumpadEnter') && this.squad.length > 0) this.beginClimb(this.picking, this.squad);
       else if (digit && options[Number(digit) - 1]) this.togglePick(options[Number(digit) - 1]);
+      else if (code === 'KeyD') {
+        const order = TOWER_DIFFICULTY_ORDER;
+        this.setDifficulty(order[(order.indexOf(this.hooks.settings().difficulty) + 1) % order.length]);
+      }
       return;
     }
     if (!battle && this.open && !this.towerEl.hidden) {
@@ -626,6 +673,13 @@ export class TavernDuel {
         this.stage.showTrack = next.timingTrack;
         this.setPaused(true);
       }),
+      this.button(`Movimento reduzido: ${settings.reducedMotion ? 'ligado' : 'desligado'}`, '', () => {
+        const next = { ...this.hooks.settings(), reducedMotion: !this.hooks.settings().reducedMotion };
+        this.hooks.saveSettings(next);
+        this.stage.reducedMotion = next.reducedMotion || systemReducedMotion();
+        if (this.stage.reducedMotion) this.frozenMs = 0;
+        this.setPaused(true);
+      }),
       this.button(this.climb ? `Desistir (leva ${Math.floor(this.climb.pot * TOWER_TUNING.keepOnLoss)} das ${this.climb.pot} fichas)` : 'Desistir e voltar à taverna', '', () => this.close())
     );
   }
@@ -696,7 +750,7 @@ export class TavernDuel {
     const playerTurn = battle.phase === 'player-turn';
     const defending = battle.phase === 'enemy-attack';
     if (!playerTurn) this.skillMenu = false;
-    const state = (fighter: Fighter) => [fighter.hp, fighter.courage, fighter.tipsiness, fighter.firm, fighter.shield, fighter.wall, fighter.taunting, fighter.poison?.rounds, fighter.mark?.hits, fighter.stunned].join(':');
+    const state = (fighter: Fighter) => [fighter.hp, fighter.courage, fighter.tipsiness, fighter.firm, fighter.shield, fighter.wall, fighter.taunting, fighter.poison?.rounds, fighter.mark?.hits, fighter.stunned, fighter.charging?.turnsLeft, fighter.charging?.targetId].join(':');
     const key = [battle.phase, battle.active?.id, battle.fighters.map(state).join(','), target?.id, queue.join(','), battle.assisted, this.skillMenu, battle.loot].join('|');
     if (key === this.hudKey) return;
     this.hudKey = key;
@@ -712,6 +766,8 @@ export class TavernDuel {
     this.stage.actingId = squad ? actor?.id ?? null : null;
     // Who the incoming attack is aimed at, so the player knows whose skin is on the line.
     const aimed = defending && squad ? battle.fighter(battle.attack?.hits[0]?.targetId ?? '') : null;
+    // A Golpe Carregado aimed at whoever acts now: Firmar is the answer.
+    const charger = playerTurn ? battle.enemies.find((foe) => foe.hp > 0 && foe.charging?.targetId === hero.id) : undefined;
     this.hud.classList.toggle('squad', squad);
     this.hud.innerHTML = `
       <div class="duel-top">
@@ -724,11 +780,15 @@ export class TavernDuel {
           <button type="button" data-action="attack"><kbd>1</kbd> Atacar</button>
           <button type="button" data-action="skills" ${hero.skills.length > 0 ? '' : `disabled title="Aprenda com ${enemy.name} em Habilidades, na taverna"`}><kbd>2</kbd> Habilidade</button>
           <button type="button" disabled title="Em breve"><kbd>3</kbd> Item do bar</button>
-          <button type="button" data-action="firm"><kbd>4</kbd> Firmar</button>
+          <button type="button" data-action="firm" ${charger ? `class="urgent" title="${charger.name} vai soltar ${charger.charging!.pattern.name}: firme pra levar só ${Math.round(DEFENSE_RULES.firmChargeCut * 100)}%"` : ''}><kbd>4</kbd> Firmar${charger ? ' ⚠' : ''}</button>
         </div>
         <div class="duel-actions duel-skills" ${playerTurn && this.skillMenu ? '' : 'hidden'}>
           <p class="eyebrow">Habilidades${squad ? ` de ${hero.name}` : ''} · <kbd>Esc</kbd> volta</p>
-          ${hero.skills.map((skill, i) => `<button type="button" data-skill="${i}" class="${skill.kind}" ${hero.courage >= skill.cost ? '' : 'disabled'} title="${skill.description}"><kbd>${i + 1}</kbd> ${skill.name} ${pips(skill.cost, skill.cost)}</button>`).join('')}
+          ${hero.skills.map((skill, i) => {
+            const cost = battle.skillCost(hero, skill);
+            const echo = cost > skill.cost;
+            return `<button type="button" data-skill="${i}" class="${skill.kind}${echo ? ' echo' : ''}" ${hero.courage >= cost ? '' : 'disabled'} title="${skill.description}${echo ? ' Repetida: custa mais Coragem até você fazer outra coisa.' : ''}"><kbd>${i + 1}</kbd> ${skill.name} ${pips(cost, cost)}${echo ? ' <em>ECO</em>' : ''}</button>`;
+          }).join('')}
         </div>
         <p class="duel-hint" ${defending ? '' : 'hidden'}>${aimed ? `Defendendo <b>${aimed.name}</b> · ` : ''}<kbd>J</kbd> aparar &nbsp;·&nbsp; <kbd>K</kbd> esquivar</p>
       </div>`;

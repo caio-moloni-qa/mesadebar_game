@@ -357,3 +357,90 @@ the igloo mage 58, barbarian 53. `skilled` 100% everywhere. tsc ok, 612 tests pa
 move them, it would take a kit number. `newcomerAssisted` and the squads got much easier (taverna weak heroes 81–97%,
 newcomer squads 50–92%, igloo squads 100%), which leans on M1b (the newcomer wins too early). Simulation only: the
 campfire and the stronger player stats need a human playtest, and the new igloo floor was not looked at in the game.
+
+## 2026-11-11 · Anti-dodge pass: feints punish K, Golpes Inquebráveis, Golpe Carregado + Firmar
+
+**Goal:** "só esquivar faz tudo" (playtester) must stop being true, without making the tower harder for a player who
+reads the fight. Branch `feature/tavern-difficulty-bosses`, 50 duel seeds / 60 tower seeds, solo, sensible policy.
+
+New bots: `averageDodge` (average hands, presses K on everything, feints included) and `newcomerAssistedReads` (the
+assisted newcomer who reads the "só apara / só esquiva" tags and firms against a charge).
+
+| step | lever | averageDodge top % | average top % |
+|---|---|---|---|
+| baseline | — | **100 everywhere** | taverna 74–94 · igloo 58–98 |
+| 1 | `DEFENSE_RULES.feintPunishesDodge` (K on a feint = taken) | taverna 12–100 · igloo 4–94 | unchanged |
+| 2 | `DEFENSE_RULES.courageLostOnHit` 0 → 1 (tried) | taverna 2–94 · igloo 0–44 | **−5 to −25** → reverted to 0 (a harder tier's lever) |
+| 3 | parryOnly hits (Lyra Queima-Roupa, Grimbo Mesa Virada, Zora Corvo 2nd, Cavaleiro Lâmina, Serpente Bote, Sineiro Sino Grande 2nd, Rei Nevasca 2nd) + charges (Brom Barril nas Costas 1 turn 30%, Sergio Fecha a Conta 2 turns 60%, Yeti Avalanche 2 turns 50%, Rei Inverno Eterno 2 turns 60%; Firmar cuts to 25%, a stun breaks it, 2 turns of rest after) | **taverna 0–14 · igloo 0** | taverna 72–96 · igloo 54–100 |
+
+`skilled` 100% everywhere. `newcomerAssisted` (doesn't read tags) fell from 81–97 to 12–60 (taverna) and 0–4 (igloo);
+`newcomerAssistedReads` sits at 94–100 / 82–98. The drop is pure **knowledge** difficulty, so the in-game cards (one
+line, first time per mechanic), the SÓ APARA tag, the gold track diamond and the pulsing Firmar are what carry it.
+
+**Not solved / risks:** the average bot went *up* a little on some heroes (a charging boss spends a turn not hitting,
+and a bot that always firms takes 25%): the charge may be too soft for Normal, to revisit with the tiers. Fabri, Brom
+and Eskimo still sit high. Tavern heroes in the igloo (mage 58, barbarian 54) stay low. Simulation only: needs a
+human playtest, especially whether newcomers read the cards.
+
+## 2026-11-11 · Boss phases by HP: Sergio and the Rei do Inverno
+
+**Goal:** the two champions should *change* mid-fight (a readable turn, then a fury), not just lose HP; the tower's
+top % should not drop for a player who reads the fight. Same branch, 50 tower seeds, solo, same bots as above.
+
+Lever: `BossPhase` (`src/config/tavernBattle.ts`, engine in `TurnBattle.checkPhases`). Sergio at 50% "HORA DE
+FECHAR": fury (speed ×1.25, damage ×1.15, wind-ups ×0.85, floor `BOSS_PHASE_RULES.minLeadMs` 700), opens with Fecha a
+Conta, adds Saideira (2 bottles + a parry-only keg). Rei at 66% "COROA DE GELO" adds Lanças de Gelo (last lance
+parry-only); at 33% "FÚRIA DO INVERNO": fury (×1.3 / ×1.15 / ×0.85) and opens with Inverno Eterno. Thresholds show as
+teeth on the boss HP bar.
+
+| bot | taverna top % before → after | igloo top % before → after |
+|---|---|---|
+| average | 72–96 → 70–98 (barbarian 78 → 70) | 54–100 → 48–100 (barbarian 54 → 48) |
+| averageDodge | 0–14 → 0–14 | 0 → 0 |
+| skilled | 100 → 100 | 100 → 100 |
+| newcomerAssistedReads | 94–100 → 94–98 | 82–98 → 78–100 |
+
+**Decision:** kept. The phases are about variety and drama, near-neutral on the curve (most cells within ±4, seed
+noise). The barbarian gets hit most (the extra boss turns land on a hero with no heal), already below target in the
+igloo: a hero lever, not a boss one. Not measured: whether players read the phase callout and the teeth; playtest.
+
+## 2026-11-11 · Skill repetition (Eco) and completion of tower difficulty
+
+Goal: repeating the same skill must have a visible opportunity cost, while alternating attacks, Firmar and skills
+keeps its original price. Continue the owner's approved difficulty/feedback work; no reaction windows changed.
+
+Lever: `TAVERN_BATTLE.skillRepeatSurcharge` (new) = 1 Coragem per consecutive use of the same skill by that fighter,
+capped at courageMax (5). Successful attack, Firmar or another skill clears that skill's streak; failed input and
+other fighters' turns do not. A new battle/floor starts without a streak. Menu and bots read `TurnBattle.skillCost`;
+`skillUsed.cost` reports the amount actually paid. Four regression tests cover payment, rejection, cap and resets.
+
+Same 50 tower seeds (1..50), average bot, existing sensible policy, 16 solo hero/tower cells, all 3 difficulties:
+
+| Tier | Average top rate before → after Eco | Range after |
+|---|---|---|
+| Normal | 81.625% → 80.25% | 48–98% |
+| Difícil | 53.5% → 52.25% | 18–84% |
+| Cruel | 22.75% → 21.25% | 2–62% |
+
+Artifacts: `tools/balance/out/tavern-codex-echo-{before,after}-{normal,dificil,cruel}.json`.
+Decision: kept. No global difficulty retune to compensate for this small average change. Difficulty multipliers
+already implemented by Claude remain Normal 1/1/1, Difícil HP 1.1/damage 1.15/fichas 1.5, Cruel 1.25/1.3/2.
+These are exploratory N=50 estimates, not a final N=200 calibration. They average cells, not individual hero fairness.
+Risks still present: solo barbarian in snowfield stays 48% Normal/18% Difícil/2% Cruel; Fabri stays 98/84/40 in taverna.
+Most 3-member squads still reach the top 100%, even on Cruel. Eco alone does not solve hero/squad dominance.
+Human playtesting is still needed for feel, readable costs, and the reward economy; no claim that these are solved.
+
+Feedback completion: compact lesson cards point at timing track or threatening fighter's status row; fighter words
+sit below nameplates/badges. Poison bubbles, mark reticle, stun stars and shield/firm rings show statuses on bodies,
+using badge colours; newly applied statuses get one short label and expiry makes a small puff. Reduced motion keeps
+these symbols still, removes badge bounce and clears queued hitstop. Existing audio integration preserved.
+
+Verification: typecheck and production build passed (existing large-chunk warning); 639 source/harness tests passed,
+6 skipped, excluding historical backups in tmp/ and .claude/. Official probe still exits at Runtime.enable;
+Playwright with installed headless Chrome checked all five duel announcements (seed 7), selected Cruel, cleared
+Taverna floor 1 with a perfect bot (12 fichas instead of 6), toggled reduced motion and rejected queued hitstop.
+Debug fixtures exercised simultaneous poison/mark/stun, real Eco cost 3, and paired status+damage on screen.
+Screenshots and state: tmp/codex-continuation-*.png and tmp/codex-continuation-probe.json (problems empty).
+The probe revealed a 120 ms crossfade overlap in the prior feedback director: replaced words now relinquish their
+slot immediately, with a regression test. Natural expiry still fades normally. Portrait 390x844 was previewed;
+its existing landscape stage scales down very small, so this is not a mobile usability approval. No human playtest.

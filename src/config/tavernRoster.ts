@@ -2,7 +2,7 @@
 // Every fighter has a signature kit of four skills (two actives, a passive and a finisher) that's always theirs, on
 // top of what a regular's tree teaches the leader. The regulars' kits are picked from their own trees.
 
-import { AttackPattern, DUELS, DuelFighterSpec, DuelId, DuelSpec } from './tavernBattle';
+import { AttackPattern, BossPhase, DUELS, DuelFighterSpec, DuelId, DuelSpec } from './tavernBattle';
 import { SKILL_TREES, SkillNode } from './tavernSkills';
 
 /** The region fighters who join the squad in the igloo (they're also the Nevado tower's foes). */
@@ -164,8 +164,8 @@ export const SQUAD_TUNING = {
   maxAllies: 2
 } as const;
 
-const snow = (id: SnowFoeId, enemy: DuelFighterSpec, rule: FoeSpec['rule'], legend: string, patterns: AttackPattern[]): FoeSpec => ({
-  id, enemy, rule, legend, patterns,
+const snow = (id: SnowFoeId, enemy: DuelFighterSpec, rule: FoeSpec['rule'], legend: string, patterns: AttackPattern[], phases?: BossPhase[]): FoeSpec => ({
+  id, enemy, rule, legend, patterns, ...(phases ? { phases } : {}),
   lines: { won: 'O gelo racha, mas aguenta... por hoje.', lost: 'A tundra não perdoa quem treme.' }
 });
 
@@ -180,28 +180,44 @@ export const SNOW_FOES: Record<SnowFoeId, FoeSpec> = {
   frostKnight: snow('frostKnight', { name: 'Cavaleiro Congelado', maxHp: 125, attack: 12, speed: 8 }, 'none', 'O Cavaleiro bate pesado e devagar: espere o golpe e apare.', [
     { id: 'corte', name: 'Corte Gélido', intent: 'golpe', leadMs: 1200, hits: [{ offsetMs: 0, damage: 12 }], weight: 3 },
     { id: 'estocadas', name: 'Estocadas', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 7 }, { offsetMs: 420, damage: 7 }, { offsetMs: 840, damage: 7 }], weight: 3 },
-    { id: 'lamina', name: 'Lâmina do Inverno', intent: 'pesado', leadMs: 2100, hits: [{ offsetMs: 0, damage: 20 }], weight: 2 }
+    { id: 'lamina', name: 'Lâmina do Inverno', intent: 'pesado', leadMs: 2100, parryOnly: true, hits: [{ offsetMs: 0, damage: 20 }], weight: 2 }
   ]),
   iceSerpent: snow('iceSerpent', { name: 'Serpente do Gelo', maxHp: 100, attack: 11, speed: 12 }, 'range', 'O cuspe de gelo vem de longe: só dá pra esquivar. O bote dá pra aparar.', [
     { id: 'cuspe', name: 'Cuspe de Gelo', intent: 'flecha', leadMs: 1000, projectile: 'ice', dodgeOnly: true, flightMs: 420, hits: [{ offsetMs: 0, damage: 9 }], weight: 3 },
     { id: 'rajada', name: 'Rajada Gélida', intent: 'flecha', leadMs: 1100, projectile: 'ice', dodgeOnly: true, flightMs: 420, hits: [{ offsetMs: 0, damage: 4 }, { offsetMs: 260, damage: 4 }, { offsetMs: 520, damage: 4 }], weight: 2 },
-    { id: 'bote', name: 'Bote', intent: 'combo', leadMs: 1000, hits: [{ offsetMs: 0, damage: 8 }, { offsetMs: 280, damage: 8 }], weight: 3 }
+    { id: 'bote', name: 'Bote', intent: 'combo', leadMs: 1000, parryOnly: true, hits: [{ offsetMs: 0, damage: 8 }, { offsetMs: 280, damage: 8 }], weight: 3 }
   ]),
   bellringer: snow('bellringer', { name: 'Sineiro', maxHp: 110, attack: 10, speed: 9 }, 'feints', 'O Sineiro finge a badalada: às vezes o sino sobe e não desce. Segure firme.', [
     { id: 'badalada', name: 'Badalada', intent: 'golpe', leadMs: 1200, hits: [{ offsetMs: 0, damage: 11 }], weight: 2 },
     { id: 'dobre', name: 'Dobre Falso', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 8, feint: true }, { offsetMs: 500, damage: 8 }, { offsetMs: 900, damage: 8 }], weight: 3 },
-    { id: 'sino-grande', name: 'Sino Grande', intent: 'pesado', leadMs: 1700, hits: [{ offsetMs: 0, damage: 10, feint: true }, { offsetMs: 800, damage: 18 }], weight: 2 }
+    { id: 'sino-grande', name: 'Sino Grande', intent: 'pesado', leadMs: 1700, hits: [{ offsetMs: 0, damage: 10, feint: true }, { offsetMs: 800, damage: 18, parryOnly: true }], weight: 2 }
   ]),
   ancientYeti: snow('ancientYeti', { name: 'Yeti Ancião', maxHp: 150, attack: 14, speed: 7 }, 'none', 'O Yeti é lento e esmaga: o pesado vem demorado, não aperte cedo.', [
     { id: 'tapa', name: 'Tapão', intent: 'golpe', leadMs: 1100, hits: [{ offsetMs: 0, damage: 13 }], weight: 3 },
     { id: 'socos', name: 'Socos de Avalanche', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 8 }, { offsetMs: 450, damage: 8 }, { offsetMs: 700, damage: 8 }, { offsetMs: 1150, damage: 8 }], weight: 3 },
-    { id: 'terremoto', name: 'Pancada no Chão', intent: 'pesado', leadMs: 2300, hits: [{ offsetMs: 0, damage: 24 }], weight: 2 }
+    { id: 'terremoto', name: 'Pancada no Chão', intent: 'pesado', leadMs: 2300, hits: [{ offsetMs: 0, damage: 24 }], weight: 2 },
+    { id: 'avalanche', name: 'Avalanche', intent: 'carregado', leadMs: 1600, hits: [{ offsetMs: 0, damage: 0 }], charge: { turns: 2, hpShare: 0.5 }, weight: 1 }
   ]),
   winterKing: snow('winterKing', { name: 'Rei do Inverno', maxHp: 170, attack: 14, speed: 9 }, 'feints', 'O Rei mistura tudo: gelo de longe, fintas e o cetro pesado.', [
     { id: 'raio', name: 'Raio do Cetro', intent: 'flecha', leadMs: 1000, projectile: 'ice', dodgeOnly: true, flightMs: 380, hits: [{ offsetMs: 0, damage: 11 }], weight: 2 },
     { id: 'coroa', name: 'Dança da Coroa', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 8 }, { offsetMs: 420, damage: 9, feint: true }, { offsetMs: 800, damage: 8 }, { offsetMs: 1100, damage: 8 }], weight: 3 },
-    { id: 'nevasca', name: 'Nevasca Real', intent: 'pesado', leadMs: 2000, hits: [{ offsetMs: 0, damage: 12, feint: true }, { offsetMs: 900, damage: 22 }], weight: 2 },
-    { id: 'granizo', name: 'Granizo', intent: 'arremesso', leadMs: 1000, projectile: 'snowball', flightMs: 400, hits: [{ offsetMs: 0, damage: 5 }, { offsetMs: 220, damage: 5 }, { offsetMs: 440, damage: 5 }, { offsetMs: 800, damage: 5 }], weight: 2 }
+    { id: 'nevasca', name: 'Nevasca Real', intent: 'pesado', leadMs: 2000, hits: [{ offsetMs: 0, damage: 12, feint: true }, { offsetMs: 900, damage: 22, parryOnly: true }], weight: 2 },
+    { id: 'granizo', name: 'Granizo', intent: 'arremesso', leadMs: 1000, projectile: 'snowball', flightMs: 400, hits: [{ offsetMs: 0, damage: 5 }, { offsetMs: 220, damage: 5 }, { offsetMs: 440, damage: 5 }, { offsetMs: 800, damage: 5 }], weight: 2 },
+    { id: 'inverno-eterno', name: 'Inverno Eterno', intent: 'carregado', leadMs: 1600, hits: [{ offsetMs: 0, damage: 0 }], charge: { turns: 2, hpShare: 0.6 }, weight: 1 }
+  ], [
+    // A third down: the crown wakes and the lances come (two to parry or dodge, the last one only a parry stops).
+    {
+      atHpShare: 0.66, name: 'COROA DE GELO', line: 'Ninguém sai do meu salão.',
+      addPatterns: [
+        { id: 'lancas', name: 'Lanças de Gelo', intent: 'combo', leadMs: 1200, hits: [{ offsetMs: 0, damage: 8 }, { offsetMs: 380, damage: 8 }, { offsetMs: 900, damage: 15, parryOnly: true }], weight: 3 }
+      ]
+    },
+    // Two thirds down: the fury, and the Eternal Winter right away.
+    {
+      atHpShare: 0.33, name: 'FÚRIA DO INVERNO', line: 'Então congela comigo!',
+      fury: { speedMul: 1.3, attackMul: 1.15, leadMul: 0.85 },
+      openWith: 'inverno-eterno'
+    }
   ]),
   frostSkeleton: snow('frostSkeleton', { name: 'Esqueleto Gélido', maxHp: 60, attack: 8, speed: 10 }, 'none', 'Esqueletos de gelo: fracos, mas vêm em bando.', [
     { id: 'osso', name: 'Ossada', intent: 'golpe', leadMs: 1000, hits: [{ offsetMs: 0, damage: 8 }], weight: 3 },

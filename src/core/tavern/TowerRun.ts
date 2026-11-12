@@ -1,6 +1,6 @@
-import { DUEL_HERO, DuelFighterSpec } from '../../config/tavernBattle';
+import { AttackPattern, DUEL_HERO, DuelFighterSpec } from '../../config/tavernBattle';
 import { FoeSpec, foeSpec } from '../../config/tavernRoster';
-import { TOWER_TUNING, TowerFloorSpec, TowerFoeSpec, TowerSpec } from '../../config/tavernTowers';
+import { TOWER_DIFFICULTIES, TOWER_TUNING, TowerDifficulty, TowerFloorSpec, TowerFoeSpec, TowerSpec } from '../../config/tavernTowers';
 import { BattleAlly, BattleFoe, TurnBattleOptions } from './TurnBattle';
 
 export type ClimbEnd = 'top' | 'lost' | 'left';
@@ -9,32 +9,36 @@ export type ClimbEnd = 'top' | 'lost' | 'left';
 export interface FloorPrize { fichas: number; masteryXp: number }
 
 /** How much tougher a floor's foes are than their base numbers: the climb (`floor`, 0-based) and the squad's size
- *  (`allies` beside the leader) both push them up. */
-export function floorScale(floor: number, allies: number): { hp: number; damage: number } {
+ *  (`allies` beside the leader) both push them up, and so does the climb's difficulty. */
+export function floorScale(floor: number, allies: number, difficulty: TowerDifficulty = 'normal'): { hp: number; damage: number } {
   const T = TOWER_TUNING;
+  const D = TOWER_DIFFICULTIES[difficulty];
   return {
-    hp: (1 + T.hpPerFloor * floor) * (1 + T.hpPerAlly * allies),
-    damage: (1 + T.damagePerFloor * floor) * (1 + T.damagePerAlly * allies)
+    hp: (1 + T.hpPerFloor * floor) * (1 + T.hpPerAlly * allies) * D.hp,
+    damage: (1 + T.damagePerFloor * floor) * (1 + T.damagePerAlly * allies) * D.damage
   };
 }
 
 /** The foes of a floor, scaled, with unique ids (the same regular twice gets "-2"). */
-export function floorFoes(foes: TowerFoeSpec[], floor = 0, allies = 0): BattleFoe[] {
+export function floorFoes(foes: TowerFoeSpec[], floor = 0, allies = 0, difficulty: TowerDifficulty = 'normal'): BattleFoe[] {
   const seen = new Map<string, number>();
-  const scale = floorScale(floor, allies);
+  const scale = floorScale(floor, allies, difficulty);
   return foes.map((foe) => {
     const duel = foeSpec(foe.duel);
     const count = (seen.get(foe.duel) ?? 0) + 1;
     seen.set(foe.duel, count);
     const damageScale = (foe.damageScale ?? 1) * scale.damage;
+    const scaled = (patterns: AttackPattern[]): AttackPattern[] => (damageScale === 1 ? patterns : patterns.map((pattern) => ({
+      ...pattern,
+      hits: pattern.hits.map((hit) => ({ ...hit, damage: Math.max(1, Math.round(hit.damage * damageScale)) }))
+    })));
     return {
       id: count > 1 ? `${foe.duel}-${count}` : foe.duel,
       look: foe.duel,
       enemy: { ...duel.enemy, maxHp: Math.round(duel.enemy.maxHp * (foe.hpScale ?? 1) * scale.hp) },
-      patterns: damageScale === 1 ? duel.patterns : duel.patterns.map((pattern) => ({
-        ...pattern,
-        hits: pattern.hits.map((hit) => ({ ...hit, damage: Math.max(1, Math.round(hit.damage * damageScale)) }))
-      }))
+      patterns: scaled(duel.patterns),
+      // A champion's later moves climb with the floor too.
+      ...(duel.phases ? { phases: duel.phases.map((phase) => (phase.addPatterns ? { ...phase, addPatterns: scaled(phase.addPatterns) } : phase)) } : {})
     };
   });
 }
@@ -70,7 +74,7 @@ export class TowerRun {
   /** The squad beside the leader, with the HP each carries from floor to floor. */
   readonly allies: Array<{ ally: BattleAlly; hp: number }>;
 
-  constructor(readonly tower: TowerSpec, hero: DuelFighterSpec = DUEL_HERO, allies: BattleAlly[] = []) {
+  constructor(readonly tower: TowerSpec, hero: DuelFighterSpec = DUEL_HERO, allies: BattleAlly[] = [], readonly difficulty: TowerDifficulty = 'normal') {
     this.heroMaxHp = hero.maxHp;
     this.heroHp = hero.maxHp;
     this.allies = allies.map((ally) => ({ ally, hp: ally.spec.maxHp }));
@@ -88,7 +92,7 @@ export class TowerRun {
     const floor = this.current;
     if (!floor || floor.kind !== 'fight') return null;
     return {
-      ...base, duel: floorDuel(floor.foes), foes: floorFoes(floor.foes, this.floor, this.allies.length),
+      ...base, duel: floorDuel(floor.foes), foes: floorFoes(floor.foes, this.floor, this.allies.length, this.difficulty),
       heroStart: { hp: this.heroHp, courage: this.courage },
       allies: this.allies.map(({ ally, hp }) => ({ ...ally, start: { hp, courage: this.courage } }))
     };
@@ -105,11 +109,12 @@ export class TowerRun {
       if (hp !== undefined) member.hp = Math.max(1, Math.min(member.ally.spec.maxHp, hp));
     });
     this.courage = 0;
-    this.pot += floor.fichas;
+    const fichas = Math.round(floor.fichas * TOWER_DIFFICULTIES[this.difficulty].fichas);
+    this.pot += fichas;
     this.masteryXp += floor.masteryXp;
     this.floor += 1;
     if (this.floor >= this.tower.floors.length) this.ended = 'top';
-    return { fichas: floor.fichas, masteryXp: floor.masteryXp };
+    return { fichas, masteryXp: floor.masteryXp };
   }
 
   /** A defeat ends the climb; returns the fichas kept. */

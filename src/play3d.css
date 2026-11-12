@@ -666,6 +666,9 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .duel-actions button { display: flex; align-items: center; gap: .6em; min-width: 11em; padding: .5em .9em; border: 1px solid #dec28a40; border-radius: 3px; background: #ffffff08; font-size: 1.1em; text-align: left; }
 .duel-actions button:hover:not(:disabled) { border-color: var(--gold); background: #dec28a20; }
 .duel-actions button:disabled { opacity: .4; }
+/* Firmar when a Golpe Carregado is aimed at whoever acts: the answer, pulsing. */
+.duel-actions button.urgent { border-color: #ff4ad2; background: #ff4ad224; animation: duel-urgent .7s ease-in-out infinite alternate; }
+@keyframes duel-urgent { from { box-shadow: 0 0 0 #ff4ad200; } to { box-shadow: 0 0 .8em #ff4ad2a0; } }
 .duel-actions kbd, .duel-hint kbd, .duel-legend kbd { font-size: .85em; }
 .duel-hint { align-self: center; margin: auto 0 0; padding: .4em 1.2em; background: #140c08d8; border-radius: 4px; font: 700 1.5em var(--sans); color: #ffe3a0; animation: duel-pulse .6s ease-in-out infinite alternate; }
 .duel-legend { position: absolute; left: 2%; right: 2%; bottom: .6%; margin: 0; text-align: center; color: #c9b89acc; font-size: .85em; }
@@ -717,6 +720,19 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; padding: 2px 6
 .squad-kit i { padding: .05em .45em; border-radius: 2px; background: #ffffff12; font-style: normal; font-size: .8em; }
 .squad-kit i.finisher { color: #ffb84a; }
 .squad-kit i.passive { color: #7fdcff; }
+/* The towers' difficulty: three choices above the squad, the picked one lit in its colour. */
+.duel-difficulty { display: flex; align-items: center; gap: .45em; margin: 0 0 .8em; }
+.duel-difficulty > kbd { opacity: .7; }
+.duel-difficulty-option { --tier: #8dffa8; flex: 1; display: flex; flex-direction: column; gap: .15em; padding: .4em .7em; border: 1px solid #dec28a30; border-top: 3px solid #dec28a30; border-radius: 3px; background: #1a110cd0; color: var(--muted); font: inherit; text-align: left; cursor: pointer; }
+.duel-difficulty-option.dificil { --tier: #ffb84a; }
+.duel-difficulty-option.cruel { --tier: #ff5a4a; }
+.duel-difficulty-option b { color: var(--cream); }
+.duel-difficulty-option span { font-size: .8em; }
+.duel-difficulty-option:hover, .duel-difficulty-option:focus-visible { border-color: var(--tier); }
+.duel-difficulty-option.on { border-color: var(--tier); border-top-color: var(--tier); background: #dec28a18; color: var(--cream); }
+.duel-difficulty-option.on b { color: var(--tier); }
+.duel-difficulty-tag { padding: .05em .45em; border-radius: 2px; font-size: .55em; vertical-align: middle; color: #140c08; background: #ffb84a; }
+.duel-difficulty-tag.cruel { background: #ff5a4a; }
 
 /* Taverna em Turnos: a regular's skill tree (three branch columns, a detail panel, the points left). */
 .skill-tree { position: absolute; inset: 0; z-index: 55; display: grid; place-items: center; background: #050303b8; }

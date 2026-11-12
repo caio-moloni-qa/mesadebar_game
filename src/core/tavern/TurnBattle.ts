@@ -1,4 +1,4 @@
-import { AttackPattern, DRINKING_RULE, DuelFighterSpec, REACTION_WINDOWS, TAVERN_BATTLE } from '../../config/tavernBattle';
+import { AttackPattern, BOSS_PHASE_RULES, BossPhase, DEFENSE_RULES, DRINKING_RULE, DuelFighterSpec, REACTION_WINDOWS, TAVERN_BATTLE } from '../../config/tavernBattle';
 import { FoeSpec } from '../../config/tavernRoster';
 import { SkillNode } from '../../config/tavernSkills';
 import { EventBus } from '../EventBus';
@@ -49,6 +49,23 @@ export interface Fighter {
   taunting: boolean;
   /** Atordoar: knocked back in the turn order; shown until this fighter's next turn. */
   stunned: boolean;
+  /** The skill this fighter used on its last turns in a row (the Eco surcharge), and how many times. */
+  lastSkill: string | null;
+  skillStreak: number;
+  /** Golpe Carregado being wound up: released on the enemy's turn when `turnsLeft` reaches 0. */
+  charging: { pattern: AttackPattern; turnsLeft: number; targetId: string } | null;
+  /** Own turns left before this enemy may start another charge. */
+  chargeRest: number;
+  /** A champion's phases by HP (BossPhase), and how many it has entered. */
+  phases: BossPhase[];
+  phase: number;
+  /** Fúria: on since a fury phase (drawn on the body). */
+  fury: boolean;
+  /** The fury's lasting multipliers: every hit's damage, and every wind-up's lead. */
+  rage: number;
+  tempo: number;
+  /** A pattern id its next turn opens with (a phase's openWith). */
+  opener: string | null;
 }
 
 export interface FighterPassives {
@@ -81,6 +98,10 @@ export interface BattleHit {
   feint: boolean;
   /** Lyra's arrows from range: a parry can't stop them. */
   dodgeOnly: boolean;
+  /** Golpe Inquebrável: a dodge can't stop it. */
+  parryOnly: boolean;
+  /** The release of a Golpe Carregado (Firmar cuts it). */
+  charged: boolean;
   /** A dodge pressed inside the perfect window (+1 Coragem). */
   perfect?: boolean;
 }
@@ -109,7 +130,7 @@ export type TurnBattleEvents = {
   fighterDown: { fighterId: string };
   battleEnded: { winner: BattleSide };
   /** A skill from the tree: what it did (damage dealt, HP healed). */
-  skillUsed: { fighterId: string; skill: SkillNode; targetId: string; damage: number; heal: number; crit: boolean; splash: Array<{ targetId: string; damage: number }> };
+  skillUsed: { fighterId: string; skill: SkillNode; targetId: string; damage: number; heal: number; crit: boolean; splash: Array<{ targetId: string; damage: number }>; /** Coragem paid (Eco included). */ cost: number };
   /** Contragolpe and friends: a parry or a dodge struck straight back. */
   riposte: { defenderId: string; attackerId: string; damage: number; on: 'parry' | 'dodge' };
   /** Veneno / Praga ticking at the start of a round. */
@@ -118,6 +139,16 @@ export type TurnBattleEvents = {
   looted: { fighterId: string; fichas: number };
   /** Rodada Dupla: the round's drink healed. */
   healed: { fighterId: string; amount: number };
+  /** A Golpe Carregado wound up (started, or one turn closer): `turnsLeft` enemy turns until it lands on `targetId`. */
+  charging: { fighterId: string; targetId: string; pattern: AttackPattern; turnsLeft: number; started: boolean };
+  /** A stun broke the wind-up. */
+  chargeBroken: { fighterId: string };
+  /** An attack landed: the defender lost Coragem. */
+  courageLost: { fighterId: string; amount: number };
+  /** A dodge on a feint: off balance. */
+  offBalance: { fighterId: string };
+  /** A champion crossed an HP threshold: the fight changes (`index` is 0-based). */
+  phaseChanged: { fighterId: string; phase: BossPhase; index: number };
 };
 
 /** One enemy of a group fight (the tower's floors): a regular or a monster, with its own patterns. */
@@ -126,6 +157,7 @@ export interface BattleFoe {
   look: string;
   enemy: DuelFighterSpec;
   patterns: AttackPattern[];
+  phases?: BossPhase[];
 }
 
 /** A squad member fighting beside the hero (the towers' squads): their stats, kit and what they carry in. */
@@ -164,7 +196,7 @@ export function tipsyOffsets(offsets: readonly number[], tipsiness: number, rng:
   return offsets.map((offset) => offset + (rng() * 2 - 1) * spread);
 }
 
-function makeFighter(id: string, look: string, spec: DuelFighterSpec, side: BattleSide, slot: number, patterns: AttackPattern[], kit: SkillNode[] = []): Fighter {
+function makeFighter(id: string, look: string, spec: DuelFighterSpec, side: BattleSide, slot: number, patterns: AttackPattern[], kit: SkillNode[] = [], phases: BossPhase[] = []): Fighter {
   const passives: FighterPassives = { armor: 0, roundHeal: 0, parryBonusMs: 0, ripostes: [], critChance: 0, dodgeBonusMs: 0, parryLoot: 0, foresight: false };
   kit.filter((node) => node.kind === 'passive').forEach(({ effect }) => {
     if (effect.type === 'armor') passives.armor += effect.amount;
@@ -179,7 +211,8 @@ function makeFighter(id: string, look: string, spec: DuelFighterSpec, side: Batt
   return {
     id, look, name: spec.name, side, slot, hp: spec.maxHp, maxHp: spec.maxHp, attack: spec.attack, speed: spec.speed, courage: 0,
     firm: false, statuses: [], tipsiness: 0, patterns, skills: kit.filter((node) => node.kind !== 'passive'), passives,
-    shield: 0, weakened: 1, wall: false, wallAs: 'parry', poison: null, mark: null, taunting: false, stunned: false
+    shield: 0, weakened: 1, wall: false, wallAs: 'parry', poison: null, mark: null, taunting: false, stunned: false, lastSkill: null, skillStreak: 0,
+    charging: null, chargeRest: 0, phases: [...phases].sort((a, b) => b.atHpShare - a.atHpShare), phase: 0, fury: false, rage: 1, tempo: 1, opener: null
   };
 }
 
@@ -210,17 +243,19 @@ export class TurnBattle {
   private readonly meters = new Map<string, number>();
   private readonly actedThisRound = new Set<string>();
   private pending: TimerHandle | null = null;
+  /** Extra time the next wait holds (a phase callout lands mid-turn). */
+  private hold = 0;
 
   constructor(private readonly options: TurnBattleOptions) {
     this.rng = createRng(options.seed);
     this.assisted = Boolean(options.assisted);
     const { hero, duel } = options;
-    const foes = options.foes ?? [{ id: duel.id, look: duel.id, enemy: duel.enemy, patterns: duel.patterns }];
+    const foes = options.foes ?? [{ id: duel.id, look: duel.id, enemy: duel.enemy, patterns: duel.patterns, phases: duel.phases }];
     const allies = options.allies ?? [];
     this.fighters = [
       makeFighter('hero', options.heroLook ?? 'hero', hero, 'party', 0, [], options.kit),
       ...allies.map((ally, i) => makeFighter(ally.id, ally.look, ally.spec, 'party', i + 1, [], ally.kit)),
-      ...foes.map((foe, slot) => makeFighter(foe.id, foe.look, foe.enemy, 'enemy', slot, foe.patterns))
+      ...foes.map((foe, slot) => makeFighter(foe.id, foe.look, foe.enemy, 'enemy', slot, foe.patterns, [], foe.phases))
     ];
     // The tower carries everyone in with the HP and Coragem they had.
     [options.heroStart, ...allies.map((ally) => ally.start)].forEach((start, i) => {
@@ -267,6 +302,7 @@ export class TurnBattle {
     const target = targetId ? this.fighter(targetId) : this.enemies.find((enemy) => enemy.hp > 0);
     if (!actor || !target || target.hp <= 0 || target.side === actor.side) return false;
     const { damage, crit } = this.blow(actor, target, actor.attack, true);
+    this.clearEcho(actor);
     this.gainCourage(actor);
     this.events.emit('strike', { attackerId: actor.id, targetId: target.id, damage, crit });
     if (!this.checkEnd()) this.wait(TAVERN_BATTLE.strikeMs);
@@ -277,9 +313,22 @@ export class TurnBattle {
     const actor = this.partyActor();
     if (!actor) return false;
     actor.firm = true;
+    this.clearEcho(actor);
     this.events.emit('firmed', { fighterId: actor.id });
     this.wait(TAVERN_BATTLE.firmMs);
     return true;
+  }
+
+  /** What `skill` costs `fighter` right now: its Coragem, plus the Eco surcharge when it's the same skill as last
+   *  turn (capped at a full bar, so it's never locked out). */
+  skillCost(fighter: Fighter, skill: SkillNode): number {
+    const repeats = fighter.lastSkill === skill.id ? fighter.skillStreak : 0;
+    return Math.min(TAVERN_BATTLE.courageMax, skill.cost + repeats * TAVERN_BATTLE.skillRepeatSurcharge);
+  }
+
+  private clearEcho(fighter: Fighter): void {
+    fighter.lastSkill = null;
+    fighter.skillStreak = 0;
   }
 
   /** A skill from the active fighter's tree, for its Coragem. Damage skills hit `targetId` (or the first enemy
@@ -288,8 +337,12 @@ export class TurnBattle {
     const actor = this.partyActor();
     const skill = actor?.skills.find((node) => node.id === skillId);
     const target = targetId ? this.fighter(targetId) : this.enemies.find((enemy) => enemy.hp > 0);
-    if (!actor || !skill || !target || target.hp <= 0 || actor.courage < skill.cost) return false;
-    actor.courage -= skill.cost;
+    if (!actor || !skill || !target || target.hp <= 0) return false;
+    const cost = this.skillCost(actor, skill);
+    if (actor.courage < cost) return false;
+    actor.courage -= cost;
+    actor.skillStreak = actor.lastSkill === skill.id ? actor.skillStreak + 1 : 1;
+    actor.lastSkill = skill.id;
     const { effect } = skill;
     let damage = 0;
     let heal = 0;
@@ -303,6 +356,12 @@ export class TurnBattle {
       if (effect.type === 'stun') {
         this.meters.set(target.id, this.meters.get(target.id)! - effect.delay);
         target.stunned = true;
+        // A stun knocks the wind out of a Golpe Carregado.
+        if (target.charging && target.hp > 0) {
+          target.charging = null;
+          target.chargeRest = DEFENSE_RULES.chargeRestTurns;
+          this.events.emit('chargeBroken', { fighterId: target.id });
+        }
       }
     } else if (effect.type === 'gamble') {
       strike(effect.min + this.rng() * (effect.max - effect.min));
@@ -342,7 +401,7 @@ export class TurnBattle {
       if (effect.shield) actor.shield += effect.shield;
       if (effect.weaken !== undefined) this.enemies.forEach((enemy) => { enemy.weakened = Math.min(enemy.weakened, effect.weaken!); });
     }
-    this.events.emit('skillUsed', { fighterId: actor.id, skill, targetId: target.id, damage, heal, crit, splash });
+    this.events.emit('skillUsed', { fighterId: actor.id, skill, targetId: target.id, damage, heal, crit, splash, cost });
     if (!this.checkEnd()) this.wait(TAVERN_BATTLE.skillMs);
     return true;
   }
@@ -362,7 +421,13 @@ export class TurnBattle {
     const windows = this.windowsFor(target);
     // An arrow from range can't be parried: a parry inside the dodge window is just taken.
     let result = judgeReaction(kind, hit.at, now, hit.dodgeOnly ? { ...windows, parryMs: -1 } : windows);
-    // Biting on a feint: she was waiting for it.
+    // A Golpe Inquebrável can't be stepped away from.
+    if (hit.parryOnly && result === 'dodge') result = 'taken';
+    // Biting on a feint: she was waiting for it. Dodging it throws you off balance just the same.
+    if (hit.feint && result === 'dodge' && DEFENSE_RULES.feintPunishesDodge) {
+      result = 'taken';
+      this.events.emit('offBalance', { fighterId: target.id });
+    }
     if (hit.feint && result === 'parry') result = 'taken';
     if (result === 'early') {
       this.lockedUntil = now + windows.earlyLockMs;
@@ -386,7 +451,8 @@ export class TurnBattle {
   private wait(ms: number): void {
     this.phase = 'resolving';
     this.pending?.cancel();
-    this.pending = this.clock.delayedCall(ms, () => this.nextTurn());
+    this.pending = this.clock.delayedCall(ms + this.hold, () => this.nextTurn());
+    this.hold = 0;
   }
 
   private nextTurn(): void {
@@ -452,13 +518,49 @@ export class TurnBattle {
     });
   }
 
-  private announceAttack(attacker: Fighter): void {
-    const pattern = this.pickPattern(attacker.patterns);
+  /** Whom an enemy attack goes at: a taunter if any is up, else anyone standing (seeded). */
+  private pickTarget(): Fighter {
     const living = this.party.filter((fighter) => fighter.hp > 0);
-    // A taunt draws every attack.
     const taunters = living.filter((fighter) => fighter.taunting);
     const targets = taunters.length > 0 ? taunters : living;
-    const target = targets[Math.floor(this.rng() * targets.length)];
+    return targets[Math.floor(this.rng() * targets.length)];
+  }
+
+  private announceAttack(attacker: Fighter): void {
+    // A Golpe Carregado in the works: one turn closer, or let go.
+    if (attacker.charging) {
+      const charging = attacker.charging;
+      charging.turnsLeft -= 1;
+      if (charging.turnsLeft > 0) {
+        this.events.emit('charging', { fighterId: attacker.id, targetId: charging.targetId, pattern: charging.pattern, turnsLeft: charging.turnsLeft, started: false });
+        this.wait(DEFENSE_RULES.chargeTickMs);
+        return;
+      }
+      attacker.charging = null;
+      attacker.chargeRest = DEFENSE_RULES.chargeRestTurns;
+      const marked = this.fighter(charging.targetId);
+      this.release(attacker, charging.pattern, marked && marked.hp > 0 ? marked : this.pickTarget());
+      return;
+    }
+    const resting = attacker.chargeRest > 0;
+    if (resting) attacker.chargeRest -= 1;
+    const plain = attacker.patterns.filter((p) => !p.charge);
+    // A new phase opens with its move (a charge ignores the rest).
+    const opener = attacker.opener ? attacker.patterns.find((p) => p.id === attacker.opener) : undefined;
+    attacker.opener = null;
+    const pattern = opener ?? this.pickPattern(resting && plain.length > 0 ? plain : attacker.patterns);
+    const target = this.pickTarget();
+    if (pattern.charge) {
+      attacker.charging = { pattern, turnsLeft: pattern.charge.turns, targetId: target.id };
+      this.events.emit('charging', { fighterId: attacker.id, targetId: target.id, pattern, turnsLeft: pattern.charge.turns, started: true });
+      this.wait(DEFENSE_RULES.chargeTickMs);
+      return;
+    }
+    this.release(attacker, pattern, target);
+  }
+
+  /** The attack comes: its hits are scheduled on the clock and the defender answers them. */
+  private release(attacker: Fighter, pattern: AttackPattern, target: Fighter): void {
     const now = this.clock.now;
     // Grimbo's dice: the roll decides how many copies of the first hit come.
     const { dice } = pattern;
@@ -467,10 +569,19 @@ export class TurnBattle {
       ? Array.from({ length: rolled }, (_, i) => ({ ...pattern.hits[0], offsetMs: i * dice.intervalMs }))
       : pattern.hits;
     const offsets = tipsyOffsets(template.map((hit) => hit.offsetMs), this.options.duel.rule === 'drinking' ? attacker.tipsiness : 0, this.rng);
+    const charged = Boolean(pattern.charge);
+    // A fury winds up faster, never under the telegraph floor (nor slower than the pattern's own lead).
+    const lead = Math.min(pattern.leadMs, Math.max(BOSS_PHASE_RULES.minLeadMs, pattern.leadMs * attacker.tempo));
     const hits = template
-      .map((hit, i) => ({ at: now + pattern.leadMs + offsets[i], damage: Math.max(1, Math.round(hit.damage * attacker.weakened)), feint: Boolean(hit.feint) }))
+      .map((hit, i) => ({
+        at: now + lead + offsets[i],
+        // A charge is measured against whoever it lands on.
+        damage: Math.max(1, Math.round((charged ? target.maxHp * pattern.charge!.hpShare : hit.damage * attacker.rage) * attacker.weakened)),
+        feint: Boolean(hit.feint),
+        parryOnly: charged || Boolean(pattern.parryOnly || hit.parryOnly)
+      }))
       .sort((a, b) => a.at - b.at)
-      .map((hit, index): BattleHit => ({ index, at: hit.at, damage: hit.damage, targetId: target.id, result: null, feint: hit.feint, dodgeOnly: Boolean(pattern.dodgeOnly) }));
+      .map((hit, index): BattleHit => ({ index, at: hit.at, damage: hit.damage, targetId: target.id, result: null, feint: hit.feint, dodgeOnly: Boolean(pattern.dodgeOnly), parryOnly: hit.parryOnly, charged }));
     // Provocar spends itself on this attack.
     attacker.weakened = 1;
     this.attack = {
@@ -509,7 +620,9 @@ export class TurnBattle {
     const attack = this.attack!;
     const target = this.fighter(hit.targetId)!;
     hit.result = result;
-    const damage = result === 'taken' ? this.soak(target, hit.damage) : 0;
+    // Firmar braces for a Golpe Carregado.
+    const braced = hit.charged && target.firm ? DEFENSE_RULES.firmChargeCut : 1;
+    const damage = result === 'taken' ? this.soak(target, Math.max(1, Math.round(hit.damage * braced))) : 0;
     this.damage(target, damage);
     const perfect = Boolean(hit.perfect);
     if (result === 'parry' || result === 'held' || perfect) this.gainCourage(target);
@@ -537,6 +650,12 @@ export class TurnBattle {
     const attacker = this.fighter(attack.attackerId)!;
     const defender = this.fighter(attack.hits[0].targetId)!;
     defender.wall = false;
+    // Getting hit shakes your nerve.
+    const lost = Math.min(defender.courage, DEFENSE_RULES.courageLostOnHit);
+    if (defender.hp > 0 && lost > 0 && attack.hits.some((hit) => hit.result === 'taken')) {
+      defender.courage -= lost;
+      this.events.emit('courageLost', { fighterId: defender.id, amount: lost });
+    }
     // Every real hit parried, and no feint bitten.
     const countered = defender.hp > 0 && attacker.hp > 0 && attack.hits.some((hit) => !hit.feint)
       && attack.hits.every((hit) => (hit.feint ? hit.result === 'held' : hit.result === 'parry'));
@@ -571,6 +690,28 @@ export class TurnBattle {
     if (amount <= 0 || fighter.hp <= 0) return;
     fighter.hp = Math.max(0, fighter.hp - amount);
     if (fighter.hp === 0) this.events.emit('fighterDown', { fighterId: fighter.id });
+    else this.checkPhases(fighter);
+  }
+
+  /** A champion whose HP crossed its next threshold(s) enters the phase: new moves, the fury, an opener. */
+  private checkPhases(fighter: Fighter): void {
+    while (fighter.phase < fighter.phases.length && fighter.hp <= fighter.maxHp * fighter.phases[fighter.phase].atHpShare) {
+      const index = fighter.phase;
+      const phase = fighter.phases[index];
+      fighter.phase += 1;
+      const dropped = new Set(phase.dropPatterns ?? []);
+      fighter.patterns = [...fighter.patterns.filter((p) => !dropped.has(p.id)), ...(phase.addPatterns ?? [])];
+      if (phase.fury) {
+        fighter.fury = true;
+        fighter.speed *= phase.fury.speedMul;
+        fighter.rage *= phase.fury.attackMul;
+        fighter.tempo *= phase.fury.leadMul;
+      }
+      // Already winding up that very move: no need to open with it again.
+      if (phase.openWith && fighter.charging?.pattern.id !== phase.openWith) fighter.opener = phase.openWith;
+      this.hold = BOSS_PHASE_RULES.callMs;
+      this.events.emit('phaseChanged', { fighterId: fighter.id, phase, index });
+    }
   }
 
   /** Armor (never below 1), then the shield, take their share of a hit; returns what reaches HP. */

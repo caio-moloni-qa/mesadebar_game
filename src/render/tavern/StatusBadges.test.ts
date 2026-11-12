@@ -21,6 +21,14 @@ describe('status badges', () => {
     ]);
   });
 
+  it('shows a Golpe Carregado as a threat with the turns left, and explains it', () => {
+    const fighter = { ...calm, charging: { pattern: { name: 'Fecha a Conta' }, turnsLeft: 2, targetId: 'hero' } } as unknown as Fighter;
+    const badges = fighterStatuses(fighter);
+    expect(badges).toEqual([{ id: 'charge', good: false, count: 2 }]);
+    expect(statusInfo(fighter, badges[0])).toMatchObject({ title: 'Carregando: Fecha a Conta', good: false });
+    expect(statusInfo(fighter, badges[0]).text).toContain('daqui a 2 turnos');
+  });
+
   it('explains every badge on hover, with the bearer\'s numbers', () => {
     const fighter = { ...calm, shield: 12, firm: true, wall: true, wallAs: 'dodge', taunting: true, poison: { perRound: 3, rounds: 2 }, mark: { ratio: 0.5, hits: 1 }, weakened: 0.5, stunned: true } as unknown as Fighter;
     const tips = fighterStatuses(fighter).map((badge) => statusInfo(fighter, badge));

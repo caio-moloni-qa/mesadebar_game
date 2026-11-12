@@ -1,9 +1,10 @@
 // Taverna em Turnos: the buffs and debuffs a fighter carries, as a row of badges over their head (the turn-based RPG
 // way): a green frame for what helps, a red one for what hurts, a counter where the status has one.
 
+import { DEFENSE_RULES } from '../../config/tavernBattle';
 import { Fighter } from '../../core/tavern/TurnBattle';
 
-export type StatusId = 'shield' | 'firm' | 'wall' | 'taunt' | 'poison' | 'mark' | 'weak' | 'stun';
+export type StatusId = 'shield' | 'firm' | 'wall' | 'taunt' | 'poison' | 'mark' | 'weak' | 'stun' | 'charge' | 'fury';
 
 export interface StatusBadge {
   id: StatusId;
@@ -24,6 +25,10 @@ export function fighterStatuses(fighter: Fighter): StatusBadge[] {
   if (fighter.mark) out.push({ id: 'mark', good: false, count: fighter.mark.hits });
   if (fighter.weakened < 1) out.push({ id: 'weak', good: false });
   if (fighter.stunned) out.push({ id: 'stun', good: false });
+  // A threat to the party, framed like one, with the turns left on it.
+  if (fighter.charging) out.push({ id: 'charge', good: false, count: fighter.charging.turnsLeft });
+  // A champion's rage: good for them, bad news for the party (framed as a threat, like the charge).
+  if (fighter.fury) out.push({ id: 'fury', good: false });
   return out;
 }
 
@@ -34,7 +39,11 @@ export function statusInfo(fighter: Fighter, badge: StatusBadge): { title: strin
   const info = (title: string, text: string) => ({ title, text, good: badge.good });
   switch (badge.id) {
     case 'shield': return info(`Escudo ${fighter.shield}`, `Absorve os próximos ${fighter.shield} de dano antes de chegar na vida.`);
-    case 'firm': return info('Firme', 'Janela de aparar e de esquivar maior até o próximo turno.');
+    case 'firm': return info('Firme', `Janela de aparar maior até o próximo turno, e um Golpe Carregado que passar tira só ${percent(DEFENSE_RULES.firmChargeCut)} do que tiraria.`);
+    case 'charge': {
+      const turns = fighter.charging?.turnsLeft ?? 0;
+      return info(`Carregando: ${fighter.charging?.pattern.name ?? ''}`, `Solta ${turns === 1 ? 'no próximo turno dele' : `daqui a ${turns} turnos dele`}. Só dá pra aparar: Firmar antes corta o golpe; atordoar quebra.`);
+    }
     case 'wall': return info('Muralha', fighter.wallAs === 'dodge'
       ? 'O próximo ataque contra ele é esquivado sozinho, sem precisar apertar nada.'
       : 'O próximo ataque contra ele é aparado sozinho (e ainda devolve o contra-ataque).');
@@ -49,6 +58,7 @@ export function statusInfo(fighter: Fighter, badge: StatusBadge): { title: strin
     }
     case 'weak': return info('Enfraquecido', `O próximo ataque dele causa só ${percent(fighter.weakened)} do dano.`);
     case 'stun': return info('Atordoado', 'Foi empurrado pra trás na fila de turnos: vai agir mais tarde.');
+    case 'fury': return info('Fúria', `Age mais vezes, bate ${percent(fighter.rage - 1)} mais forte e prepara os golpes mais rápido até o fim da luta.`);
   }
 }
 
@@ -63,9 +73,9 @@ export function badgeLefts(x: number, count: number): { lefts: number[]; side: n
   const left = Math.round(x - (count * side + (count - 1) * GAP) / 2);
   return { lefts: Array.from({ length: count }, (_, i) => left + i * (side + GAP)), side };
 }
-const COLOR: Record<StatusId, string> = {
+export const STATUS_COLORS: Record<StatusId, string> = {
   shield: '#e0a05a', firm: '#8fc8ff', wall: '#ffd75a', taunt: '#ff5a4a',
-  poison: '#8de05a', mark: '#ff5a8a', weak: '#c58bff', stun: '#ffe066'
+  poison: '#8de05a', mark: '#ff5a8a', weak: '#c58bff', stun: '#ffe066', charge: '#ff4ad2', fury: '#ff3b2f'
 };
 
 /** The badges, centred on `x` with their bottom at `bottom`; `popOf` scales one that just appeared (1 = settled). */
@@ -87,7 +97,7 @@ function drawBadge(ctx: CanvasRenderingContext2D, cx: number, cy: number, badge:
   ctx.strokeStyle = badge.good ? '#5ad27a' : '#e0463a';
   ctx.lineWidth = 2;
   ctx.strokeRect(-half + 1, -half + 1, SIZE - 2, SIZE - 2);
-  const color = COLOR[badge.id];
+  const color = STATUS_COLORS[badge.id];
   ctx.fillStyle = color;
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
@@ -142,6 +152,18 @@ function glyph(ctx: CanvasRenderingContext2D, id: StatusId): void {
       // Attack down: a blade with an arrow pointing down.
       ctx.moveTo(-2, -8); ctx.lineTo(2, -8); ctx.lineTo(2, 1); ctx.lineTo(6, 1); ctx.lineTo(0, 8); ctx.lineTo(-6, 1); ctx.lineTo(-2, 1);
       ctx.closePath();
+      ctx.fill();
+      break;
+    case 'charge':
+      // An hourglass: the wind-up running out.
+      ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.lineTo(0, 0); ctx.lineTo(6, 8); ctx.lineTo(-6, 8); ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'fury':
+      // A flame.
+      ctx.moveTo(0, -9); ctx.quadraticCurveTo(8, -1, 5, 5); ctx.quadraticCurveTo(3, 9, 0, 8);
+      ctx.quadraticCurveTo(-3, 9, -5, 5); ctx.quadraticCurveTo(-7, 0, -2, -3); ctx.quadraticCurveTo(-1, -6, 0, -9);
       ctx.fill();
       break;
     case 'stun':
