@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "arena-eruption",
+  "seconds": 1.2,
+  "prompt": "Ice erupting from under a frozen lake, heavy crack and spray, mono.",
+  "speech": false,
+  "seed": 1855120086,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/arena-eruption.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/arena-eruption-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/arena-eruption.wav",
+  "peak": 0.7711181640625,
+  "rms": 0.12588868380578552,
+  "sha256": "8675c4e708b9d0597d0264f0c39afad5f9757bad18b4e19ce7018210d0d3ba12"
+}

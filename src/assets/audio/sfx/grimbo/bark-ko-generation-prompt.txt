@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Goblin falling with a whiny groan and coins scattering, mono.",
+  "speech": false,
+  "seed": 502102169,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/bark-ko.wav",
+  "peak": 0.32794189453125,
+  "rms": 0.12588873406586995,
+  "sha256": "fd5311ac0b26451afe0975f17fa6dbf9425c4ccad221913bf5007875ae0cf9a4"
+}

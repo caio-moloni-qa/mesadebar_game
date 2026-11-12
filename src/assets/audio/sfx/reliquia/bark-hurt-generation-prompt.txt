@@ -1,0 +1,18 @@
+{
+  "character": "reliquia",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Cheerful adventurer quick \"ouch\" grunt, mono.",
+  "speech": false,
+  "seed": 2871951775,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/reliquia/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/reliquia/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/reliquia/bark-hurt.wav",
+  "peak": 0.378997802734375,
+  "rms": 0.12588879040270565,
+  "sha256": "5405e48d062ae30d49652b9599941fde71a0ab612450515d08b96e3ab9ccfc45"
+}

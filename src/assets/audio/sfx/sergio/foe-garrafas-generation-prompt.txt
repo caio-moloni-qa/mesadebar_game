@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "foe-garrafas",
+  "seconds": 0.6,
+  "prompt": "Three corks popping and bottles flung, mono.",
+  "speech": false,
+  "seed": 2734622807,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/foe-garrafas.mp3",
+  "raw": "src/assets/audio/sfx/sergio/foe-garrafas-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/foe-garrafas.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11852591290774907,
+  "sha256": "4c41aac217247bf2b7643fd48e442935579705d86f7780439c0626d587725741"
+}

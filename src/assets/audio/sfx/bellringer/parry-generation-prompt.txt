@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Bronze bell blocking a blade, loud ringing clang, mono.",
+  "speech": false,
+  "seed": 56344524,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/parry.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/parry.wav",
+  "peak": 0.824462890625,
+  "rms": 0.1258887269825677,
+  "sha256": "8a74f1d23d7b7126cb935e46ac5bea8f9e5f3f5e705f39ac2feb71f71d99abc0"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Ice shield blocking, deep icy clang, mono.",
+  "speech": false,
+  "seed": 833064607,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/parry.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/parry.wav",
+  "peak": 0.763671875,
+  "rms": 0.12588855992170137,
+  "sha256": "1880e9d6b7934f9555b1166e7fc0c71a67f2d69edd059f14193e1a24df65fdf0"
+}

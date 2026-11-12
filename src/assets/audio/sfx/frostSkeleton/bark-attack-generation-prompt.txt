@@ -1,0 +1,18 @@
+{
+  "character": "frostSkeleton",
+  "event": "bark-attack",
+  "seconds": 0.3,
+  "prompt": "Skeleton jaw clacking with a raspy hiss, mono.",
+  "speech": false,
+  "seed": 1043018939,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSkeleton/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/frostSkeleton/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSkeleton/bark-attack.wav",
+  "peak": 0.394775390625,
+  "rms": 0.1258886254238309,
+  "sha256": "e0aca88b5e33a78500edeb25ecf358a802db0df12c0069b6d0973af40d8487b3"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "skill-banana",
+  "seconds": 0.8,
+  "prompt": "Banana peeled and eaten quickly with a happy monkey munch, mono.",
+  "speech": false,
+  "seed": 2046677648,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/skill-banana.mp3",
+  "raw": "src/assets/audio/sfx/fabri/skill-banana-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/skill-banana.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06056731211332872,
+  "sha256": "e42c7385b8452d2ed6c018e7fcbd113d53f4d9d916c34aaed46bc61cd6a84522"
+}

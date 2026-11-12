@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Mature woman offended pained gasp, mono.",
+  "speech": false,
+  "seed": 843143651,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/zora/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/bark-hurt.wav",
+  "peak": 0.42926025390625,
+  "rms": 0.12588871296526372,
+  "sha256": "74e00e714ff1c4417e04454477cd47ce41b2739bbe88696754e96eaef7af22fd"
+}

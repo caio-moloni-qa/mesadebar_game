@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-prisao-de-cristal",
+  "seconds": 1.0,
+  "prompt": "Crystal prison forming around a body, cracking glass growth, mono.",
+  "speech": false,
+  "seed": 1879745570,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-prisao-de-cristal.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-prisao-de-cristal-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-prisao-de-cristal.wav",
+  "peak": 0.742156982421875,
+  "rms": 0.12588864292395827,
+  "sha256": "85ac393e737a63d6a194a0675f7d8691b6dc5e298eedcb3639543473281da21c"
+}

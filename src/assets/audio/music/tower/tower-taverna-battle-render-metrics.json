@@ -1,0 +1,40 @@
+{
+  "id": "tower-taverna-battle",
+  "bpm": 118,
+  "bars": 60,
+  "base": 55,
+  "key": "G mixolydian",
+  "kind": "brawl",
+  "meter": 4,
+  "loop": true,
+  "seconds": 122.03389830508475,
+  "noteCount": 1020,
+  "hitCount": 480,
+  "instruments": [
+    "lute",
+    "fiddle"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "tower-taverna-battle",
+  "rate": 44100,
+  "frames": 5381695,
+  "rawSeconds": 126.03390022675737,
+  "rawPeak": 0.11424410343170166,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.09603469087896377,
+  "gain": 7.352677072757419,
+  "seam": [
+    0.005653657019138336,
+    0.007407192140817642
+  ],
+  "end": [
+    -0.02028726413846016,
+    -0.04176250472664833
+  ],
+  "file": "tower-taverna-battle.wav",
+  "rawFile": "tower-taverna-battle-raw.wav"
+}

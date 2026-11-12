@@ -1,0 +1,18 @@
+{
+  "character": "gravedigger",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Raspy skeletal grunt, mono.",
+  "speech": false,
+  "seed": 196732670,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/gravedigger/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/gravedigger/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/gravedigger/bark-attack.wav",
+  "peak": 0.42901611328125,
+  "rms": 0.12588864874433717,
+  "sha256": "832ee27831bafba23176a949c9a2af55e7f46d61a837312dd13eac9660a436cf"
+}

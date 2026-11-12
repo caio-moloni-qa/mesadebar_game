@@ -1,0 +1,18 @@
+{
+  "character": "lakeSpirit",
+  "event": "arena-wave",
+  "seconds": 1.2,
+  "prompt": "Big water wave crashing, mono.",
+  "speech": false,
+  "seed": 3617811272,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lakeSpirit/arena-wave.mp3",
+  "raw": "src/assets/audio/sfx/lakeSpirit/arena-wave-raw.wav",
+  "wav": "src/assets/audio/sfx/lakeSpirit/arena-wave.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10066397929419543,
+  "sha256": "17320084b42fd82460092402e9b3281de38e141b5eed170e88027586d34b57be"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "skill-grito-de-guerra",
+  "seconds": 1.2,
+  "prompt": "Barbarian war cry, a booming wordless roar that echoes with a shield bang, mono.",
+  "speech": false,
+  "seed": 1928026317,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/skill-grito-de-guerra.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/skill-grito-de-guerra-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/skill-grito-de-guerra.wav",
+  "peak": 0.489044189453125,
+  "rms": 0.12588874723055846,
+  "sha256": "34d5c9704d0d1798baf51ae6a83166c7ab4b457cd9434cefd2392ea5948d20d6"
+}

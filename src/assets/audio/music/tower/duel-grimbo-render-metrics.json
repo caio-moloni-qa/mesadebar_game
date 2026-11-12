@@ -1,0 +1,41 @@
+{
+  "id": "duel-grimbo",
+  "bpm": 112,
+  "bars": 48,
+  "base": 57,
+  "key": "A harmonic minor",
+  "kind": "grimbo",
+  "meter": 4,
+  "loop": true,
+  "seconds": 102.85714285714286,
+  "noteCount": 816,
+  "hitCount": 528,
+  "instruments": [
+    "lute",
+    "recorder"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine",
+    "stone"
+  ],
+  "seed": "duel-grimbo",
+  "rate": 44100,
+  "frames": 4536000,
+  "rawSeconds": 106.85714285714286,
+  "rawPeak": 0.11191730201244354,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.13193118384807057,
+  "gain": 7.505541903669233,
+  "seam": [
+    0.001561734825372696,
+    0.002663273364305496
+  ],
+  "end": [
+    -0.03726087510585785,
+    -0.041893623769283295
+  ],
+  "file": "duel-grimbo.wav",
+  "rawFile": "duel-grimbo-raw.wav"
+}

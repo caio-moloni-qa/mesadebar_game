@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "charge-release",
+  "seconds": 1.0,
+  "prompt": "Massive released charged attack: huge whoosh into a crushing impact with debris and low boom, mono.",
+  "speech": false,
+  "seed": 2886872985,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/charge-release.mp3",
+  "raw": "src/assets/audio/sfx/common/charge-release-raw.wav",
+  "wav": "src/assets/audio/sfx/common/charge-release.wav",
+  "peak": 0.50347900390625,
+  "rms": 0.12588868986417856,
+  "sha256": "4f4e485e92822e18001f314fb383b5a3c134e9a8a2fba0695b2c1988fd9fecf4"
+}

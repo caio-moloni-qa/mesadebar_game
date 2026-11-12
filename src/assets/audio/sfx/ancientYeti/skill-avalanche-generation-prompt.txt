@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "skill-avalanche",
+  "seconds": 2.0,
+  "prompt": "Fist pounding the ground triggering an avalanche, rumbling snow torrent, mono.",
+  "speech": false,
+  "seed": 1327351534,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/skill-avalanche.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/skill-avalanche-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/skill-avalanche.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.03733628852120672,
+  "sha256": "fa758de61f6b6f77a4c149fdb162fdb13ecff16a4671d5b638818cbdb05b3f5f"
+}

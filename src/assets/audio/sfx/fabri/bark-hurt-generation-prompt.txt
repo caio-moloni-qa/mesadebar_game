@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Monkey yelping in pain, short, mono.",
+  "speech": false,
+  "seed": 3478189936,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/fabri/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/bark-hurt.wav",
+  "peak": 0.364227294921875,
+  "rms": 0.12588879440386289,
+  "sha256": "9218e2ca7554afa9c3b401ec0ef435899a9428c06f0d5192642d974f93cab758"
+}

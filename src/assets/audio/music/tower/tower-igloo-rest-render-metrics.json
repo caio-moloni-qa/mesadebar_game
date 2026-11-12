@@ -1,0 +1,40 @@
+{
+  "id": "tower-igloo-rest",
+  "bpm": 72,
+  "bars": 28,
+  "base": 50,
+  "key": "D major",
+  "kind": "iceRest",
+  "meter": 4,
+  "loop": true,
+  "seconds": 93.33333333333333,
+  "noteCount": 266,
+  "hitCount": 0,
+  "instruments": [
+    "cello",
+    "harp",
+    "recorder",
+    "glass",
+    "box"
+  ],
+  "percussion": [],
+  "seed": "tower-igloo-rest",
+  "rate": 44100,
+  "frames": 4116000,
+  "rawSeconds": 97.33333333333333,
+  "rawPeak": 0.0631929337978363,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.16885310546662405,
+  "gain": 13.292625449030208,
+  "seam": [
+    0.001124747097492218,
+    0.0052701737731695175
+  ],
+  "end": [
+    -0.023836029693484306,
+    -0.025906698778271675
+  ],
+  "file": "tower-igloo-rest.wav",
+  "rawFile": "tower-igloo-rest-raw.wav"
+}

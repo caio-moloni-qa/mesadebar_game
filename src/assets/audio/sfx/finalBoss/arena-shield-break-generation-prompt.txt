@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "arena-shield-break",
+  "seconds": 1.0,
+  "prompt": "Bone-and-soul shield shattering, mono.",
+  "speech": false,
+  "seed": 1723935729,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/arena-shield-break.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/arena-shield-break-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/arena-shield-break.wav",
+  "peak": 0.77886962890625,
+  "rms": 0.1258886218807089,
+  "sha256": "941bc44a46bcc22c9952a5dd53717be6dab2c0e8fc4ae72be150fc2a86daaf83"
+}

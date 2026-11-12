@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "impact-mug",
+  "seconds": 0.4,
+  "prompt": "Wooden mug smashing on a body with a beer splash, mono.",
+  "speech": false,
+  "seed": 3121457132,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/impact-mug.mp3",
+  "raw": "src/assets/audio/sfx/common/impact-mug-raw.wav",
+  "wav": "src/assets/audio/sfx/common/impact-mug.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11080155480554467,
+  "sha256": "d6a4658428e6ee15cf0a9336a1fc4a1f2f0089fff8dff1175eddc59c75a7ec2c"
+}

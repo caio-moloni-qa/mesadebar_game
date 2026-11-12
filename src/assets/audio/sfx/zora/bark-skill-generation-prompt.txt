@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "bark-skill",
+  "seconds": 0.7,
+  "prompt": "Fortune teller mystical humming gibberish incantation, mono.",
+  "speech": false,
+  "seed": 3900201967,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/zora/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/bark-skill.wav",
+  "peak": 0.425323486328125,
+  "rms": 0.1258885937479194,
+  "sha256": "06ed4b3bf0d271750ff1f77a040db6c67cbc307ffc4587b5c917ea538a4939e0"
+}

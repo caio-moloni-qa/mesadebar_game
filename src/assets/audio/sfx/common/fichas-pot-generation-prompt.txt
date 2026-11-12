@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "fichas-pot",
+  "seconds": 0.8,
+  "prompt": "Handful of coins pouring into a wooden pot, mono.",
+  "speech": false,
+  "seed": 2517574333,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/fichas-pot.mp3",
+  "raw": "src/assets/audio/sfx/common/fichas-pot-raw.wav",
+  "wav": "src/assets/audio/sfx/common/fichas-pot.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10483610314672896,
+  "sha256": "f8f3b39028fc79e89c35dec7c36e70d64f81a82b463c93af8bece31bb1c7f72a"
+}

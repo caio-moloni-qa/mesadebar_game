@@ -22,8 +22,8 @@ describe('musicFor', () => {
     expect(musicFor(situation({ ...snow, ...fighting, merchant: { hub: true, inside: true } }), false)).toBe('igloo');
     expect(musicFor(situation({ ...snow, ...fighting, merchant: { hub: false, inside: true } }), false)).toBe('igloo');
     expect(musicFor(situation({ ...snow, over: true }), false)).toBe('igloo');
-    expect(musicFor(situation(snow), true)).toBe('tavern');
-    expect(musicFor(situation(snow), false)).toBe('arena');
+    expect(musicFor(situation(snow), true)).toBe('menu');
+    expect(musicFor(situation(snow), false)).toBe('arena-snowfield');
   });
 
   it.each([
@@ -31,7 +31,7 @@ describe('musicFor', () => {
     ['bellringer', 'guardian-bellringer'], ['ancientYeti', 'guardian-ancient-yeti']
   ] as const)('gives %s its own snowy theme and restores the arena after the fight', (kind, track) => {
     expect(musicFor(situation({ ...snow, miniBosses: { bosses: [{ kind }] } }), false)).toBe(track);
-    expect(musicFor(situation(snow), false)).toBe('arena');
+    expect(musicFor(situation(snow), false)).toBe('arena-snowfield');
   });
 
   it('gives the Winter King both phases and priority over guardians', () => {
@@ -40,8 +40,8 @@ describe('musicFor', () => {
       expect(musicFor(situation({ ...snow, miniBosses: guardian, bosses: { bosses: [{ phaseTwo, enraged }] } }), false)).toBe(track);
     }
   });
-  it('plays the tavern in the menu, between runs, inside the portal and after a run', () => {
-    expect(musicFor(situation(), true)).toBe('tavern');
+  it('plays the menu theme, and the tavern between runs, inside the portal and after a run', () => {
+    expect(musicFor(situation(), true)).toBe('menu');
     expect(musicFor(situation({ merchant: { hub: true, inside: false } }), false)).toBe('tavern');
     expect(musicFor(situation({ merchant: { hub: false, inside: true } }), false)).toBe('tavern');
     expect(musicFor(situation({ over: true }), false)).toBe('tavern');

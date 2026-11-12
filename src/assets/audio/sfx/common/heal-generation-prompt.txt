@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "heal",
+  "seconds": 0.7,
+  "prompt": "Gentle fantasy heal: warm rising harp shimmer with soft sparkles, mono.",
+  "speech": false,
+  "seed": 3833971841,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/heal.mp3",
+  "raw": "src/assets/audio/sfx/common/heal-raw.wav",
+  "wav": "src/assets/audio/sfx/common/heal.wav",
+  "peak": 0.753509521484375,
+  "rms": 0.12588870022980408,
+  "sha256": "ed2864ad891723138638a22896847363078172be3af5d4f83d5a84433614ad82"
+}

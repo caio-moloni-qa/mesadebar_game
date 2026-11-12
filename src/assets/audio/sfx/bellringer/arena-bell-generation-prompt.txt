@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "arena-bell",
+  "seconds": 0.8,
+  "prompt": "Bell dropped from above, bronze crash, mono.",
+  "speech": false,
+  "seed": 3759665965,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/arena-bell.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/arena-bell-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/arena-bell.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06992723262019829,
+  "sha256": "c8a1fd40647867f0c4c0c6216c3009fca0b31aa951ec5f55de68672155fac3a7"
+}

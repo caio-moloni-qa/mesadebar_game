@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-mau-olhado",
+  "seconds": 0.8,
+  "prompt": "Evil eye curse: eerie whisper and a descending dissonant chime, mono.",
+  "speech": false,
+  "seed": 1440315297,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-mau-olhado.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-mau-olhado-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-mau-olhado.wav",
+  "peak": 0.72735595703125,
+  "rms": 0.1258886661437595,
+  "sha256": "3d8bcfbb84aab00dec72090f792ec9d1e1eafe2b8ffd7ed308d9daf0152ae843"
+}

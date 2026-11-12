@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "skill-muralha-viva",
+  "seconds": 1.0,
+  "prompt": "Dwarf planting into an unbreakable stance, deep metal hum and a stone-like thud, mono.",
+  "speech": false,
+  "seed": 665023057,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/skill-muralha-viva.mp3",
+  "raw": "src/assets/audio/sfx/brom/skill-muralha-viva-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/skill-muralha-viva.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06559553510000073,
+  "sha256": "d021e086e788d66026511dd055b10ea54f1b92a56f592dd792f62287a6e0d92b"
+}

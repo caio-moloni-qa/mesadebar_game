@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "ui-confirm",
+  "seconds": 0.25,
+  "prompt": "Wooden UI confirm: knock plus a short bright pluck, mono.",
+  "speech": false,
+  "seed": 526142372,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/ui-confirm.mp3",
+  "raw": "src/assets/audio/sfx/common/ui-confirm-raw.wav",
+  "wav": "src/assets/audio/sfx/common/ui-confirm.wav",
+  "peak": 0.575958251953125,
+  "rms": 0.06309372584689642,
+  "sha256": "14da4b9ced7331bd2879275049e7c5b3e7e8ca09609ddfdface07ce962653925"
+}

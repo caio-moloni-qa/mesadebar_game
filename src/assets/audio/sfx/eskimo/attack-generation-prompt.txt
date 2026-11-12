@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Ladle smacking a head, metallic bonk, mono.",
+  "speech": false,
+  "seed": 4282620594,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/attack.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/attack.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10860948491423325,
+  "sha256": "253d5deab1adc76ffabc5380d1389ab04278df9743a8bd5671ae80dc3eebee8c"
+}

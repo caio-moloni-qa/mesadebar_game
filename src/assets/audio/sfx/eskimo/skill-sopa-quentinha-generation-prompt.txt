@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "skill-sopa-quentinha",
+  "seconds": 1.0,
+  "prompt": "Hot soup ladled into bowls, steamy bubbling and happy slurps, mono.",
+  "speech": false,
+  "seed": 1110462987,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/skill-sopa-quentinha.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/skill-sopa-quentinha-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/skill-sopa-quentinha.wav",
+  "peak": 0.833282470703125,
+  "rms": 0.12588870130085816,
+  "sha256": "a46181e00378e93f9397fe21e82a6def61484abb104e5f84361571ada89f2148"
+}

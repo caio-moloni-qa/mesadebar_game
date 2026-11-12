@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Male wizard short focused exhale \"hah!\", mono.",
+  "speech": false,
+  "seed": 2490539164,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/mage/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/bark-attack.wav",
+  "peak": 0.411529541015625,
+  "rms": 0.12588861793301803,
+  "sha256": "619ccb5173a0ded417f1b1cad755af2c2246231458f92717c9bbcb2c0ed072f4"
+}

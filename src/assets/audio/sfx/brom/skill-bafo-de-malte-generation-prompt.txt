@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "skill-bafo-de-malte",
+  "seconds": 1.0,
+  "prompt": "Huge comic dwarf burp blasting someone in the face, mono.",
+  "speech": false,
+  "seed": 2924171426,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/skill-bafo-de-malte.mp3",
+  "raw": "src/assets/audio/sfx/brom/skill-bafo-de-malte-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/skill-bafo-de-malte.wav",
+  "peak": 0.52947998046875,
+  "rms": 0.12588875433206095,
+  "sha256": "c90801547d97d0eed728fdcaec01cc63fa37363b9d6494d43fc8c3a1fe6197fb"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "bark-victory",
+  "seconds": 1.2,
+  "prompt": "Barbarian triumphant roaring laugh, chest-thumping, mono.",
+  "speech": false,
+  "seed": 2759679644,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/bark-victory.wav",
+  "peak": 0.767852783203125,
+  "rms": 0.12588872925277808,
+  "sha256": "a61d7587413fdc2563a594580a2a055a8412abebe85d5bd6bbf42d2eb01a71d5"
+}

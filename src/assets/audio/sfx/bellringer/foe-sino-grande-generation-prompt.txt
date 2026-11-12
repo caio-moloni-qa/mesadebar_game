@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "foe-sino-grande",
+  "seconds": 1.5,
+  "prompt": "Giant bell raised with a creak, false pause, then a crushing bell slam, mono.",
+  "speech": false,
+  "seed": 3076570292,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/foe-sino-grande.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/foe-sino-grande-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/foe-sino-grande.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.060965505640208105,
+  "sha256": "feb7d07bfc2aa16a4c591f7a8b202fc40f8ca2d33424c1bb63729c740e34926e"
+}

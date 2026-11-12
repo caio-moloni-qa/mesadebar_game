@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Old man wheezing pained groan, mono.",
+  "speech": false,
+  "seed": 1810241248,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/bark-hurt.wav",
+  "peak": 0.530517578125,
+  "rms": 0.12588872264617854,
+  "sha256": "06ad4bd40701dacc102ba578acbd3bc1b838a9fbf843836343d53835f49fced9"
+}

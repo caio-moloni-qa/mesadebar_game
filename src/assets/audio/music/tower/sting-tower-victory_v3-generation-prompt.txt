@@ -1,0 +1,69 @@
+{
+  "id": "sting-tower-victory",
+  "seconds": 8,
+  "kind": "win",
+  "loop": false,
+  "noteCount": 20,
+  "hitCount": 4,
+  "instruments": [
+    "trumpet",
+    "strings",
+    "lute"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-tower-victory",
+  "rate": 44100,
+  "frames": 352800,
+  "rawSeconds": 12,
+  "rawPeak": 0.06991489976644516,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.09924494049290676,
+  "gain": 12.014606368686351,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-tower-victory.wav",
+  "rawFile": "sting-tower-victory-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/sting-tower-victory_v3.mp3",
+  "wav": "src/assets/audio/music/tower/sting-tower-victory.wav",
+  "raw": "src/assets/audio/music/tower/sting-tower-victory-raw.wav",
+  "prompt": "Triumphant tower-top fanfare: brass fanfare, timpani roll, cavaquinho and fiddle flourish, a tavern crowd cheer without words, ending on a ringing major chord, 8 seconds, instrumental.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-15.71",
+    "input_tp": "-1.51",
+    "input_lra": "4.70",
+    "input_thresh": "-27.99",
+    "output_i": "-14.31",
+    "output_tp": "-2.50",
+    "output_lra": "1.50",
+    "output_thresh": "-26.23",
+    "normalization_type": "dynamic",
+    "target_offset": "0.31"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.00",
+    "input_tp": "-1.87",
+    "input_lra": "4.20",
+    "input_thresh": "-26.14",
+    "output_i": "-14.04",
+    "output_tp": "-2.50",
+    "output_lra": "1.30",
+    "output_thresh": "-25.87",
+    "normalization_type": "dynamic",
+    "target_offset": "0.04"
+  },
+  "sha256": "ef6734394e88defd7fe060fc6a689490b041c16e8f7f93c3bb0f15c2fc1616cd"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "arena-snowball",
+  "seconds": 0.8,
+  "prompt": "Giant snowball hurled and exploding into powder, mono.",
+  "speech": false,
+  "seed": 193118989,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/arena-snowball.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/arena-snowball-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/arena-snowball.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06101229208789085,
+  "sha256": "352da6c8ca3ee50dd1af40376dae69b9a57e5394edfb4e5ce85c562692150c2b"
+}

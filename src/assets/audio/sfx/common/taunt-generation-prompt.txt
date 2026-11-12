@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "taunt",
+  "seconds": 0.6,
+  "prompt": "Aggro taunt: weapon banging on a shield twice with a short echo, mono.",
+  "speech": false,
+  "seed": 1426214922,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/taunt.mp3",
+  "raw": "src/assets/audio/sfx/common/taunt-raw.wav",
+  "wav": "src/assets/audio/sfx/common/taunt.wav",
+  "peak": 0.773040771484375,
+  "rms": 0.12588868785699298,
+  "sha256": "639752bd146d15ec1da5cf57fc5819c6a4f9f7c59f259eabc085f78a5e2113d0"
+}

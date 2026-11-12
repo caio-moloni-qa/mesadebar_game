@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Chubby man muffled \"oof\" through thick furs, mono.",
+  "speech": false,
+  "seed": 1962470837,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/bark-hurt.wav",
+  "peak": 0.4580078125,
+  "rms": 0.12588863480936413,
+  "sha256": "00798c14cea987a8276e21d6effdb7da231ed8298e8f7f42b38386f91c535f07"
+}

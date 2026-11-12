@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "shield-break",
+  "seconds": 0.6,
+  "prompt": "Magic barrier shattering like thick glass with sparkling debris, mono.",
+  "speech": false,
+  "seed": 3862345259,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/shield-break.mp3",
+  "raw": "src/assets/audio/sfx/common/shield-break-raw.wav",
+  "wav": "src/assets/audio/sfx/common/shield-break.wav",
+  "peak": 0.665618896484375,
+  "rms": 0.1258886911641381,
+  "sha256": "16fac780096753ab0ad7cebf1818f2f420b4e7a0d98ae0c13a9fe09ccf2ac8bd"
+}

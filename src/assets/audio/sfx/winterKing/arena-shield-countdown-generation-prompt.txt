@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "arena-shield-countdown",
+  "seconds": 0.5,
+  "prompt": "Ice shield countdown pulse, deep icy tick, mono.",
+  "speech": false,
+  "seed": 3910547465,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/arena-shield-countdown.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/arena-shield-countdown-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/arena-shield-countdown.wav",
+  "peak": 0.697479248046875,
+  "rms": 0.12588873290140076,
+  "sha256": "9d7153cd143b0d0f99ce7efb14181a71553b93855bb3048e29da40b5596e6281"
+}

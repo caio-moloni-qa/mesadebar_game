@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Armored monkey warrior short aggressive screech \"ook!\", mono.",
+  "speech": false,
+  "seed": 2907366542,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/fabri/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/bark-attack.wav",
+  "peak": 0.33197021484375,
+  "rms": 0.12588868682865634,
+  "sha256": "f26142fd96e4587c13a7c262fe44e53874edb245a0b518bd191bc8c90ba535a4"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "foe-dados",
+  "seconds": 1.0,
+  "prompt": "Dice rattling and tumbling, followed by quick small hits, mono.",
+  "speech": false,
+  "seed": 2256517369,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/foe-dados.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/foe-dados-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/foe-dados.wav",
+  "peak": 0.74591064453125,
+  "rms": 0.12588864266444155,
+  "sha256": "16894d6e2808ee27e876d3e9fb71789cf7af9f0b6db5ea2464c4ff56de1b25f2"
+}

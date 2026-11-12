@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "bark-attack",
+  "seconds": 0.5,
+  "prompt": "Lich raspy hiss with a ghostly echo, mono.",
+  "speech": false,
+  "seed": 811107746,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/bark-attack.wav",
+  "peak": 0.50665283203125,
+  "rms": 0.12588870527169654,
+  "sha256": "f6dabedf691d5c329d74659937451c78a656d0f976fcf24ae7c6e4c8b0bbdfdf"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Monkey whimpering as it falls, armor clanking on wood, mono.",
+  "speech": false,
+  "seed": 2002841629,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/fabri/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/bark-ko.wav",
+  "peak": 0.34771728515625,
+  "rms": 0.12588870446806752,
+  "sha256": "beef6b073ed696bf698fad2a0f5ad4f64d669f608b8815b35b1d6198be1e86c6"
+}

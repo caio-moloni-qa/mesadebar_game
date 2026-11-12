@@ -1,0 +1,76 @@
+{
+  "id": "arena-snowfield",
+  "bpm": 120,
+  "bars": 64,
+  "base": 50,
+  "key": "D harmonic minor",
+  "kind": "snow",
+  "meter": 4,
+  "loop": true,
+  "seconds": 128,
+  "noteCount": 864,
+  "hitCount": 512,
+  "instruments": [
+    "cello",
+    "harp",
+    "recorder",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "rattle"
+  ],
+  "seed": "arena-snowfield",
+  "rate": 44100,
+  "frames": 5644800,
+  "rawSeconds": 132,
+  "rawPeak": 0.11550845205783844,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.14548893930196222,
+  "gain": 7.272195108106787,
+  "seam": [
+    0.0023469291627407074,
+    0.0005033835768699646
+  ],
+  "end": [
+    -0.05874163284897804,
+    -0.06964336335659027
+  ],
+  "file": "arena-snowfield.wav",
+  "rawFile": "arena-snowfield-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/snowfield/arena-snowfield.mp3",
+  "wav": "src/assets/audio/music/tower/arena-snowfield.wav",
+  "raw": "src/assets/audio/music/tower/arena-snowfield-raw.wav",
+  "prompt": "Cold dark-fantasy survival theme in a frozen field at night, 120 BPM, D harmonic minor: driving harp and pizzicato ostinato, tremolo strings, deep skin frame drums, icy sleigh bells and a lonely bone-flute melody over howling wind. Constant tension, room to grow, seamless loop with no intro or ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-14.98",
+    "input_tp": "-1.51",
+    "input_lra": "1.00",
+    "input_thresh": "-24.98",
+    "output_i": "-14.05",
+    "output_tp": "-2.50",
+    "output_lra": "0.90",
+    "output_thresh": "-24.05",
+    "normalization_type": "dynamic",
+    "target_offset": "0.05"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.46",
+    "input_tp": "-2.93",
+    "input_lra": "0.90",
+    "input_thresh": "-24.46",
+    "output_i": "-14.00",
+    "output_tp": "-2.50",
+    "output_lra": "0.80",
+    "output_thresh": "-24.00",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.00"
+  },
+  "sha256": "d0965fa1619b7df68cdd6e2051d5839fab494a22e46784d274d1f5783c3057cd"
+}

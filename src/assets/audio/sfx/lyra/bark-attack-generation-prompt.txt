@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "bark-attack",
+  "seconds": 0.3,
+  "prompt": "Young elf woman short sharp exhale \"tsh!\", mono.",
+  "speech": false,
+  "seed": 1247015937,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/lyra/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/bark-attack.wav",
+  "peak": 0.39306640625,
+  "rms": 0.12588862498431322,
+  "sha256": "d40c1035c6f0f3377cea90236b7aa753904cd29ca01c76468ec1474e1ee33e6b"
+}

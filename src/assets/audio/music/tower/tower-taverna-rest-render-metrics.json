@@ -1,0 +1,36 @@
+{
+  "id": "tower-taverna-rest",
+  "bpm": 84,
+  "bars": 32,
+  "base": 50,
+  "key": "D major",
+  "kind": "rest",
+  "meter": 4,
+  "loop": true,
+  "seconds": 91.42857142857143,
+  "noteCount": 288,
+  "hitCount": 0,
+  "instruments": [
+    "lute"
+  ],
+  "percussion": [],
+  "seed": "tower-taverna-rest",
+  "rate": 44100,
+  "frames": 4032000,
+  "rawSeconds": 95.42857142857143,
+  "rawPeak": 0.04310182109475136,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.13147071074321703,
+  "gain": 19.488735711500816,
+  "seam": [
+    0.002492642030119896,
+    0.00008361600339412689
+  ],
+  "end": [
+    -0.018615925684571266,
+    -0.01732163317501545
+  ],
+  "file": "tower-taverna-rest.wav",
+  "rawFile": "tower-taverna-rest-raw.wav"
+}

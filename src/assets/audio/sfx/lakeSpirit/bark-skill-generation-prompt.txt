@@ -1,0 +1,18 @@
+{
+  "character": "lakeSpirit",
+  "event": "bark-skill",
+  "seconds": 1.5,
+  "prompt": "Water spirit rising from a lake, surging water and an ethereal female wail, mono.",
+  "speech": false,
+  "seed": 302020470,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lakeSpirit/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/lakeSpirit/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/lakeSpirit/bark-skill.wav",
+  "peak": 0.53680419921875,
+  "rms": 0.12588868840865447,
+  "sha256": "e50ae2d116f67f5f0b74c50403cee45f95f6d0b596cf9c7346780dfbfe285bac"
+}

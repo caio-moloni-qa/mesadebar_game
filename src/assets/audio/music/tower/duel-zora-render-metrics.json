@@ -1,0 +1,40 @@
+{
+  "id": "duel-zora",
+  "bpm": 92,
+  "bars": 40,
+  "base": 50,
+  "key": "D phrygian dominant",
+  "kind": "zora",
+  "meter": 4,
+  "loop": true,
+  "seconds": 104.34782608695652,
+  "noteCount": 745,
+  "hitCount": 280,
+  "instruments": [
+    "lute",
+    "glass"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "duel-zora",
+  "rate": 44100,
+  "frames": 4601739,
+  "rawSeconds": 108.3478231292517,
+  "rawPeak": 0.1188514456152916,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.1276234262611406,
+  "gain": 7.067646469517779,
+  "seam": [
+    0.0012206807732582092,
+    0.0017632171511650085
+  ],
+  "end": [
+    -0.08882696181535721,
+    -0.0767042487859726
+  ],
+  "file": "duel-zora.wav",
+  "rawFile": "duel-zora-raw.wav"
+}

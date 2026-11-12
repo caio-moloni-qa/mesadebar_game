@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "skill-chuva-de-meteoros",
+  "seconds": 2.0,
+  "prompt": "Meteor shower: roaring fireballs falling from the sky, several heavy explosive impacts, mono.",
+  "speech": false,
+  "seed": 3180608196,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/skill-chuva-de-meteoros.mp3",
+  "raw": "src/assets/audio/sfx/mage/skill-chuva-de-meteoros-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/skill-chuva-de-meteoros.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.05373580793123655,
+  "sha256": "556b863988b4035cc3e8d66ad803eec25dcafd6ad39ab79dc928eac4dd0d4ce8"
+}

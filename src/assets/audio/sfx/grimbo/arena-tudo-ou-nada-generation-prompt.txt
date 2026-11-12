@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "arena-tudo-ou-nada",
+  "seconds": 1.0,
+  "prompt": "Single big die rolling and landing with a jackpot ding, mono.",
+  "speech": false,
+  "seed": 342942129,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/arena-tudo-ou-nada.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/arena-tudo-ou-nada-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/arena-tudo-ou-nada.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0968543686471888,
+  "sha256": "cdb22ae6dfbd480e49f4426a92cdc4d046b5cc45d3ddc562c79541d1b57195fb"
+}

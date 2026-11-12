@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-rodada-da-casa",
+  "seconds": 1.0,
+  "prompt": "Round on the house: several mugs filled from a tap and clinked together, mono.",
+  "speech": false,
+  "seed": 3258679146,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-rodada-da-casa.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-rodada-da-casa-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-rodada-da-casa.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06881117706328328,
+  "sha256": "6eb2278e10edc61a2ce5a57f8bb81179f7f14a7cfcf3fc5eb320bdae84cc6d2e"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "arena-liquidacao",
+  "seconds": 0.8,
+  "prompt": "Clearance sale: cash register ka-ching and a cheerful bell, mono.",
+  "speech": false,
+  "seed": 1063800942,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/arena-liquidacao.mp3",
+  "raw": "src/assets/audio/sfx/sergio/arena-liquidacao-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/arena-liquidacao.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06850423030820448,
+  "sha256": "267a6d765af935165350df7e290655533ae94db4cb7db9879eb2f9258ba83665"
+}

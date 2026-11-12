@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Elven bow: string pull, release twang and arrow hit, mono.",
+  "speech": false,
+  "seed": 291439179,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/attack.mp3",
+  "raw": "src/assets/audio/sfx/lyra/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/attack.wav",
+  "peak": 0.5555419921875,
+  "rms": 0.12588866061445692,
+  "sha256": "2c9de7888307195836895b14a5f63cd6e7895bbc1c40a26a13ad0ac008d86643"
+}

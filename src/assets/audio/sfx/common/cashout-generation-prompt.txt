@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "cashout",
+  "seconds": 1.0,
+  "prompt": "Leather pouch of coins tied shut and patted, satisfying jingle, mono.",
+  "speech": false,
+  "seed": 2594823626,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/cashout.mp3",
+  "raw": "src/assets/audio/sfx/common/cashout-raw.wav",
+  "wav": "src/assets/audio/sfx/common/cashout.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06339894585485419,
+  "sha256": "21d8d622103c39f36e9086532d8fd4af23ae17c9a3deced166ca93d86d582dfb"
+}

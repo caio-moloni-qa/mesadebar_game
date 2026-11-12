@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "skill-barril",
+  "seconds": 0.8,
+  "prompt": "Wooden barrel dragged and slammed down as cover, hollow thunk, mono.",
+  "speech": false,
+  "seed": 2775366233,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/skill-barril.mp3",
+  "raw": "src/assets/audio/sfx/brom/skill-barril-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/skill-barril.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08941206108031001,
+  "sha256": "32d71a886cb77cdc52845dec217bd6c27d5feb594df1ed0db542498d9537431b"
+}

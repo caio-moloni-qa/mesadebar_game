@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "bark-hurt",
+  "seconds": 0.5,
+  "prompt": "Ice king angry pained growl with cracking ice, mono.",
+  "speech": false,
+  "seed": 3965007488,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/bark-hurt.wav",
+  "peak": 0.505279541015625,
+  "rms": 0.12588873303560452,
+  "sha256": "db1d4d32a3d9c24d53c361d04b39f204716396ae4f7166e6421aa48628de3d6a"
+}

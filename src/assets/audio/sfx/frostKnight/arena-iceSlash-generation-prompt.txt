@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "arena-iceSlash",
+  "seconds": 0.6,
+  "prompt": "Wide icy sword arc, freezing whoosh, mono.",
+  "speech": false,
+  "seed": 3729841982,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/arena-iceSlash.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/arena-iceSlash-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/arena-iceSlash.wav",
+  "peak": 0.504547119140625,
+  "rms": 0.1258885998925208,
+  "sha256": "03befd862202e4335f08a3fa5438fd69df4d43712d67f76ff7e1a34a11787e0e"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-rodada",
+  "seconds": 0.7,
+  "prompt": "Single drink poured and gulped, mono.",
+  "speech": false,
+  "seed": 1184276309,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-rodada.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-rodada-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-rodada.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09400359952784963,
+  "sha256": "5ae47e3e7a9985a021ad522b50df1f622953085b4dd0b0f1b53850b08980149a"
+}

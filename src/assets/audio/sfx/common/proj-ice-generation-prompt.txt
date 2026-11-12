@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-ice",
+  "seconds": 0.4,
+  "prompt": "Ice shard shot through the air, crystalline whistle, mono.",
+  "speech": false,
+  "seed": 912695341,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-ice.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-ice-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-ice.wav",
+  "peak": 0.73529052734375,
+  "rms": 0.12588874875740558,
+  "sha256": "c9034499fdbb00ebba769bca36cf7093d9870d2fb1bfdd4a46585b0c7c9facb6"
+}

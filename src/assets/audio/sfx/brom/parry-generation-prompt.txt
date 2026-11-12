@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Hammer head blocking a blow, anvil-like ring, mono.",
+  "speech": false,
+  "seed": 2123474630,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/parry.mp3",
+  "raw": "src/assets/audio/sfx/brom/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/parry.wav",
+  "peak": 0.82958984375,
+  "rms": 0.12588871430562393,
+  "sha256": "1b3dd983147b3586179b9686c0abf7fcc3e35872f0c1acac5fde1bdd3e8174c7"
+}

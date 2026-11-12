@@ -1,0 +1,18 @@
+{
+  "character": "templeGuardian",
+  "event": "bark-skill",
+  "seconds": 1.5,
+  "prompt": "Stone golem awakening, grinding rock and a rising magical rune hum, mono.",
+  "speech": false,
+  "seed": 3140583871,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/templeGuardian/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/templeGuardian/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/templeGuardian/bark-skill.wav",
+  "peak": 0.5557861328125,
+  "rms": 0.1258886624730961,
+  "sha256": "fa8e656b50177e260c221b36b10d5fc77ad4e0f1205b4eebd5e49b97c5876f63"
+}

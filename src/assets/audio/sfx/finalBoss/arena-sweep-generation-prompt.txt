@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "arena-sweep",
+  "seconds": 0.8,
+  "prompt": "Scythe-like sweep with ghostly whoosh, mono.",
+  "speech": false,
+  "seed": 4161317474,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/arena-sweep.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/arena-sweep-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/arena-sweep.wav",
+  "peak": 0.513702392578125,
+  "rms": 0.12588860046648712,
+  "sha256": "51fc9dc49c6453c0a01c2fd4382e4aaafc6e027c0ade766ccd73596aab53491e"
+}

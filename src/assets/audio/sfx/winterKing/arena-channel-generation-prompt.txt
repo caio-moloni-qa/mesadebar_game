@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "arena-channel",
+  "seconds": 2.0,
+  "prompt": "Channeling dark frost magic, building ominous drone, mono.",
+  "speech": false,
+  "seed": 1042549453,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/arena-channel.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/arena-channel-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/arena-channel.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.12413197095403813,
+  "sha256": "ae6dce79dc98ecefc24a10040397485c212e42fa8ae788f6469acee939f0cd10"
+}

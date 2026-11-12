@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "skill-corte-gelido",
+  "seconds": 0.8,
+  "prompt": "Freezing sword slash leaving frost: icy whoosh and crackle, mono.",
+  "speech": false,
+  "seed": 2438498236,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/skill-corte-gelido.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/skill-corte-gelido-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/skill-corte-gelido.wav",
+  "peak": 0.5697021484375,
+  "rms": 0.12588873429244363,
+  "sha256": "253309877d1a8a782b8a591e59e6c14d26386a5a2b3ad26f6b70d6ff17ead0b1"
+}

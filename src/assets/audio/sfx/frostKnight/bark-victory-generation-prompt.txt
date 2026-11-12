@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "bark-victory",
+  "seconds": 1.0,
+  "prompt": "Knight's cold low exhale and sword planted in ice, mono.",
+  "speech": false,
+  "seed": 1916695792,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/bark-victory.wav",
+  "peak": 0.503814697265625,
+  "rms": 0.1258887075703557,
+  "sha256": "fb08446235cdd80337bede0ca34091b7641f394d1f368ead6770bdf3a0c36b1a"
+}

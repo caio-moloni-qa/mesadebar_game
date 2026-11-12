@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "skill-dobre-final",
+  "seconds": 2.0,
+  "prompt": "Final death knell: deep massive bell toll with a heavy hit and long stunned ring, mono.",
+  "speech": false,
+  "seed": 1538252535,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/skill-dobre-final.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/skill-dobre-final-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/skill-dobre-final.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.05494471531770423,
+  "sha256": "1cac8532819b62ce1fa1603c1b89c6135c7553eeca20e27d4fc950234b22894d"
+}

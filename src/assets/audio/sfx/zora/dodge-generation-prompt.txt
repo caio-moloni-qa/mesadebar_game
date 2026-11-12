@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Silk scarves and bangles swishing, mono.",
+  "speech": false,
+  "seed": 2048813085,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/dodge.mp3",
+  "raw": "src/assets/audio/sfx/zora/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/dodge.wav",
+  "peak": 0.5062255859375,
+  "rms": 0.12588894575189802,
+  "sha256": "31e4ee237a091831925636b674c5d9feeb01362ebf455820b005a1fe6ec8b762"
+}

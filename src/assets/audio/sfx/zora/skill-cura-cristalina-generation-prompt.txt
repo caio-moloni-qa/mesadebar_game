@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-cura-cristalina",
+  "seconds": 0.8,
+  "prompt": "Crystal healing chime, soft and pure, mono.",
+  "speech": false,
+  "seed": 1543913094,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-cura-cristalina.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-cura-cristalina-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-cura-cristalina.wav",
+  "peak": 0.717926025390625,
+  "rms": 0.1258886791428672,
+  "sha256": "ac63817942385c1ebf7a8471388e30e308201eb2789bd2b974a520d2018bf26a"
+}

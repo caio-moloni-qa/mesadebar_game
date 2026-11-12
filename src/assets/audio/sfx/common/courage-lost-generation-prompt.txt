@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "courage-lost",
+  "seconds": 0.4,
+  "prompt": "Courage lost: short descending pluck with a dull thud, mono.",
+  "speech": false,
+  "seed": 3368850779,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/courage-lost.mp3",
+  "raw": "src/assets/audio/sfx/common/courage-lost-raw.wav",
+  "wav": "src/assets/audio/sfx/common/courage-lost.wav",
+  "peak": 0.716400146484375,
+  "rms": 0.06309384676455206,
+  "sha256": "9e2af1a209b676c4f296f6cd4408a8d6e3f88f61552dc2e9b16c7cac2bdc4173"
+}

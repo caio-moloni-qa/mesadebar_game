@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "foe-coroa",
+  "seconds": 1.4,
+  "prompt": "Four regal strikes with a deceptive pause and icy swishes, mono.",
+  "speech": false,
+  "seed": 2006618015,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/foe-coroa.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/foe-coroa-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/foe-coroa.wav",
+  "peak": 0.685028076171875,
+  "rms": 0.12588867752126273,
+  "sha256": "838de26a99e83ed82cb0b7b11c0beb6afb4da6fccf2a9844d8120de01cfed2f8"
+}

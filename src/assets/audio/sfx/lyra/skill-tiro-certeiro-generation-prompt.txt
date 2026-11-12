@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "skill-tiro-certeiro",
+  "seconds": 0.8,
+  "prompt": "Long bow draw creak, powerful release and a piercing arrow hit, mono.",
+  "speech": false,
+  "seed": 3539273896,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/skill-tiro-certeiro.mp3",
+  "raw": "src/assets/audio/sfx/lyra/skill-tiro-certeiro-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/skill-tiro-certeiro.wav",
+  "peak": 0.522216796875,
+  "rms": 0.12588872531263956,
+  "sha256": "1fa66fd6e736531446435816dba34e85eae0d49857fc17d3fd0791b130af707b"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Backpack full of junk swung, rattling pots and a blunt clunk, mono.",
+  "speech": false,
+  "seed": 391370211,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/attack.mp3",
+  "raw": "src/assets/audio/sfx/sergio/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/attack.wav",
+  "peak": 0.82525634765625,
+  "rms": 0.1258886357341126,
+  "sha256": "408e362bcfcb2eec7d806331e2e8a324d15b01f4c78bdb394ed70a226380f725"
+}

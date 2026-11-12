@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "arena-roar",
+  "seconds": 1.5,
+  "prompt": "Enraged yeti roar, mono.",
+  "speech": false,
+  "seed": 2100419379,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/arena-roar.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/arena-roar-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/arena-roar.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.04172187138370556,
+  "sha256": "ccb44a494bf7675002c18ca8808bb20ef35e3609890498bf04073b51bc8f5cc2"
+}

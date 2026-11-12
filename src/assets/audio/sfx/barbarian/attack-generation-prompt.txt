@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Heavy two-handed greatsword swing, deep whoosh into a meaty slash, mono.",
+  "speech": false,
+  "seed": 444171608,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/attack.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/attack.wav",
+  "peak": 0.492034912109375,
+  "rms": 0.1258886619604794,
+  "sha256": "2483996977f539e10460f73f90ca5465086d5ddf92859bc56e3447ce53bbb6c0"
+}

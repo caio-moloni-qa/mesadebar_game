@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "skill-flecha-envenenada",
+  "seconds": 0.8,
+  "prompt": "Arrow release and hit with a sickly green poison hiss, mono.",
+  "speech": false,
+  "seed": 3486996734,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/skill-flecha-envenenada.mp3",
+  "raw": "src/assets/audio/sfx/lyra/skill-flecha-envenenada-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/skill-flecha-envenenada.wav",
+  "peak": 0.5,
+  "rms": 0.1258887402855847,
+  "sha256": "c616158fbe30165c49005410bd470d40a2f74a512a23241122000aa642020a39"
+}

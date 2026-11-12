@@ -1,0 +1,18 @@
+{
+  "character": "templeGuardian",
+  "event": "bark-attack",
+  "seconds": 0.5,
+  "prompt": "Deep stone grinding growl, mono.",
+  "speech": false,
+  "seed": 2706176851,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/templeGuardian/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/templeGuardian/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/templeGuardian/bark-attack.wav",
+  "peak": 0.53900146484375,
+  "rms": 0.12588858470597905,
+  "sha256": "f1c30a38b15e3cf0f84c4fad40f7fca3c40b66625875b2090c04c2edd139ac28"
+}

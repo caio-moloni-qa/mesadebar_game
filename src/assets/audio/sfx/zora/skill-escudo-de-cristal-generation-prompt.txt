@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-escudo-de-cristal",
+  "seconds": 0.8,
+  "prompt": "Crystal shield forming with resonant glass harmonics, mono.",
+  "speech": false,
+  "seed": 3474383528,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-escudo-de-cristal.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-escudo-de-cristal-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-escudo-de-cristal.wav",
+  "peak": 0.71661376953125,
+  "rms": 0.12588879125993174,
+  "sha256": "75fb71605d7d1a2c22e8ac6e38a886810f4e09e332e74956711bc8849fc3a2be"
+}

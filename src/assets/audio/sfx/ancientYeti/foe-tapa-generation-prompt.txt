@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "foe-tapa",
+  "seconds": 0.5,
+  "prompt": "Giant open-palm slap, heavy smack, mono.",
+  "speech": false,
+  "seed": 3337887329,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/foe-tapa.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/foe-tapa-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/foe-tapa.wav",
+  "peak": 0.787689208984375,
+  "rms": 0.12588873990130064,
+  "sha256": "04530f10cbdab915711fabc222a6336092c71f52ce9eb8212af9709304896873"
+}

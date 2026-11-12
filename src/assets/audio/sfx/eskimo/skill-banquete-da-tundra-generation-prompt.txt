@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "skill-banquete-da-tundra",
+  "seconds": 1.6,
+  "prompt": "Big cauldron feast: bubbling pot, many ladles serving, warm cheering, mono.",
+  "speech": false,
+  "seed": 4107051654,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/skill-banquete-da-tundra.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/skill-banquete-da-tundra-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/skill-banquete-da-tundra.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09733630152388409,
+  "sha256": "5b1c2387d9f9064ec62da77c84dbccf2443be7cf930608316076d2e03cfb04c8"
+}

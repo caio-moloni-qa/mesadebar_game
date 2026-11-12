@@ -1,0 +1,18 @@
+{
+  "character": "reliquia",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Light leather-boots sidestep with amulet chain jingle, mono.",
+  "speech": false,
+  "seed": 3632517400,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/reliquia/dodge.mp3",
+  "raw": "src/assets/audio/sfx/reliquia/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/reliquia/dodge.wav",
+  "peak": 0.48046875,
+  "rms": 0.12588870197565158,
+  "sha256": "af3130c01fc062fe08a38b57c5b10a5477f6c09fdcd0c1e00e9e3665bea6876f"
+}

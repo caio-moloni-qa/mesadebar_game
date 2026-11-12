@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Agile monkey hop with light armor rattle, mono.",
+  "speech": false,
+  "seed": 125914370,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/dodge.mp3",
+  "raw": "src/assets/audio/sfx/fabri/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/dodge.wav",
+  "peak": 0.65997314453125,
+  "rms": 0.12588867357812697,
+  "sha256": "98bf779fbe5b6a803d29eaba0f3ac10a3528a066fdc759172a8ac0fa909dea6a"
+}

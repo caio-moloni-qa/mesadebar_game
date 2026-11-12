@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "skill-abraco-da-floresta",
+  "seconds": 1.5,
+  "prompt": "Forest embrace: vines and branches crushing, leaves rustling, toxic bubbling, mono.",
+  "speech": false,
+  "seed": 1752218977,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/skill-abraco-da-floresta.mp3",
+  "raw": "src/assets/audio/sfx/lyra/skill-abraco-da-floresta-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/skill-abraco-da-floresta.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11853969564957881,
+  "sha256": "d9fe67ba569ccf7690305006d67f2f65ed7fcb580534a3f05ff837a17e595d00"
+}

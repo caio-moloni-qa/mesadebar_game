@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "arena-shield-countdown",
+  "seconds": 0.5,
+  "prompt": "Necrotic shield countdown pulse, mono.",
+  "speech": false,
+  "seed": 2886024870,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/arena-shield-countdown.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/arena-shield-countdown-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/arena-shield-countdown.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07087281307395422,
+  "sha256": "c7e567837de7822d7728ea48f0100c35f6e6b57186568f33eb01ab9470432489"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-bottle",
+  "seconds": 0.4,
+  "prompt": "Glass bottle tumbling through the air with liquid sloshing, mono.",
+  "speech": false,
+  "seed": 133231283,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-bottle.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-bottle-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-bottle.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09633375259327996,
+  "sha256": "eea9d831234c9aeba148e69f928b09c704116c735972cc491d009b3cc4226c2b"
+}

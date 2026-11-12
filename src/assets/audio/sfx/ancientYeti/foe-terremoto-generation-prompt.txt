@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "foe-terremoto",
+  "seconds": 2.0,
+  "prompt": "Slow heavy wind-up growl then ground-shaking slam with quake rumble, mono.",
+  "speech": false,
+  "seed": 2553682861,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/foe-terremoto.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/foe-terremoto-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/foe-terremoto.wav",
+  "peak": 0.587371826171875,
+  "rms": 0.12588867876858534,
+  "sha256": "165068f89ef3676a606a53995e702b8b7d1cf849c064547af643bd728915ac6b"
+}

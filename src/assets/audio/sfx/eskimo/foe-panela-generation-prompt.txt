@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "foe-panela",
+  "seconds": 1.0,
+  "prompt": "Big iron pot swung slowly and smashed down, loud clang, mono.",
+  "speech": false,
+  "seed": 2155538162,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/foe-panela.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/foe-panela-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/foe-panela.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06695654102699744,
+  "sha256": "07cbd2d9e025c3981360cce938bec6806b5f2b4573465c98bf602605b1ff7916"
+}

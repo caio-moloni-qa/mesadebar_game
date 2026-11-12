@@ -1,0 +1,45 @@
+{
+  "id": "tower-igloo-champion",
+  "bpm": 128,
+  "bars": 64,
+  "base": 50,
+  "key": "D harmonic minor",
+  "kind": "king",
+  "meter": 4,
+  "loop": true,
+  "seconds": 120,
+  "noteCount": 2016,
+  "hitCount": 640,
+  "instruments": [
+    "cello",
+    "harp",
+    "choir",
+    "horn",
+    "organ",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "rattle"
+  ],
+  "seed": "tower-igloo-champion",
+  "rate": 44100,
+  "frames": 5292000,
+  "rawSeconds": 124,
+  "rawPeak": 0.16112862527370453,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.15116072252581755,
+  "gain": 5.213226380930863,
+  "seam": [
+    0.0016859658062458038,
+    0.004274889826774597
+  ],
+  "end": [
+    0.009624487720429897,
+    -0.12953481078147888
+  ],
+  "file": "tower-igloo-champion.wav",
+  "rawFile": "tower-igloo-champion-raw.wav"
+}

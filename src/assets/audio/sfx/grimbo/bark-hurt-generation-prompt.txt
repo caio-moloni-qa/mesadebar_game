@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "bark-hurt",
+  "seconds": 0.3,
+  "prompt": "Goblin squealing in pain, mono.",
+  "speech": false,
+  "seed": 1857660132,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/bark-hurt.wav",
+  "peak": 0.303375244140625,
+  "rms": 0.12588867603657314,
+  "sha256": "95bce69bc6cd6323f29d38f781baebe72562ec7a18388c174f26450f2484dcc6"
+}

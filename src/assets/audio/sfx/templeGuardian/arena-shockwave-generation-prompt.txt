@@ -1,0 +1,18 @@
+{
+  "character": "templeGuardian",
+  "event": "arena-shockwave",
+  "seconds": 1.2,
+  "prompt": "Stone fists pounding ground, expanding shockwave boom, mono.",
+  "speech": false,
+  "seed": 751100382,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/templeGuardian/arena-shockwave.mp3",
+  "raw": "src/assets/audio/sfx/templeGuardian/arena-shockwave-raw.wav",
+  "wav": "src/assets/audio/sfx/templeGuardian/arena-shockwave.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.036045923911929,
+  "sha256": "4eb037740235480e94ec8abfe51d7bccfdeb574899f5a10ba030f8dae9c9dc30"
+}

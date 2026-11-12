@@ -1,0 +1,41 @@
+{
+  "id": "menu",
+  "bpm": 96,
+  "bars": 40,
+  "base": 50,
+  "key": "D dorian",
+  "kind": "menu",
+  "meter": 4,
+  "loop": true,
+  "seconds": 100,
+  "noteCount": 580,
+  "hitCount": 320,
+  "instruments": [
+    "lute",
+    "choir",
+    "fiddle"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "menu",
+  "rate": 44100,
+  "frames": 4410000,
+  "rawSeconds": 104,
+  "rawPeak": 0.11238206923007965,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.09548534397570943,
+  "gain": 7.474501989105301,
+  "seam": [
+    0.004405669867992401,
+    0.003884134814143181
+  ],
+  "end": [
+    0.03920891880989075,
+    -0.004850866738706827
+  ],
+  "file": "menu.wav",
+  "rawFile": "menu-raw.wav"
+}

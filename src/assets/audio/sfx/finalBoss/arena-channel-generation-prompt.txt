@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "arena-channel",
+  "seconds": 2.0,
+  "prompt": "Channeling necromantic magic, whispering voices building, mono.",
+  "speech": false,
+  "seed": 370908788,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/arena-channel.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/arena-channel-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/arena-channel.wav",
+  "peak": 0.6982421875,
+  "rms": 0.12588868972850692,
+  "sha256": "36f0d64cc3a8e8f90d078bd5f8959b24175fca4f821ce1ac291e2744d6ab45c0"
+}

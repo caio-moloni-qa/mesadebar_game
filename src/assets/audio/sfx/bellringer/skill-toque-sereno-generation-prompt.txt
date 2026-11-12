@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "skill-toque-sereno",
+  "seconds": 1.0,
+  "prompt": "Soft gentle bell chime, calming and fading, mono.",
+  "speech": false,
+  "seed": 1989817489,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/skill-toque-sereno.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/skill-toque-sereno-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/skill-toque-sereno.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.05473309782752662,
+  "sha256": "bb60bb22bcd04229a6ada9cf72c7a41e1b6f877002b33e843abd5e8cbb36b50c"
+}

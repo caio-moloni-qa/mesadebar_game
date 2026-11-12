@@ -1,0 +1,73 @@
+{
+  "id": "duel-lyra",
+  "bpm": 124,
+  "bars": 48,
+  "base": 52,
+  "key": "E aeolian",
+  "kind": "lyra",
+  "meter": 4,
+  "loop": true,
+  "seconds": 92.90322580645162,
+  "noteCount": 816,
+  "hitCount": 384,
+  "instruments": [
+    "lute",
+    "recorder"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "duel-lyra",
+  "rate": 44100,
+  "frames": 4097032,
+  "rawSeconds": 96.90321995464852,
+  "rawPeak": 0.12101723253726959,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.1328932126258744,
+  "gain": 6.941160216511362,
+  "seam": [
+    0.0013751126825809479,
+    0.0026745349168777466
+  ],
+  "end": [
+    -0.037099506705999374,
+    -0.10016988217830658
+  ],
+  "file": "duel-lyra.wav",
+  "rawFile": "duel-lyra-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/duel-lyra.mp3",
+  "wav": "src/assets/audio/music/tower/duel-lyra.wav",
+  "raw": "src/assets/audio/music/tower/duel-lyra-raw.wav",
+  "prompt": "Agile elven huntress duel, 124 BPM, E aeolian: quick wooden-flute melody, Celtic harp arpeggios, fingerpicked nylon guitar, bodhrán and light shaker, pizzicato strings like arrows in flight. Focused and nimble, seamless loop, no intro, no ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-15.44",
+    "input_tp": "-1.51",
+    "input_lra": "0.50",
+    "input_thresh": "-25.44",
+    "output_i": "-14.09",
+    "output_tp": "-2.50",
+    "output_lra": "0.40",
+    "output_thresh": "-24.09",
+    "normalization_type": "dynamic",
+    "target_offset": "0.09"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.46",
+    "input_tp": "-2.82",
+    "input_lra": "0.40",
+    "input_thresh": "-24.46",
+    "output_i": "-14.00",
+    "output_tp": "-2.50",
+    "output_lra": "0.40",
+    "output_thresh": "-24.00",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.00"
+  },
+  "sha256": "5e5d9339bbfbb0d4e75d95e7f03ed57c1e07c3e8c251399e98ff1cf319d3a508"
+}

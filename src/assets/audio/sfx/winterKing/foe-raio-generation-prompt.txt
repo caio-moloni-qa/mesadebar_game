@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "foe-raio",
+  "seconds": 0.6,
+  "prompt": "Icy scepter beam fired, crystalline zap, mono.",
+  "speech": false,
+  "seed": 2687901507,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/foe-raio.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/foe-raio-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/foe-raio.wav",
+  "peak": 0.802093505859375,
+  "rms": 0.12588868718541477,
+  "sha256": "3202237b3cc5d0ddfbbae19b574a37e851a0c1c6e51ea7e6047b9366b98ae703"
+}

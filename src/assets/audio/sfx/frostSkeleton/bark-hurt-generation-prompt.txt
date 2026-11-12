@@ -1,0 +1,18 @@
+{
+  "character": "frostSkeleton",
+  "event": "bark-hurt",
+  "seconds": 0.3,
+  "prompt": "Frozen bones cracking, mono.",
+  "speech": false,
+  "seed": 3541549032,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSkeleton/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/frostSkeleton/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSkeleton/bark-hurt.wav",
+  "peak": 0.3951416015625,
+  "rms": 0.12588877372349214,
+  "sha256": "81eec649d6d8581d181b6b6e99e5b6bcebc9531c577ab5bd1345b447d57b3f28"
+}

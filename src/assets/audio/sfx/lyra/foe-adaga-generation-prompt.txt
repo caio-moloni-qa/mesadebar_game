@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "foe-adaga",
+  "seconds": 0.6,
+  "prompt": "Two quick dagger slashes, light and sharp, mono.",
+  "speech": false,
+  "seed": 3041312286,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/foe-adaga.mp3",
+  "raw": "src/assets/audio/sfx/lyra/foe-adaga-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/foe-adaga.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06137838360793415,
+  "sha256": "1754d4b0c8963e9e64059bb12ca69b68497c1b235c56ea97cbde2fda0a80e9dc"
+}

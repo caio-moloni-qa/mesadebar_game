@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-barril-rolante",
+  "seconds": 1.8,
+  "prompt": "Full barrel rolling fast across wooden floor and crashing hard, mono.",
+  "speech": false,
+  "seed": 417243003,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-barril-rolante.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-barril-rolante-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-barril-rolante.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10759338998225836,
+  "sha256": "865c75b2f7addce605f255aa2569f73d3a49a7ec97ee2cead86aba33bd97716e"
+}

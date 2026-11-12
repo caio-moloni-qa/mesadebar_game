@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "intent-flecha",
+  "seconds": 0.4,
+  "prompt": "Bowstring being drawn tight, short creak, mono.",
+  "speech": false,
+  "seed": 591208143,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/intent-flecha.mp3",
+  "raw": "src/assets/audio/sfx/common/intent-flecha-raw.wav",
+  "wav": "src/assets/audio/sfx/common/intent-flecha.wav",
+  "peak": 0.646270751953125,
+  "rms": 0.06309385978452658,
+  "sha256": "7c3ae9662699eaa43efa8cb323cd9fef323bdc459f55c04b7182852778acafca"
+}

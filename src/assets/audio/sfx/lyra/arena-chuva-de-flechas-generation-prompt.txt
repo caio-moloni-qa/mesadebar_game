@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "arena-chuva-de-flechas",
+  "seconds": 1.5,
+  "prompt": "Rain of arrows: many arrows whistling down and thudding into the ground, mono.",
+  "speech": false,
+  "seed": 3216582750,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/arena-chuva-de-flechas.mp3",
+  "raw": "src/assets/audio/sfx/lyra/arena-chuva-de-flechas-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/arena-chuva-de-flechas.wav",
+  "peak": 0.788543701171875,
+  "rms": 0.12588868740576065,
+  "sha256": "9e1ea2b1cc16e2dab8eba88fcd98976b753fc8bc37c5809932a94ebd2157972f"
+}

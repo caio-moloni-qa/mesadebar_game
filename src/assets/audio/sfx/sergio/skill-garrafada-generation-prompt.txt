@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-garrafada",
+  "seconds": 0.6,
+  "prompt": "Glass bottle smashed over a head, glass shatter and dull thud, mono.",
+  "speech": false,
+  "seed": 3408037160,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-garrafada.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-garrafada-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-garrafada.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07699832835259993,
+  "sha256": "0ea338d6d18b46e22c96aa5f65306cf294b4bac1ab6d7abdea0f16d76fa2e186"
+}

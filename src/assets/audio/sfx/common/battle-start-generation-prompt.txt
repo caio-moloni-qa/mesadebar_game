@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "battle-start",
+  "seconds": 0.8,
+  "prompt": "Two beer mugs clinking in a toast with a foam splash, mono.",
+  "speech": false,
+  "seed": 737448649,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/battle-start.mp3",
+  "raw": "src/assets/audio/sfx/common/battle-start-raw.wav",
+  "wav": "src/assets/audio/sfx/common/battle-start.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08802606350354923,
+  "sha256": "e06dffc232f54ec58c01ff40dcdd4fc17f82750f7ae75454d0ebaa9350a8719f"
+}

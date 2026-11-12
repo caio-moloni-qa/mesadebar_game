@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "bark-attack",
+  "seconds": 0.5,
+  "prompt": "Cold regal king deep grunt with an icy echo, mono.",
+  "speech": false,
+  "seed": 3067882491,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/bark-attack.wav",
+  "peak": 0.493255615234375,
+  "rms": 0.12588872040937918,
+  "sha256": "26dcd66a4d466c47b7f8cf3c111e36a7c0ce181d39819fede714ad1cd8f82957"
+}

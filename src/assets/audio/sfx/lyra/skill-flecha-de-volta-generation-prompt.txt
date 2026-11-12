@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "skill-flecha-de-volta",
+  "seconds": 0.4,
+  "prompt": "Quick snap shot arrow fired mid-dodge, mono.",
+  "speech": false,
+  "seed": 3945171543,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/skill-flecha-de-volta.mp3",
+  "raw": "src/assets/audio/sfx/lyra/skill-flecha-de-volta-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/skill-flecha-de-volta.wav",
+  "peak": 0.514923095703125,
+  "rms": 0.12588873530368988,
+  "sha256": "8a38c55a9ae99f13368946ec16327b59db04e796906090d29c59dd84bb0cb5eb"
+}

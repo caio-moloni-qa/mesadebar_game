@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Crystal deflecting a blow, glassy ring, mono.",
+  "speech": false,
+  "seed": 1589831181,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/parry.mp3",
+  "raw": "src/assets/audio/sfx/zora/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/parry.wav",
+  "peak": 0.8228759765625,
+  "rms": 0.12588880672054562,
+  "sha256": "52ba6648bea3340a6b188d17536442b2810c58eda3ef960d7a02ed1e20f23077"
+}

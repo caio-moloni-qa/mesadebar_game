@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Magic staff bolt: quick zap with a bright arcane whoosh, mono.",
+  "speech": false,
+  "seed": 1115633021,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/attack.mp3",
+  "raw": "src/assets/audio/sfx/mage/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/attack.wav",
+  "peak": 0.532440185546875,
+  "rms": 0.12588869981706752,
+  "sha256": "59b663564910d349052be6ad94f8bcab58e425d4679079f99fd55c897cb708db"
+}

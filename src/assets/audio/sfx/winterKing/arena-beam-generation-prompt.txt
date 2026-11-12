@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "arena-beam",
+  "seconds": 1.5,
+  "prompt": "Sustained icy energy beam, crackling and humming, mono.",
+  "speech": false,
+  "seed": 979829032,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/arena-beam.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/arena-beam-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/arena-beam.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.04988870472809015,
+  "sha256": "f9d62e5c058c3e8599635c89bfc0c81bf3e13c7dc480e5f85a34d098b57deaac"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "level-up",
+  "seconds": 0.9,
+  "prompt": "Level up: bright ascending lute arpeggio with coin sparkle, mono.",
+  "speech": false,
+  "seed": 763815319,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/level-up.mp3",
+  "raw": "src/assets/audio/sfx/common/level-up-raw.wav",
+  "wav": "src/assets/audio/sfx/common/level-up.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.05698343399102018,
+  "sha256": "dac322fe2eaea55ab5407c768bbd8843a118c53da3f25719907d9ed0d7283ac2"
+}

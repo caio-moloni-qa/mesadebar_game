@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-marca",
+  "seconds": 0.6,
+  "prompt": "Arcane mark burned onto a target, sizzling sigil sound, mono.",
+  "speech": false,
+  "seed": 2541882224,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-marca.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-marca-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-marca.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07538392196804895,
+  "sha256": "3570ceba4d9e994ac633b3443de2c54998f2dd92ee81d73b4eec4f8b0141bb9f"
+}

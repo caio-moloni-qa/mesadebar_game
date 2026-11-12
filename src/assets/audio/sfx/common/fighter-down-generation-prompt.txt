@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "fighter-down",
+  "seconds": 0.8,
+  "prompt": "Body falling onto wooden floor with a mug rolling away, mono.",
+  "speech": false,
+  "seed": 3669291088,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/fighter-down.mp3",
+  "raw": "src/assets/audio/sfx/common/fighter-down-raw.wav",
+  "wav": "src/assets/audio/sfx/common/fighter-down.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10006409594329242,
+  "sha256": "5bdc601b9e75f1cd0ed12851d2e290c5a2ea99e4d6f16a687187a581333cf48e"
+}

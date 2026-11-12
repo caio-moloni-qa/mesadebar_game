@@ -1,0 +1,18 @@
+{
+  "character": "lakeSpirit",
+  "event": "bark-ko",
+  "seconds": 2.0,
+  "prompt": "Water spirit collapsing into a huge splash and dissipating, mono.",
+  "speech": false,
+  "seed": 319545227,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lakeSpirit/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/lakeSpirit/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/lakeSpirit/bark-ko.wav",
+  "peak": 0.57000732421875,
+  "rms": 0.12588868965687564,
+  "sha256": "419f7c2b3c91bda741092a64b47138207d5f9ee923b49c145ede451ee78262bf"
+}

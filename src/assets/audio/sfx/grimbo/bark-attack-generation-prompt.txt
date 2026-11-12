@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "bark-attack",
+  "seconds": 0.3,
+  "prompt": "Small goblin squeaky gleeful \"hee!\", mono.",
+  "speech": false,
+  "seed": 2276480954,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/bark-attack.wav",
+  "peak": 0.292999267578125,
+  "rms": 0.12588879460111435,
+  "sha256": "d80c73d2495f98178f39a711384241d94bb2823ae097fd08f5ae009a87f3ccc7"
+}

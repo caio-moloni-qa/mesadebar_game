@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "skill-rolar-os-dados",
+  "seconds": 1.0,
+  "prompt": "Two dice rolled across a wooden table, then a hit, mono.",
+  "speech": false,
+  "seed": 994065851,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/skill-rolar-os-dados.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/skill-rolar-os-dados-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/skill-rolar-os-dados.wav",
+  "peak": 0.63311767578125,
+  "rms": 0.12588867179850047,
+  "sha256": "f1acd96983f9a729af2b13795a777d5efdaf8bffd83025634b0bfde9bfacba62"
+}

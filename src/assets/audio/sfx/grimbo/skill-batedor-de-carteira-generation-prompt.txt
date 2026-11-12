@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "skill-batedor-de-carteira",
+  "seconds": 0.7,
+  "prompt": "Quick pickpocket: cloth swipe and coins jingling into a pouch, mono.",
+  "speech": false,
+  "seed": 657369354,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/skill-batedor-de-carteira.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/skill-batedor-de-carteira-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/skill-batedor-de-carteira.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06758254235942301,
+  "sha256": "0c70342ea8d7367368282514af269a616572912c0915aed98e064f1f8e40a1ed"
+}

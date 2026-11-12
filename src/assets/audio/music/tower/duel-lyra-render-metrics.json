@@ -1,0 +1,40 @@
+{
+  "id": "duel-lyra",
+  "bpm": 124,
+  "bars": 48,
+  "base": 52,
+  "key": "E aeolian",
+  "kind": "lyra",
+  "meter": 4,
+  "loop": true,
+  "seconds": 92.90322580645162,
+  "noteCount": 816,
+  "hitCount": 384,
+  "instruments": [
+    "lute",
+    "recorder"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "duel-lyra",
+  "rate": 44100,
+  "frames": 4097032,
+  "rawSeconds": 96.90321995464852,
+  "rawPeak": 0.12101723253726959,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.1328932126258744,
+  "gain": 6.941160216511362,
+  "seam": [
+    0.0013751126825809479,
+    0.0026745349168777466
+  ],
+  "end": [
+    -0.037099506705999374,
+    -0.10016988217830658
+  ],
+  "file": "duel-lyra.wav",
+  "rawFile": "duel-lyra-raw.wav"
+}

@@ -3,10 +3,28 @@ import { EnemyState } from '../core/session/entities';
 import { MiniBossKind } from '../core/systems/MiniBossSystem';
 import { DIFFICULTY_STAGES } from '../config/balance';
 import { SoundName, synthesizeSound } from './soundbank';
+import type { TurnBattle } from '../core/tavern/TurnBattle';
+import { bindBattleAudio, DuelAudioState, duelMusicFor } from './TavernAudio';
+import { TAVERN_SFX } from './tavernSoundUrls';
 
 /** The score, one loop per situation (art-source/MUSIC_PROMPTS.md), loudness-matched MP3s. One static URL literal per
  *  file so Vite rewrites them; each is fetched the first time it's needed. */
 const TRACK_URLS = {
+  menu: new URL('../assets/audio/music/menu.mp3', import.meta.url).href,
+  'arena-snowfield': new URL('../assets/audio/music/snowfield/arena-snowfield.mp3', import.meta.url).href,
+  'arena-snowfield-intense': new URL('../assets/audio/music/snowfield/arena-snowfield-intense.mp3', import.meta.url).href,
+  'tower-select': new URL('../assets/audio/music/tower/tower-select_v2.mp3', import.meta.url).href,
+  'duel-brom': new URL('../assets/audio/music/tower/duel-brom.mp3', import.meta.url).href,
+  'duel-lyra': new URL('../assets/audio/music/tower/duel-lyra.mp3', import.meta.url).href,
+  'duel-grimbo': new URL('../assets/audio/music/tower/duel-grimbo.mp3', import.meta.url).href,
+  'duel-zora': new URL('../assets/audio/music/tower/duel-zora.mp3', import.meta.url).href,
+  'duel-sergio': new URL('../assets/audio/music/tower/tower-taverna-champion.mp3', import.meta.url).href,
+  'tower-taverna-battle': new URL('../assets/audio/music/tower/tower-taverna-battle.mp3', import.meta.url).href,
+  'tower-taverna-champion': new URL('../assets/audio/music/tower/tower-taverna-champion.mp3', import.meta.url).href,
+  'tower-taverna-rest': new URL('../assets/audio/music/tower/tower-taverna-rest_v2.mp3', import.meta.url).href,
+  'tower-igloo-battle': new URL('../assets/audio/music/tower/tower-igloo-battle.mp3', import.meta.url).href,
+  'tower-igloo-champion': new URL('../assets/audio/music/tower/tower-igloo-champion.mp3', import.meta.url).href,
+  'tower-igloo-rest': new URL('../assets/audio/music/tower/tower-igloo-rest.mp3', import.meta.url).href,
   igloo: new URL('../assets/audio/music/snowfield/igloo.mp3', import.meta.url).href,
   'guardian-frost-knight': new URL('../assets/audio/music/snowfield/guardian-frost-knight.mp3', import.meta.url).href,
   'guardian-ice-serpent': new URL('../assets/audio/music/snowfield/guardian-ice-serpent.mp3', import.meta.url).href,
@@ -26,6 +44,12 @@ const TRACK_URLS = {
 };
 /** Short cues over the music (which ducks under them). */
 const STING_URLS = {
+  'duel-start': new URL('../assets/audio/music/tower/sting-duel-start.mp3', import.meta.url).href,
+  'floor-cleared': new URL('../assets/audio/music/tower/sting-floor-cleared.mp3', import.meta.url).href,
+  'tower-victory': new URL('../assets/audio/music/tower/sting-tower-victory_v3.mp3', import.meta.url).href,
+  'tower-defeat': new URL('../assets/audio/music/tower/sting-tower-defeat.mp3', import.meta.url).href,
+  champion: new URL('../assets/audio/music/tower/sting-champion.mp3', import.meta.url).href,
+  cashout: new URL('../assets/audio/music/tower/sting-cashout.mp3', import.meta.url).href,
   guardian: new URL('../assets/audio/music/sting-guardian.mp3', import.meta.url).href,
   boss: new URL('../assets/audio/music/sting-boss.mp3', import.meta.url).href,
   victory: new URL('../assets/audio/music/sting-victory.mp3', import.meta.url).href,
@@ -56,12 +80,13 @@ function finalBossTrack(session: MusicSituation, enraged: boolean): TrackName {
 
 /** Shelters take priority over combat, then the final boss, guardians and the arena's intensity. */
 export function musicFor(session: MusicSituation, inMenu: boolean): TrackName {
-  if (inMenu) return 'tavern';
+  if (inMenu) return 'menu';
   if (session.over || session.merchant.hub || session.merchant.inside) return session.arena.layout.id === 'snowfield' ? 'igloo' : 'tavern';
   if (session.bosses.bosses.length) return finalBossTrack(session, session.bosses.bosses.some((boss) => boss.phaseTwo || boss.enraged));
   const guardian = session.miniBosses.bosses[0];
   if (guardian) return GUARDIAN_TRACK[guardian.kind];
-  return session.difficulty.stageFor(session.elapsedMs).startMs >= DIFFICULTY_STAGES[2].startMs ? 'arena-intense' : 'arena';
+  const intense = session.difficulty.stageFor(session.elapsedMs).startMs >= DIFFICULTY_STAGES[2].startMs;
+  return session.arena.layout.id === 'snowfield' ? intense ? 'arena-snowfield-intense' : 'arena-snowfield' : intense ? 'arena-intense' : 'arena';
 }
 const STORAGE_KEY = 'venivium.audio.v1';
 const VOICE_LIMIT = 20;
@@ -102,6 +127,12 @@ export class GameAudio {
   private unsubscribe: Array<() => void> = [];
   private session: GameSession | null = null;
   private mode: Mode = 'menu';
+  private duelBattle: TurnBattle | null = null;
+  private detachDuel: (() => void) | null = null;
+  private inDuel = false;
+  private audioEpoch = 0;
+  private pendingCashout = false;
+  private readonly fileLast = new Map<string, number>();
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
   private readonly toggle: HTMLButtonElement;
@@ -161,7 +192,8 @@ export class GameAudio {
   private save(): void {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings)); } catch { /* blocked storage */ }
     this.refreshControls(); this.applyMix();
-    if (this.settings.muted || this.settings.effects === 0) this.stopEffects();
+    if (this.settings.muted) this.resetDuelSounds();
+    else if (this.settings.effects === 0) this.stopEffects();
   }
 
   private refreshControls(): void {
@@ -187,6 +219,7 @@ export class GameAudio {
         // The arena and the stings (small) load up front; the other loops as they come up.
         this.preload(TRACK_URLS.arena);
         Object.values(STING_URLS).forEach((url) => this.preload(url));
+        if (this.duelBattle) this.preloadBattle(this.duelBattle);
       }
       if (this.context.state === 'suspended' && !document.hidden) await this.context.resume();
     } catch { this.status.textContent = 'Interaja novamente para ativar o som.'; }
@@ -248,11 +281,14 @@ export class GameAudio {
     if (!ctx || ctx.state !== 'running' || this.settings.muted) return;
     // Hold the loop where it is while the sting loads.
     this.stingUntil = ctx.currentTime + 10;
+    const epoch = this.audioEpoch;
     this.load(STING_URLS[name]).then((buffer) => {
+      if (epoch !== this.audioEpoch || document.hidden || ctx.state !== 'running' || this.settings.muted) return;
       const now = ctx.currentTime;
       const source = ctx.createBufferSource(); source.buffer = buffer;
+      this.voices.add(source);
       source.connect(this.music!); source.start();
-      source.onended = () => source.disconnect();
+      source.onended = () => { this.voices.delete(source); source.disconnect(); };
       this.stingUntil = now + buffer.duration;
       if (stopLoop) {
         this.fadeOutTrack();
@@ -260,9 +296,10 @@ export class GameAudio {
       } else {
         const duck = this.trackBus!.gain;
         duck.cancelScheduledValues(now); duck.setValueAtTime(duck.value, now);
-        duck.linearRampToValueAtTime(.3, now + .25); duck.setValueAtTime(.3, now + buffer.duration - .6); duck.linearRampToValueAtTime(1, now + buffer.duration);
+        duck.linearRampToValueAtTime(.3, now + Math.min(.25, buffer.duration / 4)); duck.setValueAtTime(.3, now + Math.max(buffer.duration / 4, buffer.duration - .6)); duck.linearRampToValueAtTime(1, now + buffer.duration);
       }
     }).catch(() => {
+      if (epoch !== this.audioEpoch) return;
       this.stingUntil = 0;
       this.play(name === 'victory' || name === 'defeat' ? name : 'warning', undefined, .8, true);
     });
@@ -342,6 +379,11 @@ export class GameAudio {
   }
 
   update(session: GameSession, inMenu: boolean): void {
+    if (this.inDuel) {
+      this.detachDuel?.(); this.detachDuel = null; this.duelBattle = null;
+      this.inDuel = false; this.resetDuelSounds();
+    }
+    if (this.pendingCashout) { this.pendingCashout = false; this.sting('cashout'); }
     const mode: Mode = inMenu ? 'menu' : session.over ? 'ended' : session.frozen ? 'paused' : 'run';
     if (mode !== this.mode) {
       this.mode = mode;
@@ -365,6 +407,80 @@ export class GameAudio {
       this.bossStates.set(boss.enemy, state);
     });
     for (const enemy of this.bossStates.keys()) if (!live.has(enemy)) this.bossStates.delete(enemy);
+  }
+
+  /** The overlay owns its simulation; audio must update even while Game3D skips the world frame. */
+  updateDuel(view: { battle: TurnBattle | null; snapshot(): Record<string, unknown> | null; towerSnapshot(): Record<string, unknown> | null }): void {
+    const snapshot = view.snapshot();
+    const tower = view.towerSnapshot();
+    const towerId = tower?.tower;
+    const state: DuelAudioState = {
+      duel: typeof snapshot?.duel === 'string' ? snapshot.duel : 'brom',
+      tower: towerId === 'taverna' || towerId === 'snowfield' || towerId === 'greenfield' ? towerId : null,
+      floor: typeof tower?.floor === 'number' ? tower.floor : 0,
+      ladder: tower?.ladder === true, paused: snapshot?.paused === true,
+      ended: typeof tower?.ended === 'string' ? tower.ended : null,
+    };
+    if (!this.inDuel || this.duelBattle !== view.battle) {
+      this.detachDuel?.(); this.detachDuel = null;
+      this.resetDuelSounds(); this.inDuel = true; this.duelBattle = view.battle;
+      if (view.battle) {
+        this.preloadBattle(view.battle);
+        const champion = view.battle.enemies.some(enemy => enemy.look === 'sergio' || enemy.look === 'winterKing');
+        this.detachDuel = bindBattleAudio(view.battle, (key, volume) => this.playFile(key, volume), won => {
+          this.sting(won ? state.tower ? champion ? 'tower-victory' : 'floor-cleared' : 'victory' : 'tower-defeat');
+        });
+        this.sting(champion ? 'champion' : 'duel-start');
+      }
+    }
+    const mode = state.paused ? 'paused' : view.battle && !['won', 'lost'].includes(view.battle.phase) ? 'run' : 'menu';
+    if (this.mode !== mode) {
+      this.mode = mode;
+      if (mode === 'paused') this.resetDuelSounds();
+      this.applyMix();
+    }
+    this.root.dataset.mode = mode;
+    const track = duelMusicFor(view.battle, state);
+    if (this.context && this.context.currentTime >= this.stingUntil) this.setTrack(track in TRACK_URLS ? track as TrackName : 'tavern');
+  }
+
+  /** Payout can close the overlay in the same input event, before another duel frame can observe it. */
+  towerPayout(fichas: number, reachedTop: boolean): void {
+    if (fichas > 0 && !reachedTop && this.duelBattle?.phase !== 'lost') this.pendingCashout = true;
+  }
+
+  private resetDuelSounds(): void {
+    this.audioEpoch++; this.stopEffects(); this.fileLast.clear(); this.stingUntil = 0;
+    if (this.context && this.trackBus) {
+      this.trackBus.gain.cancelScheduledValues(this.context.currentTime);
+      this.trackBus.gain.setValueAtTime(1, this.context.currentTime);
+    }
+  }
+
+  private preloadBattle(battle: TurnBattle): void {
+    const looks = new Set(['common', ...battle.fighters.map(fighter => fighter.look)]);
+    const skills = new Set(battle.fighters.flatMap(fighter => fighter.skills.map(skill => `skill-${skill.id}`)));
+    for (const [key, url] of Object.entries(TAVERN_SFX)) {
+      const [look, event] = key.split('/');
+      if (looks.has(look) || skills.has(event)) this.preload(url);
+    }
+  }
+
+  /** File effects share the game's effects bus, mute and voice cap; late decodes never leak into another screen. */
+  private playFile(key: string, volume = .65): void {
+    const ctx = this.context, url = TAVERN_SFX[key];
+    if (!ctx || !url || ctx.state !== 'running' || document.hidden || this.mode !== 'run' || this.settings.muted || this.settings.effects <= 0) return;
+    const now = ctx.currentTime;
+    if (now - (this.fileLast.get(key) ?? -Infinity) < .12) return;
+    this.fileLast.set(key, now);
+    const epoch = this.audioEpoch;
+    this.load(url).then(buffer => {
+      if (epoch !== this.audioEpoch || ctx.currentTime - now > .25 || this.mode !== 'run' || document.hidden || ctx.state !== 'running' || this.settings.muted || this.settings.effects <= 0 || this.voices.size >= VOICE_LIMIT) return;
+      const source = ctx.createBufferSource(), gain = ctx.createGain();
+      source.buffer = buffer; gain.gain.value = volume;
+      source.connect(gain).connect(this.effects!); this.voices.add(source); source.start();
+      source.onended = () => { this.voices.delete(source); source.disconnect(); gain.disconnect(); };
+    }).catch(() => {});
   }
 
   /** A power tier switching on: a short, bright fanfare of our own (a quick rising run, then a held chord with a bell

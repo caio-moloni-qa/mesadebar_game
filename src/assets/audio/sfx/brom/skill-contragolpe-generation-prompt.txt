@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "skill-contragolpe",
+  "seconds": 0.4,
+  "prompt": "Instant hammer riposte after a parry: quick snap whoosh and iron thud, mono.",
+  "speech": false,
+  "seed": 4053014261,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/skill-contragolpe.mp3",
+  "raw": "src/assets/audio/sfx/brom/skill-contragolpe-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/skill-contragolpe.wav",
+  "peak": 0.616363525390625,
+  "rms": 0.12588859673991748,
+  "sha256": "6c061c426de76522b1490269ee31ac171bd616c87545698d02340ed85b79a40b"
+}
