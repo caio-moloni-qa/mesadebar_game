@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "foe-concha",
+  "seconds": 0.6,
+  "prompt": "Two quick metal ladle bonks, mono.",
+  "speech": false,
+  "seed": 1519942131,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/foe-concha.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/foe-concha-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/foe-concha.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0701295421184354,
+  "sha256": "599ea59877aa53205302ef2110425a702e86180ba30b7920ae76896b0d99831e"
+}

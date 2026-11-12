@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "heal-all",
+  "seconds": 1.0,
+  "prompt": "Group heal: warm choir-like swell with harp glissando and twinkling sparkles, mono.",
+  "speech": false,
+  "seed": 1453963269,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/heal-all.mp3",
+  "raw": "src/assets/audio/sfx/common/heal-all-raw.wav",
+  "wav": "src/assets/audio/sfx/common/heal-all.wav",
+  "peak": 0.77947998046875,
+  "rms": 0.12588877250181896,
+  "sha256": "e4114985fdba9638e34565e13af52bf53a76ddee4636e32384a26317b1e230bc"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "arena-bellWave",
+  "seconds": 1.5,
+  "prompt": "Expanding sonic ring from a giant bell, booming toll and rushing air, mono.",
+  "speech": false,
+  "seed": 1863902885,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/arena-bellWave.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/arena-bellWave-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/arena-bellWave.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.051404737179332596,
+  "sha256": "c20e94fd3869f730e857b5a82ea17ab84733d2f3619e22069c8e16a522c28e67"
+}

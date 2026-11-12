@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "impact-bottle",
+  "seconds": 0.4,
+  "prompt": "Glass bottle breaking with a liquid splash, mono.",
+  "speech": false,
+  "seed": 3834298675,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/impact-bottle.mp3",
+  "raw": "src/assets/audio/sfx/common/impact-bottle-raw.wav",
+  "wav": "src/assets/audio/sfx/common/impact-bottle.wav",
+  "peak": 0.8336181640625,
+  "rms": 0.12588861724878797,
+  "sha256": "cfa250a20ef0de483120c4307db3d85a62920a063ca162bd6ee8bbdb89a9963f"
+}

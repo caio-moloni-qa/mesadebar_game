@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "foe-olhar",
+  "seconds": 1.0,
+  "prompt": "Cursed gaze: eerie hum, then strikes with a deceptive pause, mono.",
+  "speech": false,
+  "seed": 1914739713,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/foe-olhar.mp3",
+  "raw": "src/assets/audio/sfx/zora/foe-olhar-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/foe-olhar.wav",
+  "peak": 0.753997802734375,
+  "rms": 0.12588874700445313,
+  "sha256": "a5c505a3177a9321b4a1dd34a2e84af9ff97663e41f3a40ad8bc05033ab15d98"
+}

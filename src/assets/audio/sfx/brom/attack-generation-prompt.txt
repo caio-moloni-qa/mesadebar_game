@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "attack",
+  "seconds": 0.4,
+  "prompt": "Forge hammer swing, heavy whoosh into a blunt iron thud, mono.",
+  "speech": false,
+  "seed": 1384798008,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/attack.mp3",
+  "raw": "src/assets/audio/sfx/brom/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/attack.wav",
+  "peak": 0.47808837890625,
+  "rms": 0.12588859756883625,
+  "sha256": "25fed503e73c9f84b7b0c19406c126eeebda44572b46e6321a1559d022b14c62"
+}

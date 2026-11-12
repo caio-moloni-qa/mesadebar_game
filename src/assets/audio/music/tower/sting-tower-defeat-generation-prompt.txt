@@ -1,0 +1,68 @@
+{
+  "id": "sting-tower-defeat",
+  "seconds": 5,
+  "kind": "lose",
+  "loop": false,
+  "noteCount": 8,
+  "hitCount": 5,
+  "instruments": [
+    "hurdy",
+    "strings"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-tower-defeat",
+  "rate": 44100,
+  "frames": 220500,
+  "rawSeconds": 9,
+  "rawPeak": 0.05771493911743164,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.1260018779103338,
+  "gain": 14.554290671447573,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-tower-defeat.wav",
+  "rawFile": "sting-tower-defeat-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/sting-tower-defeat.mp3",
+  "wav": "src/assets/audio/music/tower/sting-tower-defeat.wav",
+  "raw": "src/assets/audio/music/tower/sting-tower-defeat-raw.wav",
+  "prompt": "Comic-sad defeat sting: a deflating trombone wah-wah, a slow out-of-tune accordion phrase and a final empty-mug thunk, 5 seconds, instrumental.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-14.90",
+    "input_tp": "-1.51",
+    "input_lra": "1.30",
+    "input_thresh": "-26.28",
+    "output_i": "-14.09",
+    "output_tp": "-2.50",
+    "output_lra": "1.50",
+    "output_thresh": "-25.22",
+    "normalization_type": "dynamic",
+    "target_offset": "0.09"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.40",
+    "input_tp": "-2.94",
+    "input_lra": "1.50",
+    "input_thresh": "-25.78",
+    "output_i": "-13.89",
+    "output_tp": "-2.50",
+    "output_lra": "1.50",
+    "output_thresh": "-25.02",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.11"
+  },
+  "sha256": "c483f00ea370920d7c9fedfe0009437363bc1665e0c8703326418d096881e7dc"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "gravedigger",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Bones rattling with an angry hiss, mono.",
+  "speech": false,
+  "seed": 3017460958,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/gravedigger/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/gravedigger/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/gravedigger/bark-hurt.wav",
+  "peak": 0.47027587890625,
+  "rms": 0.1258886648720734,
+  "sha256": "450c93e522a5dd172fff6c079156fbde040dbf1c2544c4fa877ea03e4ca2d2cf"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "dodge",
+  "seconds": 0.3,
+  "prompt": "Scales slithering quickly on ice, mono.",
+  "speech": false,
+  "seed": 3441359465,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/dodge.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/dodge.wav",
+  "peak": 0.541595458984375,
+  "rms": 0.12588858943230524,
+  "sha256": "d7b139a64ce14e74f342fdfe07520a4453d9ef7352e8341ec4a5bb9d1dee6953"
+}

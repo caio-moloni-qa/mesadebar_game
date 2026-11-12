@@ -1,0 +1,18 @@
+{
+  "character": "reliquia",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Cheerful adventurer short effort shout with a grin, \"hup!\", mono.",
+  "speech": false,
+  "seed": 4277265477,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/reliquia/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/reliquia/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/reliquia/bark-attack.wav",
+  "peak": 0.36920166015625,
+  "rms": 0.1258886268978367,
+  "sha256": "dab1693272c748ad2cb4edf5bce08965a1be6d3f39b5d97ca2966d08a2d38fb2"
+}

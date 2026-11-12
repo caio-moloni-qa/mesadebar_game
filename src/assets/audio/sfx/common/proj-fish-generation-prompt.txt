@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-fish",
+  "seconds": 0.5,
+  "prompt": "Frozen fish thrown, stiff whoosh with a comic wobble, mono.",
+  "speech": false,
+  "seed": 3385940019,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-fish.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-fish-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-fish.wav",
+  "peak": 0.56268310546875,
+  "rms": 0.1258885945604042,
+  "sha256": "ff4278ecb2e4a2e011d368ebc71cf5d64d49f4770931e2d50a24b75aae662bb6"
+}

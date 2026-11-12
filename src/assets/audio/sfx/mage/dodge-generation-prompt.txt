@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Robe swish with a faint magical blink, mono.",
+  "speech": false,
+  "seed": 2633376474,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/dodge.mp3",
+  "raw": "src/assets/audio/sfx/mage/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/dodge.wav",
+  "peak": 0.586669921875,
+  "rms": 0.12588870937665472,
+  "sha256": "394f6a035ed9def2b6c71ed50ddb1851d2d91465aaebffa89dcdf669bfe90413"
+}

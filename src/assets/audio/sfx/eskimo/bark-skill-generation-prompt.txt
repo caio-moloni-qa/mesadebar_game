@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "bark-skill",
+  "seconds": 0.6,
+  "prompt": "Cook humming happily \"mm-hmm!\", mono.",
+  "speech": false,
+  "seed": 3799089270,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/bark-skill.wav",
+  "peak": 0.460479736328125,
+  "rms": 0.12588884560787195,
+  "sha256": "b219e96d8de45a2659e3bab09a03ed67eef1ac64b2dd33f60f838513752c2cb6"
+}

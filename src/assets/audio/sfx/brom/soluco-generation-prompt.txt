@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "soluco",
+  "seconds": 0.4,
+  "prompt": "Comic drunk dwarf hiccup, mono.",
+  "speech": false,
+  "seed": 1119385580,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/soluco.mp3",
+  "raw": "src/assets/audio/sfx/brom/soluco-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/soluco.wav",
+  "peak": 0.49847412109375,
+  "rms": 0.12588865853912048,
+  "sha256": "fda742972bd97ccf24da15f07c0b03dde64dc9ee5ad0eb161f12475103373933"
+}

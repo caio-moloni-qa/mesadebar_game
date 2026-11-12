@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "courage-spend",
+  "seconds": 0.3,
+  "prompt": "Energy spent: quick whoosh with a soft magical pop, mono.",
+  "speech": false,
+  "seed": 622205437,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/courage-spend.mp3",
+  "raw": "src/assets/audio/sfx/common/courage-spend-raw.wav",
+  "wav": "src/assets/audio/sfx/common/courage-spend.wav",
+  "peak": 0.27001953125,
+  "rms": 0.06309384028880229,
+  "sha256": "b7cd670852b22f4908c716c39f0c0063b48da25d028e3cc784ac63812dc93a57"
+}

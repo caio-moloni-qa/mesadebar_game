@@ -1,0 +1,73 @@
+{
+  "id": "duel-zora",
+  "bpm": 92,
+  "bars": 40,
+  "base": 50,
+  "key": "D phrygian dominant",
+  "kind": "zora",
+  "meter": 4,
+  "loop": true,
+  "seconds": 104.34782608695652,
+  "noteCount": 745,
+  "hitCount": 280,
+  "instruments": [
+    "lute",
+    "glass"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "duel-zora",
+  "rate": 44100,
+  "frames": 4601739,
+  "rawSeconds": 108.3478231292517,
+  "rawPeak": 0.1188514456152916,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.1276234262611406,
+  "gain": 7.067646469517779,
+  "seam": [
+    0.0012206807732582092,
+    0.0017632171511650085
+  ],
+  "end": [
+    -0.08882696181535721,
+    -0.0767042487859726
+  ],
+  "file": "duel-zora.wav",
+  "rawFile": "duel-zora-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/duel-zora.mp3",
+  "wav": "src/assets/audio/music/tower/duel-zora.wav",
+  "raw": "src/assets/audio/music/tower/duel-zora-raw.wav",
+  "prompt": "Mysterious fortune-teller duel, 92 BPM, D phrygian dominant: cimbalom and gypsy violin, shimmering glass harmonica, darbuka, crystal-bowl swells, with sudden held pauses that feel like a feint. Hypnotic and teasing, seamless loop, no intro, no ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-15.93",
+    "input_tp": "-1.51",
+    "input_lra": "1.40",
+    "input_thresh": "-25.93",
+    "output_i": "-14.17",
+    "output_tp": "-2.50",
+    "output_lra": "1.00",
+    "output_thresh": "-24.17",
+    "normalization_type": "dynamic",
+    "target_offset": "0.17"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.49",
+    "input_tp": "-2.90",
+    "input_lra": "1.10",
+    "input_thresh": "-24.49",
+    "output_i": "-14.02",
+    "output_tp": "-2.50",
+    "output_lra": "1.10",
+    "output_thresh": "-24.02",
+    "normalization_type": "dynamic",
+    "target_offset": "0.02"
+  },
+  "sha256": "51cd9903b32add516d8f7f4ab172a5888cb000a89dc8a694362e22b7332af47c"
+}

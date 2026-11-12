@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "intent-golpe",
+  "seconds": 0.3,
+  "prompt": "Single short warning tick: a wooden knock with a brief rising tone, mono.",
+  "speech": false,
+  "seed": 1335533107,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/intent-golpe.mp3",
+  "raw": "src/assets/audio/sfx/common/intent-golpe-raw.wav",
+  "wav": "src/assets/audio/sfx/common/intent-golpe.wav",
+  "peak": 0.52276611328125,
+  "rms": 0.06309373562682596,
+  "sha256": "e175af5becfc6bd807631a8937ae6e0109520568dd2d198b1224bde09b8551c2"
+}

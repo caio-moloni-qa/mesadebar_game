@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "arena-sweep",
+  "seconds": 0.8,
+  "prompt": "Wide scepter sweep, heavy icy whoosh, mono.",
+  "speech": false,
+  "seed": 2117489,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/arena-sweep.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/arena-sweep-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/arena-sweep.wav",
+  "peak": 0.548492431640625,
+  "rms": 0.1258886857644621,
+  "sha256": "8c564ff7f0e4c761f6884ff87ab4c1b5debe0b0cd774e79a65239f45e14a114e"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Hunched old bell-ringer raspy grunt, mono.",
+  "speech": false,
+  "seed": 4015884367,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/bark-attack.wav",
+  "peak": 0.52117919921875,
+  "rms": 0.1258886960744593,
+  "sha256": "ccfeaffdedb29664a564ad32822f8386cc5acc1316071db759b15b175871ae7b"
+}

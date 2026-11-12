@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "skill-peixe-congelado",
+  "seconds": 0.6,
+  "prompt": "Frozen fish slapped hard, icy crack and comic stun bonk, mono.",
+  "speech": false,
+  "seed": 4138139330,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/skill-peixe-congelado.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/skill-peixe-congelado-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/skill-peixe-congelado.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06057115105274752,
+  "sha256": "7b80b39cb75ba2192a7205a1e752d02e3232d0a7432a44290f026eebc59e91ae"
+}

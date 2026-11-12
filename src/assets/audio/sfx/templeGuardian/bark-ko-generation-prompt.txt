@@ -1,0 +1,18 @@
+{
+  "character": "templeGuardian",
+  "event": "bark-ko",
+  "seconds": 2.0,
+  "prompt": "Stone guardian crumbling into rubble, mono.",
+  "speech": false,
+  "seed": 3848202421,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/templeGuardian/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/templeGuardian/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/templeGuardian/bark-ko.wav",
+  "peak": 0.543182373046875,
+  "rms": 0.12588871246577404,
+  "sha256": "6285df1b777decda283e971393b64c06fc14a6ebd0f268ec91791b0b79f4ae3f"
+}

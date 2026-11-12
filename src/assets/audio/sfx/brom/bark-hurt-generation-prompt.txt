@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Dwarf gruff annoyed \"oof\", mono.",
+  "speech": false,
+  "seed": 2171254586,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/brom/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/bark-hurt.wav",
+  "peak": 0.5030517578125,
+  "rms": 0.12588860420836426,
+  "sha256": "b4f6235c64bba5395e91533742b54fc9d43693171875acdc24802fc7133a0293"
+}

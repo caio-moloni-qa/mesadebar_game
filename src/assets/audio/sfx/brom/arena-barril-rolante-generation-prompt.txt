@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "arena-barril-rolante",
+  "seconds": 1.5,
+  "prompt": "Barrel rolling fast then exploding into a burst of beer foam, mono.",
+  "speech": false,
+  "seed": 1188898247,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/arena-barril-rolante.mp3",
+  "raw": "src/assets/audio/sfx/brom/arena-barril-rolante-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/arena-barril-rolante.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.10171377891957442,
+  "sha256": "0ab71cbbeac168a36aa1494c12e2c37dfe92622e5985616a0a449593aa75b67e"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostSkeleton",
+  "event": "bark-ko",
+  "seconds": 0.8,
+  "prompt": "Frozen skeleton collapsing into a pile of icy bones, mono.",
+  "speech": false,
+  "seed": 2356254545,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSkeleton/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/frostSkeleton/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSkeleton/bark-ko.wav",
+  "peak": 0.4036865234375,
+  "rms": 0.1258886963045978,
+  "sha256": "6f61b30a58e02cf0dd503519eb4c85174a820f59b9af8eaa3bf286d08712992e"
+}

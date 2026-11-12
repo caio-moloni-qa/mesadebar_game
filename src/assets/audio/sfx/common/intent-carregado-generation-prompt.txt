@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "intent-carregado",
+  "seconds": 0.7,
+  "prompt": "Ominous gathering of power: low rumble and rising metallic hum, mono.",
+  "speech": false,
+  "seed": 3606750089,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/intent-carregado.mp3",
+  "raw": "src/assets/audio/sfx/common/intent-carregado-raw.wav",
+  "wav": "src/assets/audio/sfx/common/intent-carregado.wav",
+  "peak": 0.2615966796875,
+  "rms": 0.06309377169945994,
+  "sha256": "e2582f06ae1c2c019233e72e63bdbe1c4cb235d5c6725c42c5a3c015460e3830"
+}

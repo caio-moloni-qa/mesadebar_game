@@ -1,0 +1,77 @@
+{
+  "id": "arena-snowfield-intense",
+  "bpm": 136,
+  "bars": 72,
+  "base": 50,
+  "key": "D harmonic minor",
+  "kind": "snowIntense",
+  "meter": 4,
+  "loop": true,
+  "seconds": 127.05882352941177,
+  "noteCount": 2052,
+  "hitCount": 720,
+  "instruments": [
+    "cello",
+    "harp",
+    "choir",
+    "horn",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "rattle"
+  ],
+  "seed": "arena-snowfield-intense",
+  "rate": 44100,
+  "frames": 5603294,
+  "rawSeconds": 131.05882086167802,
+  "rawPeak": 0.13620014488697052,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.16528360444806683,
+  "gain": 6.167394320300447,
+  "seam": [
+    0.002209991216659546,
+    0.0074580758810043335
+  ],
+  "end": [
+    0.08997293561697006,
+    0.07203558087348938
+  ],
+  "file": "arena-snowfield-intense.wav",
+  "rawFile": "arena-snowfield-intense-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/snowfield/arena-snowfield-intense.mp3",
+  "wav": "src/assets/audio/music/tower/arena-snowfield-intense.wav",
+  "raw": "src/assets/audio/music/tower/arena-snowfield-intense-raw.wav",
+  "prompt": "The same frozen-field battle theme pushed to full force, 136 BPM, D harmonic minor: double-time skin drums, relentless low string ostinato, glassy celesta stabs, war horns and a wordless female choir in icy harmonies. Constant high intensity, no breakdown, seamless loop; instrumental, no lyrics.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-13.70",
+    "input_tp": "-1.51",
+    "input_lra": "1.00",
+    "input_thresh": "-23.70",
+    "output_i": "-14.06",
+    "output_tp": "-2.50",
+    "output_lra": "0.90",
+    "output_thresh": "-24.06",
+    "normalization_type": "dynamic",
+    "target_offset": "0.06"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.46",
+    "input_tp": "-2.92",
+    "input_lra": "1.00",
+    "input_thresh": "-24.46",
+    "output_i": "-13.97",
+    "output_tp": "-2.50",
+    "output_lra": "0.90",
+    "output_thresh": "-23.97",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.03"
+  },
+  "sha256": "b3f849894f5cf95f4cfc872da22b4d6c4bb7345f8894379cdf49fb78a2b501d4"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostSpirit",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Ghost shrieking briefly, mono.",
+  "speech": false,
+  "seed": 3313346824,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSpirit/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/frostSpirit/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSpirit/bark-hurt.wav",
+  "peak": 0.36895751953125,
+  "rms": 0.12588871055190237,
+  "sha256": "89d35d45b62040604873ff276656f202e5aa89fbbf1fcd4c2ed4570882b0539c"
+}

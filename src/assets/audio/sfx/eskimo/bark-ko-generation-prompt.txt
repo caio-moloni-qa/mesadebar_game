@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Cook falling into the snow with a sigh, pots clanging, mono.",
+  "speech": false,
+  "seed": 1457104879,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/bark-ko.wav",
+  "peak": 0.4608154296875,
+  "rms": 0.12588871211088892,
+  "sha256": "d02ad1020f2d01c2ecfb30ffaaf46e6e35c37d0f5a04212c6cb35de89f3b3b9a"
+}

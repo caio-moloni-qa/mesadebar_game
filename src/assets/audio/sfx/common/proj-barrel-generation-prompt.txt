@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-barrel",
+  "seconds": 1.4,
+  "prompt": "Big wooden barrel rolling fast across wooden floorboards, rumbling, mono.",
+  "speech": false,
+  "seed": 2421482848,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-barrel.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-barrel-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-barrel.wav",
+  "peak": 0.80377197265625,
+  "rms": 0.12588867026868475,
+  "sha256": "ca4a6686b7ce79182de3b8da2427d241636bd498e62e306561f09443a326d2eb"
+}

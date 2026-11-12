@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "bark-skill",
+  "seconds": 0.6,
+  "prompt": "Serpent inhaling cold air with a menacing hiss, mono.",
+  "speech": false,
+  "seed": 2099875962,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/bark-skill.wav",
+  "peak": 0.523681640625,
+  "rms": 0.12588867163328996,
+  "sha256": "6af2e1bff41c4c4fb03fbe0fdb6cb1e73c2b914b28fbe8af83e36427f0a0bec8"
+}

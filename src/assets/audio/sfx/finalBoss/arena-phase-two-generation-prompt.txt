@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "arena-phase-two",
+  "seconds": 2.0,
+  "prompt": "Lich furious roar as green soul-fire flares violently, mono.",
+  "speech": false,
+  "seed": 3409188802,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/arena-phase-two.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/arena-phase-two-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/arena-phase-two.wav",
+  "peak": 0.8145751953125,
+  "rms": 0.12588866094816312,
+  "sha256": "5769396914248bed68d6b9b2b6ebf67669860691c27d212e7f44a18a2ffce848"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-arrow",
+  "seconds": 0.4,
+  "prompt": "Arrow release and fast whistling flight, mono.",
+  "speech": false,
+  "seed": 2065735297,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-arrow.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-arrow-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-arrow.wav",
+  "peak": 0.4967041015625,
+  "rms": 0.12588874803794772,
+  "sha256": "e61a4c76da93b4a8a48f67b08e09fd43272cdb55b6450360032ec9eeacbba979"
+}

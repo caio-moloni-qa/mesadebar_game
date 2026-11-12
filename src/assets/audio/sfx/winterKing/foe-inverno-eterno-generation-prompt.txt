@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "foe-inverno-eterno",
+  "seconds": 2.0,
+  "prompt": "Eternal winter: deep freezing wind-up, then an enormous shattering ice explosion, mono.",
+  "speech": false,
+  "seed": 2414062058,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/foe-inverno-eterno.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/foe-inverno-eterno-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/foe-inverno-eterno.wav",
+  "peak": 0.589385986328125,
+  "rms": 0.12588868980517084,
+  "sha256": "6251ec38aecdc89e80278f84681dce57cf541de91d49010f9f1621649959df3c"
+}

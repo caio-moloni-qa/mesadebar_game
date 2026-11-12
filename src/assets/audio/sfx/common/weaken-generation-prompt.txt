@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "weaken",
+  "seconds": 0.6,
+  "prompt": "Debuff: descending wobbly tone with a soft deflating whoosh, mono.",
+  "speech": false,
+  "seed": 3808402064,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/weaken.mp3",
+  "raw": "src/assets/audio/sfx/common/weaken-raw.wav",
+  "wav": "src/assets/audio/sfx/common/weaken.wav",
+  "peak": 0.5,
+  "rms": 0.12588873568120784,
+  "sha256": "41f166b7dcbdd2a048aa9b674bc9671b19674c1f5af402fc6b0ca662973babdd"
+}

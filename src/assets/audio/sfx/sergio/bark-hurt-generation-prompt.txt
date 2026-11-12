@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Innkeeper indignant \"ai!\" grunt, mono.",
+  "speech": false,
+  "seed": 1630315538,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/sergio/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/bark-hurt.wav",
+  "peak": 0.436614990234375,
+  "rms": 0.12588877031744386,
+  "sha256": "0ae34a650f1ee900bfa01b94b8efe4e59aea9ad11526b5996019ef8f37eccd9f"
+}

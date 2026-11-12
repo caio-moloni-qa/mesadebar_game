@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "skill-investida",
+  "seconds": 0.8,
+  "prompt": "Charging barbarian: thundering footsteps rushing forward into a massive greatsword slash, mono.",
+  "speech": false,
+  "seed": 744984089,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/skill-investida.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/skill-investida-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/skill-investida.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09673525187389283,
+  "sha256": "cbb90696fb8bfd6917efcce3393647ea3ee5c1ed1e3916b45e55f20453507814"
+}

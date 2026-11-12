@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "bark-victory",
+  "seconds": 1.0,
+  "prompt": "Serpent satisfied rattling hiss, mono.",
+  "speech": false,
+  "seed": 866911680,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/bark-victory.wav",
+  "peak": 0.54229736328125,
+  "rms": 0.12588870182333028,
+  "sha256": "9fb9eae22c1bf6e360bbdadc70659c294af7d6d65bd7e14c6c74513ebbe9b148"
+}

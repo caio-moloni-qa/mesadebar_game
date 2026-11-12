@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "attack",
+  "seconds": 0.5,
+  "prompt": "Ice longsword heavy slash, crystalline whoosh and cold impact, mono.",
+  "speech": false,
+  "seed": 2453609826,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/attack.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/attack-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/attack.wav",
+  "peak": 0.56707763671875,
+  "rms": 0.12588866264756107,
+  "sha256": "7302bb6f30f1a23912a4f9f6418f11e4980625d7ef2f900de40b0acf23fa0b48"
+}

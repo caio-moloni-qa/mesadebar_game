@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "intent-dados",
+  "seconds": 0.5,
+  "prompt": "Dice shaken in a cup, short rattle, mono.",
+  "speech": false,
+  "seed": 306032772,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/intent-dados.mp3",
+  "raw": "src/assets/audio/sfx/common/intent-dados-raw.wav",
+  "wav": "src/assets/audio/sfx/common/intent-dados.wav",
+  "peak": 0.294921875,
+  "rms": 0.06309376303173,
+  "sha256": "ad133273481daa8020e52ce110ddb3b46ef44331628bb660d0f6ef888ffad5a1"
+}

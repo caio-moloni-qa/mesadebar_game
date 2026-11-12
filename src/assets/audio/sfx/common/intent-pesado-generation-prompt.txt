@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "intent-pesado",
+  "seconds": 0.5,
+  "prompt": "Heavy warning: deep low drum hit with a slow creak, mono.",
+  "speech": false,
+  "seed": 172335730,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/intent-pesado.mp3",
+  "raw": "src/assets/audio/sfx/common/intent-pesado-raw.wav",
+  "wav": "src/assets/audio/sfx/common/intent-pesado.wav",
+  "peak": 0.470947265625,
+  "rms": 0.06309373515298096,
+  "sha256": "a38196b00cc233da1e5c9622ad521db4097b0a413d1d1062e48df13377aee2ca"
+}

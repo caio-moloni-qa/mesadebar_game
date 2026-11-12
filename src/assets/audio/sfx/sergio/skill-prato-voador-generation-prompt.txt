@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-prato-voador",
+  "seconds": 0.6,
+  "prompt": "Plate thrown like a frisbee, whirring then shattering on a head, mono.",
+  "speech": false,
+  "seed": 1746191514,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-prato-voador.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-prato-voador-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-prato-voador.wav",
+  "peak": 0.494232177734375,
+  "rms": 0.1258886484597831,
+  "sha256": "8684485c94644b0edef3776dafe2348fc4cd5eba47f3d73bda359b14b58b9dc1"
+}

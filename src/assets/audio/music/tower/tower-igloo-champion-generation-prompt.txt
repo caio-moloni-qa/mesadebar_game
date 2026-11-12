@@ -1,0 +1,78 @@
+{
+  "id": "tower-igloo-champion",
+  "bpm": 128,
+  "bars": 64,
+  "base": 50,
+  "key": "D harmonic minor",
+  "kind": "king",
+  "meter": 4,
+  "loop": true,
+  "seconds": 120,
+  "noteCount": 2016,
+  "hitCount": 640,
+  "instruments": [
+    "cello",
+    "harp",
+    "choir",
+    "horn",
+    "organ",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "rattle"
+  ],
+  "seed": "tower-igloo-champion",
+  "rate": 44100,
+  "frames": 5292000,
+  "rawSeconds": 124,
+  "rawPeak": 0.16112862527370453,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.15116072252581755,
+  "gain": 5.213226380930863,
+  "seam": [
+    0.0016859658062458038,
+    0.004274889826774597
+  ],
+  "end": [
+    0.009624487720429897,
+    -0.12953481078147888
+  ],
+  "file": "tower-igloo-champion.wav",
+  "rawFile": "tower-igloo-champion-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/tower-igloo-champion.mp3",
+  "wav": "src/assets/audio/music/tower/tower-igloo-champion.wav",
+  "raw": "src/assets/audio/music/tower/tower-igloo-champion-raw.wav",
+  "prompt": "Regal ice-king boss duel, 128 BPM, D harmonic minor: majestic low brass motif, pipe organ, icy harpsichord ostinato, timpani and frame drums on a very clear beat, wordless female choir and shattering-glass accents. Cold, royal and menacing, seamless loop, no intro, no ending; instrumental, no lyrics.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-14.50",
+    "input_tp": "-1.51",
+    "input_lra": "1.20",
+    "input_thresh": "-24.50",
+    "output_i": "-14.04",
+    "output_tp": "-2.50",
+    "output_lra": "1.10",
+    "output_thresh": "-24.04",
+    "normalization_type": "dynamic",
+    "target_offset": "0.04"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.46",
+    "input_tp": "-2.92",
+    "input_lra": "1.10",
+    "input_thresh": "-24.46",
+    "output_i": "-13.99",
+    "output_tp": "-2.50",
+    "output_lra": "1.10",
+    "output_thresh": "-23.99",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.01"
+  },
+  "sha256": "d91bdab958fc4b5b3786038120875654e676a808f221f41005aa909f373e55d6"
+}

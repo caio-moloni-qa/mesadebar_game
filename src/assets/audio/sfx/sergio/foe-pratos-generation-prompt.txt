@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "foe-pratos",
+  "seconds": 1.2,
+  "prompt": "Four plates thrown in quick irregular rhythm, whirring, mono.",
+  "speech": false,
+  "seed": 3160412527,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/foe-pratos.mp3",
+  "raw": "src/assets/audio/sfx/sergio/foe-pratos-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/foe-pratos.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.1236405278822111,
+  "sha256": "1f057e409eb06a3dc59a46bb0db5c5e1f4a39a78ea282ecbec500865045ab638"
+}

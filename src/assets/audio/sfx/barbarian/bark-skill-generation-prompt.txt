@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "bark-skill",
+  "seconds": 0.7,
+  "prompt": "Barbarian fierce war shout building power, no words, mono.",
+  "speech": false,
+  "seed": 2777385943,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/bark-skill.wav",
+  "peak": 0.47369384765625,
+  "rms": 0.12588855771931884,
+  "sha256": "f19e045a1e80c7f9f6dccb3a1661d34b58469e891dd350fb979495037848cc04"
+}

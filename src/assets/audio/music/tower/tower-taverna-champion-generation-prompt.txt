@@ -1,0 +1,75 @@
+{
+  "id": "tower-taverna-champion",
+  "bpm": 132,
+  "bars": 68,
+  "base": 48,
+  "key": "C minor / Eb major",
+  "kind": "sergio",
+  "meter": 4,
+  "loop": true,
+  "seconds": 123.63636363636364,
+  "noteCount": 1904,
+  "hitCount": 680,
+  "instruments": [
+    "lute",
+    "choir",
+    "horn",
+    "trumpet"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "tower-taverna-champion",
+  "rate": 44100,
+  "frames": 5452364,
+  "rawSeconds": 127.63637188208617,
+  "rawPeak": 0.11666988581418991,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.14593570473496875,
+  "gain": 7.199801338091611,
+  "seam": [
+    0.00251828134059906,
+    0.0028620424563996494
+  ],
+  "end": [
+    0.028277212753891945,
+    0.0006063435575924814
+  ],
+  "file": "tower-taverna-champion_v2.wav",
+  "rawFile": "tower-taverna-champion-raw_v2.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/tower-taverna-champion.mp3",
+  "wav": "src/assets/audio/music/tower/tower-taverna-champion_v2.wav",
+  "raw": "src/assets/audio/music/tower/tower-taverna-champion-raw_v2.wav",
+  "prompt": "Grand tavern-owner boss battle, 132 BPM, C minor: full folk band with brass fanfare stabs, galloping fiddle and cavaquinho, surdo and pandeiro driving a frevo-like pulse, hurdy-gurdy lead and a rowdy wordless tavern crowd chant. Epic yet comic, the whole bar is fighting, seamless loop, no intro, no ending; instrumental, no lyrics.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-14.68",
+    "input_tp": "-1.51",
+    "input_lra": "1.10",
+    "input_thresh": "-24.68",
+    "output_i": "-14.03",
+    "output_tp": "-2.50",
+    "output_lra": "1.00",
+    "output_thresh": "-24.03",
+    "normalization_type": "dynamic",
+    "target_offset": "0.03"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.46",
+    "input_tp": "-2.83",
+    "input_lra": "1.10",
+    "input_thresh": "-24.46",
+    "output_i": "-14.03",
+    "output_tp": "-2.50",
+    "output_lra": "1.00",
+    "output_thresh": "-24.03",
+    "normalization_type": "dynamic",
+    "target_offset": "0.03"
+  },
+  "sha256": "a0c197b719c27140c5979d64439e53a30d308716f4804a3d4c72a5fb969bbf90"
+}

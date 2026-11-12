@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "foe-corte",
+  "seconds": 0.6,
+  "prompt": "Slow heavy icy sword slash, mono.",
+  "speech": false,
+  "seed": 1146596262,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/foe-corte.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/foe-corte-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/foe-corte.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08668138805902491,
+  "sha256": "e40a618b4a1b539f04b39c41690b8704903fd0f45bcdfc6a1c426e2e81dc2362"
+}

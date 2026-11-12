@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "dodge",
+  "seconds": 0.3,
+  "prompt": "Robe shuffle with a tiny bell tinkle, mono.",
+  "speech": false,
+  "seed": 3166197390,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/dodge.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/dodge.wav",
+  "peak": 0.612213134765625,
+  "rms": 0.12588879003203785,
+  "sha256": "611867b67a44b6b0786e24634cba9eea4f821fe7849a96af454e8e8914277dd5"
+}

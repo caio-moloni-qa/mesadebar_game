@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "bark-hurt",
+  "seconds": 0.5,
+  "prompt": "Lich angry ghostly screech, mono.",
+  "speech": false,
+  "seed": 3713258814,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/bark-hurt.wav",
+  "peak": 0.501373291015625,
+  "rms": 0.125888672541738,
+  "sha256": "de1cf4648f4865ed5c65479c1251c26a4794a90a6ce94532e5e2f1f914f20692"
+}

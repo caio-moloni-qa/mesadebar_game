@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Wizard falling with a fading groan and staff clattering on wood, mono.",
+  "speech": false,
+  "seed": 2090505305,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/mage/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/bark-ko.wav",
+  "peak": 0.40509033203125,
+  "rms": 0.12588867119819,
+  "sha256": "d6d6e7f3491aaec17e38bb1edf67e24a859741cc0fb45dc832fea472ba7fad04"
+}

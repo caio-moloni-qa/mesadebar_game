@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "arena-leap",
+  "seconds": 1.2,
+  "prompt": "Yeti leaping high with a grunt and landing with a heavy ground quake, mono.",
+  "speech": false,
+  "seed": 2170958245,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/arena-leap.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/arena-leap-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/arena-leap.wav",
+  "peak": 0.556793212890625,
+  "rms": 0.12588873391845554,
+  "sha256": "304b9e916aeae7d4fd9e07b32743eae7228046f236cc11c00409c55c111a0da3"
+}

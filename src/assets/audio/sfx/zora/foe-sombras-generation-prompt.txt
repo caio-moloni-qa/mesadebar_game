@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "foe-sombras",
+  "seconds": 1.0,
+  "prompt": "Shadow dance: whooshing dark swirls and two quick strikes, mono.",
+  "speech": false,
+  "seed": 1448078765,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/foe-sombras.mp3",
+  "raw": "src/assets/audio/sfx/zora/foe-sombras-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/foe-sombras.wav",
+  "peak": 0.53021240234375,
+  "rms": 0.1258887096634314,
+  "sha256": "9c6121af8b11160a43e1cb1a77dfc497926971e7c55bfec4d24982529551be97"
+}

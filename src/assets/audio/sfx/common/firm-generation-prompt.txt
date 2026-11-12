@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "firm",
+  "seconds": 0.5,
+  "prompt": "Bracing stance: boots planting on wooden floor, leather creak and a shield being raised, low thud, mono.",
+  "speech": false,
+  "seed": 1725247499,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/firm.mp3",
+  "raw": "src/assets/audio/sfx/common/firm-raw.wav",
+  "wav": "src/assets/audio/sfx/common/firm.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07199986168728004,
+  "sha256": "27ce2ab381d929145089ff14f155d629090c36270db891d2c44b1e6fc0f01130"
+}

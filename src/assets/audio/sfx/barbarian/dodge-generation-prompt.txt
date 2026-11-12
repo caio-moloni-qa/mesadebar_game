@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Heavy body sidestep, fur and leather swish, mono.",
+  "speech": false,
+  "seed": 3677769766,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/dodge.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/dodge.wav",
+  "peak": 0.468994140625,
+  "rms": 0.1258888048867642,
+  "sha256": "f363a3994ff5eff49fa34131b5ad3ef8cf8a733f3b0b6ff573e95c0084772fbb"
+}

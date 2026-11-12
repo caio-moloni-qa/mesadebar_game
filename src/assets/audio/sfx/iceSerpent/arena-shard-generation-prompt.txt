@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "arena-shard",
+  "seconds": 0.6,
+  "prompt": "Ice shards fired in a spread, mono.",
+  "speech": false,
+  "seed": 196495190,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/arena-shard.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/arena-shard-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/arena-shard.wav",
+  "peak": 0.705535888671875,
+  "rms": 0.12588873377229925,
+  "sha256": "36a92dc006a55199dcdaf0af80fd89216dd92e7e20b32b0ee895357e740b4e0d"
+}

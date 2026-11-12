@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Heavy furs swishing with a crunchy snow step, mono.",
+  "speech": false,
+  "seed": 588546136,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/dodge.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/dodge.wav",
+  "peak": 0.47186279296875,
+  "rms": 0.12588861866459694,
+  "sha256": "ec8d8d37c1b6b4d3836d60cb0b338d274a9e5c5067f427e66a6d21ffbae1fc60"
+}

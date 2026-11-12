@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "frost-burn-tick",
+  "seconds": 0.4,
+  "prompt": "Cold frost bite: crackling ice crystals forming with a sharp hiss, mono.",
+  "speech": false,
+  "seed": 482903883,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/frost-burn-tick.mp3",
+  "raw": "src/assets/audio/sfx/common/frost-burn-tick-raw.wav",
+  "wav": "src/assets/audio/sfx/common/frost-burn-tick.wav",
+  "peak": 0.336578369140625,
+  "rms": 0.06309375088090673,
+  "sha256": "add1532234481611880e5a6f402b0c93424c50a12c1c5f8481ca0bf9ac75c043"
+}

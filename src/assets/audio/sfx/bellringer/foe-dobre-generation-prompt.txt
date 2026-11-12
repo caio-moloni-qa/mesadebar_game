@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "foe-dobre",
+  "seconds": 1.2,
+  "prompt": "Bell lifted as a fake-out with a held breath, then two real clangs, mono.",
+  "speech": false,
+  "seed": 750464204,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/foe-dobre.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/foe-dobre-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/foe-dobre.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.04731457277198114,
+  "sha256": "928835aa3c223c35964ee7d923725a2c87e5c4cd8cbe5d51d7adb794178a9c26"
+}

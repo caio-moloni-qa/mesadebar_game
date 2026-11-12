@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "skill-barreira-arcana",
+  "seconds": 1.0,
+  "prompt": "Arcane barrier spreading over a group: humming dome expanding with a glassy chime, mono.",
+  "speech": false,
+  "seed": 1771345052,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/skill-barreira-arcana.mp3",
+  "raw": "src/assets/audio/sfx/mage/skill-barreira-arcana-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/skill-barreira-arcana.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.04980310399383914,
+  "sha256": "95b9f69020ef445d2452874d189bc3a4ace3c5cfb24ce5071d3db8a1fca137db"
+}

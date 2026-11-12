@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "foe-flecha",
+  "seconds": 0.5,
+  "prompt": "Fast arrow shot from distance, quick twang and whistle, mono.",
+  "speech": false,
+  "seed": 19198185,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/foe-flecha.mp3",
+  "raw": "src/assets/audio/sfx/lyra/foe-flecha-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/foe-flecha.wav",
+  "peak": 0.5233154296875,
+  "rms": 0.1258886305731773,
+  "sha256": "3d2d6c8e3c0fb84ec2b00abe44ed4c62f0efbc6a47c946243655a474959982b9"
+}

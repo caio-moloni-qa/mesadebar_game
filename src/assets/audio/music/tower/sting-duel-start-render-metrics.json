@@ -1,0 +1,35 @@
+{
+  "id": "sting-duel-start",
+  "seconds": 2.5,
+  "kind": "start",
+  "loop": false,
+  "noteCount": 8,
+  "hitCount": 4,
+  "instruments": [
+    "trumpet",
+    "strings"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-duel-start",
+  "rate": 44100,
+  "frames": 110250,
+  "rawSeconds": 6.5,
+  "rawPeak": 0.07293228060007095,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.13806545364747191,
+  "gain": 11.517533705084533,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-duel-start.wav",
+  "rawFile": "sting-duel-start-raw.wav"
+}

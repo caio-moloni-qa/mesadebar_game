@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "arena-loja-portatil",
+  "seconds": 1.0,
+  "prompt": "Shop door bell jingle and a wooden counter unfolding, mono.",
+  "speech": false,
+  "seed": 1388647522,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/arena-loja-portatil.mp3",
+  "raw": "src/assets/audio/sfx/sergio/arena-loja-portatil-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/arena-loja-portatil.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.05879242495788561,
+  "sha256": "49d6118009b08369d203c596378e0afcc3e42172b8ca07441e7f8b4c2b53a2f9"
+}

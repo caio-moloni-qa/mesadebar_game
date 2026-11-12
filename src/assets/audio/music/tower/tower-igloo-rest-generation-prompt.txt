@@ -1,0 +1,73 @@
+{
+  "id": "tower-igloo-rest",
+  "bpm": 72,
+  "bars": 28,
+  "base": 50,
+  "key": "D major",
+  "kind": "iceRest",
+  "meter": 4,
+  "loop": true,
+  "seconds": 93.33333333333333,
+  "noteCount": 266,
+  "hitCount": 0,
+  "instruments": [
+    "cello",
+    "harp",
+    "recorder",
+    "glass",
+    "box"
+  ],
+  "percussion": [],
+  "seed": "tower-igloo-rest",
+  "rate": 44100,
+  "frames": 4116000,
+  "rawSeconds": 97.33333333333333,
+  "rawPeak": 0.0631929337978363,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.16885310546662405,
+  "gain": 13.292625449030208,
+  "seam": [
+    0.001124747097492218,
+    0.0052701737731695175
+  ],
+  "end": [
+    -0.023836029693484306,
+    -0.025906698778271675
+  ],
+  "file": "tower-igloo-rest.wav",
+  "rawFile": "tower-igloo-rest-raw.wav",
+  "status": "numerical-QA-passed-awaiting-listening-review",
+  "final": "src/assets/audio/music/tower/tower-igloo-rest.mp3",
+  "wav": "src/assets/audio/music/tower/tower-igloo-rest.wav",
+  "raw": "src/assets/audio/music/tower/tower-igloo-rest-raw.wav",
+  "prompt": "Campfire rest in the snow, 72 BPM, D major: soft harp and recorder melody, warm cello drone, crackling campfire and gentle wind, a music-box celesta twinkle like aurora light. Safe and tender, seamless loop, no intro, no ending; instrumental, no vocals.",
+  "source": "art-source/audio/tower/compose-tower.mjs",
+  "method": "Same Web Audio oscillator/IR/percussion engine as the existing score; new arrangements. Synthesized timbres, no real instrument or voice recordings.",
+  "date": "2026-11-11",
+  "loudness_before": {
+    "input_i": "-13.55",
+    "input_tp": "-1.51",
+    "input_lra": "0.90",
+    "input_thresh": "-23.55",
+    "output_i": "-13.99",
+    "output_tp": "-2.50",
+    "output_lra": "1.00",
+    "output_thresh": "-23.99",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.01"
+  },
+  "loudness_after_mp3": {
+    "input_i": "-14.44",
+    "input_tp": "-2.95",
+    "input_lra": "0.90",
+    "input_thresh": "-24.44",
+    "output_i": "-13.98",
+    "output_tp": "-2.50",
+    "output_lra": "1.00",
+    "output_thresh": "-23.98",
+    "normalization_type": "dynamic",
+    "target_offset": "-0.02"
+  },
+  "sha256": "242084e76864adaf7c7639e8074c04e1fe2241494f1f2af2503fa7fe19d1d86e"
+}

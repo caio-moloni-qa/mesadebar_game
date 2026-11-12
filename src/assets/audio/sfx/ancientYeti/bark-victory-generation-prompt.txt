@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "bark-victory",
+  "seconds": 1.2,
+  "prompt": "Yeti triumphant chest-pounding howl, mono.",
+  "speech": false,
+  "seed": 3219635663,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/bark-victory.wav",
+  "peak": 0.563995361328125,
+  "rms": 0.1258887096066744,
+  "sha256": "15d03eb5566a42ee511fe2fbfc80d3ef2d6627ac7783b9ffde22d1ed610158c0"
+}

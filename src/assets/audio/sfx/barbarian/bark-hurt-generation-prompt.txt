@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Big barbarian pained grunt through gritted teeth, mono.",
+  "speech": false,
+  "seed": 4265408225,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/bark-hurt.wav",
+  "peak": 0.48846435546875,
+  "rms": 0.125888635474512,
+  "sha256": "99c0365b1f3c6a68fdf8d8e919214ebdfa0acc8993c6eba0c31ea6c2748bc80a"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "bark-attack",
+  "seconds": 0.5,
+  "prompt": "Armored knight deep grunt echoing inside a frozen helmet, mono.",
+  "speech": false,
+  "seed": 1338254421,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/bark-attack.wav",
+  "peak": 0.50469970703125,
+  "rms": 0.12588863148475707,
+  "sha256": "f11d7910f12646fe693bbbc26c3ad20ab917be8497be4b4b18a1ab8bc4518249"
+}

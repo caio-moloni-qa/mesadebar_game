@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "skill-areia-nos-olhos",
+  "seconds": 0.6,
+  "prompt": "Handful of sand thrown in the face, gritty spray and a cough, mono.",
+  "speech": false,
+  "seed": 2458582503,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/skill-areia-nos-olhos.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/skill-areia-nos-olhos-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/skill-areia-nos-olhos.wav",
+  "peak": 0.5079345703125,
+  "rms": 0.12588876708725824,
+  "sha256": "0f0b09e0dfe73da9c6d7c060109aeef721c78e8917e5e6b922226dbd336ab1a8"
+}

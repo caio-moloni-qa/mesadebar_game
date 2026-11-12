@@ -1,0 +1,18 @@
+{
+  "character": "lyra",
+  "event": "skill-raizes",
+  "seconds": 1.0,
+  "prompt": "Roots bursting from the ground and wrapping tight, creaking wood, mono.",
+  "speech": false,
+  "seed": 1904218076,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lyra/skill-raizes.mp3",
+  "raw": "src/assets/audio/sfx/lyra/skill-raizes-raw.wav",
+  "wav": "src/assets/audio/sfx/lyra/skill-raizes.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.05459467538778899,
+  "sha256": "b4b689ea6e1cfd39570a886d6b12c8738850fef46899a584edec298eeb573585"
+}

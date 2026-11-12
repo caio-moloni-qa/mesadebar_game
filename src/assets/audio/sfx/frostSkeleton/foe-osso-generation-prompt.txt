@@ -1,0 +1,18 @@
+{
+  "character": "frostSkeleton",
+  "event": "foe-osso",
+  "seconds": 0.4,
+  "prompt": "Bone club strike, dry crack, mono.",
+  "speech": false,
+  "seed": 3037977380,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSkeleton/foe-osso.mp3",
+  "raw": "src/assets/audio/sfx/frostSkeleton/foe-osso-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSkeleton/foe-osso.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07246424200734693,
+  "sha256": "65d9d4a23b4228c2edc082bec40105ae6ea3243010cc26ff0838947f0d9c9ccd"
+}

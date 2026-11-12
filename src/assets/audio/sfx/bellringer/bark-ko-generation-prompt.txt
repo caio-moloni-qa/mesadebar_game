@@ -1,0 +1,18 @@
+{
+  "character": "bellringer",
+  "event": "bark-ko",
+  "seconds": 1.5,
+  "prompt": "Old bell-ringer collapsing, a cracked bell giving one last dull clang, mono.",
+  "speech": false,
+  "seed": 2518432131,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/bellringer/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/bellringer/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/bellringer/bark-ko.wav",
+  "peak": 0.54876708984375,
+  "rms": 0.12588872789576838,
+  "sha256": "217d4cb90645569cfdc1658c350c4de092a8c8f62ca206d4c5935f453ddf7598"
+}

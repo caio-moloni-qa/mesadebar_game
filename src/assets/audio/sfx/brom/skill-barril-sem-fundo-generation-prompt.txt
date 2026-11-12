@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "skill-barril-sem-fundo",
+  "seconds": 1.5,
+  "prompt": "Endless chugging from a barrel tap, glug-glug, then a sober refreshed \"ahh\", mono.",
+  "speech": false,
+  "seed": 2594418761,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/skill-barril-sem-fundo.mp3",
+  "raw": "src/assets/audio/sfx/brom/skill-barril-sem-fundo-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/skill-barril-sem-fundo.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09092265565438347,
+  "sha256": "4b2be971c0dfc2d15bc892e4fe394f29db1734734f5cc8813a3969b12a5e14a6"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "feint-held",
+  "seconds": 0.4,
+  "prompt": "Calm confident hold: a soft wooden knock and a gentle rising two-note pluck, reward feel, mono.",
+  "speech": false,
+  "seed": 1386757483,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/feint-held.mp3",
+  "raw": "src/assets/audio/sfx/common/feint-held-raw.wav",
+  "wav": "src/assets/audio/sfx/common/feint-held.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0930120867517017,
+  "sha256": "5167a6161e18ab4e9220ee82eee970f72cd4200293cbddd89d0959c527ba5f0c"
+}

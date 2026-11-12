@@ -32,3 +32,5 @@ tools/discord/.state/
 
 # Balance batches (tools/balance/*.sim.test.ts)
 tools/balance/out/
+# Tavern SFX renders (raw sources for the MP3s the game loads; reproducible with art-source/audio/tower/render-character-sfx.py)
+src/assets/audio/sfx/**/*.wav

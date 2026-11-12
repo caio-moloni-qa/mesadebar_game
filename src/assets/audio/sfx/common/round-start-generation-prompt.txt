@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "round-start",
+  "seconds": 0.5,
+  "prompt": "Small tavern bell ding, round start, mono.",
+  "speech": false,
+  "seed": 333275107,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/round-start.mp3",
+  "raw": "src/assets/audio/sfx/common/round-start-raw.wav",
+  "wav": "src/assets/audio/sfx/common/round-start.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07252005129479211,
+  "sha256": "ff7383eb83999a986ad5f14112954ea6e9909476d90456cc2ac75211ebccce6b"
+}

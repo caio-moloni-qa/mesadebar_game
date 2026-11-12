@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "skill-dobro-ou-nada",
+  "seconds": 1.2,
+  "prompt": "Tense dice roll with a drumroll and an all-or-nothing hit, mono.",
+  "speech": false,
+  "seed": 1587255828,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/skill-dobro-ou-nada.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/skill-dobro-ou-nada-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/skill-dobro-ou-nada.wav",
+  "peak": 0.674774169921875,
+  "rms": 0.1258886356530311,
+  "sha256": "e41b50ca478bf84a8e999074882933ff2205afe9eaebb1eef4817ae8e5c40b4a"
+}

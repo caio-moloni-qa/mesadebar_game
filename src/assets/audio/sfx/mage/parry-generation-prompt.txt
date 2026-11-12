@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Wooden staff blocking a blade, hard knock with a small arcane spark, mono.",
+  "speech": false,
+  "seed": 1616794895,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/parry.mp3",
+  "raw": "src/assets/audio/sfx/mage/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/parry.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.11507268236437118,
+  "sha256": "3faa33a4a96d7454f75b117f2668d8654325db753f683c4d1027513da75a61f7"
+}

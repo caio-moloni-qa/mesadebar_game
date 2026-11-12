@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "arena-shockwave",
+  "seconds": 1.2,
+  "prompt": "Necrotic shockwave blast, deep boom with ghostly wail, mono.",
+  "speech": false,
+  "seed": 2197029189,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/arena-shockwave.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/arena-shockwave-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/arena-shockwave.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0472750990994955,
+  "sha256": "20e112bf6d18cdc66a9b7b42397d50d5fb30bfb75ab0689d26b98830751c8444"
+}

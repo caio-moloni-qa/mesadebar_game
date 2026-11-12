@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "skill-golpe-da-forja",
+  "seconds": 1.5,
+  "prompt": "Massive forge hammer smash: rising grunt, huge anvil-like impact with sparks and ground shake, mono.",
+  "speech": false,
+  "seed": 2262594421,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/skill-golpe-da-forja.mp3",
+  "raw": "src/assets/audio/sfx/brom/skill-golpe-da-forja-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/skill-golpe-da-forja.wav",
+  "peak": 0.51171875,
+  "rms": 0.12588869124958116,
+  "sha256": "e5e8ae21371d93e9ccac2b00acb46ee8dc620dc1a27cdb725130ed166f3ffedd"
+}

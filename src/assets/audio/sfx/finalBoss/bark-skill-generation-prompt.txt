@@ -1,0 +1,18 @@
+{
+  "character": "finalBoss",
+  "event": "bark-skill",
+  "seconds": 2.0,
+  "prompt": "Ancient lich's deep echoing evil laugh, mono.",
+  "speech": false,
+  "seed": 2087082837,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/finalBoss/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/finalBoss/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/finalBoss/bark-skill.wav",
+  "peak": 0.776397705078125,
+  "rms": 0.12588874744346712,
+  "sha256": "a0483eefd9ed59c9deb8f15ac47cdc53f8361d9bbcdd272b206d3ec84f295b8a"
+}

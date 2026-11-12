@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "skill-furia",
+  "seconds": 1.5,
+  "prompt": "Barbarian spinning greatsword whirlwind: rapid repeating heavy whooshes and multiple meaty slashes, ending in a roar, mono.",
+  "speech": false,
+  "seed": 315493804,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/skill-furia.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/skill-furia-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/skill-furia.wav",
+  "peak": 0.568145751953125,
+  "rms": 0.12588870195999446,
+  "sha256": "6a683c5b6d27c9aaa1d005e23748ab9141f957cca6b44fcc2aa7d3769f80cd61"
+}

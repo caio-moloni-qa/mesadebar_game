@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "foe-fecha-conta",
+  "seconds": 1.5,
+  "prompt": "Ominous cash-register ka-ching, ledger slam and a massive charged smash, mono.",
+  "speech": false,
+  "seed": 1610521402,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/foe-fecha-conta.mp3",
+  "raw": "src/assets/audio/sfx/sergio/foe-fecha-conta-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/foe-fecha-conta.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.062360639022676564,
+  "sha256": "e84fee6fc7f26314d5414282038714b6ab6d4c96c504a1ac8c92b1a732ea2a7c"
+}

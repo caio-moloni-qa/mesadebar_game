@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "dodge-perfect",
+  "seconds": 0.4,
+  "prompt": "Perfect dodge: sharp airy whoosh with a soft shimmering chime tail, slow-motion feel, mono.",
+  "speech": false,
+  "seed": 1743233884,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/dodge-perfect.mp3",
+  "raw": "src/assets/audio/sfx/common/dodge-perfect-raw.wav",
+  "wav": "src/assets/audio/sfx/common/dodge-perfect.wav",
+  "peak": 0.566650390625,
+  "rms": 0.1258886831957174,
+  "sha256": "f144300bc84fd936fcf68935351e92f59ed2669bd2a83413b7ac958676710c23"
+}

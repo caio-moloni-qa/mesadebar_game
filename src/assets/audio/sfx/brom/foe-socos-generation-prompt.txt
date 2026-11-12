@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "foe-socos",
+  "seconds": 1.0,
+  "prompt": "Three quick dwarf punches, rhythmic meaty thuds, mono.",
+  "speech": false,
+  "seed": 4156540593,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/foe-socos.mp3",
+  "raw": "src/assets/audio/sfx/brom/foe-socos-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/foe-socos.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.08527946909273383,
+  "sha256": "a4a207a98a5b247f6ade8f3d041d0e3d94a434c6956f0011782fd0d533f1dee6"
+}

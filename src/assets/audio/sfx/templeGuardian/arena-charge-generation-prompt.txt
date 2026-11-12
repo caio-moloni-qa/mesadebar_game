@@ -1,0 +1,18 @@
+{
+  "character": "templeGuardian",
+  "event": "arena-charge",
+  "seconds": 1.2,
+  "prompt": "Massive stone body charging, heavy rumbling footsteps, mono.",
+  "speech": false,
+  "seed": 3047033957,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/templeGuardian/arena-charge.mp3",
+  "raw": "src/assets/audio/sfx/templeGuardian/arena-charge-raw.wav",
+  "wav": "src/assets/audio/sfx/templeGuardian/arena-charge.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06788314937799544,
+  "sha256": "5c31f44cd0417076ff7c2f0dfa1f57efb276fdf31b56901255eb84bc69328c21"
+}

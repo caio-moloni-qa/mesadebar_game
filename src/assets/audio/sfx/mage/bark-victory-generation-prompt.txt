@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "bark-victory",
+  "seconds": 1.0,
+  "prompt": "Wizard pleased chuckle with a magical sparkle, mono.",
+  "speech": false,
+  "seed": 3899599442,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/bark-victory.mp3",
+  "raw": "src/assets/audio/sfx/mage/bark-victory-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/bark-victory.wav",
+  "peak": 0.40802001953125,
+  "rms": 0.1258886244805734,
+  "sha256": "24b03cad6a0966d4a8c16b7c23a0159fa8868cf2be1471a29e4d4241a0de496e"
+}

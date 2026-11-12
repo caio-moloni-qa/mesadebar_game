@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "charge-tick",
+  "seconds": 0.6,
+  "prompt": "Heavy tense heartbeat-like drum tick with a low rumble swell, countdown feel, mono.",
+  "speech": false,
+  "seed": 10763051,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/charge-tick.mp3",
+  "raw": "src/assets/audio/sfx/common/charge-tick-raw.wav",
+  "wav": "src/assets/audio/sfx/common/charge-tick.wav",
+  "peak": 0.533538818359375,
+  "rms": 0.06309379552183239,
+  "sha256": "c9639baa7815d7432154566e254996f014f1e4825c9f93aaa4bd6913315af1ee"
+}

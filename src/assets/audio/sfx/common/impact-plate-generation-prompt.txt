@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "impact-plate",
+  "seconds": 0.4,
+  "prompt": "Ceramic plate shattering on impact, mono.",
+  "speech": false,
+  "seed": 834574482,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/impact-plate.mp3",
+  "raw": "src/assets/audio/sfx/common/impact-plate-raw.wav",
+  "wav": "src/assets/audio/sfx/common/impact-plate.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07994142569343561,
+  "sha256": "bc157668a1876e202b3301ceb27dff5e1be8a0e7da6003b0048ff876958a87e8"
+}

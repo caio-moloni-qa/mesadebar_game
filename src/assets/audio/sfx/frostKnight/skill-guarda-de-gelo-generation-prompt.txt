@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "skill-guarda-de-gelo",
+  "seconds": 0.8,
+  "prompt": "Ice shield raised with crystals forming, mono.",
+  "speech": false,
+  "seed": 2675695869,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/skill-guarda-de-gelo.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/skill-guarda-de-gelo-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/skill-guarda-de-gelo.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.12385918486457384,
+  "sha256": "5cb7fe4f489f096bb2cd903e89859fa7a30da25ddfc1e108ea6dad53e22d95b8"
+}

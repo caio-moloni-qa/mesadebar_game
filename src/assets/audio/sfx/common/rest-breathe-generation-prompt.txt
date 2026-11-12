@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "rest-breathe",
+  "seconds": 1.2,
+  "prompt": "Deep calm breath in and out with a soft warm swell, mono.",
+  "speech": false,
+  "seed": 2528051359,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/rest-breathe.mp3",
+  "raw": "src/assets/audio/sfx/common/rest-breathe-raw.wav",
+  "wav": "src/assets/audio/sfx/common/rest-breathe.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.041642419241208685,
+  "sha256": "936967c30b4689d01a4d63978bb1900261012f4a4f2d2b1800fd15fe6548e0a6"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "mage",
+  "event": "skill-raio-arcano",
+  "seconds": 0.9,
+  "prompt": "Arcane lightning bolt cast from a staff: crackling charge then a sharp electric blast, mono.",
+  "speech": false,
+  "seed": 2954063305,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/mage/skill-raio-arcano.mp3",
+  "raw": "src/assets/audio/sfx/mage/skill-raio-arcano-raw.wav",
+  "wav": "src/assets/audio/sfx/mage/skill-raio-arcano.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06071606852810362,
+  "sha256": "1da9853c7652386998ccb2e1e1fa871dbd5d106f3081b69cbf427367f8c2d02a"
+}

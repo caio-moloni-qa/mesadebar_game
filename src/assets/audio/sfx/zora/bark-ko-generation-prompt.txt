@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "bark-ko",
+  "seconds": 1.0,
+  "prompt": "Fortune teller falling with a sighing moan, crystal ball rolling, mono.",
+  "speech": false,
+  "seed": 1362800363,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/zora/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/bark-ko.wav",
+  "peak": 0.43804931640625,
+  "rms": 0.12588866402650542,
+  "sha256": "477b89e7f55e7947a6cc3432b73904f00a788b4144291a61b2060bade17ac0bf"
+}

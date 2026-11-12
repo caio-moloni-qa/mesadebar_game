@@ -1,0 +1,18 @@
+{
+  "character": "lakeSpirit",
+  "event": "arena-geyser",
+  "seconds": 1.0,
+  "prompt": "Water geyser bursting up from the ground, mono.",
+  "speech": false,
+  "seed": 3142073410,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lakeSpirit/arena-geyser.mp3",
+  "raw": "src/assets/audio/sfx/lakeSpirit/arena-geyser-raw.wav",
+  "wav": "src/assets/audio/sfx/lakeSpirit/arena-geyser.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.1034993678509737,
+  "sha256": "fd07f5477ded7d3890324714eda6c9f482ef2772cc019a9c606da47df58f7fce"
+}

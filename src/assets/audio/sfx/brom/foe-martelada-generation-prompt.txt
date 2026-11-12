@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "foe-martelada",
+  "seconds": 1.0,
+  "prompt": "Slow heavy hammer wind-up creak then a crushing blow, mono.",
+  "speech": false,
+  "seed": 1008500337,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/foe-martelada.mp3",
+  "raw": "src/assets/audio/sfx/brom/foe-martelada-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/foe-martelada.wav",
+  "peak": 0.52740478515625,
+  "rms": 0.1258886539910783,
+  "sha256": "dab82e1160a018e910e6977e6d3d8d3171633891bf6616218d0b7862ba224c9c"
+}

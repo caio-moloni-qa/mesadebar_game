@@ -1,0 +1,18 @@
+{
+  "character": "barbarian",
+  "event": "bark-attack",
+  "seconds": 0.5,
+  "prompt": "Big burly barbarian battle grunt, short and raspy \"HRAH!\", mono.",
+  "speech": false,
+  "seed": 1286212854,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/barbarian/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/barbarian/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/barbarian/bark-attack.wav",
+  "peak": 0.4671630859375,
+  "rms": 0.1258887287441039,
+  "sha256": "ac16e49c3fa4717a2d95bb07eeb83ccb5957a6e749d5dcf2db8c9bf592f930c8"
+}

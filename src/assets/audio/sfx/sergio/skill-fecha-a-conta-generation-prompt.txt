@@ -1,0 +1,18 @@
+{
+  "character": "sergio",
+  "event": "skill-fecha-a-conta",
+  "seconds": 0.8,
+  "prompt": "Old cash register ka-ching with a heavy ledger slam, mono.",
+  "speech": false,
+  "seed": 671733947,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/sergio/skill-fecha-a-conta.mp3",
+  "raw": "src/assets/audio/sfx/sergio/skill-fecha-a-conta-raw.wav",
+  "wav": "src/assets/audio/sfx/sergio/skill-fecha-a-conta.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07918818298200404,
+  "sha256": "2f4e9a84ea65d85f15da3e8c78a4fa9dd1b5a44882a02f243f23f3ff8966d827"
+}

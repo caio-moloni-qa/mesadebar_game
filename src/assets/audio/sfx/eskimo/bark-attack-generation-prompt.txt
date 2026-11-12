@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Chubby cheerful cook effort grunt \"hoh!\", mono.",
+  "speech": false,
+  "seed": 2773808250,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/bark-attack.wav",
+  "peak": 0.434356689453125,
+  "rms": 0.12588871623920672,
+  "sha256": "844cee2db2272cc3b2e4dfea236c68b04c0cf7ff6c8cafdd0b1b433e5eee1ad3"
+}

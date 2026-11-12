@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "bark-ko",
+  "seconds": 1.2,
+  "prompt": "Drunk dwarf collapsing with a long groan and a final hiccup, mono.",
+  "speech": false,
+  "seed": 1297638737,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/bark-ko.mp3",
+  "raw": "src/assets/audio/sfx/brom/bark-ko-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/bark-ko.wav",
+  "peak": 0.51556396484375,
+  "rms": 0.12588861058074233,
+  "sha256": "488ae6e13cc7b8913d1d18f4b4acd9e398366fea607c647b21efd11d7324e146"
+}

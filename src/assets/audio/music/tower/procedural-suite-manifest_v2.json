@@ -1,0 +1,796 @@
+{
+  "method": "Original locally composed Web Audio synthesis; no recorded instruments, external music service or voice recordings.",
+  "normalization": "Peak normalized to .84; LUFS matching deferred to integration.",
+  "tracks": [
+    {
+      "id": "tower-taverna-battle",
+      "bpm": 118,
+      "bars": 60,
+      "base": 55,
+      "key": "G mixolydian",
+      "kind": "brawl",
+      "meter": 4,
+      "loop": true,
+      "seconds": 122.03389830508475,
+      "noteCount": 1020,
+      "hitCount": 480,
+      "instruments": [
+        "lute",
+        "fiddle"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "tower-taverna-battle",
+      "rate": 44100,
+      "frames": 5381695,
+      "rawSeconds": 126.03390022675737,
+      "rawPeak": 0.11424410343170166,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.09603469087896377,
+      "gain": 7.352677072757419,
+      "seam": [
+        0.005653657019138336,
+        0.007407192140817642
+      ],
+      "end": [
+        -0.02028726413846016,
+        -0.04176250472664833
+      ],
+      "file": "tower-taverna-battle.wav",
+      "rawFile": "tower-taverna-battle-raw.wav"
+    },
+    {
+      "id": "duel-brom",
+      "bpm": 100,
+      "bars": 40,
+      "base": 50,
+      "key": "D major",
+      "kind": "brom",
+      "meter": 4,
+      "loop": true,
+      "seconds": 96,
+      "noteCount": 920,
+      "hitCount": 320,
+      "instruments": [
+        "horn",
+        "lute",
+        "hurdy"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "duel-brom",
+      "rate": 44100,
+      "frames": 4233600,
+      "rawSeconds": 100,
+      "rawPeak": 0.18568487465381622,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.07501921130723553,
+      "gain": 4.523793343782383,
+      "seam": [
+        0.0018651504069566727,
+        0.0007531002629548311
+      ],
+      "end": [
+        -0.012371613644063473,
+        -0.0031363407615572214
+      ],
+      "file": "duel-brom.wav",
+      "rawFile": "duel-brom-raw.wav"
+    },
+    {
+      "id": "duel-lyra",
+      "bpm": 124,
+      "bars": 48,
+      "base": 52,
+      "key": "E aeolian",
+      "kind": "lyra",
+      "meter": 4,
+      "loop": true,
+      "seconds": 92.90322580645162,
+      "noteCount": 816,
+      "hitCount": 384,
+      "instruments": [
+        "lute",
+        "recorder"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "duel-lyra",
+      "rate": 44100,
+      "frames": 4097032,
+      "rawSeconds": 96.90321995464852,
+      "rawPeak": 0.12101723253726959,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.1328932126258744,
+      "gain": 6.941160216511362,
+      "seam": [
+        0.0013751126825809479,
+        0.0026745349168777466
+      ],
+      "end": [
+        -0.037099506705999374,
+        -0.10016988217830658
+      ],
+      "file": "duel-lyra.wav",
+      "rawFile": "duel-lyra-raw.wav"
+    },
+    {
+      "id": "duel-grimbo",
+      "bpm": 112,
+      "bars": 48,
+      "base": 57,
+      "key": "A harmonic minor",
+      "kind": "grimbo",
+      "meter": 4,
+      "loop": true,
+      "seconds": 102.85714285714286,
+      "noteCount": 816,
+      "hitCount": 528,
+      "instruments": [
+        "lute",
+        "recorder"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine",
+        "stone"
+      ],
+      "seed": "duel-grimbo",
+      "rate": 44100,
+      "frames": 4536000,
+      "rawSeconds": 106.85714285714286,
+      "rawPeak": 0.11191730201244354,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.13193118384807057,
+      "gain": 7.505541903669233,
+      "seam": [
+        0.001561734825372696,
+        0.002663273364305496
+      ],
+      "end": [
+        -0.03726087510585785,
+        -0.041893623769283295
+      ],
+      "file": "duel-grimbo.wav",
+      "rawFile": "duel-grimbo-raw.wav"
+    },
+    {
+      "id": "duel-zora",
+      "bpm": 92,
+      "bars": 40,
+      "base": 50,
+      "key": "D phrygian dominant",
+      "kind": "zora",
+      "meter": 4,
+      "loop": true,
+      "seconds": 104.34782608695652,
+      "noteCount": 745,
+      "hitCount": 280,
+      "instruments": [
+        "lute",
+        "glass"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "duel-zora",
+      "rate": 44100,
+      "frames": 4601739,
+      "rawSeconds": 108.3478231292517,
+      "rawPeak": 0.1188514456152916,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.1276234262611406,
+      "gain": 7.067646469517779,
+      "seam": [
+        0.0012206807732582092,
+        0.0017632171511650085
+      ],
+      "end": [
+        -0.08882696181535721,
+        -0.0767042487859726
+      ],
+      "file": "duel-zora.wav",
+      "rawFile": "duel-zora-raw.wav"
+    },
+    {
+      "id": "tower-taverna-champion",
+      "bpm": 132,
+      "bars": 68,
+      "base": 48,
+      "key": "C minor / Eb major",
+      "kind": "sergio",
+      "meter": 4,
+      "loop": true,
+      "seconds": 123.63636363636364,
+      "noteCount": 1904,
+      "hitCount": 680,
+      "instruments": [
+        "lute",
+        "choir",
+        "horn",
+        "trumpet"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "tower-taverna-champion",
+      "rate": 44100,
+      "frames": 5452364,
+      "rawSeconds": 127.63637188208617,
+      "rawPeak": 0.1260308474302292,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.13862157880339795,
+      "gain": 6.6650349269850375,
+      "seam": [
+        0.00827309861779213,
+        0.01734597608447075
+      ],
+      "end": [
+        -0.03391478210687637,
+        -0.05414678528904915
+      ],
+      "file": "tower-taverna-champion.wav",
+      "rawFile": "tower-taverna-champion-raw.wav"
+    },
+    {
+      "id": "tower-taverna-rest",
+      "bpm": 84,
+      "bars": 32,
+      "base": 50,
+      "key": "D major",
+      "kind": "rest",
+      "meter": 4,
+      "loop": true,
+      "seconds": 91.42857142857143,
+      "noteCount": 288,
+      "hitCount": 0,
+      "instruments": [
+        "lute"
+      ],
+      "percussion": [],
+      "seed": "tower-taverna-rest",
+      "rate": 44100,
+      "frames": 4032000,
+      "rawSeconds": 95.42857142857143,
+      "rawPeak": 0.04310182109475136,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.13147071074321703,
+      "gain": 19.488735711500816,
+      "seam": [
+        0.002492642030119896,
+        0.00008361600339412689
+      ],
+      "end": [
+        -0.018615925684571266,
+        -0.01732163317501545
+      ],
+      "file": "tower-taverna-rest.wav",
+      "rawFile": "tower-taverna-rest-raw.wav"
+    },
+    {
+      "id": "tower-select",
+      "bpm": 104,
+      "bars": 40,
+      "base": 55,
+      "key": "G major",
+      "kind": "lobby",
+      "meter": 4,
+      "loop": true,
+      "seconds": 92.3076923076923,
+      "noteCount": 535,
+      "hitCount": 320,
+      "instruments": [
+        "lute",
+        "trumpet"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "tower-select",
+      "rate": 44100,
+      "frames": 4070769,
+      "rawSeconds": 96.30768707482993,
+      "rawPeak": 0.1255710870027542,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.08218591421785985,
+      "gain": 6.689471331716525,
+      "seam": [
+        0.00017609435599297285,
+        0.0005565197570831515
+      ],
+      "end": [
+        0.0016835253918543458,
+        0.00004571965109789744
+      ],
+      "file": "tower-select.wav",
+      "rawFile": "tower-select-raw.wav"
+    },
+    {
+      "id": "menu",
+      "bpm": 96,
+      "bars": 40,
+      "base": 50,
+      "key": "D dorian",
+      "kind": "menu",
+      "meter": 4,
+      "loop": true,
+      "seconds": 100,
+      "noteCount": 580,
+      "hitCount": 320,
+      "instruments": [
+        "lute",
+        "choir",
+        "fiddle"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "menu",
+      "rate": 44100,
+      "frames": 4410000,
+      "rawSeconds": 104,
+      "rawPeak": 0.11238206923007965,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.09548534397570943,
+      "gain": 7.474501989105301,
+      "seam": [
+        0.004405669867992401,
+        0.003884134814143181
+      ],
+      "end": [
+        0.03920891880989075,
+        -0.004850866738706827
+      ],
+      "file": "menu.wav",
+      "rawFile": "menu-raw.wav"
+    },
+    {
+      "id": "arena-snowfield",
+      "bpm": 120,
+      "bars": 64,
+      "base": 50,
+      "key": "D harmonic minor",
+      "kind": "snow",
+      "meter": 4,
+      "loop": true,
+      "seconds": 128,
+      "noteCount": 864,
+      "hitCount": 512,
+      "instruments": [
+        "cello",
+        "harp",
+        "recorder",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "frame",
+        "rattle"
+      ],
+      "seed": "arena-snowfield",
+      "rate": 44100,
+      "frames": 5644800,
+      "rawSeconds": 132,
+      "rawPeak": 0.11550845205783844,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.14548893930196222,
+      "gain": 7.272195108106787,
+      "seam": [
+        0.0023469291627407074,
+        0.0005033835768699646
+      ],
+      "end": [
+        -0.05874163284897804,
+        -0.06964336335659027
+      ],
+      "file": "arena-snowfield.wav",
+      "rawFile": "arena-snowfield-raw.wav"
+    },
+    {
+      "id": "arena-snowfield-intense",
+      "bpm": 136,
+      "bars": 72,
+      "base": 50,
+      "key": "D harmonic minor",
+      "kind": "snowIntense",
+      "meter": 4,
+      "loop": true,
+      "seconds": 127.05882352941177,
+      "noteCount": 2052,
+      "hitCount": 720,
+      "instruments": [
+        "cello",
+        "harp",
+        "choir",
+        "horn",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "frame",
+        "rattle"
+      ],
+      "seed": "arena-snowfield-intense",
+      "rate": 44100,
+      "frames": 5603294,
+      "rawSeconds": 131.05882086167802,
+      "rawPeak": 0.13620014488697052,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.16528360444806683,
+      "gain": 6.167394320300447,
+      "seam": [
+        0.002209991216659546,
+        0.0074580758810043335
+      ],
+      "end": [
+        0.08997293561697006,
+        0.07203558087348938
+      ],
+      "file": "arena-snowfield-intense.wav",
+      "rawFile": "arena-snowfield-intense-raw.wav"
+    },
+    {
+      "id": "tower-igloo-battle",
+      "bpm": 116,
+      "bars": 60,
+      "base": 50,
+      "key": "D minor",
+      "kind": "ice",
+      "meter": 4,
+      "loop": true,
+      "seconds": 124.13793103448276,
+      "noteCount": 810,
+      "hitCount": 480,
+      "instruments": [
+        "cello",
+        "harp",
+        "box",
+        "glass"
+      ],
+      "percussion": [
+        "frame",
+        "rattle"
+      ],
+      "seed": "tower-igloo-battle",
+      "rate": 44100,
+      "frames": 5474483,
+      "rawSeconds": 128.1379365079365,
+      "rawPeak": 0.10479598492383957,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.14057451970470985,
+      "gain": 8.015574266614028,
+      "seam": [
+        0.0004372522234916687,
+        0.002143584191799164
+      ],
+      "end": [
+        -0.06457824259996414,
+        -0.06365500390529633
+      ],
+      "file": "tower-igloo-battle.wav",
+      "rawFile": "tower-igloo-battle-raw.wav"
+    },
+    {
+      "id": "tower-igloo-rest",
+      "bpm": 72,
+      "bars": 28,
+      "base": 50,
+      "key": "D major",
+      "kind": "iceRest",
+      "meter": 4,
+      "loop": true,
+      "seconds": 93.33333333333333,
+      "noteCount": 266,
+      "hitCount": 0,
+      "instruments": [
+        "cello",
+        "harp",
+        "recorder",
+        "glass",
+        "box"
+      ],
+      "percussion": [],
+      "seed": "tower-igloo-rest",
+      "rate": 44100,
+      "frames": 4116000,
+      "rawSeconds": 97.33333333333333,
+      "rawPeak": 0.0631929337978363,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.16885310546662405,
+      "gain": 13.292625449030208,
+      "seam": [
+        0.001124747097492218,
+        0.0052701737731695175
+      ],
+      "end": [
+        -0.023836029693484306,
+        -0.025906698778271675
+      ],
+      "file": "tower-igloo-rest.wav",
+      "rawFile": "tower-igloo-rest-raw.wav"
+    },
+    {
+      "id": "tower-igloo-champion",
+      "bpm": 128,
+      "bars": 64,
+      "base": 50,
+      "key": "D harmonic minor",
+      "kind": "king",
+      "meter": 4,
+      "loop": true,
+      "seconds": 120,
+      "noteCount": 2016,
+      "hitCount": 640,
+      "instruments": [
+        "cello",
+        "harp",
+        "choir",
+        "horn",
+        "organ",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "frame",
+        "rattle"
+      ],
+      "seed": "tower-igloo-champion",
+      "rate": 44100,
+      "frames": 5292000,
+      "rawSeconds": 124,
+      "rawPeak": 0.16112862527370453,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.15116072252581755,
+      "gain": 5.213226380930863,
+      "seam": [
+        0.0016859658062458038,
+        0.004274889826774597
+      ],
+      "end": [
+        0.009624487720429897,
+        -0.12953481078147888
+      ],
+      "file": "tower-igloo-champion.wav",
+      "rawFile": "tower-igloo-champion-raw.wav"
+    },
+    {
+      "id": "sting-duel-start",
+      "seconds": 2.5,
+      "kind": "start",
+      "loop": false,
+      "noteCount": 8,
+      "hitCount": 4,
+      "instruments": [
+        "trumpet",
+        "strings"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "sting-duel-start",
+      "rate": 44100,
+      "frames": 110250,
+      "rawSeconds": 6.5,
+      "rawPeak": 0.07293228060007095,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.13806545364747191,
+      "gain": 11.517533705084533,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-duel-start.wav",
+      "rawFile": "sting-duel-start-raw.wav"
+    },
+    {
+      "id": "sting-floor-cleared",
+      "seconds": 3.5,
+      "kind": "floor",
+      "loop": false,
+      "noteCount": 26,
+      "hitCount": 4,
+      "instruments": [
+        "trumpet",
+        "strings",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "sting-floor-cleared",
+      "rate": 44100,
+      "frames": 154350,
+      "rawSeconds": 7.5,
+      "rawPeak": 0.07965853065252304,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.133804151273709,
+      "gain": 10.545009970923868,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-floor-cleared.wav",
+      "rawFile": "sting-floor-cleared-raw.wav"
+    },
+    {
+      "id": "sting-champion",
+      "seconds": 4.5,
+      "kind": "champion",
+      "loop": false,
+      "noteCount": 7,
+      "hitCount": 4,
+      "instruments": [
+        "horn",
+        "strings"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "sting-champion",
+      "rate": 44100,
+      "frames": 198450,
+      "rawSeconds": 8.5,
+      "rawPeak": 0.052425045520067215,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.22270848653647762,
+      "gain": 16.022875930140405,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-champion.wav",
+      "rawFile": "sting-champion-raw.wav"
+    },
+    {
+      "id": "sting-tower-victory",
+      "seconds": 8,
+      "kind": "win",
+      "loop": false,
+      "noteCount": 20,
+      "hitCount": 4,
+      "instruments": [
+        "trumpet",
+        "strings",
+        "lute"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "sting-tower-victory",
+      "rate": 44100,
+      "frames": 352800,
+      "rawSeconds": 12,
+      "rawPeak": 0.06991489976644516,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.09924494049290676,
+      "gain": 12.014606368686351,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-tower-victory.wav",
+      "rawFile": "sting-tower-victory-raw.wav"
+    },
+    {
+      "id": "sting-tower-defeat",
+      "seconds": 5,
+      "kind": "lose",
+      "loop": false,
+      "noteCount": 8,
+      "hitCount": 5,
+      "instruments": [
+        "hurdy",
+        "strings"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "sting-tower-defeat",
+      "rate": 44100,
+      "frames": 220500,
+      "rawSeconds": 9,
+      "rawPeak": 0.05771493911743164,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.1260018779103338,
+      "gain": 14.554290671447573,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-tower-defeat.wav",
+      "rawFile": "sting-tower-defeat-raw.wav"
+    },
+    {
+      "id": "sting-cashout",
+      "seconds": 2.5,
+      "kind": "cash",
+      "loop": false,
+      "noteCount": 26,
+      "hitCount": 4,
+      "instruments": [
+        "lute",
+        "strings",
+        "glass",
+        "box"
+      ],
+      "percussion": [
+        "frame",
+        "tambourine"
+      ],
+      "seed": "sting-cashout",
+      "rate": 44100,
+      "frames": 110250,
+      "rawSeconds": 6.5,
+      "rawPeak": 0.0814763531088829,
+      "rawSamplesAboveOne": 0,
+      "peak": 0.84,
+      "rms": 0.13161839456433252,
+      "gain": 10.309739795023049,
+      "seam": [
+        0,
+        0
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "file": "sting-cashout.wav",
+      "rawFile": "sting-cashout-raw.wav"
+    }
+  ]
+}

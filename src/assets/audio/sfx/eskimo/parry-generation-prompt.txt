@@ -1,0 +1,18 @@
+{
+  "character": "eskimo",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Cooking pot lid blocking a blow, tinny clang, mono.",
+  "speech": false,
+  "seed": 1888770343,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/eskimo/parry.mp3",
+  "raw": "src/assets/audio/sfx/eskimo/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/eskimo/parry.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09580107162583959,
+  "sha256": "0492655ab3417b30af63ef42ae0935195b741d403f9b9e4080f1952a90dde1e8"
+}

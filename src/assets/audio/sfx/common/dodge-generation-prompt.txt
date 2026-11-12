@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "dodge",
+  "seconds": 0.25,
+  "prompt": "Quick cloth-and-air dodge whoosh, light footstep scuff, mono.",
+  "speech": false,
+  "seed": 310622985,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/dodge.mp3",
+  "raw": "src/assets/audio/sfx/common/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/common/dodge.wav",
+  "peak": 0.5189208984375,
+  "rms": 0.1258886004279664,
+  "sha256": "830ce8b785a7e64fc5b2d135b19c341be7cf06b5c5e463912ac324b198bef574"
+}

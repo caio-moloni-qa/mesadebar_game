@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "skill-provocar",
+  "seconds": 0.8,
+  "prompt": "Dwarf mocking raspberry and belly slap, comic taunt, mono.",
+  "speech": false,
+  "seed": 3029158195,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/skill-provocar.mp3",
+  "raw": "src/assets/audio/sfx/brom/skill-provocar-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/skill-provocar.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06621137213520138,
+  "sha256": "0633f56d90e0c1c5c008499d4b19293216d73c7ad72b55ed7c757473b66b8961"
+}

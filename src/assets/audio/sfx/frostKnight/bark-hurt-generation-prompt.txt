@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "bark-hurt",
+  "seconds": 0.4,
+  "prompt": "Muffled knight grunt with cracking ice armor, mono.",
+  "speech": false,
+  "seed": 4153953339,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/bark-hurt.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/bark-hurt-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/bark-hurt.wav",
+  "peak": 0.50946044921875,
+  "rms": 0.12588873650439406,
+  "sha256": "9ba5d8dbf60a24a289ded420af8a5c6b44958f2b3f9f6002e57a34316f7fcfd1"
+}

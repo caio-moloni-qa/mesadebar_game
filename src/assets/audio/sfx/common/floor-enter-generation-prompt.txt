@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "floor-enter",
+  "seconds": 1.0,
+  "prompt": "Heavy wooden door creaking open onto a noisy tavern crowd murmur, mono.",
+  "speech": false,
+  "seed": 1490072709,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/floor-enter.mp3",
+  "raw": "src/assets/audio/sfx/common/floor-enter-raw.wav",
+  "wav": "src/assets/audio/sfx/common/floor-enter.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0738717103931564,
+  "sha256": "46ab20bae85b6f6f2da8918e11655302f56cffd8371ca3670d7d153f714bb470"
+}

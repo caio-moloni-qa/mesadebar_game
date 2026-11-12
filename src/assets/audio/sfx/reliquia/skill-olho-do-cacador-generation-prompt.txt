@@ -1,0 +1,18 @@
+{
+  "character": "reliquia",
+  "event": "skill-olho-do-cacador",
+  "seconds": 0.6,
+  "prompt": "Hunter's eye mark: sharp golden ping and focused lens-like zoom, mono.",
+  "speech": false,
+  "seed": 2295745128,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/reliquia/skill-olho-do-cacador.mp3",
+  "raw": "src/assets/audio/sfx/reliquia/skill-olho-do-cacador-raw.wav",
+  "wav": "src/assets/audio/sfx/reliquia/skill-olho-do-cacador.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.06398086860128116,
+  "sha256": "4460ea29333ab7a548be5b8e1dc1ce0a8ba7e0e75e24f23b92d0e8a49b3a1134"
+}

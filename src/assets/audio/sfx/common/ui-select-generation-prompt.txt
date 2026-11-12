@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "ui-select",
+  "seconds": 0.1,
+  "prompt": "Soft wooden UI click, mono.",
+  "speech": false,
+  "seed": 2225136841,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/ui-select.mp3",
+  "raw": "src/assets/audio/sfx/common/ui-select-raw.wav",
+  "wav": "src/assets/audio/sfx/common/ui-select.wav",
+  "peak": 0.344696044921875,
+  "rms": 0.06309370838882136,
+  "sha256": "edfce0df4aac5e3efd68f03da727e9e8f078bd7f693e498aed3f1ee0c10a2ac0"
+}

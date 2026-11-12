@@ -1,0 +1,18 @@
+{
+  "character": "brom",
+  "event": "arena-hidromel",
+  "seconds": 1.0,
+  "prompt": "Mead horn drinking, warm healing glow and satisfied dwarf sigh, mono.",
+  "speech": false,
+  "seed": 2511348432,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/brom/arena-hidromel.mp3",
+  "raw": "src/assets/audio/sfx/brom/arena-hidromel-raw.wav",
+  "wav": "src/assets/audio/sfx/brom/arena-hidromel.wav",
+  "peak": 0.793548583984375,
+  "rms": 0.12588871545356944,
+  "sha256": "274b2222b7616eb787e82be0f50f7311a1a040b80407cdc9b351cf881233d856"
+}

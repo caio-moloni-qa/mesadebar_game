@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "impact-ice",
+  "seconds": 0.4,
+  "prompt": "Ice shard shattering on impact with tinkling crystals, mono.",
+  "speech": false,
+  "seed": 3135173135,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/impact-ice.mp3",
+  "raw": "src/assets/audio/sfx/common/impact-ice-raw.wav",
+  "wav": "src/assets/audio/sfx/common/impact-ice.wav",
+  "peak": 0.68450927734375,
+  "rms": 0.12588862996103994,
+  "sha256": "4c541e1116f94d920f856a95668fc464d6e3dd757b565331af36b334c932c266"
+}

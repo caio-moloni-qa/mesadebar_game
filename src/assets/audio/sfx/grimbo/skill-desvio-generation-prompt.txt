@@ -1,0 +1,18 @@
+{
+  "character": "grimbo",
+  "event": "skill-desvio",
+  "seconds": 0.4,
+  "prompt": "Sly deflection: quick swish and a blow bounced back, mono.",
+  "speech": false,
+  "seed": 1982135828,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/grimbo/skill-desvio.mp3",
+  "raw": "src/assets/audio/sfx/grimbo/skill-desvio-raw.wav",
+  "wav": "src/assets/audio/sfx/grimbo/skill-desvio.wav",
+  "peak": 0.5362548828125,
+  "rms": 0.1258886279563697,
+  "sha256": "4fbf6a95e77039ef600be0b544076bfa7854d8e87e1b349fce2190643082b701"
+}

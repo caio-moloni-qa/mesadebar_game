@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "off-balance",
+  "seconds": 0.5,
+  "prompt": "Comic stumble: boots slipping on wood, a cartoon wobble and a small thud, mono.",
+  "speech": false,
+  "seed": 3642183324,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/off-balance.mp3",
+  "raw": "src/assets/audio/sfx/common/off-balance-raw.wav",
+  "wav": "src/assets/audio/sfx/common/off-balance.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.07491344362193168,
+  "sha256": "10035da25456b1456da1bd0a46063dd7c69ed2be74992e0dcc939ecc06b18a0e"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "frostKnight",
+  "event": "arena-charge",
+  "seconds": 1.0,
+  "prompt": "Armored knight charging on ice, heavy clanking footsteps into a crash, mono.",
+  "speech": false,
+  "seed": 2277184344,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostKnight/arena-charge.mp3",
+  "raw": "src/assets/audio/sfx/frostKnight/arena-charge-raw.wav",
+  "wav": "src/assets/audio/sfx/frostKnight/arena-charge.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.12524061894031224,
+  "sha256": "b4280bbe532289afa3c9c8dc1dbcff08b2e54515786f6515b163112eb59bc1df"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "parry",
+  "seconds": 0.3,
+  "prompt": "Massive forearm block, thick fur thud, mono.",
+  "speech": false,
+  "seed": 2308984567,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/parry.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/parry-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/parry.wav",
+  "peak": 0.776885986328125,
+  "rms": 0.12588872802348564,
+  "sha256": "09265874c3788e6d8865d0ed3e47bfb8b330eb891fc419dc0cc43a69ec3b30de"
+}

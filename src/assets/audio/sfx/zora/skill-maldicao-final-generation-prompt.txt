@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "skill-maldicao-final",
+  "seconds": 1.5,
+  "prompt": "Final curse: chorus of ghostly whispers converging into a heavy dark impact, mono.",
+  "speech": false,
+  "seed": 2577654566,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/skill-maldicao-final.mp3",
+  "raw": "src/assets/audio/sfx/zora/skill-maldicao-final-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/skill-maldicao-final.wav",
+  "peak": 0.81597900390625,
+  "rms": 0.1258887096608312,
+  "sha256": "d0b63bc1ad9e2c1466967e898465619c3d6b4ab89eb569af2aa76885e75fe3e8"
+}

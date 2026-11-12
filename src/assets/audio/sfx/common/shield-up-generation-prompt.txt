@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "shield-up",
+  "seconds": 0.6,
+  "prompt": "Magic shield forming: resonant hum rising into a glassy click, mono.",
+  "speech": false,
+  "seed": 3104141280,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/shield-up.mp3",
+  "raw": "src/assets/audio/sfx/common/shield-up-raw.wav",
+  "wav": "src/assets/audio/sfx/common/shield-up.wav",
+  "peak": 0.83782958984375,
+  "rms": 0.12588870814581035,
+  "sha256": "f285fa745c19c00bb6eca75eca5b221ee46bd869203142ef34f51c6c162e3df9"
+}

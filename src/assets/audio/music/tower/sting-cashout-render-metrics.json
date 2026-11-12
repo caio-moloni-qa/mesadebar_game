@@ -1,0 +1,37 @@
+{
+  "id": "sting-cashout",
+  "seconds": 2.5,
+  "kind": "cash",
+  "loop": false,
+  "noteCount": 26,
+  "hitCount": 4,
+  "instruments": [
+    "lute",
+    "strings",
+    "glass",
+    "box"
+  ],
+  "percussion": [
+    "frame",
+    "tambourine"
+  ],
+  "seed": "sting-cashout",
+  "rate": 44100,
+  "frames": 110250,
+  "rawSeconds": 6.5,
+  "rawPeak": 0.0814763531088829,
+  "rawSamplesAboveOne": 0,
+  "peak": 0.84,
+  "rms": 0.13161839456433252,
+  "gain": 10.309739795023049,
+  "seam": [
+    0,
+    0
+  ],
+  "end": [
+    0,
+    0
+  ],
+  "file": "sting-cashout.wav",
+  "rawFile": "sting-cashout-raw.wav"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "winterKing",
+  "event": "bark-skill",
+  "seconds": 1.0,
+  "prompt": "Ice king menacing low hum with wind and frost, mono.",
+  "speech": false,
+  "seed": 2050391941,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/winterKing/bark-skill.mp3",
+  "raw": "src/assets/audio/sfx/winterKing/bark-skill-raw.wav",
+  "wav": "src/assets/audio/sfx/winterKing/bark-skill.wav",
+  "peak": 0.483673095703125,
+  "rms": 0.1258886564061602,
+  "sha256": "dd48ff81a2f5058338b256ea636e787e1085321c2be9da192321abf0445029f8"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "zora",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Mysterious mature woman sharp whispered \"hah\", mono.",
+  "speech": false,
+  "seed": 2422275424,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/zora/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/zora/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/zora/bark-attack.wav",
+  "peak": 0.409698486328125,
+  "rms": 0.12588861391487005,
+  "sha256": "9d883885ecbf5fa0d099787ced98a0764a61d91924fff71263d2a5c6cd3cf4b0"
+}

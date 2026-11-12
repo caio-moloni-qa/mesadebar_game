@@ -1,0 +1,18 @@
+{
+  "character": "iceSerpent",
+  "event": "skill-nevasca",
+  "seconds": 1.6,
+  "prompt": "Serpent breathing a blizzard: roaring icy wind and pelting ice, mono.",
+  "speech": false,
+  "seed": 2917302053,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/iceSerpent/skill-nevasca.mp3",
+  "raw": "src/assets/audio/sfx/iceSerpent/skill-nevasca-raw.wav",
+  "wav": "src/assets/audio/sfx/iceSerpent/skill-nevasca.wav",
+  "peak": 0.599822998046875,
+  "rms": 0.12588869114828877,
+  "sha256": "be92273ed05002501f9dc21e56b7b968211c79141131b22de2aaee56ea483273"
+}

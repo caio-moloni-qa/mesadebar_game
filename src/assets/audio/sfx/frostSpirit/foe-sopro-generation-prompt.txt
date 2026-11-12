@@ -1,0 +1,18 @@
+{
+  "character": "frostSpirit",
+  "event": "foe-sopro",
+  "seconds": 0.6,
+  "prompt": "Icy breath projectile, frosty whoosh, mono.",
+  "speech": false,
+  "seed": 2166453418,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/frostSpirit/foe-sopro.mp3",
+  "raw": "src/assets/audio/sfx/frostSpirit/foe-sopro-raw.wav",
+  "wav": "src/assets/audio/sfx/frostSpirit/foe-sopro.wav",
+  "peak": 0.54107666015625,
+  "rms": 0.12588865508246305,
+  "sha256": "d30b5251fc48cff289a862c328dc1cb01ed239d57dabd0302bc1559804228000"
+}

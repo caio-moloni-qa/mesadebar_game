@@ -1,0 +1,18 @@
+{
+  "character": "ancientYeti",
+  "event": "dodge",
+  "seconds": 0.3,
+  "prompt": "Huge body shifting in deep snow, mono.",
+  "speech": false,
+  "seed": 3794876827,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/ancientYeti/dodge.mp3",
+  "raw": "src/assets/audio/sfx/ancientYeti/dodge-raw.wav",
+  "wav": "src/assets/audio/sfx/ancientYeti/dodge.wav",
+  "peak": 0.518768310546875,
+  "rms": 0.12588874121739205,
+  "sha256": "7678cdb251ac2e65957e3815a9072d081455f2856cfe6b44a9b4897b968954f5"
+}

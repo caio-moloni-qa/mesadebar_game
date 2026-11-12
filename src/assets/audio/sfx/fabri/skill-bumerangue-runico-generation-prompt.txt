@@ -1,0 +1,18 @@
+{
+  "character": "fabri",
+  "event": "skill-bumerangue-runico",
+  "seconds": 1.2,
+  "prompt": "Glowing runic boomerang whirring through several enemies with quick successive hits and a magical hum, mono.",
+  "speech": false,
+  "seed": 313891915,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/fabri/skill-bumerangue-runico.mp3",
+  "raw": "src/assets/audio/sfx/fabri/skill-bumerangue-runico-raw.wav",
+  "wav": "src/assets/audio/sfx/fabri/skill-bumerangue-runico.wav",
+  "peak": 0.773406982421875,
+  "rms": 0.12588866879536845,
+  "sha256": "d230407b40b16c31e80a486d80353dcddd085f512bc0da2aad4c95d93820fadf"
+}

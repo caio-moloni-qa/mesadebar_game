@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "mark",
+  "seconds": 0.5,
+  "prompt": "Target marked: sharp metallic ping with a short ominous drone, mono.",
+  "speech": false,
+  "seed": 3646479519,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/mark.mp3",
+  "raw": "src/assets/audio/sfx/common/mark-raw.wav",
+  "wav": "src/assets/audio/sfx/common/mark.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.09634717000891502,
+  "sha256": "1bcc0bfe287582f52e9cda22f9b3e21c0dbef8b202cdaaaa1f03afc1e0463d26"
+}

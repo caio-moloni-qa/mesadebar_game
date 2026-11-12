@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "proj-mug",
+  "seconds": 0.5,
+  "prompt": "Heavy wooden beer mug spinning through the air with beer sloshing, mono.",
+  "speech": false,
+  "seed": 1654093321,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/proj-mug.mp3",
+  "raw": "src/assets/audio/sfx/common/proj-mug-raw.wav",
+  "wav": "src/assets/audio/sfx/common/proj-mug.wav",
+  "peak": 0.7027587890625,
+  "rms": 0.1258886792113321,
+  "sha256": "942ba8df39ea22abe00c0f06d169549c4e37176af2fd6c728c68715e443c6a6a"
+}

@@ -1,0 +1,18 @@
+{
+  "character": "lakeSpirit",
+  "event": "bark-attack",
+  "seconds": 0.4,
+  "prompt": "Ethereal watery hiss, mono.",
+  "speech": false,
+  "seed": 3972716004,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/lakeSpirit/bark-attack.mp3",
+  "raw": "src/assets/audio/sfx/lakeSpirit/bark-attack-raw.wav",
+  "wav": "src/assets/audio/sfx/lakeSpirit/bark-attack.wav",
+  "peak": 0.521636962890625,
+  "rms": 0.125888677031988,
+  "sha256": "00dc086ab61082e129b167953468ef2131227536d17e19d6d0165cfe803fe7aa"
+}

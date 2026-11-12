@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "early-lock",
+  "seconds": 0.25,
+  "prompt": "Dull muted error thunk, like a wooden button jammed, short and clear, mono.",
+  "speech": false,
+  "seed": 3709474034,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/early-lock.mp3",
+  "raw": "src/assets/audio/sfx/common/early-lock-raw.wav",
+  "wav": "src/assets/audio/sfx/common/early-lock.wav",
+  "peak": 0.8399658203125,
+  "rms": 0.0761117875971432,
+  "sha256": "24f09ce130db014ae0573dcc74a28d7429584c17bcf97b8b2369f64dfabadc0e"
+}

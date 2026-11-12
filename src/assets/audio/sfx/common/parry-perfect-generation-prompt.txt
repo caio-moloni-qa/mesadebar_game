@@ -1,0 +1,18 @@
+{
+  "character": "common",
+  "event": "parry-perfect",
+  "seconds": 0.5,
+  "prompt": "Perfect parry: crisp steel clang followed by a sparkling high chime and a tiny reverse whoosh, satisfying, mono.",
+  "speech": false,
+  "seed": 376864328,
+  "method": "Original deterministic noise / harmonic oscillator synthesis; acoustic and nonverbal voice approximations only, not recordings or TTS.",
+  "source": "art-source/audio/tower/render-character-sfx.py",
+  "date": "2026-11-11",
+  "status": "rendered-awaiting-audition",
+  "file": "src/assets/audio/sfx/common/parry-perfect.mp3",
+  "raw": "src/assets/audio/sfx/common/parry-perfect-raw.wav",
+  "wav": "src/assets/audio/sfx/common/parry-perfect.wav",
+  "peak": 0.575775146484375,
+  "rms": 0.12588859631528795,
+  "sha256": "7be5a55845da3375b1f985b79d14b6e7b5482c223c57b953220defec3e308fec"
+}
